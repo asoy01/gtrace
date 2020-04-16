@@ -1,0 +1,3 @@
+numpy>=1.5.0
+scipy>=0.1.0
+traits>=4.0.0
