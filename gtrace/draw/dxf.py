@@ -1,0 +1,6030 @@
+'''
+dxf.py - a DXF export library for python
+
+Sample code:
+
+import dxf
+d = dxf.DXF('test.dxf')
+d.add_layer('ABC', color=5)
+d.add_entity(dxf.Line((1.5,5), (56,-89)), 'ABC')
+d.save_to_file()
+
+'''
+#{{{ Import modules
+
+import os
+import math
+pi = math.pi
+
+#}}}
+
+#{{{ Classes
+
+#{{{ DXF class
+
+class DXF(object):
+    '''
+    A DXF file class.
+    '''
+
+    def __init__(self, filename='drawing.dxf'):
+        self.filename = filename
+        self.layers = {}  #A dictionary to hold the layers
+        self.handseed = 120
+
+    def add_layer(self, name, color=1, ltype='Continuous'):
+        self.layers[name] = Layer(name, hex(self.handseed)[2:], color=color, ltype=ltype)
+        self.handseed += 1
+
+    def add_entity(self, entity, layername):
+        if not layername in self.layers:
+            self.add_layer(layername)
+
+        entity.set_handle(hex(self.handseed)[2:])
+        self.handseed += 1
+        self.layers[layername].add_entity(entity)
+
+#{{{ def save_to_file(self):
+
+    def save_to_file(self):
+        '''
+        Save the DXF file
+        '''
+
+        #Open a file
+        dxffile = open(self.filename, 'w')
+
+#{{{ Header
+
+        #Compute the lower left and the upper left corners of the drawing
+        xmin = 0.0
+        xmax = 0.0
+        ymin = 0.0
+        ymax = 0.0
+
+        for ly in list(self.layers.values()):
+            for ent in ly.entities:
+                a = ent.report_min_max()
+                xmin = a[0][0] if a[0][0] < xmin else xmin
+                xmax = a[1][0] if a[1][0] > xmax else xmax                
+                ymin = a[0][1] if a[0][1] < ymin else ymin
+                ymax = a[1][1] if a[1][1] > ymax else ymax                
+        
+        dxffile.write(header_template1)
+
+        dxffile.write('  9\n$EXTMIN\n 10\n')
+        dxffile.write(str(xmin)+'\n 20\n'+str(ymin)+'\n 30\n0.0\n')        
+        dxffile.write('  9\n$EXTMAX\n 10\n')
+        dxffile.write(str(xmax)+'\n 20\n'+str(ymax)+'\n 30\n0.0\n')        
+        dxffile.write('  9\n$LIMMIN\n 10\n')
+        dxffile.write(str(xmin)+'\n 20\n'+str(ymin)+'\n')        
+        dxffile.write('  9\n$LIMMAX\n 10\n')
+        dxffile.write(str(xmax)+'\n 20\n'+str(ymax)+'\n')        
+
+        dxffile.write(header_template3)
+
+#}}}
+
+#{{{ Classes
+        dxffile.write(classes_template)
+#}}}
+
+#{{{ Tables
+        dxffile.write(tables_template1)
+        dxffile.write(vport_template)    
+        dxffile.write(linetype_template)
+
+        #Layers
+        dxffile.write(layer_template1)
+        #Loop for layers
+        for ly in list(self.layers.values()):
+            dxffile.write('  0\nLAYER\n  5\n')
+            dxffile.write(ly.handle+'\n')
+            dxffile.write('330\n2\n100\nAcDbSymbolTableRecord\n')
+            dxffile.write('100\nAcDbLayerTableRecord\n  2\n')
+            dxffile.write(ly.name+'\n')
+            dxffile.write(' 70\n0\n 62\n')
+            dxffile.write(str(ly.color)+'\n')
+            dxffile.write('  6\n')
+            dxffile.write(ly.ltype+'\n')
+            dxffile.write('370\n    -3\n390\nF\n347\n3E\n')
+
+        dxffile.write('  0\nENDTAB\n')
+
+        dxffile.write(style_template)
+        dxffile.write(view_template)
+        dxffile.write(misctable_template)    
+        dxffile.write(blockrecords_template)
+        dxffile.write(tables_template2)
+
+#}}}
+
+#{{{ Blocks
+        dxffile.write(blocks_template)
+#}}}
+
+#{{{ Entities
+
+        dxffile.write(entities_template1)
+        for ly in list(self.layers.values()):
+            for ent in ly.entities:
+                dxffile.write(ent.draw(ly.name))
+
+        dxffile.write('  0\nENDSEC\n')
+#}}}
+
+#{{{ Objects
+        dxffile.write(objects_template)
+#}}}
+
+        dxffile.write('0\nEOF\n')
+        dxffile.close()
+
+#}}}
+
+#}}}
+
+#{{{ Layer
+class Layer(object):
+    '''
+    Layer class
+    '''
+
+    def __init__(self, name, handle, color=1, ltype='Continuous'):
+        self.name = name
+        self.handle = handle
+        self.color = color
+        self.ltype = ltype
+        self.entities = [] #A list of entities, such as lines, circles, etc.
+
+    def add_entity(self, entity):
+        self.entities.append(entity)
+
+#}}}
+
+#{{{ Entity
+
+class Entity(object):
+    '''
+    A graphic entity
+    '''
+
+    def __init__(self):
+        self.handle = ''
+
+    def set_handle(self, handle):
+        self.handle = handle
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        return ((0.0,0.0), (1.0,1.0))
+
+    def draw(self):
+        return ''
+
+#}}}
+
+#{{{ Line
+
+class Line(Entity):
+    '''
+    A line entity
+    '''
+
+    def __init__(self, start, stop, thickness=0):
+        super(Line, self).__init__()
+        self.start = start
+        self.stop = stop
+        self.thickness = thickness
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        xmin = min((self.start[0], self.stop[0]))
+        xmax = max((self.start[0], self.stop[0]))
+        ymin = min((self.start[1], self.stop[1]))
+        ymax = max((self.start[1], self.stop[1]))
+        
+        return ((xmin, ymin), (xmax, ymax))
+
+    def draw(self, layername):
+        output ='''  0\nLINE\n  5\n'''
+        output += self.handle+'\n'
+        output +='330\n1F\n100\nAcDbEntity\n  8\n'
+        output += layername+'\n'
+        output += '100\nAcDbLine\n 10\n'
+        output += str(self.start[0])+'\n 20\n'
+        output += str(self.start[1])+'\n 30\n0.0\n  11\n'
+        output += str(self.stop[0])+'\n 21\n'
+        output += str(self.stop[1])+'\n 31\n0.0\n'        
+
+        return output
+
+#}}}    
+
+#{{{ LWPOLYLINE
+
+class NumberOfElementError(BaseException):
+    def __initi__(self, message):
+        self.message = message
+        
+class LwPolyLine(Entity):
+    '''
+    A light weight poly-line
+    '''
+
+    def __init__(self, x, y, thickness=0):
+        '''
+        = Arguments =
+        x: x coordinates of the vertices
+        y: y coordinates of the vertices        
+        '''
+        super(LwPolyLine, self).__init__()
+        self.x = x
+        self.y = y
+        if len(x) != len(y):
+            raise NumberOfElementError('The numbers of elements of x and y do not match.')
+        self.numpoints = len(x)
+        self.thickness = thickness
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        xmin = min(self.x)
+        xmax = max(self.x)
+        ymin = min(self.y)
+        ymax = max(self.y)
+        
+        return ((xmin, ymin), (xmax, ymax))
+
+    def draw(self, layername):
+        output ='''  0\nLWPOLYLINE\n  5\n'''
+        output += self.handle+'\n'
+        output +='330\n1F\n100\nAcDbEntity\n  8\n'
+        output += layername+'\n'
+        output += '100\nAcDbPolyline\n 90\n'
+        output += str(self.numpoints)+'\n 70\n0\n43\n0.0\n'
+        for ii in range(self.numpoints):
+            output += ' 10\n'
+            output += str(self.x[ii])+'\n 20\n'
+            output += str(self.y[ii])+'\n'
+            
+        return output
+
+#}}}
+
+#{{{ Rectangle
+
+        
+class Rectangle(Entity):
+    '''
+    A rectangle
+    '''
+
+    def __init__(self, point, width, height, thickness=0):
+        '''
+        = Arguments =
+
+        '''
+        super(Rectangle, self).__init__()
+        self.point = point
+        self.width = width
+        self.height = height
+        self.thickness = thickness
+        x0 = point[0]
+        y0 = point[1]        
+        self.x = [x0, x0+width, x0+width, x0, x0]
+        self.y = [y0, y0, y0+height, y0+height, y0]        
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        xmin = min(self.point[0], self.point[0]+self.width)
+        xmax = max(self.point[0], self.point[0]+self.width)        
+        ymin = min(self.point[1], self.point[1]+self.height)
+        ymax = max(self.point[1], self.point[1]+self.height)
+        
+        return ((xmin, ymin), (xmax, ymax))
+
+    def draw(self, layername):
+        output ='''  0\nLWPOLYLINE\n  5\n'''
+        output += self.handle+'\n'
+        output +='330\n1F\n100\nAcDbEntity\n  8\n'
+        output += layername+'\n'
+        output += '100\nAcDbPolyline\n 90\n'
+        output += str(5)+'\n 70\n0\n43\n0.0\n'
+        for ii in range(5):
+            output += ' 10\n'
+            output += str(self.x[ii])+'\n 20\n'
+            output += str(self.y[ii])+'\n'
+            
+        return output
+
+#}}}
+
+#{{{ Circle
+
+class Circle(Entity):
+    '''
+    A circle entity
+    '''
+
+    def __init__(self, center, radius, thickness=0):
+        super(Circle, self).__init__()
+        self.center = center
+        self.radius = radius
+        self.thickness = thickness
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        xmin = self.center[0]-self.radius
+        xmax = self.center[0]+self.radius
+        ymin = self.center[1]-self.radius
+        ymax = self.center[1]+self.radius
+        
+        return ((xmin, ymin), (xmax, ymax))
+
+    def draw(self, layername):
+        output ='''  0\nCIRCLE\n  5\n'''
+        output += self.handle+'\n'
+        output +='330\n1F\n100\nAcDbEntity\n  8\n'
+        output += layername+'\n'
+        output += '100\nAcDbCircle\n 10\n'
+        output += str(self.center[0])+'\n 20\n'
+        output += str(self.center[1])+'\n 30\n0.0\n  40\n'
+        output += str(self.radius)+'\n'
+
+        return output
+
+#}}}
+
+#{{{ Arc
+
+class Arc(Entity):
+    '''
+    An arc entity
+    '''
+
+    def __init__(self, center, radius, startangle, stopangle, thickness=0):
+        super(Arc, self).__init__()
+        self.center = center
+        self.radius = radius
+        self.thickness = thickness
+        self.startangle = startangle
+        self.stopangle = stopangle
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        if self.startangle > self.stopangle:
+            stopangle = self.stopangle + 360.0
+        else:
+            stopangle = self.stopangle
+
+        startangle = self.startangle
+
+        dx1 = self.radius*math.cos(pi*startangle/180)
+        dy1 = self.radius*math.sin(pi*startangle/180)        
+        dx2 = self.radius*math.cos(pi*stopangle/180)
+        dy2 = self.radius*math.sin(pi*stopangle/180)
+
+        #Assign temporary values for xmin etc.
+        xmin = min(dx1, dx2)+self.center[0]
+        xmax = max(dx1, dx2)+self.center[0]            
+        ymin = min(dy1, dy2)+self.center[1]
+        ymax = max(dy1, dy2)+self.center[1]            
+
+        #Quadrature of the start point
+        start_quad = int(math.floor(startangle/90.0))
+        #Quadrature of the end point
+        stop_quad = int(math.floor(stopangle/90.0))
+        #List of poles in between the start and the stop quadratures
+        poles = list(range(start_quad, stop_quad))
+
+        for n in poles:
+            a = n%4
+            if a == 0:
+                ymax = self.center[1]+self.radius
+            elif a == 1:
+                xmin = self.center[0]-self.radius
+            elif a == 2:
+                ymin = self.center[1]-self.radius
+            elif a == 3:
+                xmax = self.center[0]+self.radius
+        
+        return ((xmin, ymin), (xmax, ymax))
+
+    def draw(self, layername):
+        output ='''  0\nARC\n  5\n'''
+        output += self.handle+'\n'
+        output +='330\n1F\n100\nAcDbEntity\n  8\n'
+        output += layername+'\n'
+        output += '100\nAcDbCircle\n 10\n'
+        output += str(self.center[0])+'\n 20\n'
+        output += str(self.center[1])+'\n 30\n0.0\n  40\n'
+        output += str(self.radius)+'\n100\nAcDbArc\n 50\n'
+        output += str(self.startangle)+'\n 51\n'
+        output += str(self.stopangle)+'\n'
+        
+        return output
+
+#}}}
+
+#{{{ Text
+
+class Text(Entity):
+    '''
+    Text
+    '''
+
+    def __init__(self, text, point, height=1.0, rotation=0.0):
+        super(Text, self).__init__()
+        self.text = text
+        self.point = point
+        self.height = height
+        self.rotation = rotation
+
+    def report_min_max(self):
+        '''
+        Return the coordinates of the lower left and the upper right corners
+        of the drawing.
+        Return value: ((xmin, ymin), (xmax, ymax))
+        '''
+        length = len(self.text)*self.height
+        dx = length*math.cos(pi*self.rotation/180)
+        dy = length*math.sin(pi*self.rotation/180)        
+        xmin = min(self.point[0], self.point[0]+dx)
+        xmax = max(self.point[0], self.point[0]+dx)
+        ymin = min(self.point[1], self.point[1]+dy)
+        ymax = max(self.point[1], self.point[1]+dy)
+        
+        return ((xmin, ymin), (xmax, ymax))
+
+    def draw(self, layername):
+        output ='''  0\nTEXT\n  5\n'''
+        output += self.handle+'\n'
+        output +='330\n1F\n100\nAcDbEntity\n  8\n'
+        output += layername+'\n'
+        output += '100\nAcDbText\n 10\n'
+        output += str(self.point[0])+'\n 20\n'
+        output += str(self.point[1])+'\n 30\n0.0\n  40\n'
+        output += str(self.height)+'\n  1\n'
+        output += self.text+'\n 50\n'
+        output += str(self.rotation)+'\n 7\nStandard\n100\nAcDbText\n'
+        
+        return output
+
+#}}}
+
+#}}}
+
+#{{{ Utilities
+
+def color_encode(color):
+    '''
+    Given a set of RGB values for a color, find the closest matching
+    one from the pre-defined colors in the DXF specification.
+    Then return its color code (an integer in 1 to 255).
+
+    = Input =
+    color: A tuple of three numbers in the range of 0-255, i.e. (R,G,B)
+
+    = Return =
+    best_color_num: integer
+    '''
+
+    min_dist = 1e10
+    best_color_num = 1
+    for c in list(color_table.keys()):
+        candidate = color_table[c]
+        dist = (candidate[0]-color[0])**2 + (candidate[1]-color[1])**2+(candidate[2]-color[2])**2
+        if dist < min_dist:
+            min_dist = dist
+            best_color_num = c
+
+    return best_color_num
+
+#}}}
+
+#{{{ Color Table
+
+color_table = {1:(255,0,0),
+2:(255,255,0),
+3:(0,255,0),
+4:(0,255,255),
+5:(0,0,255),
+6:(255,0,255),
+7:(255,255,255),
+8:(128,128,128),
+9:(192,192,192),
+10:(255,0,0),
+11:(255,127,127),
+12:(165,0,0),
+13:(165,82,82),
+14:(127,0,0),
+15:(127,63,63),
+16:(76,0,0),
+17:(76,38,38),
+18:(38,0,0),
+19:(38,19,19),
+20:(255,63,0),
+21:(255,159,127),
+22:(165,41,0),
+23:(165,103,82),
+24:(127,31,0),
+25:(127,79,63),
+26:(76,19,0),
+27:(76,47,38),
+28:(38,9,0),
+29:(38,23,19),
+30:(255,127,0),
+31:(255,191,127),
+32:(165,82,0),
+33:(165,124,82),
+34:(127,63,0),
+35:(127,95,63),
+36:(76,38,0),
+37:(76,57,38),
+38:(38,19,0),
+39:(38,28,19),
+40:(255,191,0),
+41:(255,223,127),
+42:(165,124,0),
+43:(165,145,82),
+44:(127,95,0),
+45:(127,111,63),
+46:(76,57,0),
+47:(76,66,38),
+48:(38,28,0),
+49:(38,33,19),
+50:(255,255,0),
+51:(255,255,127),
+52:(165,165,0),
+53:(165,165,82),
+54:(127,127,0),
+55:(127,127,63),
+56:(76,76,0),
+57:(76,76,38),
+58:(38,38,0),
+59:(38,38,19),
+60:(191,255,0),
+61:(223,255,127),
+62:(124,165,0),
+63:(145,165,82),
+64:(95,127,0),
+65:(111,127,63),
+66:(57,76,0),
+67:(66,76,38),
+68:(28,38,0),
+69:(33,38,19),
+70:(127,255,0),
+71:(191,255,127),
+72:(82,165,0),
+73:(124,165,82),
+74:(63,127,0),
+75:(95,127,63),
+76:(38,76,0),
+77:(57,76,38),
+78:(19,38,0),
+79:(28,38,19),
+80:(63,255,0),
+81:(159,255,127),
+82:(41,165,0),
+83:(103,165,82),
+84:(31,127,0),
+85:(79,127,63),
+86:(19,76,0),
+87:(47,76,38),
+88:(9,38,0),
+89:(23,38,19),
+90:(0,255,0),
+91:(127,255,127),
+92:(0,165,0),
+93:(82,165,82),
+94:(0,127,0),
+95:(63,127,63),
+96:(0,76,0),
+97:(38,76,38),
+98:(0,38,0),
+99:(19,38,19),
+100:(0,255,63),
+101:(127,255,159),
+102:(0,165,41),
+103:(82,165,103),
+104:(0,127,31),
+105:(63,127,79),
+106:(0,76,19),
+107:(38,76,47),
+108:(0,38,9),
+109:(19,38,23),
+110:(0,255,127),
+111:(127,255,191),
+112:(0,165,82),
+113:(82,165,124),
+114:(0,127,63),
+115:(63,127,95),
+116:(0,76,38),
+117:(38,76,57),
+118:(0,38,19),
+119:(19,38,28),
+120:(0,255,191),
+121:(127,255,223),
+122:(0,165,124),
+123:(82,165,145),
+124:(0,127,95),
+125:(63,127,111),
+126:(0,76,57),
+127:(38,76,66),
+128:(0,38,28),
+129:(19,38,33),
+130:(0,255,255),
+131:(127,255,255),
+132:(0,165,165),
+133:(82,165,165),
+134:(0,127,127),
+135:(63,127,127),
+136:(0,76,76),
+137:(38,76,76),
+138:(0,38,38),
+139:(19,38,38),
+140:(0,191,255),
+141:(127,223,255),
+142:(0,124,165),
+143:(82,145,165),
+144:(0,95,127),
+145:(63,111,127),
+146:(0,57,76),
+147:(38,66,76),
+148:(0,28,38),
+149:(19,33,38),
+150:(0,127,255),
+151:(127,191,255),
+152:(0,82,165),
+153:(82,124,165),
+154:(0,63,127),
+155:(63,95,127),
+156:(0,38,76),
+157:(38,57,76),
+158:(0,19,38),
+159:(19,28,38),
+160:(0,63,255),
+161:(127,159,255),
+162:(0,41,165),
+163:(82,103,165),
+164:(0,31,127),
+165:(63,79,127),
+166:(0,19,76),
+167:(38,47,76),
+168:(0,9,38),
+169:(19,23,38),
+170:(0,0,255),
+171:(127,127,255),
+172:(0,0,165),
+173:(82,82,165),
+174:(0,0,127),
+175:(63,63,127),
+176:(0,0,76),
+177:(38,38,76),
+178:(0,0,38),
+179:(19,19,38),
+180:(63,0,255),
+181:(159,127,255),
+182:(41,0,165),
+183:(103,82,165),
+184:(31,0,127),
+185:(79,63,127),
+186:(19,0,76),
+187:(47,38,76),
+188:(9,0,38),
+189:(23,19,38),
+190:(127,0,255),
+191:(191,127,255),
+192:(82,0,165),
+193:(124,82,165),
+194:(63,0,127),
+195:(95,63,127),
+196:(38,0,76),
+197:(57,38,76),
+198:(19,0,38),
+199:(28,19,38),
+200:(191,0,255),
+201:(223,127,255),
+202:(124,0,165),
+203:(145,82,165),
+204:(95,0,127),
+205:(111,63,127),
+206:(57,0,76),
+207:(66,38,76),
+208:(28,0,38),
+209:(33,19,38),
+210:(255,0,255),
+211:(255,127,255),
+212:(165,0,165),
+213:(165,82,165),
+214:(127,0,127),
+215:(127,63,127),
+216:(76,0,76),
+217:(76,38,76),
+218:(38,0,38),
+219:(38,19,38),
+220:(255,0,191),
+221:(255,127,223),
+222:(165,0,124),
+223:(165,82,145),
+224:(127,0,95),
+225:(127,63,111),
+226:(76,0,57),
+227:(76,38,66),
+228:(38,0,28),
+229:(38,19,33),
+230:(255,0,127),
+231:(255,127,191),
+232:(165,0,82),
+233:(165,82,124),
+234:(127,0,63),
+235:(127,63,95),
+236:(76,0,38),
+237:(76,38,57),
+238:(38,0,19),
+239:(38,19,28),
+240:(255,0,63),
+241:(255,127,159),
+242:(165,0,41),
+243:(165,82,103),
+244:(127,0,31),
+245:(127,63,79),
+246:(76,0,19),
+247:(76,38,47),
+248:(38,0,9),
+249:(38,19,23),
+250:(84,84,84),
+251:(118,118,118),
+252:(160,160,160),
+253:(192,192,192),
+254:(224,224,224),
+255:(0,0,0)}
+
+#}}}
+
+#{{{ Templates
+
+#{{{ Header
+
+header_template1 = \
+'''  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1024
+  9
+$ACADMAINTVER
+ 70
+     6
+  9
+$DWGCODEPAGE
+  3
+ANSI_1252
+  9
+$INSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+'''
+
+header_template2 =\
+''' 9
+$EXTMIN
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+$EXTMAX
+ 10
+73.0
+ 20
+41.0
+ 30
+0.0
+  9
+$LIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+$LIMMAX
+ 10
+1000.0
+ 20
+1000.0
+'''
+
+header_template3 =\
+'''  9
+$ORTHOMODE
+ 70
+     0
+  9
+$REGENMODE
+ 70
+     1
+  9
+$FILLMODE
+ 70
+     1
+  9
+$QTEXTMODE
+ 70
+     0
+  9
+$MIRRTEXT
+ 70
+     1
+  9
+$LTSCALE
+ 40
+1.0
+  9
+$ATTMODE
+ 70
+     1
+  9
+$TEXTSIZE
+ 40
+2.5
+  9
+$TRACEWID
+ 40
+1.0
+  9
+$TEXTSTYLE
+  7
+Standard
+  9
+$CLAYER
+  8
+Outline
+  9
+$CELTYPE
+  6
+ByLayer
+  9
+$CECOLOR
+ 62
+   256
+  9
+$CELTSCALE
+ 40
+1.0
+  9
+$DISPSILH
+ 70
+     0
+  9
+$DIMSCALE
+ 40
+1.0
+  9
+$DIMASZ
+ 40
+2.5
+  9
+$DIMEXO
+ 40
+0.625
+  9
+$DIMDLI
+ 40
+3.75
+  9
+$DIMRND
+ 40
+0.0
+  9
+$DIMDLE
+ 40
+0.0
+  9
+$DIMEXE
+ 40
+1.25
+  9
+$DIMTP
+ 40
+0.0
+  9
+$DIMTM
+ 40
+0.0
+  9
+$DIMTXT
+ 40
+2.5
+  9
+$DIMCEN
+ 40
+2.5
+  9
+$DIMTSZ
+ 40
+0.0
+  9
+$DIMTOL
+ 70
+     0
+  9
+$DIMLIM
+ 70
+     0
+  9
+$DIMTIH
+ 70
+     0
+  9
+$DIMTOH
+ 70
+     0
+  9
+$DIMSE1
+ 70
+     0
+  9
+$DIMSE2
+ 70
+     0
+  9
+$DIMTAD
+ 70
+     1
+  9
+$DIMZIN
+ 70
+     8
+  9
+$DIMBLK
+  1
+
+  9
+$DIMASO
+ 70
+     1
+  9
+$DIMSHO
+ 70
+     1
+  9
+$DIMPOST
+  1
+
+  9
+$DIMAPOST
+  1
+
+  9
+$DIMALT
+ 70
+     0
+  9
+$DIMALTD
+ 70
+     3
+  9
+$DIMALTF
+ 40
+0.03937007874016
+  9
+$DIMLFAC
+ 40
+1.0
+  9
+$DIMTOFL
+ 70
+     1
+  9
+$DIMTVP
+ 40
+0.0
+  9
+$DIMTIX
+ 70
+     0
+  9
+$DIMSOXD
+ 70
+     0
+  9
+$DIMSAH
+ 70
+     0
+  9
+$DIMBLK1
+  1
+
+  9
+$DIMBLK2
+  1
+
+  9
+$DIMSTYLE
+  2
+ISO-25
+  9
+$DIMCLRD
+ 70
+     0
+  9
+$DIMCLRE
+ 70
+     0
+  9
+$DIMCLRT
+ 70
+     0
+  9
+$DIMTFAC
+ 40
+1.0
+  9
+$DIMGAP
+ 40
+0.625
+  9
+$DIMJUST
+ 70
+     0
+  9
+$DIMSD1
+ 70
+     0
+  9
+$DIMSD2
+ 70
+     0
+  9
+$DIMTOLJ
+ 70
+     0
+  9
+$DIMTZIN
+ 70
+     8
+  9
+$DIMALTZ
+ 70
+     0
+  9
+$DIMALTTZ
+ 70
+     0
+  9
+$DIMUPT
+ 70
+     0
+  9
+$DIMDEC
+ 70
+     2
+  9
+$DIMTDEC
+ 70
+     2
+  9
+$DIMALTU
+ 70
+     2
+  9
+$DIMALTTD
+ 70
+     3
+  9
+$DIMTXSTY
+  7
+Standard
+  9
+$DIMAUNIT
+ 70
+     0
+  9
+$DIMADEC
+ 70
+     0
+  9
+$DIMALTRND
+ 40
+0.0
+  9
+$DIMAZIN
+ 70
+     0
+  9
+$DIMDSEP
+ 70
+    44
+  9
+$DIMATFIT
+ 70
+     3
+  9
+$DIMFRAC
+ 70
+     0
+  9
+$DIMLDRBLK
+  1
+
+  9
+$DIMLUNIT
+ 70
+     2
+  9
+$DIMLWD
+ 70
+    -2
+  9
+$DIMLWE
+ 70
+    -2
+  9
+$DIMTMOVE
+ 70
+     0
+  9
+$DIMFXL
+ 40
+1.0
+  9
+$DIMFXLON
+ 70
+     0
+  9
+$DIMJOGANG
+ 40
+0.7853981633974483
+  9
+$DIMTFILL
+ 70
+     0
+  9
+$DIMTFILLCLR
+ 70
+     0
+  9
+$DIMARCSYM
+ 70
+     0
+  9
+$DIMLTYPE
+  6
+
+  9
+$DIMLTEX1
+  6
+
+  9
+$DIMLTEX2
+  6
+
+  9
+$DIMTXTDIRECTION
+ 70
+     0
+  9
+$LUNITS
+ 70
+     2
+  9
+$LUPREC
+ 70
+     4
+  9
+$SKETCHINC
+ 40
+1.0
+  9
+$FILLETRAD
+ 40
+10.0
+  9
+$AUNITS
+ 70
+     0
+  9
+$AUPREC
+ 70
+     0
+  9
+$MENU
+  1
+.
+  9
+$ELEVATION
+ 40
+0.0
+  9
+$PELEVATION
+ 40
+0.0
+  9
+$THICKNESS
+ 40
+0.0
+  9
+$LIMCHECK
+ 70
+     0
+  9
+$CHAMFERA
+ 40
+10.0
+  9
+$CHAMFERB
+ 40
+10.0
+  9
+$CHAMFERC
+ 40
+20.0
+  9
+$CHAMFERD
+ 40
+0.0
+  9
+$SKPOLY
+ 70
+     0
+  9
+$TDCREATE
+ 40
+2456231.748506945
+  9
+$TDUCREATE
+ 40
+2456231.373506945
+  9
+$TDUPDATE
+ 40
+2456231.748506945
+  9
+$TDUUPDATE
+ 40
+2456231.373506945
+  9
+$TDINDWG
+ 40
+0.0000000116
+  9
+$TDUSRTIMER
+ 40
+0.0000000116
+  9
+$USRTIMER
+ 70
+     1
+  9
+$ANGBASE
+ 50
+0.0
+  9
+$ANGDIR
+ 70
+     0
+  9
+$PDMODE
+ 70
+     0
+  9
+$PDSIZE
+ 40
+0.0
+  9
+$PLINEWID
+ 40
+0.0
+  9
+$SPLFRAME
+ 70
+     0
+  9
+$SPLINETYPE
+ 70
+     6
+  9
+$SPLINESEGS
+ 70
+     8
+  9
+$HANDSEED
+  5
+6F
+  9
+$SURFTAB1
+ 70
+     6
+  9
+$SURFTAB2
+ 70
+     6
+  9
+$SURFTYPE
+ 70
+     6
+  9
+$SURFU
+ 70
+     6
+  9
+$SURFV
+ 70
+     6
+  9
+$UCSBASE
+  2
+
+  9
+$UCSNAME
+  2
+
+  9
+$UCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+$UCSORTHOREF
+  2
+
+  9
+$UCSORTHOVIEW
+ 70
+     0
+  9
+$UCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$UCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSBASE
+  2
+
+  9
+$PUCSNAME
+  2
+
+  9
+$PUCSORG
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSXDIR
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSYDIR
+ 10
+0.0
+ 20
+1.0
+ 30
+0.0
+  9
+$PUCSORTHOREF
+  2
+
+  9
+$PUCSORTHOVIEW
+ 70
+     0
+  9
+$PUCSORGTOP
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGBOTTOM
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGLEFT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGRIGHT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGFRONT
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PUCSORGBACK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$USERI1
+ 70
+     0
+  9
+$USERI2
+ 70
+     0
+  9
+$USERI3
+ 70
+     0
+  9
+$USERI4
+ 70
+     0
+  9
+$USERI5
+ 70
+     0
+  9
+$USERR1
+ 40
+0.0
+  9
+$USERR2
+ 40
+0.0
+  9
+$USERR3
+ 40
+0.0
+  9
+$USERR4
+ 40
+0.0
+  9
+$USERR5
+ 40
+0.0
+  9
+$WORLDVIEW
+ 70
+     1
+  9
+$SHADEDGE
+ 70
+     3
+  9
+$SHADEDIF
+ 70
+    70
+  9
+$TILEMODE
+ 70
+     1
+  9
+$MAXACTVP
+ 70
+    64
+  9
+$PINSBASE
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  9
+$PLIMCHECK
+ 70
+     0
+  9
+$PEXTMIN
+ 10
+1.000000000000000E+20
+ 20
+1.000000000000000E+20
+ 30
+1.000000000000000E+20
+  9
+$PEXTMAX
+ 10
+-1.000000000000000E+20
+ 20
+-1.000000000000000E+20
+ 30
+-1.000000000000000E+20
+  9
+$PLIMMIN
+ 10
+0.0
+ 20
+0.0
+  9
+$PLIMMAX
+ 10
+420.0
+ 20
+297.0
+  9
+$UNITMODE
+ 70
+     0
+  9
+$VISRETAIN
+ 70
+     1
+  9
+$PLINEGEN
+ 70
+     0
+  9
+$PSLTSCALE
+ 70
+     1
+  9
+$TREEDEPTH
+ 70
+  3020
+  9
+$CMLSTYLE
+  2
+Standard
+  9
+$CMLJUST
+ 70
+     0
+  9
+$CMLSCALE
+ 40
+20.0
+  9
+$PROXYGRAPHICS
+ 70
+     1
+  9
+$MEASUREMENT
+ 70
+     1
+  9
+$CELWEIGHT
+370
+    -1
+  9
+$ENDCAPS
+280
+     0
+  9
+$JOINSTYLE
+280
+     0
+  9
+$LWDISPLAY
+290
+     0
+  9
+$INSUNITS
+ 70
+     4
+  9
+$HYPERLINKBASE
+  1
+
+  9
+$STYLESHEET
+  1
+
+  9
+$XEDIT
+290
+     1
+  9
+$CEPSNTYPE
+380
+     0
+  9
+$PSTYLEMODE
+290
+     1
+  9
+$FINGERPRINTGUID
+  2
+{92905EEA-4798-D3AF-0738-BBE039DCC74E}
+  9
+$VERSIONGUID
+  2
+{FAEB1C32-E019-11D5-929B-00C0DF256EC4}
+  9
+$EXTNAMES
+290
+     1
+  9
+$PSVPSCALE
+ 40
+0.0
+  9
+$OLESTARTUP
+290
+     0
+  9
+$SORTENTS
+280
+   127
+  9
+$INDEXCTL
+280
+     0
+  9
+$HIDETEXT
+280
+     1
+  9
+$XCLIPFRAME
+280
+     2
+  9
+$HALOGAP
+280
+     0
+  9
+$OBSCOLOR
+ 70
+   257
+  9
+$OBSLTYPE
+280
+     0
+  9
+$INTERSECTIONDISPLAY
+280
+     0
+  9
+$INTERSECTIONCOLOR
+ 70
+   257
+  9
+$DIMASSOC
+280
+     2
+  9
+$PROJECTNAME
+  1
+
+  9
+$CAMERADISPLAY
+290
+     0
+  9
+$LENSLENGTH
+ 40
+50.0
+  9
+$CAMERAHEIGHT
+ 40
+0.0
+  9
+$STEPSPERSEC
+ 40
+2.0
+  9
+$STEPSIZE
+ 40
+6.0
+  9
+$3DDWFPREC
+ 40
+2.0
+  9
+$PSOLWIDTH
+ 40
+5.0
+  9
+$PSOLHEIGHT
+ 40
+80.0
+  9
+$LOFTANG1
+ 40
+1.570796326794897
+  9
+$LOFTANG2
+ 40
+1.570796326794897
+  9
+$LOFTMAG1
+ 40
+0.0
+  9
+$LOFTMAG2
+ 40
+0.0
+  9
+$LOFTPARAM
+ 70
+     7
+  9
+$LOFTNORMALS
+280
+     1
+  9
+$LATITUDE
+ 40
+37.795
+  9
+$LONGITUDE
+ 40
+-122.394
+  9
+$NORTHDIRECTION
+ 40
+0.0
+  9
+$TIMEZONE
+ 70
+ -8000
+  9
+$LIGHTGLYPHDISPLAY
+280
+     1
+  9
+$TILEMODELIGHTSYNCH
+280
+     1
+  9
+$CMATERIAL
+347
+3C
+  9
+$SOLIDHIST
+280
+     1
+  9
+$SHOWHIST
+280
+     1
+  9
+$DWFFRAME
+280
+     2
+  9
+$DGNFRAME
+280
+     2
+  9
+$REALWORLDSCALE
+290
+     1
+  9
+$INTERFERECOLOR
+ 62
+   256
+  9
+$CSHADOW
+280
+     0
+  9
+$SHADOWPLANELOCATION
+ 40
+0.0
+  0
+ENDSEC
+'''
+#}}}
+
+#{{{ Classes
+
+classes_template =\
+ '''  0
+SECTION
+  2
+CLASSES
+  0
+CLASS
+  1
+ACDBDICTIONARYWDFLT
+  2
+AcDbDictionaryWithDefault
+  3
+ObjectDBX Classes
+ 90
+        0
+ 91
+        4
+280
+     0
+281
+     0
+  0
+CLASS
+  1
+VISUALSTYLE
+  2
+AcDbVisualStyle
+  3
+ObjectDBX Classes
+ 90
+     4095
+ 91
+        4
+280
+     0
+281
+     0
+  0
+CLASS
+  1
+MATERIAL
+  2
+AcDbMaterial
+  3
+ObjectDBX Classes
+ 90
+     1153
+ 91
+        4
+280
+     0
+281
+     0
+  0
+CLASS
+  1
+SUN
+  2
+AcDbSun
+  3
+SCENEOE
+ 90
+     1024
+ 91
+        4
+280
+     0
+281
+     0
+  0
+ENDSEC
+'''
+
+#}}}
+
+#{{{ Tables
+
+tables_template1 =\
+'''  0
+SECTION
+  2
+TABLES
+'''
+#{{{ vport
+
+vport_template =\
+'''  0
+TABLE
+  2
+VPORT
+  5
+8
+330
+0
+100
+AcDbSymbolTable
+ 70
+     1
+  0
+VPORT
+  5
+29
+330
+8
+100
+AcDbSymbolTableRecord
+100
+AcDbViewportTableRecord
+  2
+*Active
+ 70
+     0
+ 10
+0.0
+ 20
+0.0
+ 11
+1.0
+ 21
+1.0
+ 12
+360.5069142256372
+ 22
+77.37740091485402
+ 13
+0.0
+ 23
+0.0
+ 14
+10.0
+ 24
+10.0
+ 15
+10.0
+ 25
+10.0
+ 16
+0.0
+ 26
+0.0
+ 36
+1.0
+ 17
+0.0
+ 27
+0.0
+ 37
+0.0
+ 40
+643.00113180099
+ 41
+2.116173120728929
+ 42
+50.0
+ 43
+0.0
+ 44
+0.0
+ 50
+0.0
+ 51
+0.0
+ 71
+     0
+ 72
+   100
+ 73
+     1
+ 74
+     3
+ 75
+     0
+ 76
+     0
+ 77
+     0
+ 78
+     0
+281
+     0
+ 65
+     1
+110
+0.0
+120
+0.0
+130
+0.0
+111
+1.0
+121
+0.0
+131
+0.0
+112
+0.0
+122
+1.0
+132
+0.0
+ 79
+     0
+146
+0.0
+ 60
+     3
+ 61
+     5
+292
+     1
+282
+     1
+141
+0.0
+142
+0.0
+ 63
+   250
+361
+3F
+  0
+ENDTAB
+'''
+
+#}}}
+
+#{{{ linetype
+
+linetype_template =\
+'''  0
+TABLE
+  2
+LTYPE
+  5
+5
+330
+0
+100
+AcDbSymbolTable
+ 70
+     7
+  0
+LTYPE
+  5
+14
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByBlock
+ 70
+     0
+  3
+
+ 72
+    65
+ 73
+     0
+ 40
+0.0
+  0
+LTYPE
+  5
+15
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+ByLayer
+ 70
+     0
+  3
+
+ 72
+    65
+ 73
+     0
+ 40
+0.0
+  0
+LTYPE
+  5
+16
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+Continuous
+ 70
+     0
+  3
+Solid line
+ 72
+    65
+ 73
+     0
+ 40
+0.0
+  0
+LTYPE
+  5
+40
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+DOT
+ 70
+     0
+  3
+Dot . . . . . . . . . . . . . . . . . . . . . . . .
+ 72
+    65
+ 73
+     2
+ 40
+2.032
+ 49
+1.016
+ 74
+     0
+ 49
+-1.016
+ 74
+     0
+  0
+LTYPE
+  5
+41
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+CENTER
+ 70
+     0
+  3
+Center ____ _ ____ _ ____ _ ____ _ ____ _ ____
+ 72
+    65
+ 73
+     4
+ 40
+13.208
+ 49
+8.128
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+ 49
+2.032
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+  0
+LTYPE
+  5
+42
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+HIDDEN2
+ 70
+     0
+  3
+Hidden (.5x) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+ 72
+    65
+ 73
+     2
+ 40
+4.762499999999999
+ 49
+3.175
+ 74
+     0
+ 49
+-1.5875
+ 74
+     0
+  0
+LTYPE
+  5
+43
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+DASHED
+ 70
+     0
+  3
+Dashed __ __ __ __ __ __ __ __ __ __ __ __ __ _
+ 72
+    65
+ 73
+     2
+ 40
+9.652
+ 49
+8.128
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+  0
+LTYPE
+  5
+44
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+PHANTOM2
+ 70
+     0
+  3
+Phantom (.5x) ___ _ _ ___ _ _ ___ _ _ ___ _ _
+ 72
+    65
+ 73
+     6
+ 40
+14.732
+ 49
+8.128
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+ 49
+1.016
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+ 49
+1.016
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+  0
+LTYPE
+  5
+45
+330
+5
+100
+AcDbSymbolTableRecord
+100
+AcDbLinetypeTableRecord
+  2
+DASHDOT
+ 70
+     0
+  3
+Dash dot __ . __ . __ . __ . __ . __ . __ . __
+ 72
+    65
+ 73
+     4
+ 40
+11.176
+ 49
+8.128
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+ 49
+0.0
+ 74
+     0
+ 49
+-1.524
+ 74
+     0
+  0
+ENDTAB
+'''
+#}}}
+
+#{{{ layer
+
+layer_template1 =\
+'''  0
+TABLE
+  2
+LAYER
+  5
+2
+330
+0
+100
+AcDbSymbolTable
+ 70
+     7
+  0
+LAYER
+  5
+10
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+0
+ 70
+     0
+ 62
+     5
+  6
+Continuous
+370
+    -3
+390
+F
+347
+3E
+  0
+LAYER
+  5
+46
+330
+2
+100
+AcDbSymbolTableRecord
+100
+AcDbLayerTableRecord
+  2
+Default
+ 70
+     0
+ 62
+     255
+  6
+Continuous
+370
+    -3
+390
+F
+347
+3E
+'''
+layer_template2 =\
+'''  0
+ENDTAB
+'''
+#}}}
+
+#{{{ style
+
+style_template =\
+'''  0
+TABLE
+  2
+STYLE
+  5
+3
+330
+0
+100
+AcDbSymbolTable
+ 70
+    33
+  0
+STYLE
+  5
+11
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbTextStyleTableRecord
+  2
+Standard
+ 70
+     0
+ 40
+0.0
+ 41
+1.0
+ 50
+0.0
+ 71
+     0
+ 42
+2.5
+  3
+txt
+  4
+
+  0
+ENDTAB
+'''
+
+#}}}
+
+#{{{ view
+
+view_template =\
+'''  0
+TABLE
+  2
+VIEW
+  5
+6
+330
+0
+100
+AcDbSymbolTable
+ 70
+     0
+  0
+ENDTAB
+'''
+
+#}}}
+
+#{{{ UCS, APPID, DIMSTYLE
+
+misctable_template =\
+'''  0
+TABLE
+  2
+UCS
+  5
+7
+330
+0
+100
+AcDbSymbolTable
+ 70
+     0
+  0
+ENDTAB
+  0
+TABLE
+  2
+APPID
+  5
+9
+330
+0
+100
+AcDbSymbolTable
+ 70
+     1
+  0
+APPID
+  5
+12
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+ACAD
+ 70
+     0
+  0
+ENDTAB
+  0
+TABLE
+  2
+DIMSTYLE
+  5
+A
+330
+0
+100
+AcDbSymbolTable
+ 70
+     1
+100
+AcDbDimStyleTable
+  0
+DIMSTYLE
+105
+27
+330
+A
+100
+AcDbSymbolTableRecord
+100
+AcDbDimStyleTableRecord
+  2
+ISO-25
+ 70
+     0
+ 41
+2.5
+ 42
+0.625
+ 43
+3.75
+ 44
+1.25
+ 73
+     0
+ 74
+     0
+ 77
+     1
+ 78
+     8
+140
+2.5
+141
+2.5
+143
+0.03937007874016
+147
+0.625
+171
+     3
+172
+     1
+178
+     0
+271
+     2
+272
+     2
+274
+     3
+278
+    44
+283
+     0
+284
+     8
+340
+11
+  0
+ENDTAB
+'''
+
+#}}}
+
+#{{{ blockrecords
+
+blockrecords_template =\
+'''  0
+TABLE
+  2
+BLOCK_RECORD
+  5
+1
+330
+0
+100
+AcDbSymbolTable
+ 70
+     1
+  0
+BLOCK_RECORD
+  5
+1F
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Model_Space
+340
+22
+ 70
+     0
+280
+     1
+281
+     0
+  0
+BLOCK_RECORD
+  5
+1B
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Paper_Space
+340
+1E
+ 70
+     0
+280
+     1
+281
+     0
+  0
+BLOCK_RECORD
+  5
+23
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*Paper_Space0
+340
+26
+ 70
+     0
+280
+     1
+281
+     0
+  0
+ENDTAB
+'''
+
+#}}}
+
+tables_template2 =\
+'''    0
+ENDSEC
+'''
+
+#}}}
+
+#{{{ Blocks
+
+blocks_template =\
+'''  0
+SECTION
+  2
+BLOCKS
+  0
+BLOCK
+  5
+20
+330
+1F
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Model_Space
+ 70
+     0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Model_Space
+  1
+
+  0
+ENDBLK
+  5
+21
+330
+1F
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+1C
+330
+1B
+100
+AcDbEntity
+ 67
+     1
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Paper_Space
+ 70
+     0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Paper_Space
+  1
+
+  0
+ENDBLK
+  5
+1D
+330
+1B
+100
+AcDbEntity
+ 67
+     1
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+24
+330
+23
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*Paper_Space0
+ 70
+     0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*Paper_Space0
+  1
+
+  0
+ENDBLK
+  5
+25
+330
+23
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+ENDSEC
+'''
+#}}}
+
+#{{{ Entities
+
+entities_template1 =\
+'''  0
+SECTION
+  2
+ENTITIES
+'''
+entities_template0 =\
+'''  0
+LINE
+  5
+7C
+330
+1F
+100
+AcDbEntity
+  8
+Default
+100
+AcDbLine
+ 10
+1.0
+ 20
+0.0
+ 30
+0.0
+ 11
+73.0
+ 21
+41.0
+ 31
+0.0
+  0
+ENDSEC
+'''
+
+#}}}
+
+#{{{ Objects
+
+objects_template =\
+'''  0
+SECTION
+  2
+OBJECTS
+  0
+DICTIONARY
+  5
+C
+330
+0
+100
+AcDbDictionary
+281
+     1
+  3
+ACAD_GROUP
+350
+D
+  3
+ACAD_LAYOUT
+350
+1A
+  3
+ACAD_MATERIAL
+350
+3B
+  3
+ACAD_MLEADERSTYLE
+350
+6E
+  3
+ACAD_MLINESTYLE
+350
+17
+  3
+ACAD_PLOTSETTINGS
+350
+19
+  3
+ACAD_PLOTSTYLENAME
+350
+E
+  3
+ACAD_TABLESTYLE
+350
+6D
+  3
+ACAD_VISUALSTYLE
+350
+2A
+  0
+SUN
+  5
+3F
+330
+29
+100
+AcDbSun
+ 90
+        1
+290
+     0
+ 63
+     7
+421
+ 16777215
+ 40
+1.0
+291
+     1
+ 91
+  2455826
+ 92
+ 54000000
+292
+     0
+ 70
+     2
+ 71
+   256
+280
+     1
+  0
+DICTIONARY
+  5
+D
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  0
+DICTIONARY
+  5
+1A
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  3
+Layout1
+350
+1E
+  3
+Layout2
+350
+26
+  3
+Model
+350
+22
+  0
+DICTIONARY
+  5
+3B
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  3
+ByBlock
+350
+3D
+  3
+ByLayer
+350
+3C
+  3
+Global
+350
+3E
+  0
+DICTIONARY
+  5
+6E
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  0
+DICTIONARY
+  5
+17
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  3
+Standard
+350
+18
+  0
+DICTIONARY
+  5
+19
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  0
+ACDBDICTIONARYWDFLT
+  5
+E
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  3
+Normal
+350
+F
+100
+AcDbDictionaryWithDefault
+340
+F
+  0
+DICTIONARY
+  5
+6D
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  0
+DICTIONARY
+  5
+2A
+102
+{ACAD_REACTORS
+330
+C
+102
+}
+330
+C
+100
+AcDbDictionary
+281
+     1
+  3
+2dWireframe
+350
+2F
+  3
+3D Hidden
+350
+31
+  3
+3dWireframe
+350
+30
+  3
+Basic
+350
+32
+  3
+Brighten
+350
+36
+  3
+ColorChange
+350
+3A
+  3
+Conceptual
+350
+34
+  3
+Dim
+350
+35
+  3
+Facepattern
+350
+39
+  3
+Flat
+350
+2B
+  3
+FlatWithEdges
+350
+2C
+  3
+Gouraud
+350
+2D
+  3
+GouraudWithEdges
+350
+2E
+  3
+Linepattern
+350
+38
+  3
+Realistic
+350
+33
+  3
+Thicken
+350
+37
+  0
+LAYOUT
+  5
+1E
+102
+{ACAD_REACTORS
+330
+1A
+102
+}
+330
+1A
+100
+AcDbPlotSettings
+  1
+
+  2
+none_device
+  4
+
+  6
+
+ 40
+0.0
+ 41
+0.0
+ 42
+0.0
+ 43
+0.0
+ 44
+0.0
+ 45
+0.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+   688
+ 72
+     0
+ 73
+     0
+ 74
+     5
+  7
+
+ 75
+    16
+ 76
+     0
+ 77
+     2
+ 78
+   300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Layout1
+ 70
+     1
+ 71
+     1
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1.000000000000000E+20
+ 24
+1.000000000000000E+20
+ 34
+1.000000000000000E+20
+ 15
+-1.000000000000000E+20
+ 25
+-1.000000000000000E+20
+ 35
+-1.000000000000000E+20
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+     0
+330
+1B
+  0
+LAYOUT
+  5
+26
+102
+{ACAD_REACTORS
+330
+1A
+102
+}
+330
+1A
+100
+AcDbPlotSettings
+  1
+
+  2
+none_device
+  4
+
+  6
+
+ 40
+0.0
+ 41
+0.0
+ 42
+0.0
+ 43
+0.0
+ 44
+0.0
+ 45
+0.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+   688
+ 72
+     0
+ 73
+     0
+ 74
+     5
+  7
+
+ 75
+    16
+ 76
+     0
+ 77
+     2
+ 78
+   300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Layout2
+ 70
+     1
+ 71
+     2
+ 10
+0.0
+ 20
+0.0
+ 11
+0.0
+ 21
+0.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+0.0
+ 24
+0.0
+ 34
+0.0
+ 15
+0.0
+ 25
+0.0
+ 35
+0.0
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+     0
+330
+23
+  0
+LAYOUT
+  5
+22
+102
+{ACAD_REACTORS
+330
+1A
+102
+}
+330
+1A
+100
+AcDbPlotSettings
+  1
+
+  2
+none_device
+  4
+
+  6
+
+ 40
+0.0
+ 41
+0.0
+ 42
+0.0
+ 43
+0.0
+ 44
+0.0
+ 45
+0.0
+ 46
+0.0
+ 47
+0.0
+ 48
+0.0
+ 49
+0.0
+140
+0.0
+141
+0.0
+142
+1.0
+143
+1.0
+ 70
+  1712
+ 72
+     0
+ 73
+     0
+ 74
+     0
+  7
+
+ 75
+     0
+ 76
+     0
+ 77
+     2
+ 78
+   300
+147
+1.0
+148
+0.0
+149
+0.0
+100
+AcDbLayout
+  1
+Model
+ 70
+     1
+ 71
+     0
+ 10
+0.0
+ 20
+0.0
+ 11
+420.0
+ 21
+297.0
+ 12
+0.0
+ 22
+0.0
+ 32
+0.0
+ 14
+1.0
+ 24
+0.0
+ 34
+0.0
+ 15
+73.0
+ 25
+41.0
+ 35
+0.0
+146
+0.0
+ 13
+0.0
+ 23
+0.0
+ 33
+0.0
+ 16
+1.0
+ 26
+0.0
+ 36
+0.0
+ 17
+0.0
+ 27
+1.0
+ 37
+0.0
+ 76
+     0
+330
+1F
+331
+29
+  0
+MATERIAL
+  5
+3D
+102
+{ACAD_REACTORS
+330
+3B
+102
+}
+330
+3B
+100
+AcDbMaterial
+  1
+ByBlock
+ 72
+     1
+ 94
+      127
+  0
+MATERIAL
+  5
+3C
+102
+{ACAD_REACTORS
+330
+3B
+102
+}
+330
+3B
+100
+AcDbMaterial
+  1
+ByLayer
+ 72
+     1
+ 94
+      127
+  0
+MATERIAL
+  5
+3E
+102
+{ACAD_REACTORS
+330
+3B
+102
+}
+330
+3B
+100
+AcDbMaterial
+  1
+Global
+ 72
+     1
+ 94
+      127
+  0
+MLINESTYLE
+  5
+18
+102
+{ACAD_REACTORS
+330
+17
+102
+}
+330
+17
+100
+AcDbMlineStyle
+  2
+Standard
+ 70
+     0
+  3
+
+ 62
+   256
+ 51
+90.0
+ 52
+90.0
+ 71
+     2
+ 49
+0.5
+ 62
+   256
+  6
+BYLAYER
+ 49
+-0.5
+ 62
+   256
+  6
+BYLAYER
+  0
+ACDBPLACEHOLDER
+  5
+F
+102
+{ACAD_REACTORS
+330
+E
+102
+}
+330
+E
+  0
+VISUALSTYLE
+  5
+2F
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+2dWireframe
+ 70
+     4
+177
+     2
+291
+     0
+ 71
+     0
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        0
+176
+     1
+ 66
+   257
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+31
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+3D Hidden
+ 70
+     6
+177
+     2
+291
+     0
+ 71
+     1
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     2
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     2
+176
+     1
+ 91
+        2
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     2
+176
+     1
+175
+     1
+176
+     1
+ 42
+40.0
+176
+     1
+ 92
+        0
+176
+     1
+ 66
+   257
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     3
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+30
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+3dWireframe
+ 70
+     5
+177
+     2
+291
+     0
+ 71
+     0
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        0
+176
+     1
+ 66
+   257
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+32
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Basic
+ 70
+     7
+177
+     2
+291
+     1
+ 71
+     1
+176
+     1
+ 72
+     0
+176
+     1
+ 73
+     1
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     0
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+36
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Brighten
+ 70
+    12
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+50.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+3A
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+ColorChange
+ 70
+    16
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     3
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     8
+421
+  8421504
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     8
+424
+  8421504
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+34
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Conceptual
+ 70
+     9
+177
+     2
+291
+     0
+ 71
+     3
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     2
+176
+     1
+ 91
+        2
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+40.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     3
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+35
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Dim
+ 70
+    11
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+-50.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+39
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Facepattern
+ 70
+    15
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+2B
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Flat
+ 70
+     0
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     1
+176
+     1
+ 73
+     1
+176
+     1
+ 90
+        2
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     0
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+       13
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+2C
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+FlatWithEdges
+ 70
+     1
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     1
+176
+     1
+ 73
+     1
+176
+     1
+ 90
+        2
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        0
+176
+     1
+ 66
+   257
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+       13
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+2D
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Gouraud
+ 70
+     2
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     1
+176
+     1
+ 90
+        2
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     0
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        0
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+       13
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+2E
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+GouraudWithEdges
+ 70
+     3
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     1
+176
+     1
+ 90
+        2
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        0
+176
+     1
+ 66
+   257
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+       13
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+38
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Linepattern
+ 70
+    14
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     7
+176
+     1
+175
+     7
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+33
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Realistic
+ 70
+     8
+177
+     2
+291
+     0
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        0
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+        8
+176
+     1
+ 66
+     8
+424
+  7895160
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+       13
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+VISUALSTYLE
+  5
+37
+102
+{ACAD_REACTORS
+330
+2A
+102
+}
+330
+2A
+100
+AcDbVisualStyle
+  2
+Thicken
+ 70
+    13
+177
+     2
+291
+     1
+ 71
+     2
+176
+     1
+ 72
+     2
+176
+     1
+ 73
+     0
+176
+     1
+ 90
+        0
+176
+     1
+ 40
+-0.6
+176
+     1
+ 41
+-30.0
+176
+     1
+ 62
+     5
+ 63
+     7
+421
+ 16777215
+176
+     1
+ 74
+     1
+176
+     1
+ 91
+        4
+176
+     1
+ 64
+     7
+176
+     1
+ 65
+   257
+176
+     1
+ 75
+     1
+176
+     1
+175
+     1
+176
+     1
+ 42
+1.0
+176
+     1
+ 92
+       12
+176
+     1
+ 66
+     7
+176
+     1
+ 43
+1.0
+176
+     1
+ 76
+     1
+176
+     1
+ 77
+     6
+176
+     1
+ 78
+     2
+176
+     1
+ 67
+     7
+176
+     1
+ 79
+     5
+176
+     1
+170
+     0
+176
+     1
+171
+     0
+176
+     1
+290
+     0
+176
+     1
+ 93
+        1
+176
+     1
+ 44
+0.0
+176
+     1
+173
+     0
+176
+     1
+  0
+ENDSEC
+'''
+
+#}}}
+
+#}}}
+
+#{{{ Test
+
+def test_func():
+    d = DXF('test.dxf')
+    d.add_layer('ABC', color=5)
+    d.add_entity(Line((15,5), (56,-89)), 'ABC')
+    x = (2.9, 5, 9, 8.0, 20)
+    y = (-5,-12.0, -3, 6, 18)
+    d.add_entity(LwPolyLine(x, y), 'ABC')
+    d.add_entity(Rectangle((-50,50),200, 100), 'ABC')    
+    d.add_entity(Circle((-10,10), 40), 'ABC')
+    d.add_entity(Arc((100,50), 40, 30, 200), 'ABC')
+    d.add_entity(Text('This is my test DXF file.',(-50,-50), 5.0, -30), 'Text')    
+    d.save_to_file()
+    
+
+#}}}

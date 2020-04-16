@@ -1,0 +1,132 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Introduction &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="index.html" />
+    <link rel="next" title="Basic Concepts" href="basic_concepts.html" />
+    <link rel="prev" title="gtrace documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="basic_concepts.html" title="Basic Concepts"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="gtrace documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">gtrace 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<p>gtrace is a python package to trace the propagation of Gaussian beams among optical components such as mirrors and lenses. The features of gtrace include:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Automatically track the Gaussian beam propagation, i.e. q-parameter change, using the ABCD matrix method.</li>
+<li>Reflection and refraction at interface surfaces are properly treated.</li>
+<li>Automatically track the optical distance traveled by a beam through dielectric media.</li>
+<li>Sequential or non-sequential trace modes are available.</li>
+<li>Exporting the results to DXF files</li>
+</ul>
+</div></blockquote>
+<p>The main motivation behind the development of gtrace was to help the design of the optical layout for the <a class="reference external" href="http://gwcenter.icrr.u-tokyo.ac.jp/en/">KAGRA</a> interferometer. The task is not so trivial because we had to satisfy many constraints at the same time. Manually placing mirrors on a CAD and adjusting the distances between the mirrors and their orientations was not an option. We needed a way to automatically adjust the optical layout with a computer to satisfy our requirements. In order to do this, we needed a tool to represent an optical layout convenient for computer processings. gtrace represents mirrors and beams as class objects in python. Then the propagation of the beams can be treated as interactions between the beams and the mirrors. This way, we can automate the optimization of the KAGRA optical layout.</p>
+<p>The main ingredients of gtrace are mirrors and beams. A mirror is represented as an instance of <a class="reference internal" href="api/gtrace.html#gtrace.optcomp.Mirror" title="gtrace.optcomp.Mirror"><tt class="xref py py-class docutils literal"><span class="pre">Mirror</span></tt></a> class. You place mirrors in a 2D plane. You can set various properties of a mirror such as size, curvature, reflectivities, wedge angle etc. Then you launch a beam, an instance of <a class="reference internal" href="api/gtrace.html#gtrace.beam.GaussianBeam" title="gtrace.beam.GaussianBeam"><tt class="xref py py-class docutils literal"><span class="pre">GaussianBeam</span></tt></a> class, from a certain point in the 2D plane. As the beam hits mirrors, it is divided into several sub-beams, such as reflections and deflected beams. These newly generated beam objects are available to you for further propagation. In the non-sequential mode, these sub-beams are automatically propagated until one of the termination conditions is satisfied. The termination conditions include, not hitting any mirror, power is below a certain threshold and so on. At the end of the propagation, you will have a collection of beam objects generated by the collision with the mirrors. You can export the mirrors and the beams into a DXF file.</p>
+<p>gtrace is at this moment limited to 2D optical layouts. This limitation might be lifted in the future.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">gtrace documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="basic_concepts.html"
+                        title="next chapter">Basic Concepts</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/intro.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="basic_concepts.html" title="Basic Concepts"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="gtrace documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">gtrace 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+#{{{ Imports
+
+import numpy as np
+pi = np.pi
+
+#}}}
+
+#{{{ Author and License Infomation
+
+#Copyright (c) 2011, Yoichi Aso
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# * Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+__author__ = "Yoichi Aso"
+__copyright__ = "Copyright 2011, Yoichi Aso"
+__credits__ = ["Yoichi Aso"]
+__license__ = "BSD"
+__version__ = "0.2.0"
+__maintainer__ = "Yoichi Aso"
+__email__ = "aso@granite.phys.s.u-tokyo.ac.jp"
+__status__ = "Beta"
+
+#}}}
+
+#{{{ Length units
+km = 1e3
+m = 1.0
+cm = 0.01
+mm = 1e-3
+um = 1e-6
+nm = 1e-9
+#}}}
+
+#{{{ Power units
+
+kW = 1e3
+W = 1.0
+mW = 1e-3
+uW = 1e-6
+
+#}}}
+
+#{{{ Frequencies
+
+THz = 1e12
+GHz = 1e9
+MHz = 1e6
+kHz = 1e3
+Hz = 1.0
+mHz = 1e-3
+uHz = 1e-6
+
+#}}}
+
+#{{{ Other
+
+ppm = 1e-6
+percent = 1e-2
+
+#}}}
+
+#{{{ Conversion Functions
+
+def rad2deg(rad):
+    return rad * 180.0 / pi
+
+def deg2rad(deg):
+    return deg * pi /180.0
+
+#}}}

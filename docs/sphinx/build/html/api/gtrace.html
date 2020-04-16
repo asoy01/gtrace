@@ -1,0 +1,870 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>gtrace package &mdash; gtrace 0.2.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="gtrace.draw package" href="gtrace.draw.html" />
+    <link rel="prev" title="gtrace" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> gtrace
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../basic_concepts.html">Basic Concepts</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">gtrace</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">gtrace package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="gtrace.draw.html">gtrace.draw package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gtrace.optics.html">gtrace.optics package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gtrace.beam">gtrace.beam module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gtrace.hello">gtrace.hello module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gtrace.nonsequential">gtrace.nonsequential module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gtrace.optcomp">gtrace.optcomp module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gtrace.unit">gtrace.unit module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-gtrace">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">gtrace</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="modules.html">gtrace</a> &raquo;</li>
+        
+      <li>gtrace package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/gtrace.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="gtrace-package">
+<h1>gtrace package<a class="headerlink" href="#gtrace-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="gtrace.draw.html">gtrace.draw package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.draw.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.draw.html#module-gtrace.draw.draw">gtrace.draw.draw module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.draw.html#module-gtrace.draw.dxf">gtrace.draw.dxf module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.draw.html#module-gtrace.draw.renderer">gtrace.draw.renderer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.draw.html#module-gtrace.draw.tools">gtrace.draw.tools module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.draw.html#module-gtrace.draw">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gtrace.optics.html">gtrace.optics package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#module-gtrace.optics.cavity">gtrace.optics.cavity module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#module-gtrace.optics.consts">gtrace.optics.consts module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#module-gtrace.optics.gaussian">gtrace.optics.gaussian module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#module-gtrace.optics.geometric">gtrace.optics.geometric module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#module-gtrace.optics.unit">gtrace.optics.unit module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gtrace.optics.html#module-gtrace.optics">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-gtrace.beam">
+<span id="gtrace-beam-module"></span><h2>gtrace.beam module<a class="headerlink" href="#module-gtrace.beam" title="Permalink to this headline">¶</a></h2>
+<p>gtrace.beam</p>
+<p>A module to define GaussianBeam class.</p>
+<dl class="class">
+<dt id="gtrace.beam.GaussianBeam">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">GaussianBeam</code><span class="sig-paren">(</span><em class="sig-param">q0=2.952624674426497j, q0x=False, q0y=False, pos=[0.0, 0.0], length=1.0, dirAngle=0.0, dirVect=None, wl=1.064e-06, P=1.0, n=1.0, name='Beam', layer='main_beam'</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">traits.has_traits.HasTraits</span></code></p>
+<p>This is a class to represent a Gaussian beam.
+A GaussianBeam object has its origin (pos) and a propagation
+direction (dirVect or dirAngle).
+A GaussianBeam is characterized by q-parameter(s) at its origin.
+The beam can be either circular or elliptic. In order to deal with
+elliptic beams, some parameters are stored in pairs like (q0x, q0y).
+x and y denote the axes of the cross section of the beam. x-axis is
+parallel to the paper and the y-axis is perpendicular to the paper.</p>
+<p>A beam object can be propagated through a free space or made
+to interact with an optics.</p>
+<p>As a beam propagate through optical system, optical distance and
+Gouy phase are accumerated.</p>
+<p><em>=== Attributes ===</em></p>
+<dl class="simple">
+<dt><strong>q:</strong> q-parameter of the beam. If the beam is eliptic, q is the q-parameter</dt><dd><p>of the best matching circular mode.</p>
+</dd>
+</dl>
+<p><strong>qx:</strong> q-parameter of the beam in the x-direction. [complex float]</p>
+<p><strong>qy:</strong> q-parameter of the beam in the y-direction. [complex float]</p>
+<p><strong>pos:</strong> Position of the beam origin. [(2,) float array]</p>
+<p><strong>dirVect:</strong> Propagation direction vector. [(2,) float array]</p>
+<p><strong>dirAngle:</strong> Propagation direction angle measured from the positive x-axis. [float]</p>
+<p><strong>length:</strong> Length of the beam (used for DXF export) [float]</p>
+<p><strong>layer:</strong> Layer name of the beam when exported to a DXF file.</p>
+<p><strong>name:</strong> Name of the beam</p>
+<p><strong>wl:</strong> Wavelength in vacuum. Not the wavelength in the medium. [float]</p>
+<p><strong>n:</strong> Index of refraction of the medium the beam is passing through. [float]</p>
+<p><strong>P:</strong> Power [float]</p>
+<p><strong>wx:</strong> Beamwidth in x-direction [float]</p>
+<p><strong>wy:</strong> Beamwidth in y-direction [float]</p>
+<p><strong>optDist:</strong> Accumulated optical distance.</p>
+<p><strong>Gouyx:</strong> Accumulated Gouy phase in x-direction.</p>
+<p><strong>Gouyy:</strong> Accumulated Gouy phase in y-direction.</p>
+<dl class="simple">
+<dt><strong>Mx:</strong> ABCD matrix in x-direction.</dt><dd><p>This is a 2x2 matrix representing the product
+of ABCD transformations applied to this beam.
+It defaults to an identity matrix.
+Whenever a beam experience an ABCD matrix
+transformation, such as propagation in the space
+or reflection by a curved mirror, the applied ABCD
+matrix is multiplied to this matrix, so that we can
+keep track of what kind of transformations were
+made during beam propagation.</p>
+</dd>
+</dl>
+<p><strong>My:</strong> ABCD matrix in y-direction. The meaning is the same as Mx.</p>
+<dl class="simple">
+<dt><strong>departSurfAngle:</strong> The angle formed by x-axis and the normal vector of</dt><dd><p>the surface from which the beam is departing.
+Default is None. Used by the drawing routine.</p>
+</dd>
+<dt><strong>departSurfInvROC:</strong> Inverse of the ROC of the surface from which the beam is departing.</dt><dd><p>The ROC is positive for a concave surface seen from
+the beam side.
+Default is None. Used by the drawing routine.</p>
+</dd>
+<dt><strong>incSurfAngle:</strong> The angle formed by the x-arm and the normal vector of</dt><dd><p>the surface to which the beam is incident.
+Default is None. Used by the drawing routine.</p>
+</dd>
+<dt><strong>incSurfInvROC:</strong> Inverse of the ROC of the surface to which the beam is incident.</dt><dd><p>The ROC is positive for a concave surface seen from
+the beam side.
+Default is None. Used by the drawing routine.</p>
+</dd>
+<dt><strong>stray_order:</strong> An integer indicating if this beam is a stray light or not.</dt><dd><p>The default value is 0. Every time a beam is reflected by an AR surface
+or transmits an HR surface, this couter is increased by 1.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.ABCDTrans">
+<code class="sig-name descname">ABCDTrans</code><span class="sig-paren">(</span><em class="sig-param">ABCDx</em>, <em class="sig-param">ABCDy=None</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.ABCDTrans" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply ABCD transformation to the beam.</p>
+<p><strong>ABCDx:</strong> ABCD matrix for x-direction</p>
+<p><strong>ABCDy:</strong> ABCD matrix for y-direction</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.R">
+<code class="sig-name descname">R</code><span class="sig-paren">(</span><em class="sig-param">dist=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.R" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the beam ROC at a distance dist
+from the origin of the beam.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a deep copy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">cv</em>, <em class="sig-param">sigma=3.0</em>, <em class="sig-param">mode='x'</em>, <em class="sig-param">drawWidth=True</em>, <em class="sig-param">fontSize=False</em>, <em class="sig-param">drawPower=False</em>, <em class="sig-param">drawROC=False</em>, <em class="sig-param">drawGouy=False</em>, <em class="sig-param">drawOptDist=False</em>, <em class="sig-param">drawName=False</em>, <em class="sig-param">debug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the beam into a DXF object.</p>
+<p><em>Arguments</em></p>
+<p><strong>cv:</strong> draw.Canvas object.</p>
+<dl class="simple">
+<dt><strong>sigma:</strong> The width of the beam drawn is sigma * (1/e^2 radius of the beam).</dt><dd><p>The default is sigma = 3. sigma = 2.7 gives 1ppm diffraction loss.
+[float]</p>
+</dd>
+<dt><strong>mode:</strong> ‘avg’, ‘x’, or ‘y’. A beam can have different widths for x- and y-</dt><dd><p>directions. If ‘avg’ is specified, the average of them are drawn.
+‘x’ and ‘y’ specifies to show the width of the respective directions.</p>
+</dd>
+</dl>
+<p><strong>fontSize:</strong> Size of the font used to show supplemental informations. [float]</p>
+<p><strong>drawWidth:</strong> Whether to draw width or not. [Boolean]</p>
+<p><strong>drawPower:</strong> Whether to show the beam power. [Boolean]</p>
+<p><strong>drawROC:</strong> Whether to show the ROC or not. [Boolean]</p>
+<p><strong>drawGouy:</strong> Whether to show the Gouy phase or not. [Boolean]</p>
+<p><strong>drawOptDist:</strong> Whether to show the accumulated optical distance or not. [Boolean]</p>
+<p><strong>drawName:</strong> Whether draw the name of the beam or not. [Boolean]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.drawWidth">
+<code class="sig-name descname">drawWidth</code><span class="sig-paren">(</span><em class="sig-param">cv</em>, <em class="sig-param">sigma</em>, <em class="sig-param">mode</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.drawWidth" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.drawWidthOld">
+<code class="sig-name descname">drawWidthOld</code><span class="sig-paren">(</span><em class="sig-param">dxf</em>, <em class="sig-param">sigma</em>, <em class="sig-param">mode</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.drawWidthOld" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.flip">
+<code class="sig-name descname">flip</code><span class="sig-paren">(</span><em class="sig-param">flipDirVect=True</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.flip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the propagation direction of the beam
+by 180 degrees.
+This is equivalent to the reflection of the beam
+by a spherical mirror with the same ROC as the beam.</p>
+<p>If optional argument flipDirVect is set to False,
+the propagation direction of the beam is not changed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.propagate">
+<code class="sig-name descname">propagate</code><span class="sig-paren">(</span><em class="sig-param">d</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.propagate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Propagate the beam by a distance d from the current position.
+self.n is used as the index of refraction.
+During this process, the optical distance traveled is added
+to self.optDist.
+self.Goux and self.Gouyy are also updated to record the Gouy
+phase change.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.rotate">
+<code class="sig-name descname">rotate</code><span class="sig-paren">(</span><em class="sig-param">angle</em>, <em class="sig-param">center=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.rotate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotate the beam around ‘center’.
+If center is not given, the beam is rotated
+around self.pos.</p>
+<p><em>Arguments</em></p>
+<p><strong>angle:</strong> Rotation angle in radians.</p>
+<p><strong>center:</strong> Center for rotation. [(2,) array of float]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.translate">
+<code class="sig-name descname">translate</code><span class="sig-paren">(</span><em class="sig-param">trVect</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.translate" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Translate the beam by the direction and the distance
+specified by a vector.</p>
+</div></blockquote>
+<p><em>Arguments</em></p>
+<blockquote>
+<div><dl class="simple">
+<dt><strong>trVect:</strong> A vector to specify the translation direction and</dt><dd><p>distance. [(2,) float array]</p>
+</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.waist">
+<code class="sig-name descname">waist</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.waist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the tuples of waist size and distance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.beam.GaussianBeam.width">
+<code class="sig-name descname">width</code><span class="sig-paren">(</span><em class="sig-param">dist</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.GaussianBeam.width" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the beam width at a distance dist
+from the origin of the beam.
+The width is the readius where the light power becomes 1/e^2.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.beam.optFunForEndPointR">
+<code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">optFunForEndPointR</code><span class="sig-paren">(</span><em class="sig-param">phi</em>, <em class="sig-param">Mrot</em>, <em class="sig-param">R</em>, <em class="sig-param">q0</em>, <em class="sig-param">k</em>, <em class="sig-param">sigma</em>, <em class="sig-param">side</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.optFunForEndPointR" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to return the distance between the point on
+the spherical surface at an angle phi and the beam width
+at the same z.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.beam.optFunForFlat">
+<code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">optFunForFlat</code><span class="sig-paren">(</span><em class="sig-param">a</em>, <em class="sig-param">Mrot</em>, <em class="sig-param">q0</em>, <em class="sig-param">k</em>, <em class="sig-param">sigma</em>, <em class="sig-param">side</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.optFunForFlat" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to return the distance between the point on
+the spherical surface at an angle phi and the beam width
+at the same z.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.beam.optFunForStartPointR">
+<code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">optFunForStartPointR</code><span class="sig-paren">(</span><em class="sig-param">phi</em>, <em class="sig-param">Mrot</em>, <em class="sig-param">R</em>, <em class="sig-param">q0</em>, <em class="sig-param">k</em>, <em class="sig-param">sigma</em>, <em class="sig-param">side</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.optFunForStartPointR" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to return the distance between the point on
+the spherical surface at an angle phi and the beam width
+at the same z.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.beam.optimCrossPointFlat">
+<code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">optimCrossPointFlat</code><span class="sig-paren">(</span><em class="sig-param">theta</em>, <em class="sig-param">q0</em>, <em class="sig-param">k</em>, <em class="sig-param">sigma</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.optimCrossPointFlat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.beam.optimEndPointR">
+<code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">optimEndPointR</code><span class="sig-paren">(</span><em class="sig-param">theta</em>, <em class="sig-param">R</em>, <em class="sig-param">q0</em>, <em class="sig-param">k</em>, <em class="sig-param">sigma</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.optimEndPointR" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.beam.optimStartPointR">
+<code class="sig-prename descclassname">gtrace.beam.</code><code class="sig-name descname">optimStartPointR</code><span class="sig-paren">(</span><em class="sig-param">theta</em>, <em class="sig-param">R</em>, <em class="sig-param">q0</em>, <em class="sig-param">k</em>, <em class="sig-param">sigma</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.beam.optimStartPointR" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.hello">
+<span id="gtrace-hello-module"></span><h2>gtrace.hello module<a class="headerlink" href="#module-gtrace.hello" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="gtrace.hello.hello">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.hello.</code><code class="sig-name descname">hello</code><a class="headerlink" href="#gtrace.hello.hello" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="gtrace.hello.hello.greetings">
+<code class="sig-name descname">greetings</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.hello.hello.greetings" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.hello.saysomething">
+<code class="sig-prename descclassname">gtrace.hello.</code><code class="sig-name descname">saysomething</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.hello.saysomething" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.nonsequential">
+<span id="gtrace-nonsequential-module"></span><h2>gtrace.nonsequential module<a class="headerlink" href="#module-gtrace.nonsequential" title="Permalink to this headline">¶</a></h2>
+<p>gtrace.nonsequential</p>
+<p>A module to perform non-sequential trace of a beam
+in an optical system.</p>
+<dl class="function">
+<dt id="gtrace.nonsequential.non_seq_trace">
+<code class="sig-prename descclassname">gtrace.nonsequential.</code><code class="sig-name descname">non_seq_trace</code><span class="sig-paren">(</span><em class="sig-param">optList</em>, <em class="sig-param">src_beam</em>, <em class="sig-param">order=10</em>, <em class="sig-param">power_threshold=0.1</em>, <em class="sig-param">open_beam_length=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.nonsequential.non_seq_trace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform non-sequential trace of the source beam, src_beam,
+through the optical system represented by a collection of optics,
+optList.</p>
+<p>The return value of this function is a list of beams.</p>
+<p>== Arguments ==</p>
+<p>open_beam_length: open beams (beams not hitting anything) will have this length.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.optcomp">
+<span id="gtrace-optcomp-module"></span><h2>gtrace.optcomp module<a class="headerlink" href="#module-gtrace.optcomp" title="Permalink to this headline">¶</a></h2>
+<p>Define optical components for gtrace.</p>
+<dl class="class">
+<dt id="gtrace.optcomp.CyMirror">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.optcomp.</code><code class="sig-name descname">CyMirror</code><span class="sig-paren">(</span><em class="sig-param">HRcenter=[0.0, 0.0], normAngleHR=0.0, normVectHR=None, diameter=0.25, thickness=0.15, wedgeAngle=0.004363323129985824, inv_ROC_HR=0.00014285714285714287, inv_ROC_AR=0.0, Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45, name='Mirror', HRtransmissive=False, term_on_HR=False, curve_direction='h'</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.optcomp.Mirror" title="gtrace.optcomp.Mirror"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.optcomp.Mirror</span></code></a></p>
+<p>Representing a partial reflective cylindrical mirror. Note that both HR and AR surfaces are treated as cylindrical if you specify non-zero ROC for them. The curve  directions of the two surfaces must be the same.</p>
+<p>=== Attributes ===</p>
+<p>curve_direction: Either ‘h’ or ‘v’. If it is ‘h’ the mirror is curved in horizontal plane. If ‘v’, it is vertical.</p>
+<dl class="simple">
+<dt>HRcenter: The position of the center of the arc of the HR surface.</dt><dd><p>[(2,) float array]</p>
+</dd>
+<dt>HRcenterC: The position of the center of the chord of the HR surface.</dt><dd><p>[(2,) float array]</p>
+</dd>
+</dl>
+<p>normVectHR: Normal vector of the HR surface.</p>
+<p>normAngleHR: Angle of the HR normal vector.</p>
+<dl class="simple">
+<dt>ARcenter: The position of the center of the AR surface.</dt><dd><p>[(2,) float array]</p>
+</dd>
+</dl>
+<p>normVectAR: Normal vector of the HR surface.</p>
+<p>normAngleAR: Angle of the HR normal vector.</p>
+<dl class="simple">
+<dt>HRtransmissive: A boolean value defaults to False. If True, this mirror</dt><dd><p>is supposed to transmit beams on the HR surface. Therefore,
+for the first encounter of a beam on the HR surface of this mirror
+will not increase the stray_order. This flag should be set to True for
+beam splitters and input test masses.</p>
+</dd>
+<dt>term_on_HR: If this is True, a beam with stray_order &lt;= self.term_on_HR_order will be terminated when</dt><dd><p>it hits on HR. This is to avoid the inifinite loop of non-sequencial
+trace by forming a cavity.</p>
+</dd>
+<dt>term_on_HR_order: Integer to specify the upper limit of the stray order used to judge</dt><dd><p>whether to terminate the non sequential trace or not on HR reflection.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="gtrace.optcomp.CyMirror.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror.copy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.CyMirror.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">cv</em>, <em class="sig-param">drawName=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw itself</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.CyMirror.get_side_info">
+<code class="sig-name descname">get_side_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror.get_side_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return information on the sides of the mirror.
+Returned value is a list of two tuples like [(center1, normVect1, length1), (center2, normVect2, length2)]
+Each tuple corresponds to a side. center1 is the coordinates of the center of the side line. normVect1 is the normal vector of the side line. length1 is the length of the side line.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.CyMirror.hitFromAR">
+<code class="sig-name descname">hitFromAR</code><span class="sig-paren">(</span><em class="sig-param">beam</em>, <em class="sig-param">order=0</em>, <em class="sig-param">threshold=0.0</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror.hitFromAR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the reflected and deflected beams when
+an input beam hit the AR surface.</p>
+<p>The internal reflections are computed as long as the number
+of internal reflections are below the <code class="docutils literal notranslate"><span class="pre">order</span></code> and the power
+of the reflected beams is over the threshold.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.CyMirror.hitFromHR">
+<code class="sig-name descname">hitFromHR</code><span class="sig-paren">(</span><em class="sig-param">beam</em>, <em class="sig-param">order=0</em>, <em class="sig-param">threshold=0.0</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror.hitFromHR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the reflected and deflected beams when
+an input beam hit the HR surface.</p>
+<p>The internal reflections are computed as long as the number
+of internal reflections are below the <code class="docutils literal notranslate"><span class="pre">order</span></code> and the power
+of the reflected beams is over the threshold.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.CyMirror.isHit">
+<code class="sig-name descname">isHit</code><span class="sig-paren">(</span><em class="sig-param">beam</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.CyMirror.isHit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to see if a beam hits this optics or not.</p>
+<p><strong>Input parameters</strong></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">beam</span></code>:
+A GaussianBeam object to be interacted by the optics.</p>
+</div></blockquote>
+<p><strong>Returned value</strong></p>
+<blockquote>
+<div><p>The return value is a dictionary with the following keys:
+<code class="docutils literal notranslate"><span class="pre">isHit,</span> <span class="pre">position,</span> <span class="pre">distance,</span> <span class="pre">face</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">isHit</span></code>:
+This is a boolean to answer whether the beam hit the optics
+or not.</p>
+<p><code class="docutils literal notranslate"><span class="pre">position</span></code>:
+A numpy array containing the coordinate values of the intersection
+point between the beam and the optics. If isHit is False, this parameter
+does not mean anything.</p>
+<p><code class="docutils literal notranslate"><span class="pre">distance</span></code>
+The distance between the beam origin and the intersection point.</p>
+<p><code class="docutils literal notranslate"><span class="pre">face</span></code>:
+An optional string identifying which face of the optics was hit.
+For example, <code class="docutils literal notranslate"><span class="pre">face</span></code> can be either “HR” or “AR” for a mirror.
+<code class="docutils literal notranslate"><span class="pre">face</span></code> can also be “side”, meaning that the beam hits a side
+of the optics, which is not meant to be used, e.g. the side of a mirror.
+In this case, the beam have reached a dead end.</p>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.optcomp.Mirror">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.optcomp.</code><code class="sig-name descname">Mirror</code><span class="sig-paren">(</span><em class="sig-param">HRcenter=[0.0, 0.0], normAngleHR=0.0, normVectHR=None, diameter=0.25, thickness=0.15, wedgeAngle=0.004363323129985824, inv_ROC_HR=0.00014285714285714287, inv_ROC_AR=0.0, Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45, name='Mirror', HRtransmissive=False, term_on_HR=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.optcomp.Optics" title="gtrace.optcomp.Optics"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.optcomp.Optics</span></code></a></p>
+<p>Representing a partial reflective mirror.</p>
+<p>=== Attributes ===</p>
+<dl class="simple">
+<dt>HRcenter: The position of the center of the arc of the HR surface.</dt><dd><p>[(2,) float array]</p>
+</dd>
+<dt>HRcenterC: The position of the center of the chord of the HR surface.</dt><dd><p>[(2,) float array]</p>
+</dd>
+</dl>
+<p>normVectHR: Normal vector of the HR surface.</p>
+<p>normAngleHR: Angle of the HR normal vector.</p>
+<dl class="simple">
+<dt>ARcenter: The position of the center of the AR surface.</dt><dd><p>[(2,) float array]</p>
+</dd>
+</dl>
+<p>normVectAR: Normal vector of the HR surface.</p>
+<p>normAngleAR: Angle of the HR normal vector.</p>
+<dl class="simple">
+<dt>HRtransmissive: A boolean value defaults to False. If True, this mirror</dt><dd><p>is supposed to transmit beams on the HR surface. Therefore,
+for the first encounter of a beam on the HR surface of this mirror
+will not increase the stray_order. This flag should be set to True for
+beam splitters and input test masses.</p>
+</dd>
+<dt>term_on_HR: If this is True, a beam with stray_order &lt;= self.term_on_HR_order will be terminated when</dt><dd><p>it hits on HR. This is to avoid the inifinite loop of non-sequencial
+trace by forming a cavity.</p>
+</dd>
+<dt>term_on_HR_order: Integer to specify the upper limit of the stray order used to judge</dt><dd><p>whether to terminate the non sequential trace or not on HR reflection.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.copy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">cv</em>, <em class="sig-param">drawName=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw itself</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.get_side_info">
+<code class="sig-name descname">get_side_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.get_side_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return information on the sides of the mirror.
+Returned value is a list of two tuples like [(center1, normVect1, length1), (center2, normVect2, length2)]
+Each tuple corresponds to a side. center1 is the coordinates of the center of the side line. normVect1 is the normal vector of the side line. length1 is the length of the side line.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.hit">
+<code class="sig-name descname">hit</code><span class="sig-paren">(</span><em class="sig-param">beam</em>, <em class="sig-param">order=0</em>, <em class="sig-param">threshold=0.0</em>, <em class="sig-param">face=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.hit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to hit the optics with a beam.</p>
+<p>This function attempts to hit the optics with the source beam, <code class="docutils literal notranslate"><span class="pre">beam</span></code>.</p>
+<p><strong>Input parameters</strong>:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">beam</span></code>:
+A GaussianBeam object to be interacted by the optics.</p>
+<p><code class="docutils literal notranslate"><span class="pre">order</span></code>:
+An integer to specify how many times the internal reflections
+are computed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">threshold</span></code>
+The power threshold for internal reflection calculation.
+If the power of an auxiliary beam falls below this threshold,
+further propagation of this beam will not be performed.</p>
+</div></blockquote>
+<p><strong>Return values</strong>
+<code class="docutils literal notranslate"><span class="pre">(isHit,</span> <span class="pre">beamDict,</span> <span class="pre">face)</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">isHit</span></code>
+This is a boolean to answer whether the beam hit the optics
+or not.</p>
+<p><code class="docutils literal notranslate"><span class="pre">beamDict</span></code>
+A dictionary containing resultant beams.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">face</span></code>:</dt><dd><p>An optional string identifying which face of the optics was hit.
+For a mirror, <code class="docutils literal notranslate"><span class="pre">face</span></code> is any of “HR”, “AR” or “side”.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.hitFromAR">
+<code class="sig-name descname">hitFromAR</code><span class="sig-paren">(</span><em class="sig-param">beam</em>, <em class="sig-param">order=0</em>, <em class="sig-param">threshold=0.0</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.hitFromAR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the reflected and deflected beams when
+an input beam hit the AR surface.</p>
+<p>The internal reflections are computed as long as the number
+of internal reflections are below the <code class="docutils literal notranslate"><span class="pre">order</span></code> and the power
+of the reflected beams is over the threshold.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.hitFromHR">
+<code class="sig-name descname">hitFromHR</code><span class="sig-paren">(</span><em class="sig-param">beam</em>, <em class="sig-param">order=0</em>, <em class="sig-param">threshold=0.0</em>, <em class="sig-param">verbose=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.hitFromHR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the reflected and deflected beams when
+an input beam hit the HR surface.</p>
+<p>The internal reflections are computed as long as the number
+of internal reflections are below the <code class="docutils literal notranslate"><span class="pre">order</span></code> and the power
+of the reflected beams is over the threshold.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.isHit">
+<code class="sig-name descname">isHit</code><span class="sig-paren">(</span><em class="sig-param">beam</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.isHit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to see if a beam hits this optics or not.</p>
+<p><strong>Input parameters</strong></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">beam</span></code>:
+A GaussianBeam object to be interacted by the optics.</p>
+</div></blockquote>
+<p><strong>Returned value</strong></p>
+<blockquote>
+<div><p>The return value is a dictionary with the following keys:
+<code class="docutils literal notranslate"><span class="pre">isHit,</span> <span class="pre">position,</span> <span class="pre">distance,</span> <span class="pre">face</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">isHit</span></code>:
+This is a boolean to answer whether the beam hit the optics
+or not.</p>
+<p><code class="docutils literal notranslate"><span class="pre">position</span></code>:
+A numpy array containing the coordinate values of the intersection
+point between the beam and the optics. If isHit is False, this parameter
+does not mean anything.</p>
+<p><code class="docutils literal notranslate"><span class="pre">distance</span></code>
+The distance between the beam origin and the intersection point.</p>
+<p><code class="docutils literal notranslate"><span class="pre">face</span></code>:
+An optional string identifying which face of the optics was hit.
+For example, <code class="docutils literal notranslate"><span class="pre">face</span></code> can be either “HR” or “AR” for a mirror.
+<code class="docutils literal notranslate"><span class="pre">face</span></code> can also be “side”, meaning that the beam hits a side
+of the optics, which is not meant to be used, e.g. the side of a mirror.
+In this case, the beam have reached a dead end.</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.rotate">
+<code class="sig-name descname">rotate</code><span class="sig-paren">(</span><em class="sig-param">angle</em>, <em class="sig-param">center=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.rotate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotate the mirror. If center is not specified, the center of rotation is
+HRcenter. If center is given (as a vector), the center of rotation is
+center. center is a position vector in the global coordinates.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Mirror.translate">
+<code class="sig-name descname">translate</code><span class="sig-paren">(</span><em class="sig-param">trVect</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Mirror.translate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.optcomp.Optics">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.optcomp.</code><code class="sig-name descname">Optics</code><a class="headerlink" href="#gtrace.optcomp.Optics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">traits.has_traits.HasTraits</span></code></p>
+<p>A general optics class from which other specific
+optics classes are derived.</p>
+<p>=== Attributes ===
+name: Name of the optics. [string]
+center: Center position of the optics. [(2,) float array]
+rotationAngle: This angle defines the orientation of the optics.</p>
+<dl class="method">
+<dt id="gtrace.optcomp.Optics.hit">
+<code class="sig-name descname">hit</code><span class="sig-paren">(</span><em class="sig-param">order=0</em>, <em class="sig-param">threshold=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Optics.hit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to hit the optics with a beam.</p>
+<p>This function attempts to hit the optics with the source beam, <code class="docutils literal notranslate"><span class="pre">beam</span></code>.</p>
+<p><strong>Input parameters</strong>:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">beam</span></code>:
+A GaussianBeam object to be interacted by the optics.</p>
+<p><code class="docutils literal notranslate"><span class="pre">order</span></code>:
+An integer to specify how many times the internal reflections
+are computed.</p>
+<p><code class="docutils literal notranslate"><span class="pre">threshold</span></code>
+The power threshold for internal reflection calculation.
+If the power of an auxiliary beam falls below this threshold,
+further propagation of this beam will not be performed.</p>
+</div></blockquote>
+<p><strong>Return values</strong>
+<code class="docutils literal notranslate"><span class="pre">(isHit,</span> <span class="pre">beamDict,</span> <span class="pre">face)</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">isHit</span></code>
+This is a boolean to answer whether the beam hit the optics
+or not.</p>
+<p><code class="docutils literal notranslate"><span class="pre">beamDict</span></code>
+A dictionary containing resultant beams.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">face</span></code>:</dt><dd><p>An optional string identifying which face of the optics was hit.
+For a mirror, <code class="docutils literal notranslate"><span class="pre">face</span></code> is any of “HR”, “AR” or “side”.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optcomp.Optics.isHit">
+<code class="sig-name descname">isHit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.optcomp.Optics.isHit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A function to see if a beam hits this optics or not.</p>
+<p><strong>Input parameters</strong></p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">beam</span></code>:
+A GaussianBeam object to be interacted by the optics.</p>
+</div></blockquote>
+<p><strong>Returned value</strong></p>
+<blockquote>
+<div><p>The return value is a dictionary with the following keys:
+<code class="docutils literal notranslate"><span class="pre">isHit,</span> <span class="pre">position,</span> <span class="pre">distance,</span> <span class="pre">face</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">isHit</span></code>:
+This is a boolean to answer whether the beam hit the optics
+or not.</p>
+<p><code class="docutils literal notranslate"><span class="pre">position</span></code>:
+A numpy array containing the coordinate values of the intersection
+point between the beam and the optics. If isHit is False, this parameter
+does not mean anything.</p>
+<p><code class="docutils literal notranslate"><span class="pre">distance</span></code>
+The distance between the beam origin and the intersection point.</p>
+<p><code class="docutils literal notranslate"><span class="pre">face</span></code>:
+An optional string identifying which face of the optics was hit.
+For example, <code class="docutils literal notranslate"><span class="pre">face</span></code> can be either “HR” or “AR” for a mirror.
+<code class="docutils literal notranslate"><span class="pre">face</span></code> can also be “side”, meaning that the beam hits a side
+of the optics, which is not meant to be used, e.g. the side of a mirror.
+In this case, the beam have reached a dead end.</p>
+</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.unit">
+<span id="gtrace-unit-module"></span><h2>gtrace.unit module<a class="headerlink" href="#module-gtrace.unit" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="gtrace.unit.deg2rad">
+<code class="sig-prename descclassname">gtrace.unit.</code><code class="sig-name descname">deg2rad</code><span class="sig-paren">(</span><em class="sig-param">deg</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.unit.deg2rad" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.unit.rad2deg">
+<code class="sig-prename descclassname">gtrace.unit.</code><code class="sig-name descname">rad2deg</code><span class="sig-paren">(</span><em class="sig-param">rad</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.unit.rad2deg" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-gtrace" title="Permalink to this headline">¶</a></h2>
+<p>This package provides necessary classes and functions for tracing the propagation
+of Gaussian beams among mirrors and lenses.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gtrace.draw.html" class="btn btn-neutral float-right" title="gtrace.draw package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="modules.html" class="btn btn-neutral float-left" title="gtrace" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Yoichi Aso
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

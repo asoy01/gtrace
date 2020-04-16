@@ -1,0 +1,200 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gtrace.nonsequential &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gtrace.nonsequential</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">gtrace.nonsequential</span>
+
+<span class="sd">A module to perform non-sequential trace of a beam</span>
+<span class="sd">in an optical system.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="c">#{{{ Author and License Infomation</span>
+
+<span class="c">#Copyright (c) 2011-2012, Yoichi Aso</span>
+<span class="c"># All rights reserved.</span>
+
+<span class="c"># Redistribution and use in source and binary forms, with or without</span>
+<span class="c"># modification, are permitted provided that the following conditions</span>
+<span class="c"># are met:</span>
+<span class="c">#</span>
+<span class="c"># * Redistributions of source code must retain the above copyright</span>
+<span class="c">#   notice, this list of conditions and the following disclaimer.</span>
+<span class="c">#</span>
+<span class="c"># * Redistributions in binary form must reproduce the above copyright</span>
+<span class="c">#   notice, this list of conditions and the following disclaimer in the</span>
+<span class="c">#   documentation and/or other materials provided with the distribution.</span>
+<span class="c">#</span>
+<span class="c"># THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</span>
+<span class="c"># &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</span>
+<span class="c"># LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS</span>
+<span class="c"># FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE</span>
+<span class="c"># COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,</span>
+<span class="c"># INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,</span>
+<span class="c"># BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;</span>
+<span class="c"># LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER</span>
+<span class="c"># CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT</span>
+<span class="c"># LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN</span>
+<span class="c"># ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE</span>
+<span class="c"># POSSIBILITY OF SUCH DAMAGE.</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Yoichi Aso&quot;</span>
+<span class="n">__copyright__</span> <span class="o">=</span> <span class="s">&quot;Copyright 2011-2012, Yoichi Aso&quot;</span>
+<span class="n">__credits__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Yoichi Aso&quot;</span><span class="p">]</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s">&quot;BSD&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&quot;0.2.0&quot;</span>
+<span class="n">__maintainer__</span> <span class="o">=</span> <span class="s">&quot;Yoichi Aso&quot;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&quot;aso@granite.phys.s.u-tokyo.ac.jp&quot;</span>
+<span class="n">__status__</span> <span class="o">=</span> <span class="s">&quot;Beta&quot;</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ non_seq_trace</span>
+
+<div class="viewcode-block" id="non_seq_trace"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.nonsequential.non_seq_trace">[docs]</a><span class="k">def</span> <span class="nf">non_seq_trace</span><span class="p">(</span><span class="n">optList</span><span class="p">,</span> <span class="n">src_beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">power_threshold</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Perform non-sequential trace of the source beam, src_beam,</span>
+<span class="sd">    through the optical system represented by a collection of optics,</span>
+<span class="sd">    optList.</span>
+
+<span class="sd">    The return value of this function is a list of beams.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="c">#Loop over all the optics to see if the source beam hit them.</span>
+    <span class="c">#Then select the closest optics being hit.</span>
+    <span class="n">min_dist</span> <span class="o">=</span> <span class="mf">1e15</span>
+    <span class="n">final_answer</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">hit_optics</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">optList</span><span class="p">:</span>
+        <span class="c">#See if the beam hit the optics</span>
+        <span class="n">ans</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">isHit</span><span class="p">(</span><span class="n">src_beam</span><span class="p">)</span>
+        <span class="c">#If the beam hit the optics</span>
+        <span class="k">if</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+            <span class="c">#If the intersection point is closest one so far</span>
+            <span class="k">if</span> <span class="n">min_dist</span> <span class="o">&gt;</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]:</span>
+                    <span class="n">min_dist</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+                    <span class="n">final_answer</span> <span class="o">=</span> <span class="n">ans</span>
+                    <span class="n">hit_optics</span> <span class="o">=</span> <span class="n">opt</span>
+
+    <span class="k">if</span> <span class="n">final_answer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="c">#The beam does not hit any optics</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">src_beam</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">final_answer</span><span class="p">[</span><span class="s">&#39;face&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;side&#39;</span><span class="p">:</span>
+        <span class="c">#The beam is terminated on a side of an optics</span>
+        <span class="n">src_beam</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">final_answer</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">src_beam</span><span class="p">]</span>
+
+    <span class="c">#The beam hits an actual optical surface</span>
+
+    <span class="c">#Avoid forming a cavity</span>
+    <span class="k">if</span> <span class="n">hit_optics</span><span class="o">.</span><span class="n">term_on_HR</span>  <span class="ow">and</span> <span class="n">final_answer</span><span class="p">[</span><span class="s">&#39;face&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;HR&#39;</span> <span class="ow">and</span> <span class="n">src_beam</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">src_beam</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">final_answer</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">src_beam</span><span class="p">]</span>
+    
+    <span class="n">ans</span> <span class="o">=</span> <span class="n">hit_optics</span><span class="o">.</span><span class="n">hit</span><span class="p">(</span><span class="n">src_beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">power_threshold</span><span class="p">,</span>
+                         <span class="n">face</span><span class="o">=</span><span class="n">final_answer</span><span class="p">[</span><span class="s">&#39;face&#39;</span><span class="p">])</span>
+
+    <span class="n">terminated_beam_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">ans</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">]</span>
+    <span class="n">open_beam_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">ans</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">]</span>
+
+    <span class="c">#For each open beam, perform the non sequential trace</span>
+    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">open_beam_list</span><span class="p">:</span>
+        <span class="n">beams</span> <span class="o">=</span> <span class="n">non_seq_trace</span><span class="p">(</span><span class="n">optList</span><span class="o">=</span><span class="n">optList</span><span class="p">,</span> <span class="n">src_beam</span><span class="o">=</span><span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
+                              <span class="n">power_threshold</span><span class="o">=</span><span class="n">power_threshold</span><span class="p">)</span>
+        <span class="n">terminated_beam_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">beams</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">terminated_beam_list</span>
+        
+<span class="c">#}}}</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

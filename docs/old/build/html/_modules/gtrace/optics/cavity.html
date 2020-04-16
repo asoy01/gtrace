@@ -1,0 +1,380 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gtrace.optics.cavity &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gtrace.optics.cavity</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">cavity.py - A Cavity class and related functions for representing a Fabry-Perot cavity</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c">#{{{ Import modules</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="n">pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">c</span> <span class="o">=</span> <span class="mf">299792458.0</span>
+<span class="n">sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">scimath</span><span class="o">.</span><span class="n">sqrt</span>
+<span class="kn">import</span> <span class="nn">gtrace.optics.gaussian</span> <span class="kn">as</span> <span class="nn">gauss</span>
+<span class="kn">from</span> <span class="nn">enthought.traits.api</span> <span class="kn">import</span> <span class="n">CFloat</span><span class="p">,</span> <span class="n">HasTraits</span>
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Class Cavity</span>
+
+<div class="viewcode-block" id="Cavity"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity">[docs]</a><span class="k">class</span> <span class="nc">Cavity</span><span class="p">(</span><span class="n">HasTraits</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class to represent a Fabry-Perot cavity.</span>
+
+<span class="sd">    *Attributes*</span>
+<span class="sd">    </span>
+<span class="sd">    **r1:** Input mirror reflectivity (amplitude)</span>
+<span class="sd">    </span>
+<span class="sd">    **r2:** End mirror reflectivity (amplitude)</span>
+<span class="sd">    </span>
+<span class="sd">    **rp1:** Input mirror reflectivity (power)</span>
+<span class="sd">    </span>
+<span class="sd">    **rp2:** End mirror reflectivity (power)</span>
+<span class="sd">    </span>
+<span class="sd">    **L:** Length</span>
+
+<span class="sd">    **R1:** ROC of the input mirror (positive when concave to incident light, i.e.</span>
+<span class="sd">        convex seen from inside the cavity)</span>
+
+<span class="sd">    **R2:** ROC of the end mirror (positive when concave to incident light, i.e.</span>
+<span class="sd">        concave seen from inside the cavity)</span>
+
+<span class="sd">    **wl:** Wavelength</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r1</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">0.9</span><span class="p">)</span>
+    <span class="n">r2</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">0.99</span><span class="p">)</span>
+    <span class="n">rp1</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">rp2</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">tp1</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">tp2</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+
+    <span class="n">L</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">R1</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="o">-</span><span class="mf">1.5</span><span class="p">)</span>
+    <span class="n">R2</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">1.5</span><span class="p">)</span>
+    <span class="n">g1</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">g2</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">wl</span><span class="o">=</span><span class="n">CFloat</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r1</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">r2</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">R1</span><span class="o">=-</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">R2</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mf">1064e-9</span><span class="p">,</span> <span class="n">power</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        **r1:** Input mirror reflectivity </span>
+
+<span class="sd">        **r2:** End mirror reflectivity </span>
+
+<span class="sd">        **L:** Length</span>
+
+<span class="sd">        **R1:** ROC of the input mirror (positive when concave to incident light, i.e.</span>
+<span class="sd">            convex seen from inside the cavity)</span>
+
+<span class="sd">        **R2:** ROC of the end mirror (positive when concave to incident light, i.e.</span>
+<span class="sd">            concave seen from inside the cavity)</span>
+
+<span class="sd">        **wl:** Wavelength</span>
+
+<span class="sd">        **power:** If True, r1 and r2 are treated as power reflectivities.</span>
+<span class="sd">               Otherwise, r1 and r2 are regarded as amplitude reflectivities.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">power</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">r1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">r1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">r2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">r2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">r1</span> <span class="o">=</span> <span class="n">r1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">r2</span> <span class="o">=</span> <span class="n">r2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">R1</span> <span class="o">=</span> <span class="n">R1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">R2</span> <span class="o">=</span> <span class="n">R2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wl</span> <span class="o">=</span> <span class="n">wl</span>
+
+    <span class="c">#{{{ Trait change handlers</span>
+    <span class="k">def</span> <span class="nf">_R1_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g1</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">/</span><span class="n">new</span>
+
+    <span class="k">def</span> <span class="nf">_R2_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">/</span><span class="n">new</span>
+
+    <span class="k">def</span> <span class="nf">_L_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g1</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">new</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">R1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">g2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">new</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">R2</span>
+
+    <span class="k">def</span> <span class="nf">_r1_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">r1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rp1</span> <span class="o">=</span> <span class="n">r1</span><span class="o">**</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp1</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rp1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_r2_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">r2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rp2</span> <span class="o">=</span> <span class="n">r2</span><span class="o">**</span><span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rp2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp2</span><span class="p">)</span>
+
+    <span class="c">#}}}</span>
+
+<div class="viewcode-block" id="Cavity.finesse"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.finesse">[docs]</a>    <span class="k">def</span> <span class="nf">finesse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the finesse of the cavity.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">finesse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">r1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r2</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Cavity.storageTime"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.storageTime">[docs]</a>    <span class="k">def</span> <span class="nf">storageTime</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Storage time</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">finesse</span><span class="p">()</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="n">c</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Cavity.pole"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.pole">[docs]</a>    <span class="k">def</span> <span class="nf">pole</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Cavity pole frequency [Hz]</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">storageTime</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="Cavity.Nbounce"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.Nbounce">[docs]</a>    <span class="k">def</span> <span class="nf">Nbounce</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Bounce number</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">finesse</span><span class="p">()</span><span class="o">/</span><span class="n">pi</span>
+</div>
+<div class="viewcode-block" id="Cavity.powerGain"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.powerGain">[docs]</a>    <span class="k">def</span> <span class="nf">powerGain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Ratio of the intra-cavity power to the input power.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">r1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">r2</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span>
+</div>
+<div class="viewcode-block" id="Cavity.FSR"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.FSR">[docs]</a>    <span class="k">def</span> <span class="nf">FSR</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns the free spectral range of the cavity.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">c</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Cavity.modeSpacing"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.modeSpacing">[docs]</a>    <span class="k">def</span> <span class="nf">modeSpacing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return the transverse mode spacing of the cavity (commonly called gamma).</span>
+<span class="sd">        It is a fractional number defined by gamma = (mode spacing frequency)/FSR.</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">gauss</span><span class="o">.</span><span class="n">modeSpacing</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">g1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">g2</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Cavity.waist"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.waist">[docs]</a>    <span class="k">def</span> <span class="nf">waist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the q-parameter or the radius of the beam at the cavity waist.</span>
+
+<span class="sd">        *Input arguments*</span>
+<span class="sd">        </span>
+<span class="sd">        **size:** (optional) if set to true, the first element of the returned tuple will be the waist size, rather than the q-parameter.</span>
+
+<span class="sd">        *==Returned parameters ==*</span>
+<span class="sd">        </span>
+<span class="sd">        **(q0, d):**  This function returns a tuple with two elements.</span>
+<span class="sd">                       The first element is the q-parameter of the cavity mode at</span>
+<span class="sd">                       the cavity waist. If size=True is given, it becomes the waist</span>
+<span class="sd">                       size (1/e^2 radius).</span>
+<span class="sd">                       The second element is the distance of the cavity waist from</span>
+<span class="sd">                       the input mirror.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># q0 = 1j*np.sqrt(self.L)*np.sqrt(-(self.L+self.R1)*(self.L-self.R2)\</span>
+        <span class="c">#                                 *(self.L+self.R1-self.R2))\</span>
+        <span class="c">#                                 /(2*self.L+self.R1-self.R2)</span>
+
+        <span class="n">q0</span> <span class="o">=</span> <span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">sqrt</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">R1</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">R2</span><span class="p">)</span><span class="o">*</span>\
+                         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">R1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">R2</span><span class="p">)</span><span class="o">/</span><span class="p">((</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">R1</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">R2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>\
+                         <span class="o">/</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">R1</span><span class="p">)</span>
+        
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">R2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">R1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">R2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">size</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">gauss</span><span class="o">.</span><span class="n">q2w</span><span class="p">(</span><span class="n">q0</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wl</span><span class="p">),</span> <span class="n">d</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">q0</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Cavity.spotSize"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.spotSize">[docs]</a>    <span class="k">def</span> <span class="nf">spotSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the beam spot sizes on the input and end mirrors</span>
+<span class="sd">        as a tuple (w1,w2).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">q0</span><span class="p">,</span><span class="n">d</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">waist</span><span class="p">()</span>
+        <span class="n">w1</span><span class="o">=</span><span class="n">gauss</span><span class="o">.</span><span class="n">q2w</span><span class="p">(</span><span class="n">q0</span><span class="o">-</span><span class="n">d</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wl</span><span class="p">)</span>
+        <span class="n">w2</span><span class="o">=</span><span class="n">gauss</span><span class="o">.</span><span class="n">q2w</span><span class="p">(</span><span class="n">q0</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">-</span><span class="n">d</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wl</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">w1</span><span class="p">,</span> <span class="n">w2</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Cavity.trans"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.trans">[docs]</a>    <span class="k">def</span> <span class="nf">trans</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the amplitude transmissivity of the cavity.</span>
+<span class="sd">        It assumes the cavity was locked to the incident light first. Then computes the</span>
+<span class="sd">        amplitude transmissivity for the light with a frequency shift f from the original light</span>
+<span class="sd">        with the cavity length changed by d from the initial state.</span>
+
+<span class="sd">        *== Input arguments ==*</span>
+<span class="sd">        </span>
+<span class="sd">        **f:** Frequency shift of the light in Hz.</span>
+
+<span class="sd">        **d:** Cavity length detuning in m.</span>
+
+<span class="sd">        *== Returned parameter ==*</span>
+<span class="sd">        </span>
+<span class="sd">        The amplitude transmissivity of the cavity (a complex number).</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#One way phase change</span>
+        <span class="n">phi</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="n">f</span><span class="o">/</span><span class="n">c</span> <span class="o">+</span> <span class="n">d</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">wl</span> <span class="o">+</span> <span class="n">d</span><span class="o">*</span><span class="n">f</span><span class="o">/</span><span class="n">c</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">t1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">t2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">phi</span><span class="p">)</span><span class="o">/</span>\
+                   <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">r1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">r2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="n">j</span><span class="o">*</span><span class="n">phi</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Cavity.refl"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.refl">[docs]</a>    <span class="k">def</span> <span class="nf">refl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the amplitude reflectivity of the cavity.</span>
+<span class="sd">        It assumes the cavity was locked to the incident light first. Then computes the</span>
+<span class="sd">        amplitude reflectivity for the light with a frequency shift f from the original light</span>
+<span class="sd">        with the cavity length changed by d from the initial state.</span>
+
+<span class="sd">        *== Input arguments ==*</span>
+<span class="sd">        </span>
+<span class="sd">        **f:** Frequency shift of the light in Hz.</span>
+
+<span class="sd">        **d:** Cavity length detuning in m.</span>
+
+<span class="sd">        *== Returned parameter ==*</span>
+<span class="sd">        </span>
+<span class="sd">        The amplitude reflectivity of the cavity (a complex number).</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c">#One way phase change</span>
+        <span class="n">phi</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">*</span><span class="n">f</span><span class="o">/</span><span class="n">c</span> <span class="o">+</span> <span class="n">d</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">wl</span> <span class="o">+</span> <span class="n">d</span><span class="o">*</span><span class="n">f</span><span class="o">/</span><span class="n">c</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">r1</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">t1</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">r2</span> <span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="n">j</span><span class="o">*</span><span class="n">phi</span><span class="p">)</span><span class="o">/</span>\
+                   <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">r1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">r2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="n">j</span><span class="o">*</span><span class="n">phi</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Cavity.intra"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.Cavity.intra">[docs]</a>    <span class="k">def</span> <span class="nf">intra</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the intra cavity field amplitude.</span>
+<span class="sd">        It assumes the cavity was locked to the incident light first. Then computes the</span>
+<span class="sd">        intra-cavity field amplitude for the light with a frequency shift f from the original light</span>
+<span class="sd">        with the cavity length changed by d from the initial state.</span>
+
+<span class="sd">        *== Input arguments ==*</span>
+<span class="sd">        </span>
+<span class="sd">        **f:** Frequency shift of the light in Hz.</span>
+
+<span class="sd">        **d:** Cavity length detuning in m.</span>
+
+<span class="sd">        *== Returned parameter ==*</span>
+<span class="sd">        </span>
+<span class="sd">        The intra-cavity field amplitude at the input mirror surface (a complex number).</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#One way phase change</span>
+        <span class="n">phi</span><span class="o">=</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">+</span><span class="n">d</span><span class="p">)</span><span class="o">*</span><span class="n">f</span><span class="o">/</span><span class="n">c</span> <span class="o">+</span> <span class="n">d</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">wl</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">t1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">r1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">r2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="n">j</span><span class="o">*</span><span class="n">phi</span><span class="p">))</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Often used parameters</span>
+</div></div>
+<div class="viewcode-block" id="finesse"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.cavity.finesse">[docs]</a><span class="k">def</span> <span class="nf">finesse</span><span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">,</span> <span class="n">power</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns the finesse of a cavity</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">power</span><span class="p">:</span>
+        <span class="n">r1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">r1</span><span class="p">)</span>
+        <span class="n">r2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">r2</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">pi</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">r1</span><span class="o">*</span><span class="n">r2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">r1</span><span class="o">*</span><span class="n">r2</span><span class="p">)</span>
+
+<span class="c">#}}}</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,495 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>optics Package &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../index.html" />
+    <link rel="up" title="gtrace Package" href="gtrace.html" />
+    <link rel="prev" title="draw Package" href="gtrace.draw.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gtrace.draw.html" title="draw Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >API References</a> &raquo;</li>
+          <li><a href="gtrace.html" accesskey="U">gtrace Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="optics-package">
+<h1>optics Package<a class="headerlink" href="#optics-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-gtrace.optics.cavity">
+<span id="cavity-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">cavity</span></tt> Module<a class="headerlink" href="#module-gtrace.optics.cavity" title="Permalink to this headline">¶</a></h2>
+<p>cavity.py - A Cavity class and related functions for representing a Fabry-Perot cavity</p>
+<dl class="class">
+<dt id="gtrace.optics.cavity.Cavity">
+<em class="property">class </em><tt class="descclassname">gtrace.optics.cavity.</tt><tt class="descname">Cavity</tt><big>(</big><em>r1=0.9</em>, <em>r2=0.99</em>, <em>L=1.0</em>, <em>R1=-1.5</em>, <em>R2=1.5</em>, <em>wl=1.064e-06</em>, <em>power=False</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">traits.has_traits.HasTraits</span></tt></p>
+<p>A class to represent a Fabry-Perot cavity.</p>
+<p><em>Attributes</em></p>
+<p><strong>r1:</strong> Input mirror reflectivity (amplitude)</p>
+<p><strong>r2:</strong> End mirror reflectivity (amplitude)</p>
+<p><strong>rp1:</strong> Input mirror reflectivity (power)</p>
+<p><strong>rp2:</strong> End mirror reflectivity (power)</p>
+<p><strong>L:</strong> Length</p>
+<dl class="docutils">
+<dt><strong>R1:</strong> ROC of the input mirror (positive when concave to incident light, i.e.</dt>
+<dd>convex seen from inside the cavity)</dd>
+<dt><strong>R2:</strong> ROC of the end mirror (positive when concave to incident light, i.e.</dt>
+<dd>concave seen from inside the cavity)</dd>
+</dl>
+<p><strong>wl:</strong> Wavelength</p>
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.FSR">
+<tt class="descname">FSR</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.FSR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.FSR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the free spectral range of the cavity.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.Nbounce">
+<tt class="descname">Nbounce</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.Nbounce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.Nbounce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bounce number</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.finesse">
+<tt class="descname">finesse</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.finesse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.finesse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the finesse of the cavity.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.intra">
+<tt class="descname">intra</tt><big>(</big><em>f=0</em>, <em>d=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.intra"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.intra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the intra cavity field amplitude.
+It assumes the cavity was locked to the incident light first. Then computes the
+intra-cavity field amplitude for the light with a frequency shift f from the original light
+with the cavity length changed by d from the initial state.</p>
+<p><em>== Input arguments ==</em></p>
+<p><strong>f:</strong> Frequency shift of the light in Hz.</p>
+<p><strong>d:</strong> Cavity length detuning in m.</p>
+<p><em>== Returned parameter ==</em></p>
+<p>The intra-cavity field amplitude at the input mirror surface (a complex number).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.modeSpacing">
+<tt class="descname">modeSpacing</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.modeSpacing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.modeSpacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the transverse mode spacing of the cavity (commonly called gamma).
+It is a fractional number defined by gamma = (mode spacing frequency)/FSR.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.pole">
+<tt class="descname">pole</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.pole"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.pole" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cavity pole frequency [Hz]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.powerGain">
+<tt class="descname">powerGain</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.powerGain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.powerGain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ratio of the intra-cavity power to the input power.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.refl">
+<tt class="descname">refl</tt><big>(</big><em>f=0</em>, <em>d=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.refl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.refl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the amplitude reflectivity of the cavity.
+It assumes the cavity was locked to the incident light first. Then computes the
+amplitude reflectivity for the light with a frequency shift f from the original light
+with the cavity length changed by d from the initial state.</p>
+<p><em>== Input arguments ==</em></p>
+<p><strong>f:</strong> Frequency shift of the light in Hz.</p>
+<p><strong>d:</strong> Cavity length detuning in m.</p>
+<p><em>== Returned parameter ==</em></p>
+<p>The amplitude reflectivity of the cavity (a complex number).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.spotSize">
+<tt class="descname">spotSize</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.spotSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.spotSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the beam spot sizes on the input and end mirrors
+as a tuple (w1,w2).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.storageTime">
+<tt class="descname">storageTime</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.storageTime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.storageTime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Storage time</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.trans">
+<tt class="descname">trans</tt><big>(</big><em>f=0</em>, <em>d=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.trans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.trans" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the amplitude transmissivity of the cavity.
+It assumes the cavity was locked to the incident light first. Then computes the
+amplitude transmissivity for the light with a frequency shift f from the original light
+with the cavity length changed by d from the initial state.</p>
+<p><em>== Input arguments ==</em></p>
+<p><strong>f:</strong> Frequency shift of the light in Hz.</p>
+<p><strong>d:</strong> Cavity length detuning in m.</p>
+<p><em>== Returned parameter ==</em></p>
+<p>The amplitude transmissivity of the cavity (a complex number).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.optics.cavity.Cavity.waist">
+<tt class="descname">waist</tt><big>(</big><em>size=False</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#Cavity.waist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.Cavity.waist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the q-parameter or the radius of the beam at the cavity waist.</p>
+<p><em>Input arguments</em></p>
+<p><strong>size:</strong> (optional) if set to true, the first element of the returned tuple will be the waist size, rather than the q-parameter.</p>
+<p><em>==Returned parameters ==</em></p>
+<dl class="docutils">
+<dt><strong>(q0, d):</strong>  This function returns a tuple with two elements.</dt>
+<dd>The first element is the q-parameter of the cavity mode at
+the cavity waist. If size=True is given, it becomes the waist
+size (1/e^2 radius).
+The second element is the distance of the cavity waist from
+the input mirror.</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.cavity.finesse">
+<tt class="descclassname">gtrace.optics.cavity.</tt><tt class="descname">finesse</tt><big>(</big><em>r1</em>, <em>r2</em>, <em>power=False</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/cavity.html#finesse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.cavity.finesse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the finesse of a cavity</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.optics.consts">
+<span id="consts-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">consts</span></tt> Module<a class="headerlink" href="#module-gtrace.optics.consts" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="gtrace.optics.consts.n_fused_silica">
+<tt class="descclassname">gtrace.optics.consts.</tt><tt class="descname">n_fused_silica</tt><big>(</big><em>wl</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/consts.html#n_fused_silica"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.consts.n_fused_silica" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the index of refraction of fused silica for a given wavelength.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.consts.n_sapphire_extraordinary">
+<tt class="descclassname">gtrace.optics.consts.</tt><tt class="descname">n_sapphire_extraordinary</tt><big>(</big><em>wl</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/consts.html#n_sapphire_extraordinary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.consts.n_sapphire_extraordinary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the index of refraction of Sapphire extraordinary axis for a given wavelength.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.consts.n_sapphire_ordinary">
+<tt class="descclassname">gtrace.optics.consts.</tt><tt class="descname">n_sapphire_ordinary</tt><big>(</big><em>wl</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/consts.html#n_sapphire_ordinary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.consts.n_sapphire_ordinary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the index of refraction of Sapphire ordinary axis for a given wavelength.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.consts.sellmeier">
+<tt class="descclassname">gtrace.optics.consts.</tt><tt class="descname">sellmeier</tt><big>(</big><em>wl</em>, <em>B1</em>, <em>B2</em>, <em>B3</em>, <em>C1</em>, <em>C2</em>, <em>C3</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/consts.html#sellmeier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.consts.sellmeier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate index of refraction using Sellmeiers equation</p>
+<p>n^2 = 1+B1*wl^2/(wl^2 - C1) + B2*wl^2/(wl^2 - C2) + B3*wl^2/(wl^2 - C3)</p>
+<p>See below for the coefficients for specific materials.
+<a class="reference external" href="http://www.cvimellesgriot.com/products/Documents/Catalog/Dispersion_Equations.pdf">http://www.cvimellesgriot.com/products/Documents/Catalog/Dispersion_Equations.pdf</a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.optics.gaussian">
+<span id="gaussian-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">gaussian</span></tt> Module<a class="headerlink" href="#module-gtrace.optics.gaussian" title="Permalink to this headline">¶</a></h2>
+<p>gaussian - Gaussian Optics Module</p>
+<p>This module contains several utility functions for gaussian optics.</p>
+<dl class="function">
+<dt id="gtrace.optics.gaussian.ROCandWtoQ">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">ROCandWtoQ</tt><big>(</big><em>ROC=1.0</em>, <em>w=1.0</em>, <em>wl=1.064e-06</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#ROCandWtoQ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.ROCandWtoQ" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.Rw2q">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">Rw2q</tt><big>(</big><em>ROC=1.0</em>, <em>w=1.0</em>, <em>wl=1.064e-06</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#Rw2q"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.Rw2q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the q-parameter from the ROC and w.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.appertureCut">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">appertureCut</tt><big>(</big><em>r=1.0</em>, <em>w=3.0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#appertureCut"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.appertureCut" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.beamClip">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">beamClip</tt><big>(</big><em>a=1.0</em>, <em>w=3.0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#beamClip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.beamClip" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.modeMatching">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">modeMatching</tt><big>(</big><em>q1</em>, <em>q2x</em>, <em>q2y=False</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#modeMatching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.modeMatching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mode matching between two beams with different q-parameters.
+The axes of the two beams are assumed to be matched.</p>
+<p>q1: q-parameter of the first beam. This beam is assumed to be circular.</p>
+<dl class="docutils">
+<dt>q2x: q-parameter of the second beam in x-direction. If the second beam</dt>
+<dd>is also circular, omit the next argument.</dd>
+<dt>q2y: q-parameter of the second beam in y-direction. Specify this parameter</dt>
+<dd>if the second beam is eliptic.</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.modeSpacing">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">modeSpacing</tt><big>(</big><em>g1</em>, <em>g2</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#modeSpacing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.modeSpacing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.optimalMatching">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">optimalMatching</tt><big>(</big><em>q1</em>, <em>q2</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#optimalMatching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.optimalMatching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a mode (q-parameter) which best matches the given
+two q-parameters, q1 and q2.</p>
+<p>Returned values: (q, match)</p>
+<p>q: The best matching q-parameter</p>
+<p>match: Mode matching rate</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.q2R">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">q2R</tt><big>(</big><em>q</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#q2R"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.q2R" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a q-parameter to the ROC</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.q2w">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">q2w</tt><big>(</big><em>q</em>, <em>wl=1.064e-06</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#q2w"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.q2w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a q-parameter to the beam size</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.q2zr">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">q2zr</tt><big>(</big><em>q</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#q2zr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.q2zr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a q-parameter to Rayleigh range.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.qToROC">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">qToROC</tt><big>(</big><em>q</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#qToROC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.qToROC" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.qToRadius">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">qToRadius</tt><big>(</big><em>q</em>, <em>wl=1.064e-06</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#qToRadius"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.qToRadius" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.w02zr">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">w02zr</tt><big>(</big><em>w0</em>, <em>wl=1.064e-06</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#w02zr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.w02zr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Rayleigh range to the waist size</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.gaussian.zr2w0">
+<tt class="descclassname">gtrace.optics.gaussian.</tt><tt class="descname">zr2w0</tt><big>(</big><em>zr</em>, <em>wl=1.064e-06</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/gaussian.html#zr2w0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.gaussian.zr2w0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert Rayleigh range to the waist size</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.optics.geometric">
+<span id="geometric-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">geometric</span></tt> Module<a class="headerlink" href="#module-gtrace.optics.geometric" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="gtrace.optics.geometric.deflection_angle">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">deflection_angle</tt><big>(</big><em>theta</em>, <em>n1</em>, <em>n2</em>, <em>deg=True</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#deflection_angle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.deflection_angle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.line_arc_intersection">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">line_arc_intersection</tt><big>(</big><em>pos</em>, <em>dirVect</em>, <em>chord_center</em>, <em>chordNormVect</em>, <em>invROC</em>, <em>diameter</em>, <em>verbose=False</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#line_arc_intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.line_arc_intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the intersection point between a line
+and an arc.</p>
+<p>pos: Origin of the line
+dirVect: Direction of the line
+chord_center: The center of the chord made by the arc.
+chordNormVect: Normal vector of the chord.
+invROC: Inverse of the ROC of the arc. Positive for concave surface.
+diameter: Length of the chord.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.line_plane_intersection">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">line_plane_intersection</tt><big>(</big><em>pos</em>, <em>dirVect</em>, <em>plane_center</em>, <em>normalVector</em>, <em>diameter</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#line_plane_intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.line_plane_intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the intersection point between a line
+and a plane</p>
+<p>A line is specified by its origin (pos) and the
+direction vector (dirVect).
+A plane is specfied by its center coordinates (plane_center)
+and the normal vector (normalVector).
+The plane has its size (diameter).</p>
+<p>The returned value is a dictionary of with the following keys:
+&#8220;Intersection Point&#8221;: numpy array of the coordinates of the intersection point.
+&#8220;isHit&#8221;: A boolean value of whether the line intersects with the plane or not.
+&#8220;distance&#8221;: Distance between the origin of the line and the intersection point.
+&#8220;distance from center&#8221;: Distance between the center of the plane and the intersection point.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.normSpheric">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">normSpheric</tt><big>(</big><em>normAngle</em>, <em>invROC</em>, <em>dist_from_center</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#normSpheric"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.normSpheric" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the local normal angle of a spheric mirror
+at a distance from the center.</p>
+<dl class="docutils">
+<dt>normAngle: The angle formed by the normal vector of the mirror</dt>
+<dd>at the center and the x-axis.</dd>
+</dl>
+<p>invROC: 1/R, where R is the ROC of the mirror.</p>
+<dl class="docutils">
+<dt>dist_from_center: The distance from the center of the point where</dt>
+<dd>the local normal is requested.
+This is a signed value.
+For a mirror facing +x (the normal vector points
+towards positive x direction), this distance
+is positive for points with positive y coordinate,
+and negative for points with negative y coordinate.</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.refl_defl_angle">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">refl_defl_angle</tt><big>(</big><em>beamAngle</em>, <em>normAngle</em>, <em>n1</em>, <em>n2</em>, <em>invROC=None</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#refl_defl_angle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.refl_defl_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a tuples of reflection and deflection angles.</p>
+<dl class="docutils">
+<dt>beamAngle: The angle formed by the propagation direction vector</dt>
+<dd>of the incident beam and the x-axis.</dd>
+<dt>normAngle: The angle formed by the normal vector of the surface</dt>
+<dd>and the x-axis.</dd>
+</dl>
+<p>n1: Index of refraction of the incident side medium.</p>
+<p>n2: Index of refraction of the transmission side medium.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.vc_deflect">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">vc_deflect</tt><big>(</big><em>theta</em>, <em>theta1</em>, <em>n1</em>, <em>n2</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#vc_deflect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.vc_deflect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deflection angle helper function for VariCAD.
+theta is the angle of the surface measured from right.
+theta1 is the angle of the incident beam measured from right.
+It returns an angle of the deflected beam measured from right.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.vc_reflect">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">vc_reflect</tt><big>(</big><em>theta</em>, <em>theta1</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#vc_reflect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.vc_reflect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.geometric.vector_rotation_2D">
+<tt class="descclassname">gtrace.optics.geometric.</tt><tt class="descname">vector_rotation_2D</tt><big>(</big><em>vect</em>, <em>angle</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/geometric.html#vector_rotation_2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.geometric.vector_rotation_2D" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.optics.unit">
+<span id="unit-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">unit</span></tt> Module<a class="headerlink" href="#module-gtrace.optics.unit" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="gtrace.optics.unit.deg2rad">
+<tt class="descclassname">gtrace.optics.unit.</tt><tt class="descname">deg2rad</tt><big>(</big><em>deg</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/unit.html#deg2rad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.unit.deg2rad" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.optics.unit.rad2deg">
+<tt class="descclassname">gtrace.optics.unit.</tt><tt class="descname">rad2deg</tt><big>(</big><em>rad</em><big>)</big><a class="reference internal" href="../_modules/gtrace/optics/unit.html#rad2deg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.optics.unit.rad2deg" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">optics Package</a><ul>
+<li><a class="reference internal" href="#module-gtrace.optics.cavity"><tt class="docutils literal"><span class="pre">cavity</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.optics.consts"><tt class="docutils literal"><span class="pre">consts</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.optics.gaussian"><tt class="docutils literal"><span class="pre">gaussian</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.optics.geometric"><tt class="docutils literal"><span class="pre">geometric</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.optics.unit"><tt class="docutils literal"><span class="pre">unit</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="gtrace.draw.html"
+                        title="previous chapter">draw Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/gtrace.optics.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gtrace.draw.html" title="draw Package"
+             >previous</a> |</li>
+        <li><a href="../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >API References</a> &raquo;</li>
+          <li><a href="gtrace.html" >gtrace Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

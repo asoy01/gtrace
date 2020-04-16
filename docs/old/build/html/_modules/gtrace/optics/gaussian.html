@@ -1,0 +1,249 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gtrace.optics.gaussian &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gtrace.optics.gaussian</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">gaussian - Gaussian Optics Module</span>
+
+<span class="sd">This module contains several utility functions for gaussian optics.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c">#{{{ Import modules</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="n">pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">scimath</span><span class="o">.</span><span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">unit</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">scipy.special</span> <span class="kn">as</span> <span class="nn">spf</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ modeSpacing</span>
+
+<div class="viewcode-block" id="modeSpacing"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.modeSpacing">[docs]</a><span class="k">def</span> <span class="nf">modeSpacing</span><span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">g1</span><span class="o">*</span><span class="n">g2</span><span class="p">))</span><span class="o">/</span><span class="n">pi</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ q-parameter related functions</span>
+</div>
+<div class="viewcode-block" id="q2zr"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.q2zr">[docs]</a><span class="k">def</span> <span class="nf">q2zr</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert a q-parameter to Rayleigh range.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">zr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">zr</span>
+</div>
+<div class="viewcode-block" id="q2w"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.q2w">[docs]</a><span class="k">def</span> <span class="nf">q2w</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mi">1064</span><span class="o">*</span><span class="n">nm</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert a q-parameter to the beam size</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">wl</span><span class="o">*</span><span class="n">S</span><span class="o">/</span><span class="n">pi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">w</span>
+
+</div>
+<div class="viewcode-block" id="q2R"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.q2R">[docs]</a><span class="k">def</span> <span class="nf">q2R</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert a q-parameter to the ROC</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">q</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Rw2q"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.Rw2q">[docs]</a><span class="k">def</span> <span class="nf">Rw2q</span><span class="p">(</span><span class="n">ROC</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mf">1064e-9</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Get the q-parameter from the ROC and w.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mf">2.0</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="n">wl</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">k</span><span class="o">/</span><span class="mi">2</span>
+
+    <span class="k">return</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">ROC</span> <span class="o">+</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">S</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="zr2w0"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.zr2w0">[docs]</a><span class="k">def</span> <span class="nf">zr2w0</span><span class="p">(</span><span class="n">zr</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mi">1064</span><span class="o">*</span><span class="n">nm</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert Rayleigh range to the waist size</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">zr</span><span class="o">*</span><span class="n">wl</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="w02zr"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.w02zr">[docs]</a><span class="k">def</span> <span class="nf">w02zr</span><span class="p">(</span><span class="n">w0</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mi">1064</span><span class="o">*</span><span class="n">nm</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convert Rayleigh range to the waist size</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="n">wl</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">w0</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+</div>
+<div class="viewcode-block" id="modeMatching"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.modeMatching">[docs]</a><span class="k">def</span> <span class="nf">modeMatching</span><span class="p">(</span><span class="n">q1</span><span class="p">,</span> <span class="n">q2x</span><span class="p">,</span> <span class="n">q2y</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Mode matching between two beams with different q-parameters.</span>
+<span class="sd">    The axes of the two beams are assumed to be matched.</span>
+
+<span class="sd">    q1: q-parameter of the first beam. This beam is assumed to be circular.</span>
+
+<span class="sd">    q2x: q-parameter of the second beam in x-direction. If the second beam</span>
+<span class="sd">         is also circular, omit the next argument.</span>
+
+<span class="sd">    q2y: q-parameter of the second beam in y-direction. Specify this parameter</span>
+<span class="sd">         if the second beam is eliptic.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="n">zr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q1</span><span class="p">)</span>
+    <span class="n">d1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">q1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">q2y</span><span class="p">:</span>
+        <span class="c">#Eliptic beam</span>
+        <span class="n">zrx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q2x</span><span class="p">)</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">q2x</span><span class="p">)</span>
+        <span class="n">zry</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q2y</span><span class="p">)</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">q2y</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sqrt</span><span class="p">(</span><span class="n">zr1</span><span class="o">*</span><span class="n">sqrt</span><span class="p">(</span><span class="n">zrx</span><span class="o">*</span><span class="n">zry</span><span class="p">)</span><span class="o">/</span><span class="p">((</span><span class="n">zr1</span><span class="o">+</span><span class="n">zrx</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="p">(</span><span class="n">dx</span><span class="o">-</span><span class="n">d1</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="n">zr1</span><span class="o">+</span><span class="n">zry</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="p">(</span><span class="n">dy</span><span class="o">-</span><span class="n">d1</span><span class="p">)))))</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c">#Circular beam</span>
+        <span class="n">zr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q2x</span><span class="p">)</span>
+        <span class="n">d2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">q2x</span><span class="p">)</span>
+        <span class="n">ec</span> <span class="o">=</span> <span class="n">zr2</span> <span class="o">-</span> <span class="n">zr1</span>
+        <span class="n">az</span> <span class="o">=</span> <span class="n">d2</span> <span class="o">-</span><span class="n">d1</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">zr1</span><span class="o">*</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">ec</span><span class="o">/</span><span class="n">zr1</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">zr1</span><span class="o">+</span><span class="n">ec</span><span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">az</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span>
+</div>
+<div class="viewcode-block" id="optimalMatching"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.optimalMatching">[docs]</a><span class="k">def</span> <span class="nf">optimalMatching</span><span class="p">(</span><span class="n">q1</span><span class="p">,</span> <span class="n">q2</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Returns a mode (q-parameter) which best matches the given</span>
+<span class="sd">    two q-parameters, q1 and q2.</span>
+
+<span class="sd">    Returned values: (q, match)</span>
+
+<span class="sd">    q: The best matching q-parameter</span>
+
+<span class="sd">    match: Mode matching rate</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">zr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q1</span><span class="p">)</span>
+    <span class="n">d1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">q1</span><span class="p">)</span>
+
+    <span class="n">zr2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">q2</span><span class="p">)</span>
+    <span class="n">d2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">q2</span><span class="p">)</span>
+
+    <span class="n">zr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">zr1</span><span class="o">*</span><span class="n">zr2</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="p">((</span><span class="n">d2</span><span class="o">-</span><span class="n">d1</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">zr1</span><span class="o">+</span><span class="n">zr2</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="p">(</span><span class="n">zr1</span><span class="o">*</span><span class="n">d2</span> <span class="o">+</span> <span class="n">zr2</span><span class="o">*</span><span class="n">d1</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">zr1</span><span class="o">+</span><span class="n">zr2</span><span class="p">)</span>
+
+    <span class="n">q</span> <span class="o">=</span> <span class="n">d</span> <span class="o">+</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">zr</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">modeMatching</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q1</span><span class="p">,</span> <span class="n">q2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">match</span><span class="p">)</span>
+
+<span class="c">#{{{ For compatibility</span>
+</div>
+<div class="viewcode-block" id="qToRadius"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.qToRadius">[docs]</a><span class="k">def</span> <span class="nf">qToRadius</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mf">1064e-9</span><span class="p">):</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="n">wl</span>
+    <span class="k">return</span> <span class="n">sqrt</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="p">(</span><span class="n">k</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">q</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="qToROC"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.qToROC">[docs]</a><span class="k">def</span> <span class="nf">qToROC</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">q</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ROCandWtoQ"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.ROCandWtoQ">[docs]</a><span class="k">def</span> <span class="nf">ROCandWtoQ</span><span class="p">(</span><span class="n">ROC</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">wl</span><span class="o">=</span><span class="mf">1064e-9</span><span class="p">):</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mf">2.0</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="n">wl</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">k</span><span class="o">/</span><span class="mi">2</span>
+
+    <span class="k">return</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">ROC</span> <span class="o">+</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span><span class="o">*</span><span class="n">S</span><span class="p">))</span>
+
+<span class="c">#}}}</span>
+    
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Beam clip</span>
+</div>
+<div class="viewcode-block" id="beamClip"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.beamClip">[docs]</a><span class="k">def</span> <span class="nf">beamClip</span><span class="p">(</span><span class="n">a</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>  <span class="n">w</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">spf</span><span class="o">.</span><span class="n">erf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">a</span><span class="o">/</span><span class="n">w</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span>
+</div>
+<div class="viewcode-block" id="appertureCut"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.gaussian.appertureCut">[docs]</a><span class="k">def</span> <span class="nf">appertureCut</span><span class="p">(</span><span class="n">r</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>  <span class="n">w</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">r</span><span class="o">/</span><span class="n">w</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c">#}}}</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

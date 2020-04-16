@@ -1,0 +1,1275 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gtrace.optcomp &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gtrace.optcomp</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Define optical components for gtrace.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="c">#{{{ Import modules</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="n">pi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+<span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span>
+<span class="n">sqrt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">scimath</span><span class="o">.</span><span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">numpy.linalg</span> <span class="kn">import</span> <span class="n">norm</span>
+
+<span class="kn">from</span> <span class="nn">traits.api</span> <span class="kn">import</span> <span class="n">HasTraits</span><span class="p">,</span> <span class="n">Int</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">CFloat</span><span class="p">,</span> <span class="n">CArray</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Str</span>
+
+<span class="kn">import</span> <span class="nn">gtrace.optics</span> <span class="kn">as</span> <span class="nn">optics</span>
+<span class="kn">import</span> <span class="nn">gtrace.optics.geometric</span>
+<span class="kn">from</span> <span class="nn">unit</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">gtrace.draw</span> <span class="kn">as</span> <span class="nn">draw</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Author and License Infomation</span>
+
+<span class="c">#Copyright (c) 2011-2012, Yoichi Aso</span>
+<span class="c"># All rights reserved.</span>
+
+<span class="c"># Redistribution and use in source and binary forms, with or without</span>
+<span class="c"># modification, are permitted provided that the following conditions</span>
+<span class="c"># are met:</span>
+<span class="c">#</span>
+<span class="c"># * Redistributions of source code must retain the above copyright</span>
+<span class="c">#   notice, this list of conditions and the following disclaimer.</span>
+<span class="c">#</span>
+<span class="c"># * Redistributions in binary form must reproduce the above copyright</span>
+<span class="c">#   notice, this list of conditions and the following disclaimer in the</span>
+<span class="c">#   documentation and/or other materials provided with the distribution.</span>
+<span class="c">#</span>
+<span class="c"># THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</span>
+<span class="c"># &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</span>
+<span class="c"># LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS</span>
+<span class="c"># FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE</span>
+<span class="c"># COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,</span>
+<span class="c"># INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,</span>
+<span class="c"># BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;</span>
+<span class="c"># LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER</span>
+<span class="c"># CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT</span>
+<span class="c"># LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN</span>
+<span class="c"># ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE</span>
+<span class="c"># POSSIBILITY OF SUCH DAMAGE.</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Yoichi Aso&quot;</span>
+<span class="n">__copyright__</span> <span class="o">=</span> <span class="s">&quot;Copyright 2011-2012, Yoichi Aso&quot;</span>
+<span class="n">__credits__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Yoichi Aso&quot;</span><span class="p">]</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s">&quot;BSD&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&quot;0.2.0&quot;</span>
+<span class="n">__maintainer__</span> <span class="o">=</span> <span class="s">&quot;Yoichi Aso&quot;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&quot;aso@granite.phys.s.u-tokyo.ac.jp&quot;</span>
+<span class="n">__status__</span> <span class="o">=</span> <span class="s">&quot;Beta&quot;</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Generic Optics Class</span>
+
+<div class="viewcode-block" id="Optics"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Optics">[docs]</a><span class="k">class</span> <span class="nc">Optics</span><span class="p">(</span><span class="n">HasTraits</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A general optics class from which other specific</span>
+<span class="sd">    optics classes are derived.</span>
+
+<span class="sd">    === Attributes ===</span>
+<span class="sd">    name: Name of the optics. [string]</span>
+<span class="sd">    center: Center position of the optics. [(2,) float array]</span>
+<span class="sd">    rotationAngle: This angle defines the orientation of the optics.                   </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Str</span><span class="p">()</span>
+    <span class="n">center</span> <span class="o">=</span> <span class="n">CArray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">rotationAngle</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="c">#in rad</span>
+
+<span class="c">#{{{ isHit(beam)</span>
+
+<div class="viewcode-block" id="Optics.isHit"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Optics.isHit">[docs]</a>    <span class="k">def</span> <span class="nf">isHit</span><span class="p">(</span><span class="n">beam</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        A function to see if a beam hits this optics or not.</span>
+
+<span class="sd">        **Input parameters**</span>
+<span class="sd">        </span>
+<span class="sd">          ``beam``:</span>
+<span class="sd">          A GaussianBeam object to be interacted by the optics.</span>
+
+<span class="sd">        **Returned value**</span>
+<span class="sd">        </span>
+<span class="sd">          The return value is a dictionary with the following keys:</span>
+<span class="sd">          ``isHit, position, distance, face``</span>
+
+<span class="sd">          ``isHit``:</span>
+<span class="sd">          This is a boolean to answer whether the beam hit the optics</span>
+<span class="sd">          or not.</span>
+
+<span class="sd">          ``position``:</span>
+<span class="sd">          A numpy array containing the coordinate values of the intersection</span>
+<span class="sd">          point between the beam and the optics. If isHit is False, this parameter</span>
+<span class="sd">          does not mean anything.</span>
+
+<span class="sd">          ``distance``</span>
+<span class="sd">          The distance between the beam origin and the intersection point.</span>
+
+<span class="sd">          ``face``:</span>
+<span class="sd">          An optional string identifying which face of the optics was hit.</span>
+<span class="sd">          For example, ``face`` can be either &quot;HR&quot; or &quot;AR&quot; for a mirror.</span>
+<span class="sd">          ``face`` can also be &quot;side&quot;, meaning that the beam hits a side</span>
+<span class="sd">          of the optics, which is not meant to be used, e.g. the side of a mirror.</span>
+<span class="sd">          In this case, the beam have reached a dead end.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c">#This is an abstract function</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;isHit&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&#39;position&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span>
+                <span class="s">&#39;distance&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s">&#39;face&#39;</span><span class="p">:</span><span class="s">&#39;&#39;</span><span class="p">}</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ hit(beam, order=0, threshold=0.0):</span>
+</div>
+<div class="viewcode-block" id="Optics.hit"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Optics.hit">[docs]</a>    <span class="k">def</span> <span class="nf">hit</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        A function to hit the optics with a beam.</span>
+
+<span class="sd">        This function attempts to hit the optics with the source beam, ``beam``.</span>
+
+<span class="sd">        **Input parameters**:</span>
+
+<span class="sd">          ``beam``:</span>
+<span class="sd">          A GaussianBeam object to be interacted by the optics.</span>
+
+<span class="sd">          ``order``:</span>
+<span class="sd">          An integer to specify how many times the internal reflections</span>
+<span class="sd">          are computed.</span>
+
+<span class="sd">          ``threshold``</span>
+<span class="sd">          The power threshold for internal reflection calculation.</span>
+<span class="sd">          If the power of an auxiliary beam falls below this threshold,</span>
+<span class="sd">          further propagation of this beam will not be performed.</span>
+
+<span class="sd">        **Return values**</span>
+<span class="sd">        ``(isHit, beamDict, face)``</span>
+
+<span class="sd">        ``isHit``</span>
+<span class="sd">        This is a boolean to answer whether the beam hit the optics</span>
+<span class="sd">        or not.</span>
+
+<span class="sd">        ``beamDict``</span>
+<span class="sd">        A dictionary containing resultant beams.</span>
+<span class="sd">        </span>
+<span class="sd">        ``face``:</span>
+<span class="sd">          An optional string identifying which face of the optics was hit.</span>
+<span class="sd">          For a mirror, ``face`` is any of &quot;HR&quot;, &quot;AR&quot; or &quot;side&quot;.</span>
+<span class="sd">          </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c">#This is an abstract function</span>
+        <span class="k">return</span> <span class="p">{</span><span class="bp">False</span><span class="p">,</span> <span class="p">{},</span> <span class="s">&quot;side&quot;</span><span class="p">}</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{  _isHitSurface_()</span>
+</div>
+    <span class="k">def</span> <span class="nf">_isHitSurface_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">surface_center</span><span class="p">,</span> <span class="n">normal_vector</span><span class="p">,</span>
+                       <span class="n">surface_size</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">inv_ROC</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Determine if a beam hit a surface</span>
+
+<span class="sd">        *Input parameters*</span>
+
+<span class="sd">        ``beam``</span>
+<span class="sd">        A GaussianBeam object</span>
+
+<span class="sd">        *Return value*</span>
+<span class="sd">        A dictionary with the following keys:</span>
+<span class="sd">        &quot;isHit&quot;: A boolean value whether the beam hit the surface or not.</span>
+<span class="sd">        &quot;Intersection Point&quot;: numpy array of the coordinates of the intersection point.</span>
+<span class="sd">        &quot;distance&quot;: Distance between the origin of the beam and the intersection point.</span>
+<span class="sd">        &quot;localNormVect&quot;: A numpy array representing the normal vector of the surface</span>
+<span class="sd">                                    at the intersection point.</span>
+<span class="sd">        &quot;localNormAngle&quot;: The angle of the localNormVect.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">inv_ROC</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-5</span><span class="p">:</span>
+
+            <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_plane_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                          <span class="n">plane_center</span><span class="o">=</span><span class="n">surface_center</span><span class="p">,</span> <span class="n">normalVector</span><span class="o">=</span><span class="n">normal_vector</span><span class="p">,</span>
+                                          <span class="n">diameter</span><span class="o">=</span><span class="n">surface_size</span><span class="p">)</span>
+            <span class="n">localNormVect</span> <span class="o">=</span> <span class="n">normal_vector</span>
+            <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">localNormVect</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                               <span class="n">localNormVect</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+            <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormVect&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">localNormVect</span>
+            <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="k">return</span> <span class="n">ans</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                         <span class="n">chord_center</span><span class="o">=</span><span class="n">surface_center</span><span class="p">,</span>
+                                                         <span class="n">chordNormVect</span><span class="o">=</span><span class="n">normal_vector</span><span class="p">,</span>
+                                                         <span class="n">invROC</span><span class="o">=</span><span class="n">inv_ROC</span><span class="p">,</span>
+                                                         <span class="n">diameter</span><span class="o">=</span><span class="n">surface_size</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">ans</span>
+        
+<span class="c">#}}}</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Mirror Class</span>
+</div>
+<div class="viewcode-block" id="Mirror"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror">[docs]</a><span class="k">class</span> <span class="nc">Mirror</span><span class="p">(</span><span class="n">Optics</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Representing a partial reflective mirror.</span>
+
+<span class="sd">    === Attributes ===</span>
+
+<span class="sd">    HRcenter: The position of the center of the arc of the HR surface.</span>
+<span class="sd">                          [(2,) float array]    </span>
+<span class="sd">              </span>
+<span class="sd">    HRcenterC: The position of the center of the chord of the HR surface.</span>
+<span class="sd">                        [(2,) float array]    </span>
+
+<span class="sd">    normVectHR: Normal vector of the HR surface.</span>
+<span class="sd">    </span>
+<span class="sd">    normAngleHR: Angle of the HR normal vector.</span>
+
+<span class="sd">    ARcenter: The position of the center of the AR surface.</span>
+<span class="sd">              [(2,) float array]</span>
+
+<span class="sd">    normVectAR: Normal vector of the HR surface.</span>
+<span class="sd">    </span>
+<span class="sd">    normAngleAR: Angle of the HR normal vector.</span>
+
+<span class="sd">    HRtransmissive: A boolean value defaults to False. If True, this mirror</span>
+<span class="sd">                              is supposed to transmit beams on the HR surface. Therefore,</span>
+<span class="sd">                              for the first encounter of a beam on the HR surface of this mirror</span>
+<span class="sd">                              will not increase the stray_order. This flag should be set to True for</span>
+<span class="sd">                              beam splitters and input test masses.</span>
+
+<span class="sd">    term_on_HR: If this is True, a beam with stray_order=0 will be terminated when</span>
+<span class="sd">                          it hits on HR. This is to avoid the inifinite loop of non-sequencial</span>
+<span class="sd">                          trace by forming a cavity.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+<span class="c">#{{{ Traits definitions</span>
+
+    <span class="n">HRcenter</span> <span class="o">=</span> <span class="n">CArray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">HRcenterC</span> <span class="o">=</span> <span class="n">CArray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">sagHR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">normVectHR</span> <span class="o">=</span> <span class="n">CArray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">normAngleHR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    
+    <span class="n">ARcenter</span> <span class="o">=</span> <span class="n">CArray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">normVectAR</span> <span class="o">=</span> <span class="n">CArray</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">normAngleAR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    
+    <span class="n">diameter</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">25.0</span><span class="o">*</span><span class="n">cm</span><span class="p">)</span> <span class="c">#</span>
+    <span class="n">ARdiameter</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">()</span>
+    <span class="n">thickness</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">15.0</span><span class="o">*</span><span class="n">cm</span><span class="p">)</span> <span class="c"># </span>
+    <span class="n">wedgeAngle</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">0.25</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="mi">180</span><span class="p">)</span> <span class="c"># in rad</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">1.45</span><span class="p">)</span> <span class="c">#Index of refraction</span>
+
+    <span class="n">inv_ROC_HR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">7000.0</span><span class="p">)</span> <span class="c">#Inverse of the ROC of the HR surface.</span>
+    <span class="n">inv_ROC_AR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="c">#Inverse of the ROC of the AR surface.</span>
+
+    <span class="n">Refl_HR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">99.0</span><span class="p">)</span> <span class="c">#Power reflectivity of the HR side.</span>
+    <span class="n">Trans_HR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span> <span class="c">#Power transmittance of the HR side.</span>
+
+    <span class="n">Refl_AR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span> <span class="c">#Power reflectivity of the AR side.</span>
+    <span class="n">Trans_AR</span> <span class="o">=</span> <span class="n">CFloat</span><span class="p">(</span><span class="mf">99.99</span><span class="p">)</span> <span class="c">#Power transmittance of the HR side.</span>
+
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ __init__</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">HRcenter</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">normAngleHR</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">normVectHR</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">diameter</span><span class="o">=</span><span class="mf">25.0</span><span class="o">*</span><span class="n">cm</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="mf">15.0</span><span class="o">*</span><span class="n">cm</span><span class="p">,</span>
+                 <span class="n">wedgeAngle</span><span class="o">=</span><span class="mf">0.25</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="mf">180.</span><span class="p">,</span> <span class="n">inv_ROC_HR</span><span class="o">=</span><span class="mf">1.0</span><span class="o">/</span><span class="mf">7000.0</span><span class="p">,</span> <span class="n">inv_ROC_AR</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">Refl_HR</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">Trans_HR</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">Refl_AR</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">Trans_AR</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mf">1.45</span><span class="p">,</span>
+                 <span class="n">name</span><span class="o">=</span><span class="s">&quot;Mirror&quot;</span><span class="p">,</span> <span class="n">HRtransmissive</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">term_on_HR</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create a mirror object.</span>
+
+<span class="sd">        === Arguments ===</span>
+<span class="sd">        HRcenter: Position of the center of the HR surface. [(2,) array]</span>
+<span class="sd">        </span>
+<span class="sd">        normAngleHR: Direction angle of the normal vector of the HR surface. [rad]</span>
+<span class="sd">        </span>
+<span class="sd">        normVectHR: Normal vector of the HR surface. [(2,) array]</span>
+<span class="sd">        </span>
+<span class="sd">        diameter: Diameter of the mirror.</span>
+<span class="sd">        </span>
+<span class="sd">        thickness: Thickness of the mirror.</span>
+<span class="sd">        </span>
+<span class="sd">        wedgeAngle: Wedge angle between the HR and AR surfaces.</span>
+
+<span class="sd">        inv_ROC_HR: 1/ROC of the HR surface.</span>
+
+<span class="sd">        inv_ROC_AR: 1/ROC of the AR surface.</span>
+
+<span class="sd">        Refl_HR: Power reflectivity of the HR surface.</span>
+
+<span class="sd">        Trans_HR: Power transmissivity of the HR surface.</span>
+<span class="sd">        </span>
+<span class="sd">        Refl_AR: Power reflectivity of the AR surface.</span>
+
+<span class="sd">        Trans_AR: Power transmissivity of the AR surface.</span>
+
+<span class="sd">        n: Index of refraction.</span>
+
+<span class="sd">        name: Name of the mirror.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span> <span class="o">=</span> <span class="n">diameter</span>
+
+        <span class="c">#Compute the sag.</span>
+        <span class="c">#Sag is positive for convex mirror.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">inv_ROC_HR</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="mi">10</span><span class="o">*</span><span class="n">km</span><span class="p">):</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="n">inv_ROC_HR</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span> <span class="o">=</span>  <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">R</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">R</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">r</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+
+        <span class="c">#Convert rotationAngle to normVectHR or vice versa.</span>
+        <span class="k">if</span> <span class="n">normVectHR</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">=</span> <span class="n">normVectHR</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">=</span> <span class="n">normAngleHR</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">=</span> <span class="n">HRcenter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_HRcenter_changed</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span> <span class="o">=</span> <span class="n">thickness</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span> <span class="o">=</span> <span class="n">wedgeAngle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ARdiameter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span> <span class="o">=</span> <span class="n">inv_ROC_HR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span> <span class="o">=</span> <span class="n">inv_ROC_AR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span> <span class="o">=</span> <span class="n">Refl_HR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Trans_HR</span> <span class="o">=</span> <span class="n">Trans_HR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refl_AR</span> <span class="o">=</span> <span class="n">Refl_AR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Trans_AR</span> <span class="o">=</span> <span class="n">Trans_AR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_normAngleHR_changed</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">HRtransmissive</span> <span class="o">=</span> <span class="n">HRtransmissive</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">term_on_HR</span> <span class="o">=</span> <span class="n">term_on_HR</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ copy</span>
+
+<div class="viewcode-block" id="Mirror.copy"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Mirror</span><span class="p">(</span><span class="n">HRcenter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span><span class="p">,</span> <span class="n">normAngleHR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span><span class="p">,</span>
+                      <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">,</span>
+                      <span class="n">wedgeAngle</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">,</span> <span class="n">inv_ROC_HR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">,</span>
+                      <span class="n">inv_ROC_AR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">,</span> <span class="n">Refl_HR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span><span class="p">,</span>
+                      <span class="n">Trans_HR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Trans_HR</span><span class="p">,</span> <span class="n">Refl_AR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Refl_AR</span><span class="p">,</span> <span class="n">Trans_AR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Trans_AR</span><span class="p">,</span>
+                      <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">HRtransmissive</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">HRtransmissive</span><span class="p">,</span>
+                      <span class="n">term_on_HR</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">term_on_HR</span><span class="p">)</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ rotate</span>
+</div>
+<div class="viewcode-block" id="Mirror.rotate"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.rotate">[docs]</a>    <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Rotate the mirror. If center is not specified, the center of rotation is</span>
+<span class="sd">        HRcenter. If center is given (as a vector), the center of rotation is</span>
+<span class="sd">        center. center is a position vector in the global coordinates.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        
+        <span class="k">if</span> <span class="n">center</span><span class="p">:</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
+            <span class="n">pointer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">-</span> <span class="n">center</span>
+            <span class="n">pointer</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="n">pointer</span><span class="p">,</span> <span class="n">angle</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">=</span> <span class="n">center</span> <span class="o">+</span> <span class="n">pointer</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">+</span> <span class="n">angle</span>    
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Translate</span>
+</div>
+<div class="viewcode-block" id="Mirror.translate"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.translate">[docs]</a>    <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trVect</span><span class="p">):</span>
+        <span class="n">trVect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">trVect</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">+</span> <span class="n">trVect</span>
+        
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Draw</span>
+</div>
+<div class="viewcode-block" id="Mirror.draw"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cv</span><span class="p">,</span> <span class="n">drawName</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Draw itself</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="n">plVect</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">+</span> <span class="n">plVect</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span>
+        <span class="n">p2</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">-</span> <span class="n">plVect</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span>
+        <span class="n">p3</span> <span class="o">=</span> <span class="n">p2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thickness</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">p4</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thickness</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> 
+
+        <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>
+        <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">p4</span><span class="p">,</span><span class="n">p1</span><span class="p">),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>        
+        
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">/</span><span class="mi">10</span>
+        <span class="n">l1</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="n">d</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="n">p2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="n">d</span>
+        <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span><span class="n">l2</span><span class="p">),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>                
+
+        <span class="c">#Draw Curved surface</span>
+
+        <span class="c">#HR</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="o">/</span><span class="mf">1e5</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+            <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span><span class="o">/</span><span class="n">R</span><span class="p">)</span>
+            <span class="n">sag</span> <span class="o">=</span> <span class="n">R</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">R</span><span class="o">*</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span> <span class="o">-</span><span class="n">sag</span>
+            <span class="n">x2</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">x2</span><span class="p">,</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">y2</span><span class="p">,</span><span class="n">y</span><span class="p">))</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">))</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">-</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span>
+            <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">PolyLine</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>                            
+            <span class="c">#dxf.append(sdxf.LwPolyLine(points=list(v), layer=&quot;Mirrors&quot;))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>
+            <span class="c">#dxf.append(sdxf.Line(points=[p1,p2], layer=&quot;Mirrors&quot;))</span>
+
+        <span class="c">#AR</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="o">/</span><span class="mf">1e5</span><span class="p">:</span>
+            <span class="n">diameter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">)</span>
+            
+            <span class="n">R</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+            <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span><span class="o">/</span><span class="n">R</span><span class="p">)</span>
+            <span class="n">sag</span> <span class="o">=</span> <span class="n">R</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">diameter</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">R</span><span class="o">*</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="n">R</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span> <span class="o">-</span><span class="n">sag</span>
+            <span class="n">x2</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">x2</span><span class="p">,</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">y2</span><span class="p">,</span><span class="n">y</span><span class="p">))</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">))</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">normAngleAR</span> <span class="o">-</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span>
+            <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">PolyLine</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>
+            <span class="c">#dxf.append(sdxf.LwPolyLine(points=list(v), layer=&quot;Mirrors&quot;))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">Line</span><span class="p">(</span><span class="n">p3</span><span class="p">,</span><span class="n">p4</span><span class="p">),</span> <span class="n">layername</span><span class="o">=</span><span class="s">&quot;Mirrors&quot;</span><span class="p">)</span>
+            <span class="c">#dxf.append(sdxf.Line(points=[p3,p4], layer=&quot;Mirrors&quot;))</span>
+
+            
+        <span class="k">if</span> <span class="n">drawName</span><span class="p">:</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">p1</span><span class="o">+</span><span class="n">p2</span><span class="o">+</span><span class="n">p3</span><span class="o">+</span><span class="n">p4</span><span class="p">)</span><span class="o">/</span><span class="mf">4.</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">/</span><span class="mf">4.</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">height</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="n">center</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">width</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">height</span><span class="o">/</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">cv</span><span class="o">.</span><span class="n">add_shape</span><span class="p">(</span><span class="n">draw</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">point</span><span class="o">=</span><span class="n">center</span><span class="p">,</span><span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">),</span>
+                         <span class="n">layername</span><span class="o">=</span><span class="s">&quot;text&quot;</span><span class="p">)</span>
+            <span class="c"># dxf.append(sdxf.Text(text=self.name, point=center, # </span>
+            <span class="c">#                      height=height, layer=&#39;text&#39;))</span>
+            
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ isHit</span>
+</div>
+<div class="viewcode-block" id="Mirror.isHit"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.isHit">[docs]</a>    <span class="k">def</span> <span class="nf">isHit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        A function to see if a beam hits this optics or not.</span>
+
+<span class="sd">        **Input parameters**</span>
+<span class="sd">        </span>
+<span class="sd">          ``beam``:</span>
+<span class="sd">          A GaussianBeam object to be interacted by the optics.</span>
+
+<span class="sd">        **Returned value**</span>
+<span class="sd">        </span>
+<span class="sd">          The return value is a dictionary with the following keys:</span>
+<span class="sd">          ``isHit, position, distance, face``</span>
+
+<span class="sd">          ``isHit``:</span>
+<span class="sd">          This is a boolean to answer whether the beam hit the optics</span>
+<span class="sd">          or not.</span>
+
+<span class="sd">          ``position``:</span>
+<span class="sd">          A numpy array containing the coordinate values of the intersection</span>
+<span class="sd">          point between the beam and the optics. If isHit is False, this parameter</span>
+<span class="sd">          does not mean anything.</span>
+
+<span class="sd">          ``distance``</span>
+<span class="sd">          The distance between the beam origin and the intersection point.</span>
+
+<span class="sd">          ``face``:</span>
+<span class="sd">          An optional string identifying which face of the optics was hit.</span>
+<span class="sd">          For example, ``face`` can be either &quot;HR&quot; or &quot;AR&quot; for a mirror.</span>
+<span class="sd">          ``face`` can also be &quot;side&quot;, meaning that the beam hits a side</span>
+<span class="sd">          of the optics, which is not meant to be used, e.g. the side of a mirror.</span>
+<span class="sd">          In this case, the beam have reached a dead end.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">HRsurface</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;center&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span><span class="p">,</span> <span class="s">&#39;normal_vector&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span>
+                     <span class="s">&#39;size&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">,</span> <span class="s">&#39;inv_ROC&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;HR&#39;</span><span class="p">}</span>
+        <span class="n">ARsurface</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;center&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">,</span> <span class="s">&#39;normal_vector&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span><span class="p">,</span>
+                     <span class="s">&#39;size&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">,</span> <span class="s">&#39;inv_ROC&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;AR&#39;</span><span class="p">}</span>
+
+        <span class="c">#The vector parallel to the HR surface, pointing left.</span>
+        <span class="n">v1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="c">#Left corner of the HR surface</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span> <span class="o">*</span> <span class="n">v1</span>
+        <span class="c">#Right corner of the HR surface</span>
+        <span class="n">c2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span> <span class="o">*</span> <span class="n">v1</span>
+        <span class="c">#Center of the side 1</span>
+        <span class="n">side_center_1</span> <span class="o">=</span> <span class="n">c1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">/</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)</span>
+        <span class="c">#Center of the side 2</span>
+        <span class="n">side_center_2</span> <span class="o">=</span> <span class="n">c2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">/</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)</span>
+        
+        <span class="n">Side1</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;center&#39;</span><span class="p">:</span> <span class="n">side_center_1</span><span class="p">,</span> <span class="s">&#39;normal_vector&#39;</span><span class="p">:</span> <span class="n">v1</span><span class="p">,</span>
+                     <span class="s">&#39;size&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">,</span> <span class="s">&#39;inv_ROC&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;side&#39;</span><span class="p">}</span>
+        <span class="n">Side2</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;center&#39;</span><span class="p">:</span> <span class="n">side_center_2</span><span class="p">,</span> <span class="s">&#39;normal_vector&#39;</span><span class="p">:</span> <span class="o">-</span><span class="n">v1</span><span class="p">,</span>
+                     <span class="s">&#39;size&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">,</span> <span class="s">&#39;inv_ROC&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;side&#39;</span><span class="p">}</span>
+        
+        <span class="n">faceList</span> <span class="o">=</span> <span class="p">[</span><span class="n">HRsurface</span><span class="p">,</span> <span class="n">ARsurface</span><span class="p">,</span> <span class="n">Side1</span><span class="p">,</span> <span class="n">Side2</span><span class="p">]</span>
+
+        <span class="n">min_dist</span> <span class="o">=</span> <span class="mf">1e16</span>
+        <span class="n">final_answer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">faceList</span><span class="p">:</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_isHitSurface_</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="n">surface_center</span><span class="o">=</span><span class="n">face</span><span class="p">[</span><span class="s">&#39;center&#39;</span><span class="p">],</span>
+                                <span class="n">normal_vector</span><span class="o">=</span><span class="n">face</span><span class="p">[</span><span class="s">&#39;normal_vector&#39;</span><span class="p">],</span>
+                                <span class="n">surface_size</span><span class="o">=</span><span class="n">face</span><span class="p">[</span><span class="s">&#39;size&#39;</span><span class="p">],</span> <span class="n">inv_ROC</span><span class="o">=</span><span class="n">face</span><span class="p">[</span><span class="s">&#39;inv_ROC&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">min_dist</span> <span class="o">&gt;</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]:</span>
+                    <span class="n">min_dist</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+                    <span class="n">final_answer</span> <span class="o">=</span> <span class="n">ans</span>
+                    <span class="n">face_name</span> <span class="o">=</span> <span class="n">face</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">final_answer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;isHit&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&#39;position&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)),</span>
+                <span class="s">&#39;distance&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s">&#39;face&#39;</span><span class="p">:</span><span class="s">&#39;&#39;</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;isHit&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&#39;position&#39;</span><span class="p">:</span> <span class="n">final_answer</span><span class="p">[</span><span class="s">&#39;Intersection Point&#39;</span><span class="p">],</span>
+                <span class="s">&#39;distance&#39;</span><span class="p">:</span> <span class="n">min_dist</span><span class="p">,</span> <span class="s">&#39;face&#39;</span><span class="p">:</span> <span class="n">face_name</span><span class="p">}</span>
+                
+        
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ hit()</span></div>
+<div class="viewcode-block" id="Mirror.hit"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.hit">[docs]</a>    <span class="k">def</span> <span class="nf">hit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">face</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        A function to hit the optics with a beam.</span>
+
+<span class="sd">        This function attempts to hit the optics with the source beam, ``beam``.</span>
+
+<span class="sd">        **Input parameters**:</span>
+
+<span class="sd">          ``beam``:</span>
+<span class="sd">          A GaussianBeam object to be interacted by the optics.</span>
+
+<span class="sd">          ``order``:</span>
+<span class="sd">          An integer to specify how many times the internal reflections</span>
+<span class="sd">          are computed.</span>
+
+<span class="sd">          ``threshold``</span>
+<span class="sd">          The power threshold for internal reflection calculation.</span>
+<span class="sd">          If the power of an auxiliary beam falls below this threshold,</span>
+<span class="sd">          further propagation of this beam will not be performed.</span>
+
+<span class="sd">        **Return values**</span>
+<span class="sd">        ``(isHit, beamDict, face)``</span>
+
+<span class="sd">        ``isHit``</span>
+<span class="sd">        This is a boolean to answer whether the beam hit the optics</span>
+<span class="sd">        or not.</span>
+
+<span class="sd">        ``beamDict``</span>
+<span class="sd">        A dictionary containing resultant beams.</span>
+<span class="sd">        </span>
+<span class="sd">        ``face``:</span>
+<span class="sd">          An optional string identifying which face of the optics was hit.</span>
+<span class="sd">          For a mirror, ``face`` is any of &quot;HR&quot;, &quot;AR&quot; or &quot;side&quot;.</span>
+<span class="sd">          </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c">#If an optional argument ``face`` is specified</span>
+        <span class="k">if</span> <span class="n">face</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">face</span> <span class="o">==</span> <span class="s">&#39;HR&#39;</span><span class="p">:</span>
+                <span class="n">beams</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hitFromHR</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span> 
+            <span class="k">elif</span> <span class="n">face</span> <span class="o">==</span> <span class="s">&#39;AR&#39;</span><span class="p">:</span>
+                <span class="n">beams</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hitFromAR</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&#39;Wrong face </span><span class="si">%s</span><span class="s"> is specified&#39;</span><span class="o">%</span><span class="n">face</span><span class="p">)</span>
+                <span class="k">return</span> <span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="p">{},</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="c">#If face is not specified</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c">#Check if the beam hit the mirror</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">isHit</span><span class="p">(</span><span class="n">beam</span><span class="p">)</span>
+            <span class="n">face</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;face&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">face</span> <span class="o">==</span> <span class="s">&#39;HR&#39;</span><span class="p">:</span>
+                    <span class="n">beams</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hitFromHR</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span> 
+                <span class="k">elif</span> <span class="n">face</span> <span class="o">==</span> <span class="s">&#39;AR&#39;</span><span class="p">:</span>
+                    <span class="n">beams</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hitFromAR</span><span class="p">(</span><span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c">#The beam hit a side of the mirror</span>
+                    <span class="n">inputBeam</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">inputBeam</span><span class="o">.</span><span class="n">length</span><span class="o">=</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+                    <span class="k">return</span> <span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="p">{</span><span class="n">inputBeam</span><span class="p">},</span> <span class="s">&quot;side&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c">#The beam did not hit the mirror</span>
+                <span class="k">return</span> <span class="p">(</span><span class="bp">False</span><span class="p">,</span> <span class="p">{},</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+                    
+        <span class="k">return</span> <span class="p">(</span><span class="bp">True</span><span class="p">,</span> <span class="n">beams</span><span class="p">,</span> <span class="n">face</span><span class="p">)</span> 
+            
+        
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ hitFromHR</span>
+</div>
+<div class="viewcode-block" id="Mirror.hitFromHR"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.hitFromHR">[docs]</a>    <span class="k">def</span> <span class="nf">hitFromHR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Compute the reflected and deflected beams when</span>
+<span class="sd">        an input beam hit the HR surface.</span>
+
+<span class="sd">        The internal reflections are computed as long as the number</span>
+<span class="sd">        of internal reflections are below the ``order`` and the power</span>
+<span class="sd">        of the reflected beams is over the threshold.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c">#A dictionary to hold beams</span>
+        <span class="n">beams</span><span class="o">=</span><span class="p">{}</span>
+        
+        <span class="c">#Get the intersection point</span>
+        <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                     <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span><span class="p">,</span>
+                                                     <span class="n">chordNormVect</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span>
+                                                     <span class="n">invROC</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">,</span>
+                                                     <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+            <span class="c">#The input beam does not hit the mirror.</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&#39;: The beam does not hit the mirror&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">beams</span>
+
+        <span class="c">#Local normal angle</span>
+        <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>
+
+        <span class="n">beam_in</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c">#Make a copy</span>
+        <span class="n">beam_in</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+        <span class="n">beam_in</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+        <span class="n">beam_in</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+        <span class="n">beams</span><span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">]</span><span class="o">=</span> <span class="n">beam_in</span>
+
+        
+        <span class="c">#Propagate the input beam to the intersection point</span>
+        <span class="n">beam_on_HR</span> <span class="o">=</span> <span class="n">beam_in</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+        <span class="c">#Calculate reflection and deflection angles along with the ABCD matrices</span>
+        <span class="c">#for reflection and deflection.</span>
+        <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                    <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_HR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                               <span class="n">localNormAngle</span><span class="p">,</span>
+                                               <span class="mf">1.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">)</span>        
+        <span class="c">#Reflected beam</span>
+        <span class="n">beam_r1</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span>
+        <span class="k">if</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>        
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:r1&#39;</span>
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;r1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam_r1</span>
+        
+        <span class="c">#Transmitted beam</span>
+        <span class="n">beam_s1</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_HR</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRtransmissive</span><span class="p">:</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="ow">or</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&gt;</span> <span class="n">order</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">beams</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+
+        <span class="c">#Hit AR from back</span>
+        <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                     <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">,</span>
+                                                     <span class="n">chordNormVect</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span><span class="p">,</span>
+                                                     <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">,</span>
+                                                     <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARdiameter</span><span class="p">)</span>
+
+        <span class="c">#Local normal angle</span>
+        <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>
+
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:s1&#39;</span>
+        <span class="n">beams</span><span class="p">[</span><span class="s">&#39;s1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam_s1</span>
+
+        
+        <span class="c">#Propagate the beam to the AR surface</span>
+        <span class="n">beam_on_AR</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+        <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                    <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_AR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                               <span class="n">localNormAngle</span><span class="p">,</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">)</span>
+
+        <span class="c">#Transmitted beam</span>
+        <span class="n">beam_t1</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_AR</span>
+        <span class="k">if</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>        
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:t</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;t1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam_t1</span>
+
+                                               
+        <span class="c">#Reflected beam</span>
+        <span class="n">beam_sr</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_AR</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="ow">or</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&gt;</span> <span class="n">order</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">beams</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+        
+     
+        <span class="c">#Calculate higher order reflections</span>
+
+        <span class="n">ii</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="n">ii</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="o">*</span><span class="n">order</span><span class="p">:</span>
+
+            <span class="c">#Hit the HR from the back</span>
+            
+            <span class="c">#Get the intersection point</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam_sr</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam_sr</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                         <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span><span class="p">,</span>
+                                                         <span class="n">chordNormVect</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span>
+                                                         <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">,</span>
+                                                         <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+                <span class="k">break</span>
+
+            <span class="c">#Local normal angle</span>
+            <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>            
+
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="s">&#39;aux_beam&#39;</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:s</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="p">)</span>              
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;s&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="p">)]</span><span class="o">=</span> <span class="n">beam_sr</span>
+
+            <span class="c">#Propagate the input beam to the intersection point</span>
+            <span class="n">beam_on_HR</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+            <span class="c">#Calculate reflection and deflection angles along with the ABCD matrices</span>
+            <span class="c">#for reflection and deflection.</span>
+            <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                        <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_HR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                                         <span class="n">localNormAngle</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">)</span>
+
+            <span class="c">#Transmitted through HR</span>
+            <span class="n">beam_r1</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_HR</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>            
+            <span class="k">if</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&lt;=</span> <span class="n">order</span><span class="p">:</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:r</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>                  
+                <span class="n">beams</span><span class="p">[</span><span class="s">&#39;r&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">beam_r1</span>
+
+            <span class="c">#Reflected by HR</span>
+            <span class="n">beam_s1</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span>
+            <span class="k">if</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+
+            <span class="c">#Hit AR from back</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                         <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">,</span>
+                                                         <span class="n">chordNormVect</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span><span class="p">,</span>
+                                                         <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">,</span>
+                                                         <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARdiameter</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+                <span class="k">break</span>
+
+            <span class="c">#Local normal angle</span>
+            <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>
+
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:s</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>              
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;s&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">beam_s1</span>
+
+            <span class="c">#Propagate the beam to the AR surface</span>
+            <span class="n">beam_on_AR</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+            <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                        <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_AR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                                         <span class="n">localNormAngle</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">)</span>
+            <span class="c">#Transmitted beam</span>
+            <span class="n">beam_t1</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_AR</span>
+            <span class="k">if</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:t</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>  
+                <span class="n">beams</span><span class="p">[</span><span class="s">&#39;t&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">beam_t1</span>
+
+            <span class="c">#Reflected beam</span>
+            <span class="n">beam_sr</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_AR</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="ow">or</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&gt;</span> <span class="n">order</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+
+            <span class="n">ii</span><span class="o">=</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">beams</span>
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ hitFromAR</span>
+</div>
+<div class="viewcode-block" id="Mirror.hitFromAR"><a class="viewcode-back" href="../../api/gtrace.html#gtrace.optcomp.Mirror.hitFromAR">[docs]</a>    <span class="k">def</span> <span class="nf">hitFromAR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">beam</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Compute the reflected and deflected beams when</span>
+<span class="sd">        an input beam hit the AR surface.</span>
+
+<span class="sd">        The internal reflections are computed as long as the number</span>
+<span class="sd">        of internal reflections are below the ``order`` and the power</span>
+<span class="sd">        of the reflected beams is over the threshold.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c">#A dictionary to hold beams</span>
+        <span class="n">beams</span><span class="o">=</span><span class="p">{}</span>
+        
+        <span class="c">#Get the intersection point</span>
+        <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                     <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">,</span>
+                                                     <span class="n">chordNormVect</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span><span class="p">,</span>
+                                                     <span class="n">invROC</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">,</span>
+                                                     <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARdiameter</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+            <span class="c">#The input beam does not hit the mirror.</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&#39;: The beam does not hit the mirror&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">beams</span>
+        
+        <span class="c">#Local normal angle</span>
+        <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>        
+
+        <span class="n">beam_in</span> <span class="o">=</span> <span class="n">beam</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c">#Make a copy</span>
+        <span class="n">beam_in</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+        <span class="n">beam_in</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span> 
+        <span class="n">beam_in</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+        <span class="n">beams</span><span class="p">[</span><span class="s">&#39;input&#39;</span><span class="p">]</span><span class="o">=</span> <span class="n">beam_in</span>
+
+        <span class="c">#Propagate the input beam to the intersection point</span>
+        <span class="n">beam_on_AR</span> <span class="o">=</span> <span class="n">beam_in</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+        <span class="c">#Calculate reflection and deflection angles along with the ABCD matrices</span>
+        <span class="c">#for reflection and deflection.</span>
+        <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                    <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_AR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                               <span class="n">localNormAngle</span><span class="p">,</span>
+                                               <span class="mf">1.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">)</span>        
+        <span class="c">#Reflected beam</span>
+        <span class="n">beam_r1</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_AR</span>
+        <span class="n">beam_r1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>        
+        <span class="k">if</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&lt;=</span> <span class="n">order</span><span class="p">:</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>        
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:r1&#39;</span>            
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;r1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam_r1</span>
+        
+        <span class="c">#Transmitted beam</span>
+        <span class="n">beam_s1</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_AR</span>
+        <span class="k">if</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">beams</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+
+        <span class="c">#Hit HR from back</span>
+        <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                     <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span><span class="p">,</span>
+                                                     <span class="n">chordNormVect</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span>
+                                                     <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">,</span>
+                                                     <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">)</span>
+
+        <span class="c">#Local normal angle</span>
+        <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>                
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+        <span class="n">beam_s1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:s1&#39;</span>        
+        <span class="n">beams</span><span class="p">[</span><span class="s">&#39;s1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam_s1</span>
+
+        
+        <span class="c">#Propagate the beam to the HR surface</span>
+        <span class="n">beam_on_HR</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+        <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                    <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_HR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                               <span class="n">localNormAngle</span><span class="p">,</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">)</span>
+
+        <span class="c">#Transmitted beam</span>
+        <span class="n">beam_t1</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_HR</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRtransmissive</span><span class="p">:</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&lt;=</span> <span class="n">order</span><span class="p">:</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:t1&#39;</span>            
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;t1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">beam_t1</span>
+                                               
+        <span class="c">#Reflected beam</span>
+        <span class="n">beam_sr</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span>
+        <span class="k">if</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">beams</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+        <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+        
+        <span class="c">#Calculate higher order reflections</span>
+
+        <span class="n">ii</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="n">ii</span> <span class="o">&lt;=</span> <span class="mi">10</span><span class="o">*</span><span class="n">order</span><span class="p">:</span>
+
+            <span class="c">#Hit AR from back</span>
+            
+            <span class="c">#Get the intersection point</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam_sr</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam_sr</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                         <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">,</span>
+                                                         <span class="n">chordNormVect</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span><span class="p">,</span>
+                                                         <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">,</span>
+                                                         <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ARdiameter</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+                <span class="k">break</span>
+
+            <span class="c">#Local normal angle</span>
+            <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">layer</span> <span class="o">=</span> <span class="s">&#39;aux_beam&#39;</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:s</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="p">)</span>            
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;s&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="p">)]</span><span class="o">=</span> <span class="n">beam_sr</span>
+
+
+            <span class="c">#Propagate the input beam to the intersection point</span>
+            <span class="n">beam_on_AR</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+            <span class="c">#Calculate reflection and deflection angles along with the ABCD matrices</span>
+            <span class="c">#for reflection and deflection.</span>
+            <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                        <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_AR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                                         <span class="n">localNormAngle</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span><span class="p">)</span>
+
+            <span class="c">#Transmitted through AR</span>
+            <span class="n">beam_r1</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_AR</span>
+            <span class="k">if</span> <span class="n">beam_r1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_r1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:r</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>                              
+                <span class="n">beams</span><span class="p">[</span><span class="s">&#39;r&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">beam_r1</span>
+
+            <span class="c">#Reflected by AR</span>
+            <span class="n">beam_s1</span> <span class="o">=</span> <span class="n">beam_on_AR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_AR</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>            
+            <span class="k">if</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="ow">or</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&gt;</span> <span class="n">order</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_AR</span>
+
+            <span class="c">#Hit HR from back</span>
+            <span class="n">ans</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">line_arc_intersection</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">dirVect</span><span class="o">=</span><span class="n">beam_s1</span><span class="o">.</span><span class="n">dirVect</span><span class="p">,</span>
+                                                         <span class="n">chord_center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span><span class="p">,</span>
+                                                         <span class="n">chordNormVect</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span>
+                                                         <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">,</span>
+                                                         <span class="n">diameter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;isHit&#39;</span><span class="p">]:</span>
+                <span class="k">break</span>
+            
+           <span class="c">#Local normal angle</span>
+            <span class="n">localNormAngle</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;localNormAngle&#39;</span><span class="p">]</span>            
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">]</span>
+            <span class="n">beam_s1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:s</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>                          
+            <span class="n">beams</span><span class="p">[</span><span class="s">&#39;s&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">beam_s1</span>
+
+
+            <span class="c">#Propagate the beam to the HR surface</span>
+            <span class="n">beam_on_HR</span> <span class="o">=</span> <span class="n">beam_s1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">propagate</span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="s">&#39;distance&#39;</span><span class="p">])</span>
+
+            <span class="p">(</span><span class="n">reflAngle</span><span class="p">,</span> <span class="n">deflAngle</span><span class="p">,</span> <span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">,</span> <span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span> <span class="o">=</span> \
+                        <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">refl_defl_angle</span><span class="p">(</span><span class="n">beam_on_HR</span><span class="o">.</span><span class="n">dirAngle</span><span class="p">,</span>
+                                                         <span class="n">localNormAngle</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">invROC</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">)</span>
+
+            <span class="c">#Transmitted beam</span>
+            <span class="n">beam_t1</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Trans_HR</span>
+            <span class="n">beam_t1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">=</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">stray_order</span><span class="o">+</span><span class="mi">1</span>            
+            <span class="k">if</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">P</span> <span class="o">&gt;</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">beam_t1</span><span class="o">.</span><span class="n">stray_order</span> <span class="o">&lt;=</span> <span class="n">order</span><span class="p">:</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">deflAngle</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mtx</span><span class="p">,</span> <span class="n">Mty</span><span class="p">)</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">localNormAngle</span><span class="o">+</span><span class="n">pi</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfAngle</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">incSurfInvROC</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">beam_t1</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;:t</span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>                
+                <span class="n">beams</span><span class="p">[</span><span class="s">&#39;t&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">beam_t1</span>
+
+            <span class="c">#Reflected beam</span>
+            <span class="n">beam_sr</span> <span class="o">=</span> <span class="n">beam_on_HR</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Refl_HR</span>
+            <span class="k">if</span> <span class="n">beam_sr</span><span class="o">.</span><span class="n">P</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">dirAngle</span> <span class="o">=</span> <span class="n">reflAngle</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">ABCDTrans</span><span class="p">(</span><span class="n">Mrx</span><span class="p">,</span> <span class="n">Mry</span><span class="p">)</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfAngle</span> <span class="o">=</span> <span class="n">localNormAngle</span>
+            <span class="n">beam_sr</span><span class="o">.</span><span class="n">departSurfInvROC</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+
+            <span class="n">ii</span><span class="o">=</span><span class="n">ii</span><span class="o">+</span><span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">beams</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Notification handlers</span>
+</div>
+    <span class="k">def</span> <span class="nf">_normAngleHR_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">normVectHR</span> <span class="o">=</span> <span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span><span class="p">)]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>        
+                 <span class="n">normAngleHR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span> <span class="n">pi</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normAngleAR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">+</span> <span class="n">pi</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span>
+        
+    <span class="k">def</span> <span class="nf">_normVectHR_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="c">#Normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>        
+                 <span class="n">normVectHR</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)))</span>
+        <span class="c">#Update dirAngle accordingly</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>        
+                 <span class="n">normAngleHR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">normVectAR</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span> <span class="n">pi</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normAngleAR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">+</span> <span class="n">pi</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span>
+        
+    <span class="k">def</span> <span class="nf">_HRcenterC_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">ARcenter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">HRcenter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_HRcenter_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">HRcenterC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">ARcenter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ARcenter</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_center_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">HRcenterC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">HRcenter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">ARcenter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenterC</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_wedgeAngle_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">normAngleAR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normAngleHR</span> <span class="o">+</span> <span class="n">pi</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">normVectAR</span> <span class="o">=</span> <span class="n">optics</span><span class="o">.</span><span class="n">geometric</span><span class="o">.</span><span class="n">vector_rotation_2D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">,</span> <span class="n">pi</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">wedgeAngle</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_inv_ROC_HR_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+        <span class="c">#First update the sag</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="mi">10</span><span class="o">*</span><span class="n">km</span><span class="p">):</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_ROC_HR</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diameter</span><span class="o">/</span><span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span> <span class="o">=</span>  <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">R</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">R</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">r</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+        <span class="c">#Update the HRcenterC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">trait_change_notify</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">HRcenterC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HRcenter</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">sagHR</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">normVectHR</span><span class="p">)</span>
+        
+<span class="c">#}}}        </span>
+
+<span class="c">#}}}</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

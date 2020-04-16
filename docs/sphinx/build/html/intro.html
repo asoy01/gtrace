@@ -1,0 +1,218 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Introduction &mdash; gtrace 0.2.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Basic Concepts" href="basic_concepts.html" />
+    <link rel="prev" title="Welcome to gtrace’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> gtrace
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_concepts.html">Basic Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">gtrace</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">gtrace</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Introduction</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/intro.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<p>gtrace is a python package to trace the propagation of Gaussian beams among optical components such as mirrors and lenses. The features of gtrace include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Automatically track the Gaussian beam propagation, i.e. q-parameter change, using the ABCD matrix method.</p></li>
+<li><p>Reflection and refraction at interface surfaces are properly treated.</p></li>
+<li><p>Automatically track the optical distance traveled by a beam through dielectric media.</p></li>
+<li><p>Sequential or non-sequential trace modes are available.</p></li>
+<li><p>Exporting the results to DXF files</p></li>
+</ul>
+</div></blockquote>
+<p>The main motivation behind the development of gtrace was to help the design of the optical layout for the <a class="reference external" href="http://gwcenter.icrr.u-tokyo.ac.jp/en/">KAGRA</a> interferometer. The task is not so trivial because we had to satisfy many constraints at the same time. Manually placing mirrors on a CAD and adjusting the distances between the mirrors and their orientations was not an option. We needed a way to automatically adjust the optical layout with a computer to satisfy our requirements. In order to do this, we needed a tool to represent an optical layout convenient for computer processings. gtrace represents mirrors and beams as class objects in python. Then the propagation of the beams can be treated as interactions between the beams and the mirrors. This way, we can automate the optimization of the KAGRA optical layout.</p>
+<p>The main ingredients of gtrace are mirrors and beams. A mirror is represented as an instance of <a class="reference internal" href="api/gtrace.html#gtrace.optcomp.Mirror" title="gtrace.optcomp.Mirror"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mirror</span></code></a> class. You place mirrors in a 2D plane. You can set various properties of a mirror such as size, curvature, reflectivities, wedge angle etc. Then you launch a beam, an instance of <a class="reference internal" href="api/gtrace.html#gtrace.beam.GaussianBeam" title="gtrace.beam.GaussianBeam"><code class="xref py py-class docutils literal notranslate"><span class="pre">GaussianBeam</span></code></a> class, from a certain point in the 2D plane. As the beam hits mirrors, it is divided into several sub-beams, such as reflections and deflected beams. These newly generated beam objects are available to you for further propagation. In the non-sequential mode, these sub-beams are automatically propagated until one of the termination conditions is satisfied. The termination conditions include, not hitting any mirror, power is below a certain threshold and so on. At the end of the propagation, you will have a collection of beam objects generated by the collision with the mirrors. You can export the mirrors and the beams into a DXF file.</p>
+<p>gtrace is at this moment limited to 2D optical layouts. This limitation might be lifted in the future.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="basic_concepts.html" class="btn btn-neutral float-right" title="Basic Concepts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to gtrace’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Yoichi Aso
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

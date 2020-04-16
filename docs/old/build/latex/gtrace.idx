@@ -1,0 +1,146 @@
+\indexentry{gtrace.\_\_init\_\_ (module)|hyperpage}{7}
+\indexentry{gtrace.beam (module)|hyperpage}{7}
+\indexentry{GaussianBeam (class in gtrace.beam)|hyperpage}{7}
+\indexentry{ABCDTrans() (gtrace.beam.GaussianBeam method)|hyperpage}{8}
+\indexentry{R() (gtrace.beam.GaussianBeam method)|hyperpage}{8}
+\indexentry{copy() (gtrace.beam.GaussianBeam method)|hyperpage}{8}
+\indexentry{draw() (gtrace.beam.GaussianBeam method)|hyperpage}{8}
+\indexentry{drawWidth() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{drawWidthOld() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{flip() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{propagate() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{rotate() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{translate() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{waist() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{width() (gtrace.beam.GaussianBeam method)|hyperpage}{9}
+\indexentry{optFunForEndPointR() (in module gtrace.beam)|hyperpage}{9}
+\indexentry{optFunForFlat() (in module gtrace.beam)|hyperpage}{9}
+\indexentry{optFunForStartPointR() (in module gtrace.beam)|hyperpage}{9}
+\indexentry{optimCrossPointFlat() (in module gtrace.beam)|hyperpage}{10}
+\indexentry{optimEndPointR() (in module gtrace.beam)|hyperpage}{10}
+\indexentry{optimStartPointR() (in module gtrace.beam)|hyperpage}{10}
+\indexentry{gtrace.hello (module)|hyperpage}{10}
+\indexentry{hello (class in gtrace.hello)|hyperpage}{10}
+\indexentry{greetings() (gtrace.hello.hello method)|hyperpage}{10}
+\indexentry{saysomething() (in module gtrace.hello)|hyperpage}{10}
+\indexentry{gtrace.nonsequential (module)|hyperpage}{10}
+\indexentry{non\_seq\_trace() (in module gtrace.nonsequential)|hyperpage}{10}
+\indexentry{gtrace.optcomp (module)|hyperpage}{10}
+\indexentry{Mirror (class in gtrace.optcomp)|hyperpage}{10}
+\indexentry{copy() (gtrace.optcomp.Mirror method)|hyperpage}{11}
+\indexentry{draw() (gtrace.optcomp.Mirror method)|hyperpage}{11}
+\indexentry{hit() (gtrace.optcomp.Mirror method)|hyperpage}{11}
+\indexentry{hitFromAR() (gtrace.optcomp.Mirror method)|hyperpage}{11}
+\indexentry{hitFromHR() (gtrace.optcomp.Mirror method)|hyperpage}{11}
+\indexentry{isHit() (gtrace.optcomp.Mirror method)|hyperpage}{11}
+\indexentry{rotate() (gtrace.optcomp.Mirror method)|hyperpage}{12}
+\indexentry{translate() (gtrace.optcomp.Mirror method)|hyperpage}{12}
+\indexentry{Optics (class in gtrace.optcomp)|hyperpage}{12}
+\indexentry{hit() (gtrace.optcomp.Optics method)|hyperpage}{12}
+\indexentry{isHit() (gtrace.optcomp.Optics method)|hyperpage}{12}
+\indexentry{gtrace.unit (module)|hyperpage}{13}
+\indexentry{deg2rad() (in module gtrace.unit)|hyperpage}{13}
+\indexentry{rad2deg() (in module gtrace.unit)|hyperpage}{13}
+\indexentry{gtrace.draw (module)|hyperpage}{13}
+\indexentry{gtrace.draw.draw (module)|hyperpage}{13}
+\indexentry{Arc (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{Canvas (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{add\_layer() (gtrace.draw.draw.Canvas method)|hyperpage}{13}
+\indexentry{add\_shape() (gtrace.draw.draw.Canvas method)|hyperpage}{13}
+\indexentry{Circle (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{Layer (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{add\_shape() (gtrace.draw.draw.Layer method)|hyperpage}{13}
+\indexentry{Line (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{NumberOfElementError|hyperpage}{13}
+\indexentry{PolyLine (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{Rectangle (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{Shape (class in gtrace.draw.draw)|hyperpage}{13}
+\indexentry{Text (class in gtrace.draw.draw)|hyperpage}{14}
+\indexentry{gtrace.draw.dxf (module)|hyperpage}{14}
+\indexentry{Arc (class in gtrace.draw.dxf)|hyperpage}{14}
+\indexentry{draw() (gtrace.draw.dxf.Arc method)|hyperpage}{14}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.Arc method)|hyperpage}{14}
+\indexentry{Circle (class in gtrace.draw.dxf)|hyperpage}{14}
+\indexentry{draw() (gtrace.draw.dxf.Circle method)|hyperpage}{14}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.Circle method)|hyperpage}{14}
+\indexentry{DXF (class in gtrace.draw.dxf)|hyperpage}{14}
+\indexentry{add\_entity() (gtrace.draw.dxf.DXF method)|hyperpage}{14}
+\indexentry{add\_layer() (gtrace.draw.dxf.DXF method)|hyperpage}{14}
+\indexentry{save\_to\_file() (gtrace.draw.dxf.DXF method)|hyperpage}{14}
+\indexentry{Entity (class in gtrace.draw.dxf)|hyperpage}{14}
+\indexentry{draw() (gtrace.draw.dxf.Entity method)|hyperpage}{14}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.Entity method)|hyperpage}{14}
+\indexentry{set\_handle() (gtrace.draw.dxf.Entity method)|hyperpage}{15}
+\indexentry{Layer (class in gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{add\_entity() (gtrace.draw.dxf.Layer method)|hyperpage}{15}
+\indexentry{Line (class in gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{draw() (gtrace.draw.dxf.Line method)|hyperpage}{15}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.Line method)|hyperpage}{15}
+\indexentry{LwPolyLine (class in gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{draw() (gtrace.draw.dxf.LwPolyLine method)|hyperpage}{15}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.LwPolyLine method)|hyperpage}{15}
+\indexentry{NumberOfElementError|hyperpage}{15}
+\indexentry{Rectangle (class in gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{draw() (gtrace.draw.dxf.Rectangle method)|hyperpage}{15}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.Rectangle method)|hyperpage}{15}
+\indexentry{Text (class in gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{draw() (gtrace.draw.dxf.Text method)|hyperpage}{15}
+\indexentry{report\_min\_max() (gtrace.draw.dxf.Text method)|hyperpage}{15}
+\indexentry{color\_encode() (in module gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{test\_func() (in module gtrace.draw.dxf)|hyperpage}{15}
+\indexentry{gtrace.draw.renderer (module)|hyperpage}{16}
+\indexentry{UnknownShapeError|hyperpage}{16}
+\indexentry{renderDXF() (in module gtrace.draw.renderer)|hyperpage}{16}
+\indexentry{gtrace.draw.tools (module)|hyperpage}{16}
+\indexentry{drawAllBeams() (in module gtrace.draw.tools)|hyperpage}{16}
+\indexentry{drawAllOptics() (in module gtrace.draw.tools)|hyperpage}{16}
+\indexentry{drawOptSys() (in module gtrace.draw.tools)|hyperpage}{16}
+\indexentry{rotateAll() (in module gtrace.draw.tools)|hyperpage}{16}
+\indexentry{transAll() (in module gtrace.draw.tools)|hyperpage}{16}
+\indexentry{gtrace.optics.cavity (module)|hyperpage}{16}
+\indexentry{Cavity (class in gtrace.optics.cavity)|hyperpage}{16}
+\indexentry{FSR() (gtrace.optics.cavity.Cavity method)|hyperpage}{16}
+\indexentry{Nbounce() (gtrace.optics.cavity.Cavity method)|hyperpage}{16}
+\indexentry{finesse() (gtrace.optics.cavity.Cavity method)|hyperpage}{16}
+\indexentry{intra() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{modeSpacing() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{pole() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{powerGain() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{refl() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{spotSize() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{storageTime() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{trans() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{waist() (gtrace.optics.cavity.Cavity method)|hyperpage}{17}
+\indexentry{finesse() (in module gtrace.optics.cavity)|hyperpage}{18}
+\indexentry{gtrace.optics.consts (module)|hyperpage}{18}
+\indexentry{n\_fused\_silica() (in module gtrace.optics.consts)|hyperpage}{18}
+\indexentry{n\_sapphire\_extraordinary() (in module gtrace.optics.consts)|hyperpage}{18}
+\indexentry{n\_sapphire\_ordinary() (in module gtrace.optics.consts)|hyperpage}{18}
+\indexentry{sellmeier() (in module gtrace.optics.consts)|hyperpage}{18}
+\indexentry{gtrace.optics.gaussian (module)|hyperpage}{18}
+\indexentry{ROCandWtoQ() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{Rw2q() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{appertureCut() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{beamClip() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{modeMatching() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{modeSpacing() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{optimalMatching() (in module gtrace.optics.gaussian)|hyperpage}{18}
+\indexentry{q2R() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{q2w() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{q2zr() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{qToROC() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{qToRadius() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{w02zr() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{zr2w0() (in module gtrace.optics.gaussian)|hyperpage}{19}
+\indexentry{gtrace.optics.geometric (module)|hyperpage}{19}
+\indexentry{deflection\_angle() (in module gtrace.optics.geometric)|hyperpage}{19}
+\indexentry{line\_arc\_intersection() (in module gtrace.optics.geometric)|hyperpage}{19}
+\indexentry{line\_plane\_intersection() (in module gtrace.optics.geometric)|hyperpage}{19}
+\indexentry{normSpheric() (in module gtrace.optics.geometric)|hyperpage}{19}
+\indexentry{refl\_defl\_angle() (in module gtrace.optics.geometric)|hyperpage}{19}
+\indexentry{vc\_deflect() (in module gtrace.optics.geometric)|hyperpage}{20}
+\indexentry{vc\_reflect() (in module gtrace.optics.geometric)|hyperpage}{20}
+\indexentry{vector\_rotation\_2D() (in module gtrace.optics.geometric)|hyperpage}{20}
+\indexentry{gtrace.optics.unit (module)|hyperpage}{20}
+\indexentry{deg2rad() (in module gtrace.optics.unit)|hyperpage}{20}
+\indexentry{rad2deg() (in module gtrace.optics.unit)|hyperpage}{20}

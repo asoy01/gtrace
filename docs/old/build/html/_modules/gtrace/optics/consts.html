@@ -1,0 +1,182 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gtrace.optics.consts &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gtrace.optics.consts</h1><div class="highlight"><pre>
+<span class="c">#{{{ Imports</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c">#}}}</span>
+
+<span class="c">#{{{ Index of refractions</span>
+
+<div class="viewcode-block" id="sellmeier"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.consts.sellmeier">[docs]</a><span class="k">def</span> <span class="nf">sellmeier</span><span class="p">(</span><span class="n">wl</span><span class="p">,</span> <span class="n">B1</span><span class="p">,</span> <span class="n">B2</span><span class="p">,</span> <span class="n">B3</span><span class="p">,</span> <span class="n">C1</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">C3</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Calculate index of refraction using Sellmeiers equation</span>
+
+<span class="sd">    n^2 = 1+B1*wl^2/(wl^2 - C1) + B2*wl^2/(wl^2 - C2) + B3*wl^2/(wl^2 - C3)</span>
+
+<span class="sd">    See below for the coefficients for specific materials.</span>
+<span class="sd">    http://www.cvimellesgriot.com/products/Documents/Catalog/Dispersion_Equations.pdf</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">B1</span><span class="o">*</span><span class="n">wl</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="n">wl</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">C1</span><span class="p">)</span> <span class="o">+</span> <span class="n">B2</span><span class="o">*</span><span class="n">wl</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="n">wl</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">C2</span><span class="p">)</span> <span class="o">+</span> <span class="n">B3</span><span class="o">*</span><span class="n">wl</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="n">wl</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">C3</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">n</span>
+    </div>
+<div class="viewcode-block" id="n_fused_silica"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.consts.n_fused_silica">[docs]</a><span class="k">def</span> <span class="nf">n_fused_silica</span><span class="p">(</span><span class="n">wl</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Calculate the index of refraction of fused silica for a given wavelength.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c">#Convert the wavelength to the unit of um.</span>
+    <span class="n">wl</span> <span class="o">=</span> <span class="n">wl</span><span class="o">*</span><span class="mf">1e6</span>
+    
+    <span class="n">B1</span> <span class="o">=</span> <span class="mf">6.961663e-1</span>
+    <span class="n">B2</span> <span class="o">=</span> <span class="mf">4.079426e-1</span>
+    <span class="n">B3</span> <span class="o">=</span> <span class="mf">8.974794e-1</span>
+    <span class="n">C1</span> <span class="o">=</span> <span class="mf">4.67914826e-3</span>
+    <span class="n">C2</span> <span class="o">=</span> <span class="mf">1.35120631e-2</span>
+    <span class="n">C3</span> <span class="o">=</span> <span class="mf">9.79340025e1</span>
+    
+    <span class="k">return</span> <span class="n">sellmeier</span><span class="p">(</span><span class="n">wl</span><span class="p">,</span> <span class="n">B1</span><span class="p">,</span> <span class="n">B2</span><span class="p">,</span> <span class="n">B3</span><span class="p">,</span> <span class="n">C1</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">C3</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="n_sapphire_ordinary"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.consts.n_sapphire_ordinary">[docs]</a><span class="k">def</span> <span class="nf">n_sapphire_ordinary</span><span class="p">(</span><span class="n">wl</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Calculate the index of refraction of Sapphire ordinary axis for a given wavelength.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="c">#Convert the wavelength to the unit of um.</span>
+    <span class="n">wl</span> <span class="o">=</span> <span class="n">wl</span><span class="o">*</span><span class="mf">1e6</span>
+    
+    <span class="n">B1</span> <span class="o">=</span> <span class="mf">1.4313493</span>
+    <span class="n">B2</span> <span class="o">=</span> <span class="mf">6.5054713e-1</span>
+    <span class="n">B3</span> <span class="o">=</span> <span class="mf">5.3414021</span>
+    <span class="n">C1</span> <span class="o">=</span> <span class="mf">5.2799261e-3</span>
+    <span class="n">C2</span> <span class="o">=</span> <span class="mf">1.42382647e-2</span>
+    <span class="n">C3</span> <span class="o">=</span> <span class="mf">3.25017834e2</span>
+    
+    <span class="k">return</span> <span class="n">sellmeier</span><span class="p">(</span><span class="n">wl</span><span class="p">,</span> <span class="n">B1</span><span class="p">,</span> <span class="n">B2</span><span class="p">,</span> <span class="n">B3</span><span class="p">,</span> <span class="n">C1</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">C3</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="n_sapphire_extraordinary"><a class="viewcode-back" href="../../../api/gtrace.optics.html#gtrace.optics.consts.n_sapphire_extraordinary">[docs]</a><span class="k">def</span> <span class="nf">n_sapphire_extraordinary</span><span class="p">(</span><span class="n">wl</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Calculate the index of refraction of Sapphire extraordinary axis for a given wavelength.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="c">#Convert the wavelength to the unit of um.</span>
+    <span class="n">wl</span> <span class="o">=</span> <span class="n">wl</span><span class="o">*</span><span class="mf">1e6</span>
+    
+    <span class="n">B1</span> <span class="o">=</span> <span class="mf">1.5039759</span>
+    <span class="n">B2</span> <span class="o">=</span> <span class="mf">5.5069141e-1</span>
+    <span class="n">B3</span> <span class="o">=</span> <span class="mf">6.5927379</span>
+    <span class="n">C1</span> <span class="o">=</span> <span class="mf">5.48041129e-3</span>
+    <span class="n">C2</span> <span class="o">=</span> <span class="mf">1.47994281e-2</span>
+    <span class="n">C3</span> <span class="o">=</span> <span class="mf">4.0289514e2</span>
+    
+    <span class="k">return</span> <span class="n">sellmeier</span><span class="p">(</span><span class="n">wl</span><span class="p">,</span> <span class="n">B1</span><span class="p">,</span> <span class="n">B2</span><span class="p">,</span> <span class="n">B3</span><span class="p">,</span> <span class="n">C1</span><span class="p">,</span> <span class="n">C2</span><span class="p">,</span> <span class="n">C3</span><span class="p">)</span>
+</div>
+<span class="n">n_fused_silica_532nm</span> <span class="o">=</span> <span class="mf">1.46071</span>
+<span class="n">n_fused_silica_1064nm</span> <span class="o">=</span> <span class="mf">1.45</span>
+<span class="n">n_fused_silica_1550nm</span> <span class="o">=</span> <span class="mf">1.444</span>
+
+<span class="n">no_sapphire_532nm</span> <span class="o">=</span> <span class="mf">1.77170</span>
+<span class="n">ne_sapphire_532nm</span> <span class="o">=</span> <span class="mf">1.76355</span>
+
+<span class="n">no_sapphire_1064nm</span> <span class="o">=</span> <span class="mf">1.75449</span>
+<span class="n">ne_sapphire_1064nm</span> <span class="o">=</span> <span class="mf">1.74663</span>
+
+<span class="n">no_sapphire_1550nm</span> <span class="o">=</span> <span class="mf">1.74618</span>
+<span class="n">ne_sapphire_1550nm</span> <span class="o">=</span> <span class="mf">1.73838</span>
+
+
+<span class="c">#}}}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

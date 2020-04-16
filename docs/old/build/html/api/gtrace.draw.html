@@ -1,0 +1,486 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>draw Package &mdash; gtrace 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="gtrace 0.1.0 documentation" href="../index.html" />
+    <link rel="up" title="gtrace Package" href="gtrace.html" />
+    <link rel="next" title="optics Package" href="gtrace.optics.html" />
+    <link rel="prev" title="gtrace Package" href="gtrace.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gtrace.optics.html" title="optics Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gtrace.html" title="gtrace Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >API References</a> &raquo;</li>
+          <li><a href="gtrace.html" accesskey="U">gtrace Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="draw-package">
+<h1>draw Package<a class="headerlink" href="#draw-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">draw</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-gtrace.draw"></span></div>
+<div class="section" id="module-gtrace.draw.draw">
+<span id="draw-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">draw</span></tt> Module<a class="headerlink" href="#module-gtrace.draw.draw" title="Permalink to this headline">¶</a></h2>
+<p>Drawing classes for gtrace</p>
+<dl class="class">
+<dt id="gtrace.draw.draw.Arc">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Arc</tt><big>(</big><em>center</em>, <em>radius</em>, <em>startangle</em>, <em>stopangle</em>, <em>thickness=0</em>, <em>angle_in_rad=True</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Arc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Arc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.draw.Shape</span></tt></a></p>
+<p>An arc</p>
+<p>Note that angles are stored in rad.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Canvas">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Canvas</tt><big>(</big><em>unit='m'</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Canvas"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Canvas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Canvas class</p>
+<dl class="method">
+<dt id="gtrace.draw.draw.Canvas.add_layer">
+<tt class="descname">add_layer</tt><big>(</big><em>name</em>, <em>color=(0</em>, <em>0</em>, <em>0)</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Canvas.add_layer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Canvas.add_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.draw.Canvas.add_shape">
+<tt class="descname">add_shape</tt><big>(</big><em>shape</em>, <em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Canvas.add_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Canvas.add_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Circle">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Circle</tt><big>(</big><em>center</em>, <em>radius</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Circle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Circle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.draw.Shape</span></tt></a></p>
+<p>A circle</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Layer">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Layer</tt><big>(</big><em>name</em>, <em>color=(0</em>, <em>0</em>, <em>0)</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Layer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Layer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Layer class</p>
+<dl class="method">
+<dt id="gtrace.draw.draw.Layer.add_shape">
+<tt class="descname">add_shape</tt><big>(</big><em>shape</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Layer.add_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Layer.add_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Line">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Line</tt><big>(</big><em>start</em>, <em>stop</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.draw.Shape</span></tt></a></p>
+<p>Line class</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="gtrace.draw.draw.NumberOfElementError">
+<em class="property">exception </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">NumberOfElementError</tt><a class="reference internal" href="../_modules/gtrace/draw/draw.html#NumberOfElementError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.NumberOfElementError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.BaseException</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.PolyLine">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">PolyLine</tt><big>(</big><em>x</em>, <em>y</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#PolyLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.PolyLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.draw.Shape</span></tt></a></p>
+<p>A light weight poly-line</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Rectangle">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Rectangle</tt><big>(</big><em>point</em>, <em>width</em>, <em>height</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Rectangle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Rectangle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.draw.Shape</span></tt></a></p>
+<p>A rectangle</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Shape">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Shape</tt><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Shape class</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Text">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.draw.</tt><tt class="descname">Text</tt><big>(</big><em>text</em>, <em>point</em>, <em>height=1.0</em>, <em>rotation=0.0</em>, <em>angle_in_rad=True</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/draw.html#Text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.draw.Text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.draw.Shape</span></tt></a></p>
+<p>Text</p>
+<p>Note that angles are stored in rad.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw.dxf">
+<span id="dxf-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">dxf</span></tt> Module<a class="headerlink" href="#module-gtrace.draw.dxf" title="Permalink to this headline">¶</a></h2>
+<p>dxf.py - a DXF export library for python</p>
+<p>Sample code:</p>
+<p>import dxf
+d = dxf.DXF(&#8216;test.dxf&#8217;)
+d.add_layer(&#8216;ABC&#8217;, color=5)
+d.add_entity(dxf.Line((1.5,5), (56,-89)), &#8216;ABC&#8217;)
+d.save_to_file()</p>
+<dl class="class">
+<dt id="gtrace.draw.dxf.Arc">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Arc</tt><big>(</big><em>center</em>, <em>radius</em>, <em>startangle</em>, <em>stopangle</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Arc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Arc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.dxf.Entity</span></tt></a></p>
+<p>An arc entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Arc.draw">
+<tt class="descname">draw</tt><big>(</big><em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Arc.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Arc.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Arc.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Arc.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Arc.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Circle">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Circle</tt><big>(</big><em>center</em>, <em>radius</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Circle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Circle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.dxf.Entity</span></tt></a></p>
+<p>A circle entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Circle.draw">
+<tt class="descname">draw</tt><big>(</big><em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Circle.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Circle.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Circle.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Circle.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Circle.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.DXF">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">DXF</tt><big>(</big><em>filename='drawing.dxf'</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#DXF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.DXF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A DXF file class.</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.DXF.add_entity">
+<tt class="descname">add_entity</tt><big>(</big><em>entity</em>, <em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#DXF.add_entity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.DXF.add_entity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.DXF.add_layer">
+<tt class="descname">add_layer</tt><big>(</big><em>name</em>, <em>color=1</em>, <em>ltype='Continuous'</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#DXF.add_layer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.DXF.add_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.DXF.save_to_file">
+<tt class="descname">save_to_file</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#DXF.save_to_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.DXF.save_to_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the DXF file</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Entity">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Entity</tt><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Entity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Entity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A graphic entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Entity.draw">
+<tt class="descname">draw</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Entity.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Entity.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Entity.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Entity.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Entity.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Entity.set_handle">
+<tt class="descname">set_handle</tt><big>(</big><em>handle</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Entity.set_handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Entity.set_handle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Layer">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Layer</tt><big>(</big><em>name</em>, <em>handle</em>, <em>color=1</em>, <em>ltype='Continuous'</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Layer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Layer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Layer class</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Layer.add_entity">
+<tt class="descname">add_entity</tt><big>(</big><em>entity</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Layer.add_entity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Layer.add_entity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Line">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Line</tt><big>(</big><em>start</em>, <em>stop</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.dxf.Entity</span></tt></a></p>
+<p>A line entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Line.draw">
+<tt class="descname">draw</tt><big>(</big><em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Line.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Line.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Line.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Line.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Line.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.LwPolyLine">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">LwPolyLine</tt><big>(</big><em>x</em>, <em>y</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#LwPolyLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.LwPolyLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.dxf.Entity</span></tt></a></p>
+<p>A light weight poly-line</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.LwPolyLine.draw">
+<tt class="descname">draw</tt><big>(</big><em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#LwPolyLine.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.LwPolyLine.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.LwPolyLine.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#LwPolyLine.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.LwPolyLine.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="gtrace.draw.dxf.NumberOfElementError">
+<em class="property">exception </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">NumberOfElementError</tt><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#NumberOfElementError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.NumberOfElementError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.BaseException</span></tt></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Rectangle">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Rectangle</tt><big>(</big><em>point</em>, <em>width</em>, <em>height</em>, <em>thickness=0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Rectangle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Rectangle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.dxf.Entity</span></tt></a></p>
+<p>A rectangle</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Rectangle.draw">
+<tt class="descname">draw</tt><big>(</big><em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Rectangle.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Rectangle.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Rectangle.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Rectangle.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Rectangle.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Text">
+<em class="property">class </em><tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">Text</tt><big>(</big><em>text</em>, <em>point</em>, <em>height=1.0</em>, <em>rotation=0.0</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><tt class="xref py py-class docutils literal"><span class="pre">gtrace.draw.dxf.Entity</span></tt></a></p>
+<p>Text</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Text.draw">
+<tt class="descname">draw</tt><big>(</big><em>layername</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Text.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Text.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Text.report_min_max">
+<tt class="descname">report_min_max</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#Text.report_min_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.Text.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.dxf.color_encode">
+<tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">color_encode</tt><big>(</big><em>color</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#color_encode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.color_encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a set of RGB values for a color, find the closest matching
+one from the pre-defined colors in the DXF specification.
+Then return its color code (an integer in 1 to 255).</p>
+<p>= Input =
+color: A tuple of three numbers in the range of 0-255, i.e. (R,G,B)</p>
+<p>= Return =
+best_color_num: integer</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.dxf.test_func">
+<tt class="descclassname">gtrace.draw.dxf.</tt><tt class="descname">test_func</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/dxf.html#test_func"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.dxf.test_func" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw.renderer">
+<span id="renderer-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">renderer</span></tt> Module<a class="headerlink" href="#module-gtrace.draw.renderer" title="Permalink to this headline">¶</a></h2>
+<p>Renderer module for gtrace.draw</p>
+<dl class="exception">
+<dt id="gtrace.draw.renderer.UnknownShapeError">
+<em class="property">exception </em><tt class="descclassname">gtrace.draw.renderer.</tt><tt class="descname">UnknownShapeError</tt><a class="reference internal" href="../_modules/gtrace/draw/renderer.html#UnknownShapeError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.renderer.UnknownShapeError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.BaseException</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.renderer.renderDXF">
+<tt class="descclassname">gtrace.draw.renderer.</tt><tt class="descname">renderDXF</tt><big>(</big><em>canvas</em>, <em>filename</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/renderer.html#renderDXF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.renderer.renderDXF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Render a canvas into a DXF file</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw.tools">
+<span id="tools-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">tools</span></tt> Module<a class="headerlink" href="#module-gtrace.draw.tools" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="gtrace.draw.tools.drawAllBeams">
+<tt class="descclassname">gtrace.draw.tools.</tt><tt class="descname">drawAllBeams</tt><big>(</big><em>d</em>, <em>beamList</em>, <em>sigma=3.0</em>, <em>drawWidth=True</em>, <em>drawPower=False</em>, <em>drawROC=False</em>, <em>drawGouy=False</em>, <em>drawOptDist=False</em>, <em>layer=None</em>, <em>mode='x'</em>, <em>fontSize=0.01</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/tools.html#drawAllBeams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.tools.drawAllBeams" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.drawAllOptics">
+<tt class="descclassname">gtrace.draw.tools.</tt><tt class="descname">drawAllOptics</tt><big>(</big><em>d</em>, <em>opticsList</em>, <em>drawName=True</em>, <em>layer=None</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/tools.html#drawAllOptics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.tools.drawAllOptics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.drawOptSys">
+<tt class="descclassname">gtrace.draw.tools.</tt><tt class="descname">drawOptSys</tt><big>(</big><em>optList</em>, <em>beamList</em>, <em>filename</em>, <em>fontSize=False</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/tools.html#drawOptSys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.tools.drawOptSys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.rotateAll">
+<tt class="descclassname">gtrace.draw.tools.</tt><tt class="descname">rotateAll</tt><big>(</big><em>objList</em>, <em>angle</em>, <em>center</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/tools.html#rotateAll"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.tools.rotateAll" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.transAll">
+<tt class="descclassname">gtrace.draw.tools.</tt><tt class="descname">transAll</tt><big>(</big><em>objList</em>, <em>transVect</em><big>)</big><a class="reference internal" href="../_modules/gtrace/draw/tools.html#transAll"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gtrace.draw.tools.transAll" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">draw Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">draw</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-gtrace.draw.draw"><tt class="docutils literal"><span class="pre">draw</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.draw.dxf"><tt class="docutils literal"><span class="pre">dxf</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.draw.renderer"><tt class="docutils literal"><span class="pre">renderer</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gtrace.draw.tools"><tt class="docutils literal"><span class="pre">tools</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="gtrace.html"
+                        title="previous chapter">gtrace Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gtrace.optics.html"
+                        title="next chapter">optics Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/gtrace.draw.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gtrace.optics.html" title="optics Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gtrace.html" title="gtrace Package"
+             >previous</a> |</li>
+        <li><a href="../index.html">gtrace 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >API References</a> &raquo;</li>
+          <li><a href="gtrace.html" >gtrace Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Yoichi Aso.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

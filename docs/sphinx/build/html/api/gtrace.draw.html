@@ -1,0 +1,577 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>gtrace.draw package &mdash; gtrace 0.2.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="gtrace.optics package" href="gtrace.optics.html" />
+    <link rel="prev" title="gtrace package" href="gtrace.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> gtrace
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../basic_concepts.html">Basic Concepts</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">gtrace</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="gtrace.html">gtrace package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="gtrace.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">gtrace.draw package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gtrace.optics.html">gtrace.optics package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#module-gtrace.beam">gtrace.beam module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#module-gtrace.hello">gtrace.hello module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#module-gtrace.nonsequential">gtrace.nonsequential module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#module-gtrace.optcomp">gtrace.optcomp module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#module-gtrace.unit">gtrace.unit module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gtrace.html#module-gtrace">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">gtrace</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="modules.html">gtrace</a> &raquo;</li>
+        
+          <li><a href="gtrace.html">gtrace package</a> &raquo;</li>
+        
+      <li>gtrace.draw package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/api/gtrace.draw.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="gtrace-draw-package">
+<h1>gtrace.draw package<a class="headerlink" href="#gtrace-draw-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-gtrace.draw.draw">
+<span id="gtrace-draw-draw-module"></span><h2>gtrace.draw.draw module<a class="headerlink" href="#module-gtrace.draw.draw" title="Permalink to this headline">¶</a></h2>
+<p>Drawing classes for gtrace</p>
+<dl class="class">
+<dt id="gtrace.draw.draw.Arc">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Arc</code><span class="sig-paren">(</span><em class="sig-param">center</em>, <em class="sig-param">radius</em>, <em class="sig-param">startangle</em>, <em class="sig-param">stopangle</em>, <em class="sig-param">thickness=0</em>, <em class="sig-param">angle_in_rad=True</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Arc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.draw.Shape</span></code></a></p>
+<p>An arc</p>
+<p>Note that angles are stored in rad.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Canvas">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Canvas</code><span class="sig-paren">(</span><em class="sig-param">unit='m'</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Canvas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Canvas class</p>
+<dl class="method">
+<dt id="gtrace.draw.draw.Canvas.add_layer">
+<code class="sig-name descname">add_layer</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">color=(0</em>, <em class="sig-param">0</em>, <em class="sig-param">0)</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Canvas.add_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.draw.Canvas.add_shape">
+<code class="sig-name descname">add_shape</code><span class="sig-paren">(</span><em class="sig-param">shape</em>, <em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Canvas.add_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Circle">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Circle</code><span class="sig-paren">(</span><em class="sig-param">center</em>, <em class="sig-param">radius</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Circle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.draw.Shape</span></code></a></p>
+<p>A circle</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Layer">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Layer</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">color=(0</em>, <em class="sig-param">0</em>, <em class="sig-param">0)</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Layer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Layer class</p>
+<dl class="method">
+<dt id="gtrace.draw.draw.Layer.add_shape">
+<code class="sig-name descname">add_shape</code><span class="sig-paren">(</span><em class="sig-param">shape</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Layer.add_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Line">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Line</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">stop</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.draw.Shape</span></code></a></p>
+<p>Line class</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="gtrace.draw.draw.NumberOfElementError">
+<em class="property">exception </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">NumberOfElementError</code><a class="headerlink" href="#gtrace.draw.draw.NumberOfElementError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseException</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.PolyLine">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">PolyLine</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.PolyLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.draw.Shape</span></code></a></p>
+<p>A light weight poly-line</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Rectangle">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Rectangle</code><span class="sig-paren">(</span><em class="sig-param">point</em>, <em class="sig-param">width</em>, <em class="sig-param">height</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Rectangle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.draw.Shape</span></code></a></p>
+<p>A rectangle</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Shape">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Shape</code><a class="headerlink" href="#gtrace.draw.draw.Shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Shape class</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.draw.Text">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.draw.</code><code class="sig-name descname">Text</code><span class="sig-paren">(</span><em class="sig-param">text</em>, <em class="sig-param">point</em>, <em class="sig-param">height=1.0</em>, <em class="sig-param">rotation=0.0</em>, <em class="sig-param">angle_in_rad=True</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.draw.Text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.draw.Shape" title="gtrace.draw.draw.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.draw.Shape</span></code></a></p>
+<p>Note that angles are stored in rad.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw.dxf">
+<span id="gtrace-draw-dxf-module"></span><h2>gtrace.draw.dxf module<a class="headerlink" href="#module-gtrace.draw.dxf" title="Permalink to this headline">¶</a></h2>
+<p>dxf.py - a DXF export library for python</p>
+<p>Sample code:</p>
+<p>import dxf
+d = dxf.DXF(‘test.dxf’)
+d.add_layer(‘ABC’, color=5)
+d.add_entity(dxf.Line((1.5,5), (56,-89)), ‘ABC’)
+d.save_to_file()</p>
+<dl class="class">
+<dt id="gtrace.draw.dxf.Arc">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Arc</code><span class="sig-paren">(</span><em class="sig-param">center</em>, <em class="sig-param">radius</em>, <em class="sig-param">startangle</em>, <em class="sig-param">stopangle</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Arc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.dxf.Entity</span></code></a></p>
+<p>An arc entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Arc.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Arc.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Arc.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Arc.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Circle">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Circle</code><span class="sig-paren">(</span><em class="sig-param">center</em>, <em class="sig-param">radius</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Circle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.dxf.Entity</span></code></a></p>
+<p>A circle entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Circle.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Circle.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Circle.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Circle.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.DXF">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">DXF</code><span class="sig-paren">(</span><em class="sig-param">filename='drawing.dxf'</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.DXF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A DXF file class.</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.DXF.add_entity">
+<code class="sig-name descname">add_entity</code><span class="sig-paren">(</span><em class="sig-param">entity</em>, <em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.DXF.add_entity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.DXF.add_layer">
+<code class="sig-name descname">add_layer</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">color=1</em>, <em class="sig-param">ltype='Continuous'</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.DXF.add_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.DXF.save_to_file">
+<code class="sig-name descname">save_to_file</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.DXF.save_to_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the DXF file</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Entity">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Entity</code><a class="headerlink" href="#gtrace.draw.dxf.Entity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A graphic entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Entity.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Entity.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Entity.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Entity.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Entity.set_handle">
+<code class="sig-name descname">set_handle</code><span class="sig-paren">(</span><em class="sig-param">handle</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Entity.set_handle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Layer">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Layer</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">handle</em>, <em class="sig-param">color=1</em>, <em class="sig-param">ltype='Continuous'</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Layer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Layer class</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Layer.add_entity">
+<code class="sig-name descname">add_entity</code><span class="sig-paren">(</span><em class="sig-param">entity</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Layer.add_entity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Line">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Line</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">stop</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.dxf.Entity</span></code></a></p>
+<p>A line entity</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Line.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Line.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Line.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Line.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.LwPolyLine">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">LwPolyLine</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.LwPolyLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.dxf.Entity</span></code></a></p>
+<p>A light weight poly-line</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.LwPolyLine.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.LwPolyLine.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.LwPolyLine.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.LwPolyLine.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="gtrace.draw.dxf.NumberOfElementError">
+<em class="property">exception </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">NumberOfElementError</code><a class="headerlink" href="#gtrace.draw.dxf.NumberOfElementError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseException</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Rectangle">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Rectangle</code><span class="sig-paren">(</span><em class="sig-param">point</em>, <em class="sig-param">width</em>, <em class="sig-param">height</em>, <em class="sig-param">thickness=0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Rectangle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.dxf.Entity</span></code></a></p>
+<p>A rectangle</p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Rectangle.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Rectangle.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Rectangle.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Rectangle.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gtrace.draw.dxf.Text">
+<em class="property">class </em><code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">Text</code><span class="sig-paren">(</span><em class="sig-param">text</em>, <em class="sig-param">point</em>, <em class="sig-param">height=1.0</em>, <em class="sig-param">rotation=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gtrace.draw.dxf.Entity" title="gtrace.draw.dxf.Entity"><code class="xref py py-class docutils literal notranslate"><span class="pre">gtrace.draw.dxf.Entity</span></code></a></p>
+<dl class="method">
+<dt id="gtrace.draw.dxf.Text.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param">layername</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Text.draw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gtrace.draw.dxf.Text.report_min_max">
+<code class="sig-name descname">report_min_max</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.Text.report_min_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the coordinates of the lower left and the upper right corners
+of the drawing.
+Return value: ((xmin, ymin), (xmax, ymax))</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.dxf.color_encode">
+<code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">color_encode</code><span class="sig-paren">(</span><em class="sig-param">color</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.color_encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a set of RGB values for a color, find the closest matching
+one from the pre-defined colors in the DXF specification.
+Then return its color code (an integer in 1 to 255).</p>
+<p>= Input =
+color: A tuple of three numbers in the range of 0-255, i.e. (R,G,B)</p>
+<p>= Return =
+best_color_num: integer</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.dxf.test_func">
+<code class="sig-prename descclassname">gtrace.draw.dxf.</code><code class="sig-name descname">test_func</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.dxf.test_func" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw.renderer">
+<span id="gtrace-draw-renderer-module"></span><h2>gtrace.draw.renderer module<a class="headerlink" href="#module-gtrace.draw.renderer" title="Permalink to this headline">¶</a></h2>
+<p>Renderer module for gtrace.draw</p>
+<dl class="exception">
+<dt id="gtrace.draw.renderer.UnknownShapeError">
+<em class="property">exception </em><code class="sig-prename descclassname">gtrace.draw.renderer.</code><code class="sig-name descname">UnknownShapeError</code><a class="headerlink" href="#gtrace.draw.renderer.UnknownShapeError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseException</span></code></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.renderer.renderDXF">
+<code class="sig-prename descclassname">gtrace.draw.renderer.</code><code class="sig-name descname">renderDXF</code><span class="sig-paren">(</span><em class="sig-param">canvas</em>, <em class="sig-param">filename</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.renderer.renderDXF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Render a canvas into a DXF file</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw.tools">
+<span id="gtrace-draw-tools-module"></span><h2>gtrace.draw.tools module<a class="headerlink" href="#module-gtrace.draw.tools" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="gtrace.draw.tools.drawAllBeams">
+<code class="sig-prename descclassname">gtrace.draw.tools.</code><code class="sig-name descname">drawAllBeams</code><span class="sig-paren">(</span><em class="sig-param">d</em>, <em class="sig-param">beamList</em>, <em class="sig-param">sigma=3.0</em>, <em class="sig-param">drawWidth=True</em>, <em class="sig-param">drawPower=False</em>, <em class="sig-param">drawROC=False</em>, <em class="sig-param">drawGouy=False</em>, <em class="sig-param">drawOptDist=False</em>, <em class="sig-param">layer=None</em>, <em class="sig-param">mode='x'</em>, <em class="sig-param">fontSize=0.01</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.tools.drawAllBeams" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.drawAllOptics">
+<code class="sig-prename descclassname">gtrace.draw.tools.</code><code class="sig-name descname">drawAllOptics</code><span class="sig-paren">(</span><em class="sig-param">d</em>, <em class="sig-param">opticsList</em>, <em class="sig-param">drawName=True</em>, <em class="sig-param">layer=None</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.tools.drawAllOptics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.drawOptSys">
+<code class="sig-prename descclassname">gtrace.draw.tools.</code><code class="sig-name descname">drawOptSys</code><span class="sig-paren">(</span><em class="sig-param">optList</em>, <em class="sig-param">beamList</em>, <em class="sig-param">filename</em>, <em class="sig-param">fontSize=False</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.tools.drawOptSys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.rotateAll">
+<code class="sig-prename descclassname">gtrace.draw.tools.</code><code class="sig-name descname">rotateAll</code><span class="sig-paren">(</span><em class="sig-param">objList</em>, <em class="sig-param">angle</em>, <em class="sig-param">center</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.tools.rotateAll" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="gtrace.draw.tools.transAll">
+<code class="sig-prename descclassname">gtrace.draw.tools.</code><code class="sig-name descname">transAll</code><span class="sig-paren">(</span><em class="sig-param">objList</em>, <em class="sig-param">transVect</em><span class="sig-paren">)</span><a class="headerlink" href="#gtrace.draw.tools.transAll" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-gtrace.draw">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-gtrace.draw" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gtrace.optics.html" class="btn btn-neutral float-right" title="gtrace.optics package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="gtrace.html" class="btn btn-neutral float-left" title="gtrace package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Yoichi Aso
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
