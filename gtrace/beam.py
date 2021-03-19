@@ -532,7 +532,7 @@ class GaussianBeam(HasTraits):
         if resolution > self.length/10.0:
             resolution = self.length/10.0
 
-        numSegments = self.length/resolution
+        numSegments = int(self.length/resolution)
 
         if numSegments > 100:
             numSegments = 100
@@ -610,7 +610,7 @@ class GaussianBeam(HasTraits):
         if resolution > self.length/10.0:
             resolution = self.length/10.0
 
-        numSegments = self.length/resolution
+        numSegments = int(self.length/resolution)
 
         if numSegments > 100:
             numSegments = 100
