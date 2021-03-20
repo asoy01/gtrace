@@ -40,7 +40,6 @@ docs/Tutorial/MC.dxf
 docs/Tutorial/NonSeq.dxf
 docs/Tutorial/SeqTrace.dxf
 docs/Tutorial/gtrace-tutorial.ipynb
-docs/Tutorial/.ipynb_checkpoints/gtrace-tutorial-checkpoint.ipynb
 docs/Tutorial/figures/BeamNameConvention.png
 docs/Tutorial/figures/GaussianBeam.png
 docs/Tutorial/figures/MCtrace.png
@@ -261,9 +260,6 @@ gtrace.egg-info/SOURCES.txt
 gtrace.egg-info/dependency_links.txt
 gtrace.egg-info/requires.txt
 gtrace.egg-info/top_level.txt
-gtrace/.ropeproject/config.py
-gtrace/.ropeproject/history
-gtrace/.ropeproject/objectdb
 gtrace/draw/__init__.py
 gtrace/draw/draw.py
 gtrace/draw/dxf.py
@@ -275,4 +271,3 @@ gtrace/optics/consts.py
 gtrace/optics/gaussian.py
 gtrace/optics/geometric.py
 gtrace/optics/unit.py
-gtrace/test/test.py

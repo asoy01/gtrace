@@ -1,8 +1,8 @@
-Metadata-Version: 1.1
+Metadata-Version: 2.1
 Name: gtrace
-Version: 0.2.0
+Version: 0.2.1
 Summary: 2D ray tracing package for Gaussian beams
-Home-page: https://github.com/pypa/sampleproject
+Home-page: https://github.com/asoy01/gtrace
 Author: Yoichi Aso
 Author-email: yoichi.aso@nao.ac.jp
 License: UNKNOWN
@@ -27,3 +27,5 @@ Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: BSD License
 Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
