@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="gtrace",
-    version="0.2.0",
+    version="0.2.1",
     author="Yoichi Aso",
     author_email="yoichi.aso@nao.ac.jp",
     description="2D ray tracing package for Gaussian beams",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pypa/sampleproject",
+    url="https://github.com/asoy01/gtrace",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
