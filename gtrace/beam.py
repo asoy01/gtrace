@@ -56,12 +56,12 @@ import scipy.optimize as sopt
 # POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = "Yoichi Aso"
-__copyright__ = "Copyright 2011-2012, Yoichi Aso"
+__copyright__ = "Copyright 2011-2021, Yoichi Aso"
 __credits__ = ["Yoichi Aso"]
 __license__ = "BSD"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Yoichi Aso"
-__email__ = "aso@granite.phys.s.u-tokyo.ac.jp"
+__email__ = "yoichi.aso@nao.ac.jp"
 __status__ = "Beta"
 
 #}}}
@@ -159,7 +159,6 @@ class GaussianBeam(HasTraits):
                         or transmits an HR surface, this couter is increased by 1.
 
     '''
-
 #{{{ Traits Definitions
 
     name = Str()
@@ -215,8 +214,6 @@ class GaussianBeam(HasTraits):
                       name: Name of the beam
                       layer: Layer name of the beam when exported to a DXF file.
         '''
-
-
         self.wl = wl
         self.P = P
         self.pos = pos
@@ -275,7 +272,6 @@ class GaussianBeam(HasTraits):
         self.Goux and self.Gouyy are also updated to record the Gouy
         phase change.
         '''
-
         qx0 = self.qx
         qy0 = self.qy
 
@@ -305,7 +301,6 @@ class GaussianBeam(HasTraits):
 
         **ABCDy:** ABCD matrix for y-direction
         '''
-
         if ABCDy is None:
             ABCDy = ABCDx
             
@@ -332,8 +327,7 @@ class GaussianBeam(HasTraits):
         **angle:** Rotation angle in radians.
 
         **center:** Center for rotation. [(2,) array of float]
-        '''
-        
+        '''        
         if center:
             center = np.array(center)
             pointer = self.pos - center
@@ -355,8 +349,7 @@ class GaussianBeam(HasTraits):
 
         **trVect:** A vector to specify the translation direction and
                 distance. [(2,) float array]
-        '''
-        
+        '''        
         trVect = np.array(trVect)
         self.pos = self.pos + trVect
         
@@ -388,7 +381,6 @@ class GaussianBeam(HasTraits):
         from the origin of the beam.
         The width is the radius where the light power becomes 1/e^2.
         '''
-
         dist = np.array(dist)
         k = 2*pi/(self.wl/self.n)
         qx = self.qx + dist
@@ -405,7 +397,6 @@ class GaussianBeam(HasTraits):
         Returns the beam ROC at a distance dist
         from the origin of the beam.
         '''
-
         dist = np.array(dist)
         k = 2*pi/self.wl
         qx = self.qx + dist/self.n

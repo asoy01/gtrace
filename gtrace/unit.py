@@ -38,9 +38,9 @@ __author__ = "Yoichi Aso"
 __copyright__ = "Copyright 2011, Yoichi Aso"
 __credits__ = ["Yoichi Aso"]
 __license__ = "BSD"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Yoichi Aso"
-__email__ = "aso@granite.phys.s.u-tokyo.ac.jp"
+__email__ = "yoichi.aso@nao.ac.jp"
 __status__ = "Beta"
 
 #}}}

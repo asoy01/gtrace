@@ -11,7 +11,7 @@ Hitting a mirror
 .. image:: imgs/Mirror-beam-interaction.png
     :height: 12cm
 
-By calling ``Mirror.hitFromHR(beam)``, you can ask gtrace to try to propagate the beam until it hits the mirror. If the beam indeed hits the mirror, gtrace will generate a set of beam objects produced by the interactions (reflection and refraction) of the incident beam with the mirror.
+By calling ``Mirror.hitFromHR(beam)``, you can tell gtrace to propagate the beam until it hits the mirror. If the beam indeed hits the mirror, gtrace will generate a set of beam objects produced by the interactions (reflection and refraction) of the incident beam with the mirror.
 
 The generated beams are given the names indicated in the figure above.
 The beam objects will be returned as a dictionary with the name of a beam as a key.
