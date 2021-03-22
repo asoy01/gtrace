@@ -5,6 +5,7 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
    gtrace.draw
    gtrace.optics
@@ -51,7 +52,6 @@ gtrace.unit module
    :members:
    :undoc-members:
    :show-inheritance:
-
 
 Module contents
 ---------------

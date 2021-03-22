@@ -1,4 +1,4 @@
-gtrace API Reference
+gtrace
 ======
 
 .. toctree::

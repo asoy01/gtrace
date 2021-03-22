@@ -36,7 +36,6 @@ gtrace.draw.tools module
    :undoc-members:
    :show-inheritance:
 
-
 Module contents
 ---------------
 

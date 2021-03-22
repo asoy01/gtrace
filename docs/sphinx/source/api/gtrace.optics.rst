@@ -44,7 +44,6 @@ gtrace.optics.unit module
    :undoc-members:
    :show-inheritance:
 
-
 Module contents
 ---------------
 
