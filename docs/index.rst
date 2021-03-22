@@ -12,6 +12,7 @@ Welcome to gtrace's documentation!
 
    intro
    basic_concepts
+   tutorial
 
 Indices and tables
 ==================

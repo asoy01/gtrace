@@ -24,3 +24,13 @@ Beam
    :height: 10cm
 
 A Gaussian beam is represented by an instance of :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` class. The most fundamental properties of a beam is its position (``pos``) and the direction of propagation (``dirVect`` or ``dirAngle``). 
+
+Mirror
+-----------
+
+.. image:: imgs/Mirror.png
+   :height: 10cm
+
+Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a spherical lense, light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use ``CyMirror`` class instead.
+
+The parameters of a Mirror object are shown in the figure above.
