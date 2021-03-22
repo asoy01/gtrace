@@ -12,8 +12,6 @@ Welcome to gtrace's documentation!
 
    intro
    basic_concepts
-   API Reference <api/modules>
-
 
 Indices and tables
 ==================
