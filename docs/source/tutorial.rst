@@ -9,5 +9,11 @@ You can download the gtrace source tree by::
 
 Or the direct link to the tutorial file is here: https://github.com/asoy01/gtrace/blob/master/Manuals/Tutorial/gtrace-tutorial.ipynb
 
----------------
+Or you can find it directly here:
 
+.. toctree::
+   :maxdepth: 1
+
+   tutorial/gtrace-tutorial
+
+---------------

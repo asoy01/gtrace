@@ -1,2 +1,4 @@
 gtrace
 sphinx-autoapi
+ipykernel
+nbsphinx
