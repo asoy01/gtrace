@@ -7,4 +7,4 @@ gtrace-*/
 /Manuals/references/
 /docs/_build/
 /docs/autoapi/
-
+__pycache__/

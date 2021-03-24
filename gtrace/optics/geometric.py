@@ -6,11 +6,24 @@ pi = np.pi
 #{{{ Snell's Law
 
 def deflection_angle(theta, n1, n2, deg=True):
+    """Calculate deflection angle according to Snell's law.
+
+    Parameters
+    ----------
+    theta : float
+        Angle of incidence.
+    n1 : float
+        Refractive index of the first medium.
+    n2 : float
+        Refraction index of the second medium.
+    deg : boolean, optional
+        True if theta is specified in degrees.
+    """
     if deg:
         factor = pi/180.0
     else:
         factor = 1.0
-        
+
     return np.arcsin(n1*np.sin(theta*factor)/n2)/factor
 
 #}}}
@@ -28,17 +41,27 @@ def line_plane_intersection(pos,
     Compute the intersection point between a line
     and a plane
 
-    A line is specified by its origin (pos) and the
-    direction vector (dirVect).
-    A plane is specfied by its center coordinates (plane_center)
-    and the normal vector (normalVector).
-    The plane has its size (diameter).
+    Parameters
+    ----------
+    pos : array
+        The position of the end point of the line.
+    dirVert : array
+        The directional vector specifying the line.
+    plane_center : array
+        The position of the center of the plane.
+    normalVector: array
+        The normal vector of the plane.
+    diameter: float
+        The diameter of the plane.
 
-    The returned value is a dictionary with the following keys:
-    "Intersection Point": numpy array of the coordinates of the intersection point.
-    "isHit": A boolean value of whether the line intersects with the plane or not.
-    "distance": Distance between the origin of the line and the intersection point.
-    "distance from center": Distance between the center of the plane and the intersection point.
+    Returns
+    -------
+    dict
+        The returned value is a dictionary with the following keys:
+        "Intersection Point": numpy array of the coordinates of the intersection point.
+        "isHit": A boolean value of whether the line intersects with the plane or not.
+        "distance": Distance between the origin of the line and the intersection point.
+        "distance from center": Distance between the center of the plane and the intersection point.
     '''
 
     #Make sure the inputs are ndarrays
@@ -47,7 +70,7 @@ def line_plane_intersection(pos,
     plane_center = np.array(plane_center, dtype=np.float64)
     normalVector = np.array(normalVector, dtype=np.float64)
     diameter = float(diameter)
-    
+
     #Get a normalized vector along the plane
     plVect = np.array([-normalVector[1], normalVector[0]])
     plVect = plVect/np.linalg.norm(plVect)
@@ -61,10 +84,10 @@ def line_plane_intersection(pos,
             'distance': 0.0,
             'distance from center': 0.0}
 
-    
+
     #Solve line equations to get the intersection point
     M = np.vstack((dirVect, -plVect)).T
-    ans = np.linalg.solve(M, plane_center - pos)    
+    ans = np.linalg.solve(M, plane_center - pos)
     intersection_point = pos + ans[0]*dirVect
 
     #How far the intersection point is from the center
@@ -73,11 +96,11 @@ def line_plane_intersection(pos,
     if dist_from_center > diameter/2.0\
            or ans[0] < 0.\
            or np.dot(dirVect, normalVector) > 0.:
-        
+
         hit = False
     else:
         hit = True
-        
+
     return {'Intersection Point': intersection_point, 'isHit': hit,
             'distance': np.abs(ans[0]),
             'distance from center': ans[1]}
@@ -97,13 +120,33 @@ def line_arc_intersection(pos,
     '''
     Compute the intersection point between a line
     and an arc.
-    
-    pos: Origin of the line
-    dirVect: Direction of the line
-    chord_center: The center of the chord made by the arc.
-    chordNormVect: Normal vector of the chord.
-    invROC: Inverse of the ROC of the arc. Positive for concave surface.
-    diameter: Length of the chord.
+
+    Parameters
+    ----------
+    pos : array
+        Origin of the line.
+    dirVect : array
+        Direction of the line.
+    chord_center : array
+        The center of the chord made by the arc.
+    chordNormVect : array
+        Normal vector of the chord.
+    invROC : float
+        Inverse of the ROC of the arc. Positive for concave surface.
+    diameter : float
+        Length of the chord.
+    verbose : boolean, optional
+        Prints useful information.
+
+    Returns
+    -------
+    dict
+        The returned value is a dictionary with the following keys:
+        "Intersection Point": numpy array of the coordinates of the intersection point.
+        "isHit": A boolean value of whether the line intersects with the plane or not.
+        "distance": Distance between the origin of the line and the intersection point.
+        "localNormVect": localNormVect,
+        "localNormAngle": localNormAngle.
     '''
     #Make sure the inputs are ndarrays
     pos = np.array(pos, dtype=np.float64)
@@ -131,8 +174,8 @@ def line_arc_intersection(pos,
         return ans
 
     ROC = 1/invROC
-    
-    
+
+
     #Compute the center of the arc
     theta = np.arcsin(diameter/(2*ROC))
     l = ROC*np.cos(theta)
@@ -156,7 +199,7 @@ def line_arc_intersection(pos,
     ans = np.linalg.solve(M, pos - arc_center)
     s = ans[0]
     t = ans[1]
-    
+
     if np.abs(s) > np.abs(ROC):
         if verbose:
             print('The line does not hit the arc.')
@@ -179,7 +222,7 @@ def line_arc_intersection(pos,
         if verbose:
             print('The line does not hit the arc.')
         return {'isHit': False}
-        
+
     #Normalize
     localNormVect = localNormVect/np.linalg.norm(localNormVect)
     localNormAngle = np.mod(np.arctan2(localNormVect[1],
@@ -198,7 +241,7 @@ def line_arc_intersection(pos,
     distance = np.linalg.norm(intersection_point - pos)
 
 
-    
+
     return {'Intersection Point': intersection_point, 'isHit': True,
             'distance': distance, 'localNormVect': localNormVect,
             'localNormAngle': localNormAngle}
@@ -208,9 +251,23 @@ def line_arc_intersection(pos,
 #{{{ vector_rotation_2D
 
 def vector_rotation_2D(vect, angle):
+    """Rotate a 2D vector by an angle.
+
+    Parameters
+    ----------
+    vect : array
+        A 2D vector.
+    angle : float
+        Angle of rotation in radians.
+
+    Returns
+    -------
+    array
+        The rotated vector.
+    """
     vect = np.array(vect)
     angle = float(angle)
-    
+
     M = np.array([[np.cos(angle), -np.sin(angle)],
                   [np.sin(angle),np.cos(angle)]])
     return np.dot(M, vect)
@@ -220,8 +277,18 @@ def vector_rotation_2D(vect, angle):
 def vector_normalize(vect):
     '''
     Normalize a vector
+
+    Parameters
+    ----------
+    vect : array
+        The vector to be normalized
+
+    Returns
+    -------
+    array
+        The normalized vector.
     '''
-    
+
     return vect/np.linalg.norm(vect)
 
 #{{{ normSpheric
@@ -231,18 +298,27 @@ def normSpheric(normAngle, invROC, dist_from_center):
     Returns the local normal angle of a spheric mirror
     at a distance from the center.
 
-    normAngle: The angle formed by the normal vector of the mirror
-               at the center and the x-axis.
+    Parameters
+    ----------
+    normAngle : float
+        The angle formed by the normal vector of the mirror
+        at the center and the x-axis.
+    invROC : float
+        1/R, where R is the ROC of the mirror.
+    dist_from_center: float
+        The distance from the center of the point where
+        the local normal is requested.
+        This is a signed value.
+        For a mirror facing +x (the normal vector points
+        towards positive x direction), this distance
+        is positive for points with positive y coordinate,
+        and negative for points with negative y coordinate.
 
-    invROC: 1/R, where R is the ROC of the mirror.
-
-    dist_from_center: The distance from the center of the point where
-                      the local normal is requested.
-                      This is a signed value.
-                      For a mirror facing +x (the normal vector points
-                      towards positive x direction), this distance
-                      is positive for points with positive y coordinate,
-                      and negative for points with negative y coordinate.
+    Returns
+    -------
+    float
+        The local normal angle of a spheric mirror
+        at a distance from the center.
     '''
 
     normAngle = np.mod(normAngle, 2*pi)
@@ -255,25 +331,35 @@ def normSpheric(normAngle, invROC, dist_from_center):
 def refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None):
     '''
     Returns a tuples of reflection and deflection angles.
-    
-    beamAngle: The angle formed by the propagation direction vector
-               of the incident beam and the x-axis.
 
-    normAngle: The angle formed by the normal vector of the surface
-               and the x-axis.
+    Parameters
+    ----------
+    beamAngle : float
+        The angle formed by the propagation direction vector
+        of the incident beam and the x-axis.
+    normAngle : float
+        The angle formed by the normal vector of the surface
+        and the x-axis.
+    n1 : float
+        Index of refraction of the incident side medium.
+    n2 : float
+        Index of refraction of the transmission side medium.
+    invROC : float or None, optional
+        Inverse of the radius of curvature.
 
-    n1: Index of refraction of the incident side medium.
-
-    n2: Index of refraction of the transmission side medium.
+    Returns
+    -------
+    6-tuple or 2-tuple
+    (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) or (reflAngle, deflAngle)
     '''
 
     beamAngle = np.mod(beamAngle, 2*pi)
     normAngle = np.mod(normAngle, 2*pi)
-    
+
     incidentAngle = np.mod(beamAngle - normAngle, 2*pi) - pi
 
     reflAngle = np.mod(normAngle - incidentAngle, 2*pi)
-    
+
     deflAngle = np.arcsin(n1*np.sin(incidentAngle)/n2)
     deflAngle = np.mod(deflAngle + pi + normAngle, 2*pi)
 
@@ -301,8 +387,8 @@ def refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None):
 
     else:
         return (reflAngle, deflAngle)
-    
-    
+
+
 #}}}
 
 #{{{ reflection and deflection angle for cylindrical surface
@@ -310,29 +396,32 @@ def refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None):
 def cyl_refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None, curve_direction='h'):
     '''
     Returns a tuples of reflection and deflection angles for incidence of a beam into a cylindrical surface.
-    
-    beamAngle: The angle formed by the propagation direction vector
-               of the incident beam and the x-axis.
 
-    normAngle: The angle formed by the normal vector of the surface
-               and the x-axis.
-
-    n1: Index of refraction of the incident side medium.
-
-    n2: Index of refraction of the transmission side medium.
-
-    invROC: Inverse of the radius of curvature.
-
-    curve_direction: Direction of curvature. Either 'h' or 'v'.
+    Parameters
+    ----------
+    beamAngle : float
+        The angle formed by the propagation direction vector
+        of the incident beam and the x-axis.
+    normAngle : float
+        The angle formed by the normal vector of the surface
+        and the x-axis.
+    n1 : float
+        Index of refraction of the incident side medium.
+    n2 : float
+        Index of refraction of the transmission side medium.
+    invROC : float or None, optional
+        Inverse of the radius of curvature.
+    curve_direction : str, optional
+        Direction of curvature. Either 'h' or 'v'.
     '''
 
     beamAngle = np.mod(beamAngle, 2*pi)
     normAngle = np.mod(normAngle, 2*pi)
-    
+
     incidentAngle = np.mod(beamAngle - normAngle, 2*pi) - pi
 
     reflAngle = np.mod(normAngle - incidentAngle, 2*pi)
-    
+
     deflAngle = np.arcsin(n1*np.sin(incidentAngle)/n2)
     deflAngle = np.mod(deflAngle + pi + normAngle, 2*pi)
 
@@ -364,8 +453,8 @@ def cyl_refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None, curve_directi
 
     else:
         return (reflAngle, deflAngle)
-    
-    
+
+
 #}}}
 
 #}}}
@@ -375,10 +464,23 @@ def cyl_refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None, curve_directi
 def vc_deflect(theta, theta1, n1, n2):
     '''
     Deflection angle helper function for VariCAD.
-    theta is the angle of the surface measured from right.
-    theta1 is the angle of the incident beam measured from right.
-    It returns an angle of the deflected beam measured from right.
-    
+
+    Parameters
+    ----------
+    theta : float
+        Angle of the surface measured from right.
+    theta1 : float
+        Angle of the incident beam measured from right.
+    n1 : float
+        Index of refraction of the incident side medium.
+    n2 : float
+        Index of refraction of the transmission side medium.
+
+    Returns
+    -------
+    phi2 : float
+        Angle of the deflected beam measured from right.
+
     '''
     #Combert theta and theta1 to 0-360 format
     if theta < 0:
@@ -386,10 +488,10 @@ def vc_deflect(theta, theta1, n1, n2):
 
     if theta > 180:
         theta = theta -180.0
-        
+
     if theta1 < 0:
         theta1 = 360.0 + theta1
-    
+
     #Determine the incident angle
     phi = abs(theta - theta1)
     phi1 = 90.0-np.arcsin(np.abs(np.sin(pi*phi/180.0)))*180.0/pi
@@ -401,17 +503,30 @@ def vc_deflect(theta, theta1, n1, n2):
     s1 = np.sign(np.sin(pi*(theta1 - theta)/180.0))
     s2 = -np.sign(np.cos(pi*(theta1 - theta)/180.0))
     phi2 = theta + s1*90 + s1*s2*phi2
-    return phi2 
+    return phi2
 
 
 def vc_reflect(theta, theta1):
+    """Convert theta and theta1 to 0-360 format.
+
+    Parameters
+    ----------
+    theta : float
+        Angle of the surface measured from right.
+    theta1 : float
+        Angle of the incident beam measured from right.
+
+    Returns
+    -------
+    float
+    """
     #Combert theta and theta1 to 0-360 format
     if theta < 0:
         theta = 360.0 + theta
 
     if theta > 180:
         theta = theta -180.0
-        
+
     if theta1 < 0:
         theta1 = 360.0 + theta1
 
