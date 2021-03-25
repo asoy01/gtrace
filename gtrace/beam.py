@@ -70,7 +70,6 @@ __status__ = "Beta"
 
 class GaussianBeam(HasTraits):
     '''
-        
     This is a class to represent a Gaussian beam.
     A GaussianBeam object has its origin (pos) and a propagation
     direction (dirVect or dirAngle).
@@ -86,78 +85,78 @@ class GaussianBeam(HasTraits):
     As a beam propagate through optical system, optical distance and
     Gouy phase are accumerated.
 
-    *=== Attributes ===*
-    
-    **q:** q-parameter of the beam. If the beam is eliptic, q is the q-parameter
+    Attributes
+    ----------
+    q : complex
+        q-parameter of the beam. If the beam is eliptic, q is the q-parameter
         of the best matching circular mode.
-        
-    **qx:** q-parameter of the beam in the x-direction. [complex float]
-    
-    **qy:** q-parameter of the beam in the y-direction. [complex float]
-    
-    **pos:** Position of the beam origin. [(2,) float array]
-    
-    **dirVect:** Propagation direction vector. [(2,) float array]
-    
-    **dirAngle:** Propagation direction angle measured from the positive x-axis. [float]
-              
-    **length:** Length of the beam (used for DXF export) [float]
-    
-    **layer:** Layer name of the beam when exported to a DXF file.
-
-    **name:** Name of the beam
-              
-    **wl:** Wavelength in vacuum. Not the wavelength in the medium. [float]
-
-    **n:** Index of refraction of the medium the beam is passing through. [float]
-
-    **P:** Power [float]
-    
-    **wx:** Beamwidth in x-direction [float]
-
-    **wy:** Beamwidth in y-direction [float]
-
-    **optDist:** Accumulated optical distance.
-
-    **Gouyx:** Accumulated Gouy phase in x-direction.
-
-    **Gouyy:** Accumulated Gouy phase in y-direction.
-
-    **Mx:** ABCD matrix in x-direction.
-           This is a 2x2 matrix representing the product
-           of ABCD transformations applied to this beam.
-           It defaults to an identity matrix.
-           Whenever a beam experience an ABCD matrix
-           transformation, such as propagation in the space
-           or reflection by a curved mirror, the applied ABCD
-           matrix is multiplied to this matrix, so that we can
-           keep track of what kind of transformations were
-           made during beam propagation.
-
-    **My:** ABCD matrix in y-direction. The meaning is the same as Mx.
-
-    **departSurfAngle:** The angle formed by x-axis and the normal vector of
-                                  the surface from which the beam is departing.
-                                  Default is None. Used by the drawing routine.
-
-    **departSurfInvROC:** Inverse of the ROC of the surface from which the beam is departing.
-                                     The ROC is positive for a concave surface seen from
-                                     the beam side.
-                                     Default is None. Used by the drawing routine.                                    
-    
-    **incSurfAngle:** The angle formed by the x-arm and the normal vector of
-                            the surface to which the beam is incident.
-                            Default is None. Used by the drawing routine.    
-
-    **incSurfInvROC:** Inverse of the ROC of the surface to which the beam is incident.
-                               The ROC is positive for a concave surface seen from
-                               the beam side.
-                               Default is None. Used by the drawing routine.
-
-    **stray_order:** An integer indicating if this beam is a stray light or not.
-                        The default value is 0. Every time a beam is reflected by an AR surface
-                        or transmits an HR surface, this couter is increased by 1.
-
+    qx : complex
+        q-parameter of the beam in the x-direction.
+    qy : complex
+        q-parameter of the beam in the y-direction.
+    pos : array
+        Position of the beam origin (x, y).
+    dirVect : array
+        Propagation direction vector.
+    dirAngle : float
+        Propagation direction angle measured from the positive x-axis.
+    length : float
+        Length of the beam (used for DXF export)
+    layer : str
+        Layer name of the beam when exported to a DXF file.
+    name : str
+        Name of the beam
+    wl : float
+        Wavelength in vacuum. Not the wavelength in the medium.
+    n : float
+        Index of refraction of the medium the beam is passing through.
+    P : float
+        Power.
+    wx : float
+        Beamwidth in x-direction.
+    wy : float
+        Beamwidth in y-direction.
+    optDist : float
+        Accumulated optical distance.
+    Gouyx : float
+        Accumulated Gouy phase in x-direction.
+    Gouyy : float
+        Accumulated Gouy phase in y-direction.
+    Mx : array
+        ABCD matrix in x-direction.
+        This is a 2x2 matrix representing the product
+        of ABCD transformations applied to this beam.
+        It defaults to an identity matrix.
+        Whenever a beam experience an ABCD matrix
+        transformation, such as propagation in the space
+        or reflection by a curved mirror, the applied ABCD
+        matrix is multiplied to this matrix, so that we can
+        keep track of what kind of transformations were
+        made during beam propagation.
+    My : array
+        ABCD matrix in y-direction. The meaning is the same as Mx.
+    departSurfAngle : None
+        The angle formed by x-axis and the normal vector of
+        the surface from which the beam is departing.
+        Default is None. Used by the drawing routine.
+    departSurfInvROC : None
+        Inverse of the ROC of the surface from which the beam is departing.
+        The ROC is positive for a concave surface seen from
+        the beam side.
+        Default is None. Used by the drawing routine.
+    incSurfAngle : None
+        The angle formed by the x-arm and the normal vector of
+        the surface to which the beam is incident.
+        Default is None. Used by the drawing routine.
+    incSurfInvROC : None
+        Inverse of the ROC of the surface to which the beam is incident.
+        The ROC is positive for a concave surface seen from
+        the beam side.
+        Default is None. Used by the drawing routine.
+    stray_order : int
+        An integer indicating if this beam is a stray light or not.
+        The default value is 0. Every time a beam is reflected by an AR surface
+        or transmits an HR surface, this couter is increased by 1.
     '''
 #{{{ Traits Definitions
 
@@ -186,7 +185,7 @@ class GaussianBeam(HasTraits):
 
     Mx = CArray(value=[[1,0],[0,1]],dtype=np.float64, shape=(2,2))
     My = CArray(value=[[1,0],[0,1]],dtype=np.float64, shape=(2,2))
-    
+
 #}}}
 
 #{{{ __init__
@@ -194,25 +193,47 @@ class GaussianBeam(HasTraits):
     def __init__(self, q0=1j*2*pi/(1064*nm)*1e-6/2, q0x=False, q0y=False,
                  pos=[0.0,0.0], length=1.0, dirAngle=0.0, dirVect=None,
                  wl=1064*nm, P=1*W, n=1.0, name="Beam", layer='main_beam'):
-        '''
-        === Arguments ===
+        '''Constructor
 
-        q0: q-parameter. If q0x or q0y is not given, this parameter is used
-            as both qx and qy. [complex float]
-            
-            q0x: q-parameter in x-direction [complex float]
-            q0y: q-parameter in y-direction [complex float]
-            
-            pos: Position of the origin of the beam [(2,) float array]
-            length: Length of the beam (used for DXF export) [float]
-            dirAngle: Propagation direction angle measured from the positive x-axis.
-                      [float]    
-                      dirVect: Propagation direction vector. [(2,) float array]
-                      wl: wavelength [float]
-                      P: Power [float]
-                      n: Index of refraction of the medium the beam is passing through. [float]
-                      name: Name of the beam
-                      layer: Layer name of the beam when exported to a DXF file.
+        Parameters
+        ----------
+        q0 : complex, optional
+            q-parameter. If q0x or q0y is not given, this parameter is used
+            as both qx and qy.
+            Defaults 1j*2*pi/(1064*nm)*1e-6/2.
+        q0x : complex, optional
+            q-parameter in x-direction.
+            Defaults False. If False, set to q0.
+        q0y : complex, optional
+            q-parameter in y-direction.
+            Defaults False. If False, set to q0.
+        pos : array, optional
+            Position of the origin of the beam (x, y).
+            Defaults [0.0, 0.0].
+        length : float, optional
+            Length of the beam (used for DXF export).
+            Defaults 1.0.
+        dirAngle : float, optional
+            Propagation direction angle measured from the positive x-axis.
+            Defaults 0.0.
+        dirVect : array, optional
+            Propagation direction vector.
+            Defaults None.
+        wl : float, optional.
+            Wavelength.
+            Defaults 1064nm.
+        P : float, optional.
+            Power.
+            Defaults 1W.
+        n : float, optional
+            Index of refraction of the medium the beam is passing through.
+            Defaults 1.0.
+        name : str, optional
+            Name of the beam.
+            Defaults "Beam".
+        layer : str, optional
+            Layer name of the beam when exported to a DXF file.
+            Defaults "main_beam".
         '''
         self.wl = wl
         self.P = P
@@ -221,12 +242,12 @@ class GaussianBeam(HasTraits):
         self.name = name
         self.layer = layer
         self.n = n
-        
-        if q0x:
+
+        if q0x:  ## Possible bug. If q0x is True then self.qx becomes True.
             self.qx = q0x
         else:
             self.qx = q0
-            
+
         if q0y:
             self.qy = q0y
         else:
@@ -241,7 +262,7 @@ class GaussianBeam(HasTraits):
         self.optDist = 0.0
 
         self.departSurfAngle = None
-        self.departSurfInvROC = None        
+        self.departSurfInvROC = None
         self.incSurfAngle = None
         self.incSurfInvROC = None
         self.stray_order = 0
@@ -271,6 +292,11 @@ class GaussianBeam(HasTraits):
         to self.optDist.
         self.Goux and self.Gouyy are also updated to record the Gouy
         phase change.
+
+        Parameters
+        ----------
+        d: float
+            Distance.
         '''
         qx0 = self.qx
         qy0 = self.qy
@@ -297,21 +323,25 @@ class GaussianBeam(HasTraits):
         '''
         Apply ABCD transformation to the beam.
 
-        **ABCDx:** ABCD matrix for x-direction
-
-        **ABCDy:** ABCD matrix for y-direction
+        Parameters
+        ----------
+        ABCDx : array
+            ABCD matrix for x-direction.
+        ABCDy : array or None, optional.
+            ABCD matrix for y-direction.
+            Defaults None. If None, set to ABCDx.
         '''
         if ABCDy is None:
             ABCDy = ABCDx
-            
+
         #Update q-parameters
         self.qrx = (ABCDx[0,0]*self.qrx + ABCDx[0,1])/(ABCDx[1,0]*self.qrx + ABCDx[1,1])
         self.qry = (ABCDy[0,0]*self.qry + ABCDy[0,1])/(ABCDy[1,0]*self.qry + ABCDy[1,1])
 
         #Update Mx and My
         self.Mx = np.dot(ABCDx, self.Mx)
-        self.My = np.dot(ABCDy, self.My)        
-        
+        self.My = np.dot(ABCDy, self.My)
+
 #}}}
 
 #{{{ rotate
@@ -322,18 +352,20 @@ class GaussianBeam(HasTraits):
         If center is not given, the beam is rotated
         around self.pos.
 
-        *Arguments*
-
-        **angle:** Rotation angle in radians.
-
-        **center:** Center for rotation. [(2,) array of float]
-        '''        
+        Parameters
+        ----------
+        angle : float
+            Rotation angle in radians.
+        center : array or boolean.
+            Center of rotation. Should be an array of shape(2,).
+            Defaults False.
+        '''
         if center:
             center = np.array(center)
             pointer = self.pos - center
             pointer = optics.geometric.vector_rotation_2D(pointer, angle)
             self.pos = center + pointer
-            
+
         self.dirAngle = self.dirAngle + angle
 
 #}}}
@@ -345,14 +377,15 @@ class GaussianBeam(HasTraits):
         Translate the beam by the direction and the distance
         specified by a vector.
 
-       *Arguments*
-
-        **trVect:** A vector to specify the translation direction and
-                distance. [(2,) float array]
-        '''        
+        Parameters
+        ----------
+        trVect : array
+            A vector to specify the translation direction and
+            distance. Should be an array of shape(2,)
+        '''
         trVect = np.array(trVect)
         self.pos = self.pos + trVect
-        
+
 #}}}
 
 #{{{ Flip
@@ -365,6 +398,12 @@ class GaussianBeam(HasTraits):
 
         If optional argument flipDirVect is set to False,
         the propagation direction of the beam is not changed.
+
+        Parameters
+        ----------
+        flipDirVect : boolean, optional
+            Flip propagation direction.
+            Defaults True.
         '''
         self.qx = -np.real(self.qx)+1j*np.imag(self.qx)
         self.qy = -np.real(self.qy)+1j*np.imag(self.qy)
@@ -380,6 +419,16 @@ class GaussianBeam(HasTraits):
         Returns the beam width at a distance dist
         from the origin of the beam.
         The width is the radius where the light power becomes 1/e^2.
+
+        Parameters
+        ----------
+        dist : float
+            Distance.
+
+        Returns
+        -------
+        (float, float)
+            The width of the beam in x and y direction.
         '''
         dist = np.array(dist)
         k = 2*pi/(self.wl/self.n)
@@ -396,6 +445,16 @@ class GaussianBeam(HasTraits):
         '''
         Returns the beam ROC at a distance dist
         from the origin of the beam.
+
+        Parameters
+        ----------
+        dist : float, optional
+            Distance.
+
+        Returns
+        -------
+        (float, float)
+            Beam ROC.
         '''
         dist = np.array(dist)
         k = 2*pi/self.wl
@@ -411,6 +470,11 @@ class GaussianBeam(HasTraits):
     def waist(self):
         '''
         Return the tuples of waist size and distance
+
+        Returns
+        -------
+        dict
+            {"Waist Size": (float, float), "Waist Position": (float, float)}
         '''
 
         #Waist positions
@@ -422,7 +486,7 @@ class GaussianBeam(HasTraits):
         wy = self.width(dy)[1]
 
         return {"Waist Size":(wx, wy), "Waist Position":(dx, dy)}
-    
+
 #}}}
 
 #{{{ draw
@@ -435,31 +499,42 @@ class GaussianBeam(HasTraits):
         '''
         Draw the beam into a DXF object.
 
-        *Arguments*
-
-        **cv:** draw.Canvas object.
-        
-        **sigma:** The width of the beam drawn is sigma * (1/e^2 radius of the beam).
-               The default is sigma = 3. sigma = 2.7 gives 1ppm diffraction loss.
-               [float]
-               
-        **mode:** 'avg', 'x', or 'y'. A beam can have different widths for x- and y-
-              directions. If 'avg' is specified, the average of them are drawn.
-              'x' and 'y' specifies to show the width of the respective directions.
-        
-        **fontSize:** Size of the font used to show supplemental informations. [float]
-
-        **drawWidth:** Whether to draw width or not. [Boolean]
-
-        **drawPower:** Whether to show the beam power. [Boolean]
-
-        **drawROC:** Whether to show the ROC or not. [Boolean]
-
-        **drawGouy:** Whether to show the Gouy phase or not. [Boolean]
-
-        **drawOptDist:** Whether to show the accumulated optical distance or not. [Boolean]
-
-        **drawName:** Whether draw the name of the beam or not. [Boolean]
+        Parameters
+        ----------
+        cv : gtrace.draw.draw.Canvas
+            gtrace canvas.
+        sigma : float, optional
+            The width of the beam drawn is sigma * (1/e^2 radius of the beam).
+            The default is sigma = 3. sigma = 2.7 gives 1ppm diffraction loss.
+            Defaults 3.
+        mode : str, optional
+            'avg', 'x', or 'y'. A beam can have different widths for x- and y-
+            directions. If 'avg' is specified, the average of them are drawn.
+            'x' and 'y' specifies to show the width of the respective directions.
+            Defaults 'x'.
+        fontSize : float, optional
+            Size of the font used to show supplemental informations.
+            Defaults False.
+        drawWidth : boolean, optional
+            Whether to draw width or not.
+            Defaults True.
+        drawPower : boolean, optional
+            Whether to show the beam power.
+            Defaults False.
+        drawROC : boolean, optional
+            Whether to show the ROC or not.
+            Defaults False.
+        drawGouy : boolean, optional
+            Whether to show the Gouy phase or not.
+            Defaults False.
+        drawOptDist : boolean, optional
+            Whether to show the accumulated optical distance or not.
+            Defaults False.
+        drawName : boolean, optional
+            Whether draw the name of the beam or not.
+            Defaults False.
+        debug : boolean, optional
+            Debug.
         '''
         if not fontSize:
             fontSize = self.width(self.length/2)[0]*sigma/5
@@ -469,27 +544,27 @@ class GaussianBeam(HasTraits):
 
         #Location to put texts
         #mid = self.pos + self.dirVect * self.length/2
-        #side = mid+fontSize*1.2*k        
+        #side = mid+fontSize*1.2*k
         k = np.array((-self.dirVect[1], self.dirVect[0]))
         text_location = tuple(self.pos + (self.length - 10*fontSize)*self.dirVect + k*fontSize*1)
 
-        
+
         #Draw the center line
         cv.add_shape(draw.Line(start, stop), self.layer)
 
         if drawWidth:
             self.drawWidth(cv, sigma, mode)
-            
+
         annotation = ''
         if drawName:
             annotation = annotation+'%s '%self.name
-            
+
         if drawPower:
             annotation = annotation+'P=%.2E '%self.P
 
         if drawROC:
-            annotation = annotation+'ROCx=%.2E '%q2R(self.qx) 
-            annotation = annotation+'ROCy=%.2E '%q2R(self.qy)             
+            annotation = annotation+'ROCx=%.2E '%q2R(self.qx)
+            annotation = annotation+'ROCy=%.2E '%q2R(self.qy)
 
         if drawGouy:
             annotation = annotation+'Gouyx=%.2E '%self.Gouyx
@@ -498,7 +573,7 @@ class GaussianBeam(HasTraits):
         if drawOptDist:
             annotation = annotation+'Optical distance=%.2E '%self.optDist
 
-        cv.add_shape(draw.Text(text=annotation, point=text_location, 
+        cv.add_shape(draw.Text(text=annotation, point=text_location,
                              height=fontSize), layername='text')
 
         #Indicate the beam direction
@@ -509,12 +584,26 @@ class GaussianBeam(HasTraits):
         # text_location = tuple(self.pos + (self.length - 10*fontSize)*self.dirVect + k*fontSize*1)
         # dxf.append(sdxf.Text(text=self.name+':end P=%.2E'%self.P, point=text_location,
         #                      height=fontSize, layer='text'))
-        
+
 #}}}
 
 #{{{ drawWidth
 
     def drawWidth(self, cv, sigma, mode):
+        """Draw width on canvas.
+
+        Parameters
+        ----------
+        cv : gtrace.draw.draw.Canvas
+            The canvas.
+        sigma : float
+            The width of the beam drawn is sigma * (1/e^2 radius of the beam).
+            The default is sigma = 3. sigma = 2.7 gives 1ppm diffraction loss.
+        mode : str
+            'avg', 'x', or 'y'. A beam can have different widths for x- and y-
+            directions. If 'avg' is specified, the average of them are drawn.
+            'x' and 'y' specifies to show the width of the respective directions.
+        """
         #Draw the width
 
         #Determine the number of line segments to draw
@@ -552,7 +641,7 @@ class GaussianBeam(HasTraits):
         #Determine the end z coordinates
         if self.incSurfAngle is not None:
             theta = np.mod(self.incSurfAngle+pi, 2*pi) - self.dirAngle
-            k = 2*pi/(self.wl/self.n)            
+            k = 2*pi/(self.wl/self.n)
             if np.abs(self.incSurfInvROC) > 1.0/100:
                 R = 1.0/self.incSurfInvROC
                 (z2u, z2d) = optimEndPointR(theta, R, q0+self.length, k, sigma)
@@ -561,21 +650,21 @@ class GaussianBeam(HasTraits):
         else:
             z2u = 0.0
             z2d = 0.0
-            
+
 
         du = np.linspace(z1u, self.length+z2u, numSegments)
-        dd = np.linspace(z1d, self.length+z2d, numSegments)        
+        dd = np.linspace(z1d, self.length+z2d, numSegments)
         au = self.width(du)
         ad = self.width(dd)
         if mode == 'x':
             wu = au[0]*sigma
-            wd = ad[0]*sigma            
+            wd = ad[0]*sigma
         elif mode == 'y':
             wu = au[1]*sigma
-            wd = ad[1]*sigma            
+            wd = ad[1]*sigma
         else:
             wu = sigma*(au[0]+au[1])/2
-            wd = sigma*(ad[0]+ad[1])/2            
+            wd = sigma*(ad[0]+ad[1])/2
 
         v = np.vstack((du,wu))
         v = optics.geometric.vector_rotation_2D(v, self.dirAngle)
@@ -585,14 +674,16 @@ class GaussianBeam(HasTraits):
         v = np.vstack((dd,-wd))
         v = optics.geometric.vector_rotation_2D(v, self.dirAngle)
         v = v + np.array([self.pos]).T
-        cv.add_shape(draw.PolyLine(x=v[0,:], y=v[1,:]), layername=self.layer+"_width")        
+        cv.add_shape(draw.PolyLine(x=v[0,:], y=v[1,:]), layername=self.layer+"_width")
 
 
-#}}}        
+#}}}
 
 #{{{ drawWidthOld
 
     def drawWidthOld(self, dxf, sigma, mode):
+        '''Deprecated?
+        '''
         #Draw the width
 
         #Determine the number of line segments to draw
@@ -639,7 +730,7 @@ class GaussianBeam(HasTraits):
                  dirAngle = np.mod(self.dirAngle, 2*pi))
 #        self.dirVect = array([np.cos(self.dirAngle), np.sin(self.dirAngle)])
 #        self.dirAngle = np.mod(self.dirAngle, 2*pi)
-            
+
     def _dirVect_changed(self, old, new):
         #Normalize
         self.set(trait_change_notify=False,
@@ -660,10 +751,10 @@ class GaussianBeam(HasTraits):
         self.set(trait_change_notify=False,
                  qry = self.qy/self.n)
         self.q = optimalMatching(self.qx, self.qy)[0]
-        
+
     def _qrx_changed(self, old, new):
         self.qx = self.qrx*self.n
-        
+
     def _qry_changed(self, old, new):
         self.qy = self.qry*self.n
 
@@ -673,7 +764,7 @@ class GaussianBeam(HasTraits):
         self.set(trait_change_notify=False,
                  qy = self.qry*self.n)
 
-#}}}        
+#}}}
 
 #}}}
 
@@ -684,6 +775,29 @@ def optFunForStartPointR(phi, Mrot, R, q0, k, sigma, side):
     A function to return the distance between the point on
     the spherical surface at an angle phi and the beam width
     at the same z.
+
+    Parameters
+    ----------
+    phi : float
+        phi
+    Mrot: array
+        Rotational transformation.
+    R : float
+        R
+    q0 : complex
+        Beam parameter.
+    k : float
+        k
+    sigma : float
+        Beam width
+    side
+        side
+
+    Returns
+    -------
+    float
+        Distance between the point on the spherical surface at an
+        angle phi and the beam width at the same z.
     '''
     cp = np.cos(phi)
     sp = np.sin(phi)
@@ -696,12 +810,30 @@ def optFunForStartPointR(phi, Mrot, R, q0, k, sigma, side):
     return (w1-w2)[0]
 
 def optimStartPointR(theta, R, q0, k, sigma):
-    '''
+    '''Caltulate optimal starting point.
+
+    Paramters
+    ---------
+    theta : float
+        theta
+    R : float
+        R
+    q0 : complex
+        Beam parameter.
+    k : float
+        k
+    sigma : float
+        Beam width.
+
+    Returns
+    -------
+    (float, float)
+        Optimal starting point.
     '''
     ct = np.cos(theta)
     st = np.sin(theta)
     Mrot = np.array([[ct, -st], [st, ct]])
-    
+
     phi1 = sopt.newton(optFunForStartPointR, 0, args=(Mrot, R, q0, k, sigma, 1))
     cp = np.cos(phi1)
     sp = np.sin(phi1)
@@ -713,14 +845,37 @@ def optimStartPointR(theta, R, q0, k, sigma):
     sp = np.sin(phi2)
     v = R*np.array([[1-cp], [-sp]])
     z2 = np.dot(Mrot, v)[0][0]
-    
-    return (z1,z2) 
+
+    return (z1,z2)
 
 def optFunForEndPointR(phi, Mrot, R, q0, k, sigma, side):
     '''
     A function to return the distance between the point on
     the spherical surface at an angle phi and the beam width
     at the same z.
+
+    Parameters
+    ----------
+    phi : float
+        phi
+    Mrot: array
+        Rotational transformation.
+    R : float
+        R
+    q0 : complex
+        Beam parameter.
+    k : float
+        k
+    sigma : float
+        Beam width
+    side
+        side
+
+    Returns
+    -------
+    float
+        Distance between the point on the spherical surface at an
+        angle phi and the beam width at the same z.
     '''
     cp = np.cos(phi)
     sp = np.sin(phi)
@@ -733,12 +888,30 @@ def optFunForEndPointR(phi, Mrot, R, q0, k, sigma, side):
     return (w1-w2)[0]
 
 def optimEndPointR(theta, R, q0, k, sigma):
-    '''
+    '''Caltulate optimal end point.
+
+    Paramters
+    ---------
+    theta : float
+        theta
+    R : float
+        R
+    q0 : complex
+        Beam parameter.
+    k : float
+        k
+    sigma : float
+        Beam width.
+
+    Returns
+    -------
+    (float, float)
+        Optimal end point.
     '''
     ct = np.cos(theta)
     st = np.sin(theta)
     Mrot = np.array([[ct, -st], [st, ct]])
-    
+
     phi1 = sopt.newton(optFunForEndPointR, 0, args=(Mrot, R, q0, k, sigma, 1))
     cp = np.cos(phi1)
     sp = np.sin(phi1)
@@ -750,14 +923,35 @@ def optimEndPointR(theta, R, q0, k, sigma):
     sp = np.sin(phi2)
     v = R*np.array([[cp - 1], [sp]])
     z2 = np.dot(Mrot, v)[0][0]
-    
-    return (z1,z2) 
+
+    return (z1,z2)
 
 def optFunForFlat(a, Mrot, q0, k, sigma, side):
     '''
     A function to return the distance between the point on
-    the spherical surface at an angle phi and the beam width
+    the spherical surface (flat?) at an angle phi and the beam width
     at the same z.
+
+    Parameters
+    ----------
+    a : float
+        a
+    Mrot: array
+        Rotational transformation.
+    q0 : complex
+        Beam parameter.
+    k : float
+        k
+    sigma : float
+        Beam width
+    side
+        side
+
+    Returns
+    -------
+    float
+        Distance between the point on the spherical surface at an
+        angle phi and the beam width at the same z.
     '''
     v = np.array([[0],[a]])
 
@@ -768,12 +962,30 @@ def optFunForFlat(a, Mrot, q0, k, sigma, side):
     return (w1-w2)[0]
 
 def optimCrossPointFlat(theta, q0, k, sigma):
-    '''
+    '''Caltulate optimal cross point.
+
+    Paramters
+    ---------
+    theta : float
+        theta
+    R : float
+        R
+    q0 : complex
+        Beam parameter.
+    k : float
+        k
+    sigma : float
+        Beam width.
+
+    Returns
+    -------
+    (float, float)
+        Optimal end point.
     '''
     ct = np.cos(theta)
     st = np.sin(theta)
     Mrot = np.array([[ct, -st], [st, ct]])
-    
+
     a1 = sopt.newton(optFunForFlat, 0, args=(Mrot, q0, k, sigma, 1))
     v = np.array([[0],[a1]])
     z1 = np.dot(Mrot, v)[0][0]
@@ -781,7 +993,7 @@ def optimCrossPointFlat(theta, q0, k, sigma):
     a2 = sopt.newton(optFunForFlat, 0, args=(Mrot, q0, k, sigma, -1))
     v = np.array([[0],[a2]])
     z2 = np.dot(Mrot, v)[0][0]
-    
-    return (z1,z2) 
+
+    return (z1,z2)
 
 #}}}
