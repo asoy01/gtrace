@@ -590,44 +590,6 @@ class GaussianBeam(HasTraits):
 
 #}}}        
 
-#{{{ drawWidthOld
-
-    def drawWidthOld(self, dxf, sigma, mode):
-        #Draw the width
-
-        #Determine the number of line segments to draw
-        zr = q2zr(self.qx)
-        resolution = zr/10.0
-        if resolution > self.length/10.0:
-            resolution = self.length/10.0
-
-        numSegments = int(self.length/resolution)
-
-        if numSegments > 100:
-            numSegments = 100
-
-        d = np.linspace(0,self.length, numSegments)
-        a = self.width(d)
-        if mode == 'x':
-            w = a[0]*sigma
-        elif mode == 'y':
-            w = a[1]*sigma
-        else:
-            w = sigma*(a[0]+a[1])/2
-
-        v = np.vstack((d,w))
-        v = optics.geometric.vector_rotation_2D(v, self.dirAngle)
-        v = v + np.array([self.pos]).T
-        dxf.append(sdxf.LwPolyLine(points=list(v.T), layer=self.layer+"_width"))
-
-        v = np.vstack((d,-w))
-        v = optics.geometric.vector_rotation_2D(v, self.dirAngle)
-        v = v + np.array([self.pos]).T
-        dxf.append(sdxf.LwPolyLine(points=list(v.T), layer=self.layer+"_width"))
-
-
-#}}}
-
 #}}}
 
 #{{{ Notification Handlers
