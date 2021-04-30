@@ -53,14 +53,30 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
     through the optical system represented by a collection of optics,
     optList.
 
-    The return value of this function is a list of beams.
+    Parameters
+    ----------
+    optList: list of gtrace.optcomp.Optics
+        List of optical components.
+    src_beam: gtrace.beam.GaussianBeam
+        The source beam object.
+    order: int, optional
+        An integer to specify how many times the internal reflections
+        are computed.
+        Defaults to 10.
+    power_threshold: float, optional
+        The power threshold for internal reflection calculation.
+        If the power of an auxiliary beam falls below this threshold,
+        further propagation of this beam will not be performed.
+        Defaults to 0.1.
+    open_beam_length: float, optional
+        The default length for beams that are not hitting anything.
+        Defaults to 1.0.
 
-    == Arguments ==
-
-    open_beam_length: open beams (beams not hitting anything) will have this length.
-
+    Returns
+    -------
+    terminated_beam_list: list of gtrace.beam.GaussianBeam
+        A list of beams.
     '''
-
     #Loop over all the optics to see if the source beam hit them.
     #Then select the closest optics being hit.
     min_dist = 1e15
@@ -91,10 +107,10 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
     #Avoid forming a cavity
     if hit_optics.term_on_HR  and final_answer['face'] == 'HR' and \
                 src_beam.stray_order <= hit_optics.term_on_HR_order:
-        
+
         src_beam.length = final_answer['distance']
         return [src_beam]
-    
+
     ans = hit_optics.hit(src_beam, order=order, threshold=power_threshold,
                          face=final_answer['face'])
 
@@ -109,5 +125,5 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
         terminated_beam_list.extend(beams)
 
     return terminated_beam_list
-        
+
 #}}}
