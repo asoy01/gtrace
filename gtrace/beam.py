@@ -253,7 +253,7 @@ class GaussianBeam(HasTraits):
         else:
             self.qy = q0
 
-        if dirVect != None:
+        if dirVect is not None:
             self.dirVect = dirVect
         else:
             self.dirAngle = dirAngle
@@ -360,7 +360,7 @@ class GaussianBeam(HasTraits):
             Center of rotation. Should be an array of shape(2,).
             Defaults False.
         '''
-        if center:
+        if center is not False:
             center = np.array(center)
             pointer = self.pos - center
             pointer = optics.geometric.vector_rotation_2D(pointer, angle)

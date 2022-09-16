@@ -458,7 +458,7 @@ class Mirror(Optics):
         center: array or boolean, optional
             Center of rotation, or False.
         '''
-        if center:
+        if center is not False:
             center = np.array(center)
             pointer = self.HRcenter - center
             pointer = optics.geometric.vector_rotation_2D(pointer, angle)
