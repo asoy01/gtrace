@@ -176,15 +176,15 @@ class GaussianBeam(HasTraits):
     wy = CFloat()
     n = CFloat(1.0)
 
-    pos = CArray(dtype=np.float64, shape=(2,))
+    pos = CArray(dtype='float64', shape=(2,))
     length = CFloat(1.0)
     layer = Str()
-    dirVect = CArray(dtype=np.float64, shape=(2,))
+    dirVect = CArray(dtype='float64', shape=(2,))
     dirAngle = CFloat()
     optDist = CFloat(0.0)
 
-    Mx = CArray(value=[[1,0],[0,1]],dtype=np.float64, shape=(2,2))
-    My = CArray(value=[[1,0],[0,1]],dtype=np.float64, shape=(2,2))
+    Mx = CArray(value=[[1,0],[0,1]],dtype='float64', shape=(2,2))
+    My = CArray(value=[[1,0],[0,1]],dtype='float64', shape=(2,2))
 
 #}}}
 

@@ -83,11 +83,11 @@ def drawAllBeams(d, beamList, sigma=3.0, drawWidth=True, drawPower=False,
                  drawROC=False, drawGouy=False, drawOptDist=False, layer=None, mode='x',
                     fontSize=0.01):
     
-    for ii in range(len(beamList)):
+    for beam in beamList:
         if layer is not None:
-            beamList[ii].layer = layer
+            beam.layer = layer
             
-        beamList[ii].draw(d, sigma=sigma, mode=mode, drawWidth=drawWidth, drawPower=drawPower,
+        beamList.draw(d, sigma=sigma, mode=mode, drawWidth=drawWidth, drawPower=drawPower,
                     drawROC=drawROC, drawGouy=drawGouy, drawOptDist=drawOptDist,
                     fontSize=fontSize)
 
@@ -95,24 +95,24 @@ def drawAllBeams(d, beamList, sigma=3.0, drawWidth=True, drawPower=False,
 
 #{{{ Draw all optics
 def drawAllOptics(d, opticsList, drawName=True, layer=None):
-    for ii in range(len(opticsList)):
+    for optics in opticsList:
         if layer is not None:
-            opticsList[ii].layer = layer
+            optics.layer = layer
 
-        opticsList[ii].draw(d, drawName=drawName)
+        optics.draw(d, drawName=drawName)
 
 #}}}
 
 #{{{ Translate all
 
 def transAll(objList, transVect):
-    for ii in range(len(objList)):
-        objList[ii].translate(transVect)
+    for obj in objList:
+        obj.translate(transVect)
 #}}}
 
 #{{{ Rotata all
 
 def rotateAll(objList, angle, center):
-    for ii in range(len(objList)):
-        objList[ii].rotate(angle, center)
+    for obj in objList:
+        obj.rotate(angle, center)
 #}}}
