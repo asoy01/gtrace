@@ -36,7 +36,7 @@ def q2zr(q):
     zr : float
         Rayleigh range.
     '''
-    zr = np.float(np.imag(q))
+    zr = np.imag(q)
     return zr
 
 def q2w(q, wl=1064*nm):
