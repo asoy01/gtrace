@@ -87,7 +87,7 @@ def drawAllBeams(d, beamList, sigma=3.0, drawWidth=True, drawPower=False,
         if layer is not None:
             beam.layer = layer
             
-        beamList.draw(d, sigma=sigma, mode=mode, drawWidth=drawWidth, drawPower=drawPower,
+        beam.draw(d, sigma=sigma, mode=mode, drawWidth=drawWidth, drawPower=drawPower,
                     drawROC=drawROC, drawGouy=drawGouy, drawOptDist=drawOptDist,
                     fontSize=fontSize)
 
