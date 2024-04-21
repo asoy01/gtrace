@@ -76,7 +76,7 @@ class Optics(HasTraits):
         This angle defines the orientation of the optics.
     '''
     name = Str()
-    center = CArray(dtype=np.float64, shape=(2,))
+    center = CArray(dtype='float64', shape=(2,))
     rotationAngle = CFloat(0.0) #in rad
 
 #{{{ isHit(beam)
@@ -252,16 +252,16 @@ class Mirror(Optics):
 
 #{{{ Traits definitions
 
-    HRcenter = CArray(dtype=np.float64, shape=(2,))
-    HRcenterC = CArray(dtype=np.float64, shape=(2,))
+    HRcenter = CArray(dtype='float64', shape=(2,))
+    HRcenterC = CArray(dtype='float64', shape=(2,))
     sagHR = CFloat()
-    normVectHR = CArray(dtype=np.float64, shape=(2,))
+    normVectHR = CArray(dtype='float64', shape=(2,))
     normAngleHR = CFloat()
 
-    ARcenter = CArray(dtype=np.float64, shape=(2,))
-    ARcenterC = CArray(dtype=np.float64, shape=(2,))
+    ARcenter = CArray(dtype='float64', shape=(2,))
+    ARcenterC = CArray(dtype='float64', shape=(2,))
     sagAR = CFloat()
-    normVectAR = CArray(dtype=np.float64, shape=(2,))
+    normVectAR = CArray(dtype='float64', shape=(2,))
     normAngleAR = CFloat()
 
     diameter = CFloat(25.0*cm) #

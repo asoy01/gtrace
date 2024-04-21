@@ -65,10 +65,10 @@ def line_plane_intersection(pos,
     '''
 
     #Make sure the inputs are ndarrays
-    pos = np.array(pos, dtype=np.float64)
-    dirVect = np.array(dirVect, dtype=np.float64)
-    plane_center = np.array(plane_center, dtype=np.float64)
-    normalVector = np.array(normalVector, dtype=np.float64)
+    pos = np.array(pos, dtype='float64')
+    dirVect = np.array(dirVect, dtype='float64')
+    plane_center = np.array(plane_center, dtype='float64')
+    normalVector = np.array(normalVector, dtype='float64')
     diameter = float(diameter)
 
     #Get a normalized vector along the plane
@@ -149,10 +149,10 @@ def line_arc_intersection(pos,
         "localNormAngle": localNormAngle.
     '''
     #Make sure the inputs are ndarrays
-    pos = np.array(pos, dtype=np.float64)
-    dirVect = np.array(dirVect, dtype=np.float64)
-    chord_center = np.array(chord_center, dtype=np.float64)
-    chordNormVect = np.array(chordNormVect, dtype=np.float64)
+    pos = np.array(pos, dtype='float64')
+    dirVect = np.array(dirVect, dtype='float64')
+    chord_center = np.array(chord_center, dtype='float64')
+    chordNormVect = np.array(chordNormVect, dtype='float64')
     invROC = float(invROC)
     diameter = float(diameter)
 
