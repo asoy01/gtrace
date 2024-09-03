@@ -121,7 +121,8 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
     for b in open_beam_list:
         b.length = open_beam_length
         beams = non_seq_trace(optList=optList, src_beam=b.copy(), order=order,
-                              power_threshold=power_threshold)
+                              power_threshold=power_threshold, 
+                              open_beam_length=open_beam_length)
         terminated_beam_list.extend(beams)
 
     return terminated_beam_list
