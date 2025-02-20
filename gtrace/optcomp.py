@@ -1391,9 +1391,9 @@ class Mirror(Optics):
 #{{{ Notification handlers
 
     def _normAngleHR_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  normVectHR = array([np.cos(self.normAngleHR), np.sin(self.normAngleHR)]))
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  normAngleHR = np.mod(self.normAngleHR, 2*pi))
 
         self.normVectAR = optics.geometric.vector_rotation_2D(self.normVectHR, pi+self.wedgeAngle)
@@ -1402,10 +1402,10 @@ class Mirror(Optics):
 
     def _normVectHR_changed(self, old, new):
         #Normalize
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  normVectHR = self.normVectHR/np.linalg.norm(array(self.normVectHR)))
         #Update dirAngle accordingly
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  normAngleHR = np.mod(np.arctan2(self.normVectHR[1],
                                                    self.normVectHR[0]), 2*pi))
 
@@ -1414,41 +1414,41 @@ class Mirror(Optics):
         self.HRcenterC = self.HRcenter - self.normVectHR * self.sagHR
 
     def _HRcenterC_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenterC = self.HRcenterC - self.normVectHR * self.thickness)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  center = (self.HRcenterC + self.ARcenter)/2.0)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  HRcenter = self.HRcenterC + self.sagHR*self.normVectHR)
 
     def _HRcenter_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  HRcenterC = self.HRcenter - self.sagHR*self.normVectHR)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenterC = self.HRcenterC - self.normVectHR * self.thickness)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  center = (self.HRcenterC + self.ARcenterC)/2.0)
 
     def _center_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  HRcenterC = self.center + self.normVectHR * self.thickness/2.0)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  HRcenter = self.HRcenterC + self.sagHR*self.normVectHR)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenterC = self.HRcenterC - self.normVectHR * self.thickness)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
 
     def _wedgeAngle_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  normAngleAR = np.mod(self.normAngleHR + pi + self.wedgeAngle, 2*pi))
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  normVectAR = optics.geometric.vector_rotation_2D(self.normVectHR, pi+self.wedgeAngle))
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
 
     def _inv_ROC_HR_changed(self, old, new):
@@ -1460,7 +1460,7 @@ class Mirror(Optics):
         else:
             self.sagHR = 0.0;
         #Update the HRcenterC
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  HRcenterC = self.HRcenter - self.sagHR*self.normVectHR)
 
     def _inv_ROC_AR_changed(self, old, new):
