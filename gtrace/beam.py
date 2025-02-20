@@ -684,31 +684,31 @@ class GaussianBeam(HasTraits):
 #{{{ Notification Handlers
 
     def _dirAngle_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  dirVect=array([np.cos(self.dirAngle), np.sin(self.dirAngle)]))
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  dirAngle = np.mod(self.dirAngle, 2*pi))
 #        self.dirVect = array([np.cos(self.dirAngle), np.sin(self.dirAngle)])
 #        self.dirAngle = np.mod(self.dirAngle, 2*pi)
 
     def _dirVect_changed(self, old, new):
         #Normalize
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  dirVect = self.dirVect/np.linalg.norm(array(self.dirVect)))
         #Update dirAngle accordingly
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  dirAngle = np.mod(np.arctan2(self.dirVect[1],
                                               self.dirVect[0]), 2*pi))
 
     def _qx_changed(self, old, new):
         self.wx = q2w(self.qx, wl=self.wl/self.n)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  qrx = self.qx/self.n)
         self.q = optimalMatching(self.qx, self.qy)[0]
 
     def _qy_changed(self, old, new):
         self.wy = q2w(self.qy, wl=self.wl/self.n)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  qry = self.qy/self.n)
         self.q = optimalMatching(self.qx, self.qy)[0]
 
@@ -719,9 +719,9 @@ class GaussianBeam(HasTraits):
         self.qy = self.qry*self.n
 
     def _n_changed(self, old, new):
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  qx = self.qrx*self.n)
-        self.set(trait_change_notify=False,
+        self.trait_set(trait_change_notify=False,
                  qy = self.qry*self.n)
 
 #}}}
