@@ -349,7 +349,7 @@ class OpticalLayout(object):
 #{{{ draw
 
     def draw(self, canvas=None, fontSize=False, drawMainWidth=True,
-             sigma_main=3.0, sigma_stray=1.0):
+             drawStrayWidth=True, sigma_main=3.0, sigma_stray=1.0):
         '''
         Draw the optics and the result of the last trace into a canvas.
 
@@ -364,6 +364,11 @@ class OpticalLayout(object):
         drawMainWidth : bool, optional
             Whether to draw the width envelope of the main beams.
             Defaults to True.
+        drawStrayWidth : bool, optional
+            Whether to draw the width envelope of the stray beams.
+            Defaults to True. Set it to False to reproduce what
+            drawOptSys draws, which leaves the 'stray_beam_width' layer
+            empty.
         sigma_main : float, optional
             Width of the drawn envelope of main beams, in units of
             the beam radius. Defaults to 3.0.
@@ -390,7 +395,7 @@ class OpticalLayout(object):
             if b.stray_order > 0:
                 b.layer = 'stray_beam'
                 sigma = sigma_stray
-                drawWidth = False
+                drawWidth = drawStrayWidth
             else:
                 b.layer = 'main_beam'
                 sigma = sigma_main

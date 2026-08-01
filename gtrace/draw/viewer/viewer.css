@@ -14,8 +14,8 @@
     min-height: 400px;
     font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
     font-size: 13px;
-    color: #d8dae0;
-    background: #15171c;
+    color: #1f2328;
+    background: #ffffff;
     box-sizing: border-box;
 }
 
@@ -34,7 +34,7 @@
     display: block;
     width: 100%;
     height: 100%;
-    background: #15171c;
+    background: #ffffff;
     cursor: crosshair;
     touch-action: none;
 }
@@ -56,21 +56,21 @@
 }
 
 .gt-highlight {
-    stroke: #ffffff;
+    stroke: #1f2328;
     stroke-width: 3;
-    stroke-opacity: 0.35;
+    stroke-opacity: 0.2;
     fill: none;
 }
 
 .gt-marker {
     fill: none;
-    stroke: #ffffff;
+    stroke: #1f2328;
     stroke-width: 1.5;
 }
 
 .gt-marker.gt-pinned {
-    fill: #ffcc33;
-    stroke: #ffffff;
+    fill: #f5a623;
+    stroke: #1f2328;
 }
 
 .gt-status {
@@ -81,8 +81,8 @@
     padding: 4px 10px;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
-    color: #8c93a1;
-    background: rgba(21, 23, 28, 0.85);
+    color: #6b7280;
+    background: rgba(255, 255, 255, 0.88);
     pointer-events: none;
     white-space: pre;
 }
@@ -97,8 +97,8 @@
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;
-    border-left: 1px solid #2a2e37;
-    background: #1a1d23;
+    border-left: 1px solid #d8dce3;
+    background: #f6f7f9;
 }
 
 .gt-head {
@@ -120,19 +120,19 @@
     padding: 3px 10px;
     font: inherit;
     font-size: 12px;
-    color: #d8dae0;
-    background: #262b34;
-    border: 1px solid #39404d;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #c9cfd8;
     border-radius: 4px;
     cursor: pointer;
 }
 
-.gt-btn:hover { background: #313846; }
+.gt-btn:hover { background: #eceff3; }
 
 .gt-panel {
-    border: 1px solid #2a2e37;
+    border: 1px solid #d8dce3;
     border-radius: 5px;
-    background: #15171c;
+    background: #ffffff;
 }
 
 .gt-panel-title {
@@ -144,16 +144,16 @@
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #8c93a1;
-    border-bottom: 1px solid #2a2e37;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e8ed;
 }
 
-.gt-pin { font-weight: 400; text-transform: none; color: #ffcc33; }
+.gt-pin { font-weight: 400; text-transform: none; color: #b45309; }
 
 /* -------------------------------------------------------------- readout */
 
 .gt-readout { padding: 4px 6px 6px; }
-.gt-readout.gt-empty { opacity: 0.45; }
+.gt-readout.gt-empty { opacity: 0.5; }
 
 /* Fixed layout keeps the x and y columns equally wide whatever the
    values are, so the panel never overflows the side bar. */
@@ -168,7 +168,7 @@
     padding: 2px 4px;
     font-size: 11px;
     font-weight: 600;
-    color: #8c93a1;
+    color: #6b7280;
     text-align: right;
 }
 
@@ -183,7 +183,7 @@
 .gt-readout .gt-key {
     width: 82px;
     font-size: 11px;
-    color: #8c93a1;
+    color: #6b7280;
     white-space: nowrap;
 }
 
@@ -193,7 +193,7 @@
     overflow-wrap: anywhere;
 }
 
-.gt-readout tr:nth-child(even) { background: #1a1d23; }
+.gt-readout tr:nth-child(even) { background: #f6f7f9; }
 
 /* --------------------------------------------------------------- layers */
 
@@ -212,7 +212,7 @@
 .gt-swatch {
     width: 11px;
     height: 11px;
-    border: 1px solid #39404d;
+    border: 1px solid #c9cfd8;
     border-radius: 2px;
     flex: 0 0 auto;
 }
@@ -223,21 +223,27 @@
     white-space: nowrap;
 }
 
+/* A layer that exists but holds no shape at all: without this it just
+   looks as if the viewer failed to draw it. */
+.gt-layerrow.gt-layer-empty { color: #9aa1ac; }
+.gt-layerrow.gt-layer-empty .gt-swatch { opacity: 0.35; }
+.gt-note { font-size: 11px; color: #9aa1ac; flex: 0 0 auto; }
+
 /* ----------------------------------------------------------------- help */
 
 .gt-help ul {
     margin: 0;
     padding: 6px 8px 8px 22px;
     font-size: 12px;
-    color: #8c93a1;
+    color: #6b7280;
 }
 
 .gt-help li { padding: 1px 0; }
-.gt-help b { color: #d8dae0; font-weight: 600; }
+.gt-help b { color: #1f2328; font-weight: 600; }
 
 /* ------------------------------------------------------------ narrow UI */
 
 @media (max-width: 700px) {
     .gt-root { flex-direction: column; }
-    .gt-side { flex: 0 0 auto; border-left: none; border-top: 1px solid #2a2e37; }
+    .gt-side { flex: 0 0 auto; border-left: none; border-top: 1px solid #d8dce3; }
 }

@@ -142,16 +142,41 @@ function projectOnBeam(beam, px, py) {
 
 //{{{ Colors
 
+function srgbToLinear(c) {
+    c = c / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function linearToSrgb(c) {
+    c = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    return Math.round(Math.max(0, Math.min(1, c)) * 255);
+}
+
 /*
- * Layer colors follow the DXF convention where pure black means
- * "the opposite of the background". The viewer uses a dark background,
- * so black is mapped to white; everything else is used as given.
+ * Relative luminance above which a color is too pale to be seen on the
+ * white background. 0.30 is the value that gives a 3:1 contrast ratio.
+ */
+var MAX_LUMINANCE = 0.30;
+
+/*
+ * Layer colors come from the DXF palette, which assumes a black
+ * background: pure green and pure cyan are perfectly readable there but
+ * nearly invisible on white. Darken any color that is too light, keeping
+ * its hue by scaling in linear light. Colors that are already dark
+ * enough (red, magenta, black) pass through untouched.
  */
 function layerColor(rgb) {
-    if (!rgb) { return '#ffffff'; }
-    var r = rgb[0], g = rgb[1], b = rgb[2];
-    if (r === 0 && g === 0 && b === 0) { return '#e8e8e8'; }
-    return 'rgb(' + r + ',' + g + ',' + b + ')';
+    if (!rgb) { return '#000000'; }
+    var r = srgbToLinear(rgb[0]);
+    var g = srgbToLinear(rgb[1]);
+    var b = srgbToLinear(rgb[2]);
+    var lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    if (lum > MAX_LUMINANCE) {
+        var k = MAX_LUMINANCE / lum;
+        r *= k; g *= k; b *= k;
+    }
+    return 'rgb(' + linearToSrgb(r) + ',' + linearToSrgb(g) + ',' +
+           linearToSrgb(b) + ')';
 }
 
 //}}}
@@ -389,8 +414,9 @@ Viewer.prototype._renderScene = function () {
         self.sceneGroup.appendChild(geom);
         self.labelGroup.appendChild(labels);
         self.layerGroups[ly.name] = {geom: geom, label: labels,
-                                     color: color, visible: true};
-        self._addLayerToggle(ly.name, color);
+                                     color: color, visible: true,
+                                     count: ly.shapes.length};
+        self._addLayerToggle(ly.name, color, ly.shapes.length);
         if (hidden.indexOf(ly.name) >= 0) { self.setLayerVisible(ly.name, false); }
     });
 
@@ -402,7 +428,7 @@ Viewer.prototype._renderScene = function () {
     this._showMarker(false);
 };
 
-Viewer.prototype._addLayerToggle = function (name, color) {
+Viewer.prototype._addLayerToggle = function (name, color, count) {
     var self = this;
     var row = htmlEl('label', 'gt-layerrow');
     var cb = htmlEl('input');
@@ -416,6 +442,13 @@ Viewer.prototype._addLayerToggle = function (name, color) {
     row.appendChild(cb);
     row.appendChild(swatch);
     row.appendChild(htmlEl('span', 'gt-layername', name));
+    if (!count) {
+        // The layer was declared but nothing was drawn into it. Say so,
+        // otherwise it reads as a bug in the viewer.
+        row.className += ' gt-layer-empty';
+        row.appendChild(htmlEl('span', 'gt-note', 'empty'));
+        row.title = 'This layer contains no shape.';
+    }
     this.layerBody.appendChild(row);
     this.layerGroups[name].checkbox = cb;
 };
