@@ -446,6 +446,14 @@ class GaussianBeam(HasTraits):
         Returns the beam ROC at a distance dist
         from the origin of the beam.
 
+        dist is a geometric distance, as in propagate() and width():
+        self.qx and self.qy advance by dist itself, not by dist/self.n
+        (the index of refraction is already accounted for in the
+        q-parameters, which are related to the reduced ones qrx and qry
+        by a factor of n).
+
+        At a waist the ROC is infinite; inf is returned there.
+
         Parameters
         ----------
         dist : float, optional
@@ -457,9 +465,8 @@ class GaussianBeam(HasTraits):
             Beam ROC.
         '''
         dist = np.array(dist)
-        k = 2*pi/self.wl
-        qx = self.qx + dist/self.n
-        qy = self.qy + dist/self.n
+        qx = self.qx + dist
+        qy = self.qy + dist
 
         return (q2R(qx), q2R(qy))
 
