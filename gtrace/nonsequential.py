@@ -47,7 +47,8 @@ __status__ = "Beta"
 
 #{{{ non_seq_trace
 
-def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_length=1.0):
+def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_length=1.0,
+                  per_optic_order=None):
     '''
     Perform non-sequential trace of the source beam, src_beam,
     through the optical system represented by a collection of optics,
@@ -71,6 +72,11 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
     open_beam_length: float, optional
         The default length for beams that are not hitting anything.
         Defaults to 1.0.
+    per_optic_order: dict or None, optional
+        A dictionary mapping an optics name to the internal reflection
+        order used for that optics. Optics not in the dictionary use
+        the global order given by the order argument.
+        Defaults to None.
 
     Returns
     -------
@@ -111,7 +117,12 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
         src_beam.length = final_answer['distance']
         return [src_beam]
 
-    ans = hit_optics.hit(src_beam, order=order, threshold=power_threshold,
+    if per_optic_order is not None and hit_optics.name in per_optic_order:
+        hit_order = per_optic_order[hit_optics.name]
+    else:
+        hit_order = order
+
+    ans = hit_optics.hit(src_beam, order=hit_order, threshold=power_threshold,
                          face=final_answer['face'])
 
     terminated_beam_list = [b for b in list(ans[1].values()) if b.incSurfAngle is not None]
@@ -122,8 +133,9 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
         b.length = open_beam_length
         b.stray_order = 0
         beams = non_seq_trace(optList=optList, src_beam=b.copy(), order=order,
-                              power_threshold=power_threshold, 
-                              open_beam_length=open_beam_length)
+                              power_threshold=power_threshold,
+                              open_beam_length=open_beam_length,
+                              per_optic_order=per_optic_order)
         terminated_beam_list.extend(beams)
 
     return terminated_beam_list
