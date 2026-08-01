@@ -349,7 +349,7 @@ class OpticalLayout(object):
 #{{{ draw
 
     def draw(self, canvas=None, fontSize=False, drawMainWidth=True,
-             drawStrayWidth=True, sigma_main=3.0, sigma_stray=1.0):
+             drawStrayWidth=True, sigma_main=2.7, sigma_stray=2.7):
         '''
         Draw the optics and the result of the last trace into a canvas.
 
@@ -370,10 +370,12 @@ class OpticalLayout(object):
             drawOptSys draws, which leaves the 'stray_beam_width' layer
             empty.
         sigma_main : float, optional
-            Width of the drawn envelope of main beams, in units of
-            the beam radius. Defaults to 3.0.
+            Width of the drawn envelope of main beams, in units of the
+            1/e^2 radius of the beam. Defaults to 2.7, the aperture at
+            which the diffraction loss is 1 ppm.
         sigma_stray : float, optional
-            Same for stray beams. Defaults to 1.0.
+            Same for stray beams. Defaults to 2.7 as well, so that every
+            envelope in the drawing means the same thing.
 
         Returns
         -------
