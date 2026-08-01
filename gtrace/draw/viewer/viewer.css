@@ -73,6 +73,19 @@
     stroke: #1f2328;
 }
 
+/* Which way the selected beam travels. */
+.gt-arrow {
+    fill: #1f2328;
+    stroke: none;
+}
+
+.gt-arrow.gt-pinned {
+    fill: #f5a623;
+    stroke: #1f2328;
+    stroke-width: 1;
+    stroke-linejoin: round;
+}
+
 .gt-status {
     position: absolute;
     left: 0;

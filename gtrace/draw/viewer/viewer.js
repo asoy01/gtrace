@@ -84,6 +84,17 @@ function fmtDeg(rad) {
     return (rad * 180 / Math.PI).toFixed(2) + '°';
 }
 
+/*
+ * Wrap an angle into (-pi, pi]. Beams accumulate their direction angle
+ * reflection after reflection, so it can grow well beyond one turn.
+ */
+function normAngle(rad) {
+    var a = rad % (2 * Math.PI);
+    if (a > Math.PI) { a -= 2 * Math.PI; }
+    if (a <= -Math.PI) { a += 2 * Math.PI; }
+    return a;
+}
+
 //}}}
 
 //{{{ Beam physics
@@ -291,6 +302,7 @@ Viewer.prototype._build = function () {
 var READOUT_ROWS = [
     {key: 'beam', label: 'Beam', span: true},
     {key: 'layer', label: 'Layer', span: true},
+    {key: 'dir', label: 'Direction', span: true},
     {key: 'point', label: 'Point', span: true},
     {key: 'dist', label: 'Distance', span: true},
     {key: 'w', label: 'Radius w'},
@@ -420,10 +432,13 @@ Viewer.prototype._renderScene = function () {
         if (hidden.indexOf(ly.name) >= 0) { self.setLayerVisible(ly.name, false); }
     });
 
-    // Overlay elements for the readout marker and the highlighted beam.
+    // Overlay elements for the readout marker, the highlighted beam and
+    // the arrow telling which way that beam travels.
     this.highlight = svgEl('line', {'class': 'gt-highlight'});
+    this.arrow = svgEl('path', {'class': 'gt-arrow'});
     this.marker = svgEl('circle', {'class': 'gt-marker', r: 4});
     this.overlayGroup.appendChild(this.highlight);
+    this.overlayGroup.appendChild(this.arrow);
     this.overlayGroup.appendChild(this.marker);
     this._showMarker(false);
 };
@@ -700,6 +715,33 @@ Viewer.prototype._onClick = function (px, py) {
 Viewer.prototype._showMarker = function (on) {
     this.marker.style.display = on ? '' : 'none';
     this.highlight.style.display = on ? '' : 'none';
+    this.arrow.style.display = on ? '' : 'none';
+};
+
+/* Arrowhead geometry, in screen pixels. */
+var ARROW_GAP = 8;      // clearance between the marker and the tail
+var ARROW_LENGTH = 13;
+var ARROW_HALFWIDTH = 5;
+
+/*
+ * An arrowhead just ahead of the readout point, pointing the way the
+ * beam travels. Two beams sharing a line are told apart by this arrow:
+ * clicking again swaps to the counter-propagating one and the arrow
+ * flips over.
+ */
+Viewer.prototype._arrowPath = function (px, py, dirVect) {
+    // The scene group is y-up and the screen is y-down, so the screen
+    // direction is the scene direction with its y component negated.
+    var ux = dirVect[0], uy = -dirVect[1];
+    var vx = -uy, vy = ux;                       // unit normal
+    var bx = px + ux * ARROW_GAP;
+    var by = py + uy * ARROW_GAP;
+    var tx = bx + ux * ARROW_LENGTH;
+    var ty = by + uy * ARROW_LENGTH;
+    return 'M ' + tx + ' ' + ty +
+           ' L ' + (bx + vx * ARROW_HALFWIDTH) + ' ' + (by + vy * ARROW_HALFWIDTH) +
+           ' L ' + (bx - vx * ARROW_HALFWIDTH) + ' ' + (by - vy * ARROW_HALFWIDTH) +
+           ' Z';
 };
 
 Viewer.prototype._updateOverlay = function () {
@@ -713,9 +755,11 @@ Viewer.prototype._updateOverlay = function () {
     this.highlight.setAttribute('y1', p0[1]);
     this.highlight.setAttribute('x2', p1[0]);
     this.highlight.setAttribute('y2', p1[1]);
+    this.arrow.setAttribute('d', this._arrowPath(pm[0], pm[1], b.dirVect));
     this.marker.setAttribute('cx', pm[0]);
     this.marker.setAttribute('cy', pm[1]);
     this.marker.classList.toggle('gt-pinned', !!this.pinned);
+    this.arrow.classList.toggle('gt-pinned', !!this.pinned);
     this._showMarker(true);
 };
 
@@ -762,6 +806,8 @@ Viewer.prototype._setReadout = function (hit) {
     var p = beamParamsAt(b, hit.d);
     set('beam', b.name);
     set('layer', b.layer);
+    set('dir', fmtDeg(normAngle(b.dirAngle)) + '   (' +
+               b.dirVect[0].toFixed(3) + ', ' + b.dirVect[1].toFixed(3) + ')');
     set('point', fmtLen(hit.point[0]) + ',  ' + fmtLen(hit.point[1]));
     set('dist', fmtLen(hit.d) + ' of ' + fmtLen(b.length));
     set('w', fmtLen(p.wx), fmtLen(p.wy));
