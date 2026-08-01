@@ -13,7 +13,7 @@
     height: 100%;
     min-height: 400px;
     font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     color: #1f2328;
     background: #ffffff;
     box-sizing: border-box;
@@ -92,7 +92,7 @@
     right: 0;
     bottom: 0;
     padding: 4px 10px;
-    font-size: 11px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: #6b7280;
     background: rgba(255, 255, 255, 0.88);
@@ -103,7 +103,7 @@
 /* ----------------------------------------------------------- side panels */
 
 .gt-side {
-    flex: 0 0 330px;
+    flex: 0 0 380px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -123,7 +123,7 @@
 
 .gt-title {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 15px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -132,7 +132,7 @@
 .gt-btn {
     padding: 3px 10px;
     font: inherit;
-    font-size: 12px;
+    font-size: 13px;
     color: #1f2328;
     background: #ffffff;
     border: 1px solid #c9cfd8;
@@ -152,8 +152,8 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 6px 9px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -178,8 +178,8 @@
 }
 
 .gt-readout th {
-    padding: 2px 4px;
-    font-size: 11px;
+    padding: 3px 5px;
+    font-size: 12px;
     font-weight: 600;
     color: #6b7280;
     text-align: right;
@@ -188,20 +188,19 @@
 .gt-readout .gt-rowhead th:first-child { text-align: left; }
 
 .gt-readout td {
-    padding: 2px 4px;
-    font-size: 12px;
+    padding: 3px 5px;
     vertical-align: baseline;
 }
 
 .gt-readout .gt-key {
-    width: 82px;
-    font-size: 11px;
+    width: 96px;
+    font-size: 13px;
     color: #6b7280;
     white-space: nowrap;
 }
 
 .gt-readout .gt-val {
-    font-size: 11px;
+    font-size: 13px;
     text-align: right;
     overflow-wrap: anywhere;
 }
@@ -223,8 +222,8 @@
 .gt-layerrow input { margin: 0; cursor: pointer; }
 
 .gt-swatch {
-    width: 11px;
-    height: 11px;
+    width: 12px;
+    height: 12px;
     border: 1px solid #c9cfd8;
     border-radius: 2px;
     flex: 0 0 auto;
@@ -240,18 +239,18 @@
    looks as if the viewer failed to draw it. */
 .gt-layerrow.gt-layer-empty { color: #9aa1ac; }
 .gt-layerrow.gt-layer-empty .gt-swatch { opacity: 0.35; }
-.gt-note { font-size: 11px; color: #9aa1ac; flex: 0 0 auto; }
+.gt-note { font-size: 12px; color: #9aa1ac; flex: 0 0 auto; }
 
 /* ----------------------------------------------------------------- help */
 
 .gt-help ul {
     margin: 0;
-    padding: 6px 8px 8px 22px;
-    font-size: 12px;
+    padding: 7px 9px 9px 24px;
+    font-size: 13px;
     color: #6b7280;
 }
 
-.gt-help li { padding: 1px 0; }
+.gt-help li { padding: 2px 0; }
 .gt-help b { color: #1f2328; font-weight: 600; }
 
 /* ------------------------------------------------------------ narrow UI */

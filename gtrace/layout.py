@@ -349,7 +349,8 @@ class OpticalLayout(object):
 #{{{ draw
 
     def draw(self, canvas=None, fontSize=False, drawMainWidth=True,
-             drawStrayWidth=True, sigma_main=2.7, sigma_stray=2.7):
+             drawStrayWidth=True, sigma_main=2.7, sigma_stray=2.7,
+             drawBeamLabels=False, drawOpticsNames=True):
         '''
         Draw the optics and the result of the last trace into a canvas.
 
@@ -376,6 +377,15 @@ class OpticalLayout(object):
         sigma_stray : float, optional
             Same for stray beams. Defaults to 2.7 as well, so that every
             envelope in the drawing means the same thing.
+        drawBeamLabels : bool, optional
+            Whether to annotate each beam with its name and power.
+            Defaults to False: the labels of neighbouring beams overlap
+            badly, and the viewer reports the same values (and more) for
+            whichever beam is clicked. Set it to True for a DXF export,
+            where there is nothing to click.
+        drawOpticsNames : bool, optional
+            Whether to annotate each optics with its name. Defaults to
+            True: unlike beams, optics are not clickable.
 
         Returns
         -------
@@ -403,10 +413,11 @@ class OpticalLayout(object):
                 sigma = sigma_main
                 drawWidth = drawMainWidth
 
-            b.draw(canvas, sigma=sigma, drawWidth=drawWidth, drawPower=True,
-                   drawName=True, fontSize=fontSize)
+            b.draw(canvas, sigma=sigma, drawWidth=drawWidth,
+                   drawPower=drawBeamLabels, drawName=drawBeamLabels,
+                   fontSize=fontSize)
 
-        drawAllOptics(canvas, self.optics, drawName=True)
+        drawAllOptics(canvas, self.optics, drawName=drawOpticsNames)
 
         return canvas
 

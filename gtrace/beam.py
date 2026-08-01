@@ -580,8 +580,10 @@ class GaussianBeam(HasTraits):
         if drawOptDist:
             annotation = annotation+'Optical distance=%.2E '%self.optDist
 
-        cv.add_shape(draw.Text(text=annotation, point=text_location,
-                             height=fontSize), layername='text')
+        #Nothing was requested: do not emit an empty text entity.
+        if annotation:
+            cv.add_shape(draw.Text(text=annotation, point=text_location,
+                                   height=fontSize), layername='text')
 
         #Indicate the beam direction
         # text_location = tuple(self.pos + 10*fontSize*self.dirVect +k*fontSize*1)

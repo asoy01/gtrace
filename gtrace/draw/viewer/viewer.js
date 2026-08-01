@@ -70,13 +70,14 @@ function fmtNum(v, digits) {
 }
 
 /*
- * Format a q parameter, held as a [real, imag] pair, in meters.
+ * Format a q parameter, held as a [real, imag] pair. The unit (meters)
+ * is carried by the row label, so that the value fits on one line.
  */
 function fmtQ(q) {
     if (!q) { return '-'; }
     var im = q[1];
     return fmtNum(q[0], 4) + (im < 0 ? ' - ' : ' + ') +
-           fmtNum(Math.abs(im), 4) + 'i m';
+           fmtNum(Math.abs(im), 4) + 'i';
 }
 
 function fmtDeg(rad) {
@@ -198,7 +199,7 @@ function Viewer(container, scene, options) {
     this.container = container;
     this.scene = scene || {canvas: {layers: []}, beams: []};
     this.opts = options || {};
-    this.fontSize = this.opts.fontSize || 11;
+    this.fontSize = this.opts.fontSize || 12;
 
     this.scale = 1;         // screen pixels per scene unit
     this.cx = 0;            // scene coordinate at the center of the view
@@ -307,7 +308,7 @@ var READOUT_ROWS = [
     {key: 'dist', label: 'Distance', span: true},
     {key: 'w', label: 'Radius w'},
     {key: 'R', label: 'ROC R'},
-    {key: 'q', label: 'q'},
+    {key: 'q', label: 'q [m]'},
     {key: 'w0', label: 'Waist w₀'},
     {key: 'waist', label: 'To waist'},
     {key: 'zR', label: 'zᴿ'},
