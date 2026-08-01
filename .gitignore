@@ -1,4 +1,5 @@
 .vscode/
+.pixi/
 *.pyc
 dist/
 build/
@@ -9,3 +10,10 @@ gtrace-*/
 /docs/autoapi/
 
 Manuals/Tutorial/.ipynb_checkpoints/gtrace-tutorial-checkpoint.ipynb
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+GUI_Development_Notes.md
+GUI_Development_PLan.md
+HANDOFF.md
