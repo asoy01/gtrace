@@ -16,6 +16,8 @@ ipykernel = ">=7.3.0,<8"
 nbformat = ">=5.10.4,<6"
 nbconvert = ">=7.17.1,<8"
 jupyter_client = ">=8.9.1,<9"
+anywidget = ">=0.11.0,<0.12"
+ipywidgets = ">=8.1.8,<9"
 
 [pypi-dependencies]
 gtrace = { path = ".", editable = true }

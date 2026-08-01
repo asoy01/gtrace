@@ -195,6 +195,13 @@ function layerColor(rgb) {
 
 //{{{ Viewer
 
+/*
+ * Every live viewer on the page. Used only to scope the keyboard
+ * shortcuts: with one viewer the keys work wherever the pointer is,
+ * with several they act on the one being pointed at.
+ */
+var VIEWERS = [];
+
 function Viewer(container, scene, options) {
     this.container = container;
     this.scene = scene || {canvas: {layers: []}, beams: []};
@@ -214,6 +221,7 @@ function Viewer(container, scene, options) {
     this.cycle = 0;         // index into the bundle of overlapping beams
     this.lastClick = null;
 
+    VIEWERS.push(this);
     this._build();
     this._renderScene();
     this._bindEvents();
@@ -580,14 +588,30 @@ Viewer.prototype._bindEvents = function () {
     var self = this;
     var dragging = false, moved = 0, lastX = 0, lastY = 0;
 
+    // Every listener is recorded so that destroy() can take it back off
+    // again. A notebook cell can be re-run any number of times, and a
+    // viewer that outlives its output area would keep reacting to the
+    // mouse and the keyboard for the rest of the session.
+    this._listeners = [];
+    function on(target, type, fn, opts) {
+        target.addEventListener(type, fn, opts);
+        self._listeners.push([target, type, fn, opts]);
+    }
+
     if (global.ResizeObserver) {
         this._ro = new ResizeObserver(function () { self._resize(); });
         this._ro.observe(this.svg);
     } else {
-        global.addEventListener('resize', function () { self._resize(); });
+        on(global, 'resize', function () { self._resize(); });
     }
 
-    this.svg.addEventListener('wheel', function (ev) {
+    // Keyboard shortcuts act on the viewer the pointer is over, so that
+    // several viewers in one notebook do not all answer the same key.
+    this.pointerInside = false;
+    on(this.root, 'mouseenter', function () { self.pointerInside = true; });
+    on(this.root, 'mouseleave', function () { self.pointerInside = false; });
+
+    on(this.svg, 'wheel', function (ev) {
         ev.preventDefault();
         var r = self.svg.getBoundingClientRect();
         var px = ev.clientX - r.left, py = ev.clientY - r.top;
@@ -600,14 +624,14 @@ Viewer.prototype._bindEvents = function () {
         self._applyTransform();
     }, {passive: false});
 
-    this.svg.addEventListener('mousedown', function (ev) {
+    on(this.svg, 'mousedown', function (ev) {
         if (ev.button !== 0) { return; }
         dragging = true; moved = 0;
         lastX = ev.clientX; lastY = ev.clientY;
         self.svg.classList.add('gt-dragging');
     });
 
-    global.addEventListener('mousemove', function (ev) {
+    on(global, 'mousemove', function (ev) {
         var r = self.svg.getBoundingClientRect();
         if (dragging) {
             var dx = ev.clientX - lastX, dy = ev.clientY - lastY;
@@ -623,7 +647,7 @@ Viewer.prototype._bindEvents = function () {
         self._onHover(ev.clientX - r.left, ev.clientY - r.top);
     });
 
-    global.addEventListener('mouseup', function (ev) {
+    on(global, 'mouseup', function (ev) {
         if (!dragging) { return; }
         dragging = false;
         self.svg.classList.remove('gt-dragging');
@@ -633,10 +657,28 @@ Viewer.prototype._bindEvents = function () {
         }
     });
 
-    global.addEventListener('keydown', function (ev) {
+    on(global, 'keydown', function (ev) {
+        if (VIEWERS.length > 1 && !self.pointerInside) { return; }
         if (ev.key === 'f' || ev.key === 'F') { self.fit(); }
         if (ev.key === 'Escape') { self.pinned = null; self._setReadout(null); }
     });
+};
+
+/*
+ * Detach the viewer: remove every listener it installed and take its DOM
+ * out of the page. anywidget calls this when the output area goes away.
+ */
+Viewer.prototype.destroy = function () {
+    (this._listeners || []).forEach(function (l) {
+        l[0].removeEventListener(l[1], l[2], l[3]);
+    });
+    this._listeners = [];
+    if (this._ro) { this._ro.disconnect(); this._ro = null; }
+    var i = VIEWERS.indexOf(this);
+    if (i >= 0) { VIEWERS.splice(i, 1); }
+    if (this.root && this.root.parentNode) {
+        this.root.parentNode.removeChild(this.root);
+    }
 };
 
 /*

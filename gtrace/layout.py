@@ -26,6 +26,7 @@ layout, which is the same object the user has in their code.
 
 import json
 import os
+import sys
 import tempfile
 import webbrowser
 
@@ -130,6 +131,23 @@ class TraceRules(object):
                    power_threshold=d.get('power_threshold', 0.1),
                    open_beam_length=d.get('open_beam_length', 1.0),
                    per_optic_order=d.get('per_optic_order', None))
+
+#}}}
+
+#{{{ Front end selection
+
+def _in_notebook():
+    '''
+    Whether we are running inside a Jupyter kernel.
+
+    Looks the module up in sys.modules rather than importing it, so that
+    gtrace does not pull IPython in when it is not already there.
+    '''
+    ipython = sys.modules.get('IPython')
+    if ipython is None:
+        return False
+    shell = ipython.get_ipython()
+    return shell is not None and type(shell).__name__ == 'ZMQInteractiveShell'
 
 #}}}
 
@@ -425,14 +443,19 @@ class OpticalLayout(object):
 
 #{{{ scene_dict
 
-    def scene_dict(self):
+    def scene_dict(self, **kwargs):
         '''
         Return the JSON-compatible scene dict {'canvas': ..., 'beams': ...}
         of this layout, for consumption by the GUI viewer.
 
         If trace() has not been run yet, it is run automatically.
+
+        Parameters
+        ----------
+        **kwargs
+            Passed to draw().
         '''
-        canvas = self.draw()
+        canvas = self.draw(**kwargs)
         return scene_to_dict(canvas, self.beams)
 
 #}}}
@@ -465,33 +488,84 @@ class OpticalLayout(object):
         return renderHTML(canvas, self.beams, filename,
                           title=title if title is not None else self.name)
 
-    def show(self, filename=None, browser=True, title=None, **kwargs):
+    def widget(self, title=None, height=520, **kwargs):
         '''
-        Show the layout in the browser-based viewer.
+        Return a Jupyter widget showing this layout.
 
-        This is the front end entry point of the layout. In this stage
-        it writes an HTML file and opens it in the default browser;
-        later stages will replace the transport (notebook widget, live
-        server) while keeping the same call.
+        The widget carries the scene in a traitlet, so a re-trace can be
+        pushed into a view that is already on screen:
+
+            w = layout.widget()
+            w                       # displays the viewer
+            M1.HRcenter = [0.6, 0]
+            w.update()              # re-traces and redraws in place
+
+        Requires anywidget. Use render_html() or show(backend='html')
+        if it is not installed.
+
+        Parameters
+        ----------
+        title : str or None, optional
+            Title shown in the side bar. Defaults to the layout name.
+        height : int, optional
+            Height of the viewer in pixels. Defaults to 520.
+        **kwargs
+            Passed to draw().
+
+        Returns
+        -------
+        widget : anywidget.AnyWidget
+        '''
+        from gtrace.draw.viewer.widget import LayoutViewer
+        return LayoutViewer(scene=self.scene_dict(**kwargs), layout=self,
+                            title=title if title is not None else self.name,
+                            height=height)
+
+    def show(self, filename=None, browser=True, title=None, backend=None,
+             **kwargs):
+        '''
+        Show the layout in the viewer.
+
+        This is the front end entry point of the layout. In a notebook
+        it returns a widget that renders in the output cell; anywhere
+        else it writes a self-contained HTML file and opens it in the
+        default browser. Both drive the same viewer core.
 
         Parameters
         ----------
         filename : str or None, optional
             Name of the HTML file to write. If None, a temporary file
             is created (and left behind for the browser to read).
+            Ignored by the widget backend.
         browser : bool, optional
             Whether to open the file in the default browser.
-            Defaults to True.
+            Defaults to True. Ignored by the widget backend.
         title : str or None, optional
             Title shown in the browser tab and in the viewer.
+        backend : {'widget', 'html'} or None, optional
+            Which front end to use. Defaults to None, which picks the
+            widget inside a Jupyter kernel with anywidget installed and
+            HTML otherwise.
         **kwargs
-            Passed to draw().
+            Passed to draw(), and to widget() for the widget backend.
 
         Returns
         -------
-        filename : str
-            The name of the file that was written.
+        widget or filename
+            The widget for the 'widget' backend, the name of the file
+            that was written for the 'html' one.
         '''
+        if backend is None:
+            from gtrace.draw.viewer.widget import widget_available
+            backend = ('widget' if _in_notebook() and widget_available()
+                       else 'html')
+
+        if backend == 'widget':
+            return self.widget(title=title, **kwargs)
+        if backend != 'html':
+            raise ValueError("backend must be 'widget', 'html' or None, "
+                             'not %r' % (backend,))
+
         if filename is None:
             fd, filename = tempfile.mkstemp(prefix='gtrace_', suffix='.html')
             os.close(fd)

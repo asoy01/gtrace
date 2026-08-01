@@ -20,7 +20,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    install_requires = ['numpy>=1.5.0', 'scipy>=0.1.0','traits>=4.0.0']
+    install_requires = ['numpy>=1.5.0', 'scipy>=0.1.0','traits>=4.0.0'],
+    # The HTML viewer needs nothing extra; only the notebook widget does.
+    extras_require = {'notebook': ['anywidget>=0.9']}
 )
 
 

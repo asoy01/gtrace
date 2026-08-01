@@ -21,6 +21,10 @@
 
 .gt-root *, .gt-root *::before, .gt-root *::after { box-sizing: inherit; }
 
+/* Host element the notebook widget mounts into. Its height is set from
+   the widget's height traitlet; .gt-root then fills it. */
+.gt-widget { width: 100%; }
+
 /* ---------------------------------------------------------- drawing area */
 
 .gt-stage {
