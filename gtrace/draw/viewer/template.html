@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!--__GTRACE_TITLE_HTML__--></title>
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #15171c;
+}
+#gtrace-viewer { height: 100%; }
+/*__GTRACE_CSS__*/
+</style>
+</head>
+<body>
+<div id="gtrace-viewer"></div>
+<script>
+var GTRACE_SCENE = __GTRACE_SCENE__;
+var GTRACE_TITLE = __GTRACE_TITLE_JSON__;
+</script>
+<script>
+/*__GTRACE_VIEWER_JS__*/
+</script>
+<script>
+window.gtraceViewer = GTraceViewer.mount(
+    document.getElementById('gtrace-viewer'), GTRACE_SCENE, {title: GTRACE_TITLE});
+</script>
+</body>
+</html>

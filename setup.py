@@ -13,6 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/asoy01/gtrace",
     packages=setuptools.find_packages(),
+    package_data={'gtrace.draw.viewer': ['*.js', '*.css', '*.html']},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",

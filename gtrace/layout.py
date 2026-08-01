@@ -25,6 +25,9 @@ layout, which is the same object the user has in their code.
 #{{{ Import modules
 
 import json
+import os
+import tempfile
+import webbrowser
 
 import numpy as np
 
@@ -33,6 +36,7 @@ from gtrace.beam import GaussianBeam
 from gtrace.nonsequential import non_seq_trace
 from gtrace.draw.tools import drawAllOptics
 from gtrace.draw.serialize import scene_to_dict
+from gtrace.draw.viewer import renderHTML
 import gtrace.draw as draw
 
 #}}}
@@ -412,6 +416,75 @@ class OpticalLayout(object):
         '''
         canvas = self.draw()
         return scene_to_dict(canvas, self.beams)
+
+#}}}
+
+#{{{ HTML viewer
+
+    def render_html(self, filename, title=None, **kwargs):
+        '''
+        Write the layout to a self-contained HTML file that can be
+        opened in any browser, with zoom, pan and click readout of the
+        beam parameters.
+
+        If trace() has not been run yet, it is run automatically.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the HTML file to write.
+        title : str or None, optional
+            Title shown in the browser tab and in the viewer.
+            Defaults to the name of the layout.
+        **kwargs
+            Passed to draw(), e.g. sigma_main or drawMainWidth.
+
+        Returns
+        -------
+        filename : str
+        '''
+        canvas = self.draw(**kwargs)
+        return renderHTML(canvas, self.beams, filename,
+                          title=title if title is not None else self.name)
+
+    def show(self, filename=None, browser=True, title=None, **kwargs):
+        '''
+        Show the layout in the browser-based viewer.
+
+        This is the front end entry point of the layout. In this stage
+        it writes an HTML file and opens it in the default browser;
+        later stages will replace the transport (notebook widget, live
+        server) while keeping the same call.
+
+        Parameters
+        ----------
+        filename : str or None, optional
+            Name of the HTML file to write. If None, a temporary file
+            is created (and left behind for the browser to read).
+        browser : bool, optional
+            Whether to open the file in the default browser.
+            Defaults to True.
+        title : str or None, optional
+            Title shown in the browser tab and in the viewer.
+        **kwargs
+            Passed to draw().
+
+        Returns
+        -------
+        filename : str
+            The name of the file that was written.
+        '''
+        if filename is None:
+            fd, filename = tempfile.mkstemp(prefix='gtrace_', suffix='.html')
+            os.close(fd)
+
+        self.render_html(filename, title=title, **kwargs)
+
+        if browser:
+            url = 'file:///' + os.path.abspath(filename).replace('\\', '/')
+            webbrowser.open(url)
+
+        return filename
 
 #}}}
 
