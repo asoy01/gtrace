@@ -135,6 +135,33 @@ function beamParamsAt(beam, d) {
 }
 
 /*
+ * The four corners of the substrate of an optics, in scene coordinates.
+ * Used to outline an optics while it is being dragged; the exact shape
+ * (wedge, curvature) belongs to the canvas, this is only a handle.
+ */
+function opticOutline(o, center, angle) {
+    var c = center || o.center || o.HRcenter || [0, 0];
+    var a = angle === undefined ? (o.normAngleHR || 0) : angle;
+    var ux = Math.cos(a), uy = Math.sin(a);          // along the normal
+    var vx = -uy, vy = ux;                           // across the face
+    var h = (o.thickness || 0) / 2;
+    var w = (o.diameter || 0) / 2;
+    return [[c[0] + ux * h + vx * w, c[1] + uy * h + vy * w],
+            [c[0] + ux * h - vx * w, c[1] + uy * h - vy * w],
+            [c[0] - ux * h - vx * w, c[1] - uy * h - vy * w],
+            [c[0] - ux * h + vx * w, c[1] - uy * h + vy * w]];
+}
+
+/*
+ * Radius of a circle enclosing the substrate, for hit testing.
+ */
+function opticRadius(o) {
+    var w = (o.diameter || 0) / 2;
+    var h = (o.thickness || 0) / 2;
+    return Math.hypot(w, h);
+}
+
+/*
  * Project a scene point onto a beam segment.
  * Returns {d, foot, dist} where d is the distance from the beam origin
  * (clamped to the segment), foot the projected point and dist the
@@ -221,6 +248,13 @@ function Viewer(container, scene, options) {
     this.cycle = 0;         // index into the bundle of overlapping beams
     this.lastClick = null;
 
+    // Editing is available only when the transport gave us somewhere to
+    // send the edits: the notebook widget and the live server do, the
+    // static HTML file does not, so that file stays read-only.
+    this.onEdit = this.opts.onEdit || null;
+    this.hoverOptic = null;
+    this.dragOptic = null;
+
     VIEWERS.push(this);
     this._build();
     this._renderScene();
@@ -284,13 +318,18 @@ Viewer.prototype._build = function () {
     var hpanel = htmlEl('div', 'gt-panel gt-help');
     hpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Controls'));
     var ul = htmlEl('ul');
-    [['Wheel', 'zoom at cursor'],
-     ['Drag', 'pan'],
-     ['Move over a beam', 'live readout'],
-     ['Click', 'pin the readout'],
-     ['Click again', 'cycle overlapping beams'],
-     ['f', 'fit to view'],
-     ['Esc', 'clear readout']].forEach(function (row) {
+    var rows = [['Wheel', 'zoom at cursor'],
+                ['Drag', 'pan'],
+                ['Move over a beam', 'live readout'],
+                ['Click', 'pin the readout'],
+                ['Click again', 'cycle overlapping beams'],
+                ['f', 'fit to view'],
+                ['Esc', 'clear readout']];
+    if (this.opts.onEdit) {
+        rows.push(['Drag an optics', 'move it'],
+                  ['Shift + drag', 'rotate it']);
+    }
+    rows.forEach(function (row) {
         var li = htmlEl('li');
         li.appendChild(htmlEl('b', null, row[0]));
         li.appendChild(document.createTextNode(' — ' + row[1]));
@@ -446,10 +485,13 @@ Viewer.prototype._renderScene = function () {
     this.highlight = svgEl('line', {'class': 'gt-highlight'});
     this.arrow = svgEl('path', {'class': 'gt-arrow'});
     this.marker = svgEl('circle', {'class': 'gt-marker', r: 4});
+    this.outline = svgEl('polygon', {'class': 'gt-optic-outline'});
+    this.overlayGroup.appendChild(this.outline);
     this.overlayGroup.appendChild(this.highlight);
     this.overlayGroup.appendChild(this.arrow);
     this.overlayGroup.appendChild(this.marker);
     this._showMarker(false);
+    this.outline.style.display = 'none';
 };
 
 Viewer.prototype._addLayerToggle = function (name, color, count) {
@@ -626,6 +668,15 @@ Viewer.prototype._bindEvents = function () {
 
     on(this.svg, 'mousedown', function (ev) {
         if (ev.button !== 0) { return; }
+        var r = self.svg.getBoundingClientRect();
+        var pt = self.screenToScene(ev.clientX - r.left, ev.clientY - r.top);
+
+        // Grabbing an optics starts an edit; grabbing anywhere else pans.
+        var o = self.onEdit ? self._pickOptic(pt[0], pt[1]) : null;
+        if (o) {
+            self._beginOpticDrag(o, pt, ev.shiftKey);
+            ev.preventDefault();
+        }
         dragging = true; moved = 0;
         lastX = ev.clientX; lastY = ev.clientY;
         self.svg.classList.add('gt-dragging');
@@ -633,6 +684,13 @@ Viewer.prototype._bindEvents = function () {
 
     on(global, 'mousemove', function (ev) {
         var r = self.svg.getBoundingClientRect();
+        if (self.dragOptic) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateOpticDrag(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+            return;
+        }
         if (dragging) {
             var dx = ev.clientX - lastX, dy = ev.clientY - lastY;
             moved += Math.abs(dx) + Math.abs(dy);
@@ -648,6 +706,12 @@ Viewer.prototype._bindEvents = function () {
     });
 
     on(global, 'mouseup', function (ev) {
+        if (self.dragOptic) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            self._endOpticDrag(moved >= 4);
+            return;
+        }
         if (!dragging) { return; }
         dragging = false;
         self.svg.classList.remove('gt-dragging');
@@ -663,6 +727,70 @@ Viewer.prototype._bindEvents = function () {
         if (ev.key === 'Escape') { self.pinned = null; self._setReadout(null); }
     });
 };
+
+//}}}
+
+//{{{ Editing
+
+/*
+ * Dragging an optics.
+ *
+ * The drag is previewed locally with an outline and only committed on
+ * release, as one edit message. Python owns the model: it applies the
+ * edit, re-traces and sends back a whole new scene. Nothing here tries
+ * to guess what the beams will do.
+ */
+Viewer.prototype._beginOpticDrag = function (optic, scenePt, rotate) {
+    var c = optic.center || optic.HRcenter;
+    this.dragOptic = {
+        optic: optic,
+        rotate: !!rotate,
+        grab: scenePt,
+        center0: [c[0], c[1]],
+        angle0: optic.normAngleHR || 0,
+        // Angle of the grab point as seen from the pivot, so that the
+        // optics turns with the cursor instead of jumping to it.
+        grabAngle: Math.atan2(scenePt[1] - c[1], scenePt[0] - c[0]),
+        center: [c[0], c[1]],
+        angle: optic.normAngleHR || 0
+    };
+    this._updateOpticOutline(optic, this.dragOptic.center,
+                             this.dragOptic.angle);
+};
+
+Viewer.prototype._updateOpticDrag = function (scenePt) {
+    var d = this.dragOptic;
+    if (!d) { return; }
+    if (d.rotate) {
+        var a = Math.atan2(scenePt[1] - d.center0[1],
+                           scenePt[0] - d.center0[0]);
+        d.angle = d.angle0 + (a - d.grabAngle);
+    } else {
+        d.center = [d.center0[0] + scenePt[0] - d.grab[0],
+                    d.center0[1] + scenePt[1] - d.grab[1]];
+    }
+    this._updateOpticOutline(d.optic, d.center, d.angle);
+    this._updateStatus();
+};
+
+Viewer.prototype._endOpticDrag = function (moved) {
+    var d = this.dragOptic;
+    this.dragOptic = null;
+    if (!d) { return; }
+    this._updateOpticOutline(this.hoverOptic);
+    if (!moved || !this.onEdit) { return; }
+
+    // 'center' is the middle of the substrate, which is the trait the
+    // outline was built from, so the optics lands where it was dropped.
+    var msg = d.rotate
+        ? {op: 'rotate', target: d.optic.name, normAngleHR: d.angle}
+        : {op: 'move', target: d.optic.name, center: d.center};
+    this.onEdit(msg);
+};
+
+//}}}
+
+//{{{ Teardown
 
 /*
  * Detach the viewer: remove every listener it installed and take its DOM
@@ -720,14 +848,53 @@ Viewer.prototype._pick = function (sx, sy, tol) {
     return hits.length ? hits[0] : null;
 };
 
+/*
+ * The optics under a scene point, if any. Only the enclosing circle of
+ * the substrate is tested: this is a grab handle, not a rendering.
+ */
+Viewer.prototype._pickOptic = function (sx, sy) {
+    var best = null, bestD = Infinity;
+    var optics = this.scene.optics || [];
+    for (var i = 0; i < optics.length; i++) {
+        var o = optics[i];
+        var c = o.center || o.HRcenter;
+        if (!c) { continue; }
+        var d = Math.hypot(sx - c[0], sy - c[1]);
+        if (d <= opticRadius(o) && d < bestD) { best = o; bestD = d; }
+    }
+    return best;
+};
+
 Viewer.prototype._onHover = function (px, py) {
     var pt = this.screenToScene(px, py);
     this.cursor = pt;
+
+    // An optics under the cursor takes precedence: it is what the next
+    // mousedown would grab, so say so before the user presses.
+    this.hoverOptic = this.onEdit ? this._pickOptic(pt[0], pt[1]) : null;
+    this.svg.classList.toggle('gt-over-optic', !!this.hoverOptic);
+
     var hit = this._pick(pt[0], pt[1], 12 / this.scale);
     this.hover = hit;
     if (!this.pinned) { this._setReadout(hit); }
     this._updateOverlay();
     this._updateStatus();
+};
+
+/*
+ * Outline shown while an optics is hovered or dragged. Drawn in screen
+ * coordinates from the scene-space corners.
+ */
+Viewer.prototype._updateOpticOutline = function (o, center, angle) {
+    if (!o) { this.outline.style.display = 'none'; return; }
+    var self = this;
+    var pts = opticOutline(o, center, angle).map(function (p) {
+        var s = self.sceneToScreen(p[0], p[1]);
+        return s[0] + ',' + s[1];
+    });
+    this.outline.setAttribute('points', pts.join(' '));
+    this.outline.classList.toggle('gt-dragging', !!this.dragOptic);
+    this.outline.style.display = '';
 };
 
 Viewer.prototype._onClick = function (px, py) {
@@ -788,6 +955,13 @@ Viewer.prototype._arrowPath = function (px, py, dirVect) {
 };
 
 Viewer.prototype._updateOverlay = function () {
+    if (this.dragOptic) {
+        this._updateOpticOutline(this.dragOptic.optic, this.dragOptic.center,
+                                 this.dragOptic.angle);
+    } else {
+        this._updateOpticOutline(this.hoverOptic);
+    }
+
     var hit = this.pinned || this.hover;
     if (!hit) { this._showMarker(false); return; }
     var b = hit.beam;
@@ -807,6 +981,15 @@ Viewer.prototype._updateOverlay = function () {
 };
 
 Viewer.prototype._updateStatus = function () {
+    var d = this.dragOptic;
+    if (d) {
+        this.statusBar.textContent = d.rotate
+            ? d.optic.name + ':  ' + fmtDeg(normAngle(d.angle)) +
+              '   (was ' + fmtDeg(normAngle(d.angle0)) + ')'
+            : d.optic.name + ':  ' + fmtLen(d.center[0]) + ',  ' +
+              fmtLen(d.center[1]);
+        return;
+    }
     var parts = [];
     if (this.cursor) {
         parts.push('x = ' + fmtLen(this.cursor[0]) +
@@ -883,6 +1066,8 @@ Viewer.prototype.setScene = function (scene) {
     this.scene = scene;
     this.pinned = null;
     this.hover = null;
+    this.hoverOptic = null;
+    this.dragOptic = null;
     this.cycle = 0;
     this.lastClick = null;
     this.labels = [];

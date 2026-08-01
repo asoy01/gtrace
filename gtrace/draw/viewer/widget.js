@@ -18,8 +18,16 @@ function render({ model, el }) {
     host.style.height = (model.get('height') || 520) + 'px';
     el.appendChild(host);
 
+    // Editing is enabled by handing the core somewhere to send edits.
+    // Here that is the widget's comm; the live server will hand it a
+    // websocket instead, with the same message format.
+    const onEdit = model.get('editable')
+        ? (msg) => model.send(msg)
+        : null;
+
     const viewer = globalThis.GTraceViewer.mount(host, model.get('scene'), {
-        title: model.get('title')
+        title: model.get('title'),
+        onEdit: onEdit
     });
 
     // Python pushes a new scene whenever the layout is re-traced. Keep
@@ -34,9 +42,24 @@ function render({ model, el }) {
         host.style.height = (model.get('height') || 520) + 'px';
         viewer.fit();
     };
+
+    // An edit Python refused: say so rather than leaving the drawing
+    // silently disagreeing with what the user just did.
+    const banner = document.createElement('div');
+    banner.className = 'gt-error';
+    banner.style.display = 'none';
+    el.appendChild(banner);
+    const onError = () => {
+        const msg = model.get('error');
+        banner.textContent = msg;
+        banner.style.display = msg ? '' : 'none';
+    };
+
     model.on('change:scene', onScene);
     model.on('change:title', onTitle);
     model.on('change:height', onHeight);
+    model.on('change:error', onError);
+    onError();
 
     // Expose the viewer for debugging and for the tests.
     el.gtraceViewer = viewer;
@@ -45,6 +68,7 @@ function render({ model, el }) {
         model.off('change:scene', onScene);
         model.off('change:title', onTitle);
         model.off('change:height', onHeight);
+        model.off('change:error', onError);
         viewer.destroy();
     };
 }

@@ -210,19 +210,63 @@ def beams_to_dict(beamList):
 
 #}}}
 
+#{{{ optic_to_dict
+
+#: Attributes of an optics passed to the viewer, when present.
+_OPTIC_SCALARS = ['diameter', 'thickness', 'wedgeAngle', 'inv_ROC_HR',
+                  'inv_ROC_AR', 'n', 'Refl_HR', 'Trans_HR', 'Refl_AR',
+                  'Trans_AR']
+_OPTIC_POINTS = ['HRcenter', 'ARcenter', 'center']
+_OPTIC_ANGLES = ['normAngleHR', 'normAngleAR']
+
+def optic_to_dict(o):
+    '''
+    Convert an Optics into a JSON-compatible dict of the attributes a
+    viewer needs in order to point at it: where it is, how big it is and
+    which way it faces.
+
+    Unlike the shapes on the canvas, this keeps the identity of the
+    optics, which is what lets a GUI say "the user grabbed M1".
+    Attributes that a particular class does not have are left out.
+    '''
+    d = {'name': str(o.name), 'type': type(o).__name__}
+    for k in _OPTIC_POINTS:
+        if hasattr(o, k):
+            d[k] = _vec(getattr(o, k))
+    for k in _OPTIC_ANGLES + _OPTIC_SCALARS:
+        if hasattr(o, k):
+            d[k] = float(getattr(o, k))
+    if hasattr(o, 'curve_direction'):
+        d['curve_direction'] = str(o.curve_direction)
+    return d
+
+def optics_to_dict(opticsList):
+    '''
+    Convert a list of Optics into a list of JSON-compatible dicts.
+    See optic_to_dict for the format of each element.
+    '''
+    return [optic_to_dict(o) for o in opticsList]
+
+#}}}
+
 #{{{ scene_to_dict
 
-def scene_to_dict(canvas, beamList=None):
+def scene_to_dict(canvas, beamList=None, opticsList=None):
     '''
-    Convert a canvas and an optional list of beams into a single
-    JSON-compatible dict:
+    Convert a canvas, an optional list of beams and an optional list of
+    optics into a single JSON-compatible dict:
 
-    {'canvas': canvas dict, 'beams': [beam dict, ...]}
+    {'canvas': canvas dict,
+     'beams': [beam dict, ...],
+     'optics': [optic dict, ...]}
 
     This is the top-level data structure consumed by the HTML/JS
-    viewer.
+    viewer. The 'optics' entry is what an editing front end addresses
+    when the user drags an element.
     '''
     return {'canvas': canvas_to_dict(canvas),
-            'beams': beams_to_dict(beamList) if beamList is not None else []}
+            'beams': beams_to_dict(beamList) if beamList is not None else [],
+            'optics': (optics_to_dict(opticsList)
+                       if opticsList is not None else [])}
 
 #}}}

@@ -148,13 +148,23 @@ def _build_class():
         scene = traitlets.Dict().tag(sync=True)
         title = traitlets.Unicode('gtrace').tag(sync=True)
         height = traitlets.Int(520).tag(sync=True)
+        #: Whether the front end may send edit messages back.
+        editable = traitlets.Bool(True).tag(sync=True)
+        #: Last edit failure, shown by the front end. Empty when fine.
+        error = traitlets.Unicode('').tag(sync=True)
 
-        def __init__(self, scene=None, layout=None, **kwargs):
+        def __init__(self, scene=None, layout=None, draw_kwargs=None,
+                     **kwargs):
             super().__init__(scene=scene if scene is not None else {},
                              **kwargs)
             # Held so that update() can re-trace. Not a traitlet: the
             # layout is a Python object, not something to synchronize.
             self._layout = layout
+            self._draw_kwargs = dict(draw_kwargs or {})
+            self._edit_log = []
+            if layout is None:
+                self.editable = False
+            self.on_msg(self._handle_custom_msg)
 
         def update(self, **kwargs):
             '''
@@ -164,14 +174,67 @@ def _build_class():
             Parameters
             ----------
             **kwargs
-                Passed to OpticalLayout.draw().
+                Passed to OpticalLayout.draw(). Remembered, so that
+                edits coming from the front end draw the same way.
             '''
             if self._layout is None:
                 raise ValueError('This viewer is not attached to a layout; '
                                  'assign to .scene directly instead.')
+            if kwargs:
+                self._draw_kwargs = dict(kwargs)
             self._layout.beams = None
-            self.scene = self._layout.scene_dict(**kwargs)
+            self.scene = self._layout.scene_dict(**self._draw_kwargs)
             return self
+
+#{{{ Edits from the front end
+
+        @property
+        def edits(self):
+            '''
+            The edit messages received so far, oldest first.
+            '''
+            return list(self._edit_log)
+
+        def apply_edit(self, msg):
+            '''
+            Apply one edit message to the layout and push the new scene.
+
+            This is what the front end reaches through the widget's
+            comm, and is also callable directly, which is how the tests
+            drive it. A rejected edit leaves the layout untouched and
+            reports itself through the 'error' traitlet rather than
+            raising into the comm machinery, where nothing would see it.
+
+            Parameters
+            ----------
+            msg : dict
+                An edit message, as described by
+                OpticalLayout.apply_edit.
+
+            Returns
+            -------
+            ok : bool
+                Whether the edit was applied.
+            '''
+            if self._layout is None or not self.editable:
+                self.error = 'This viewer is read-only.'
+                return False
+            try:
+                self._layout.apply_edit(msg)
+            except Exception as e:
+                self.error = '%s: %s' % (type(e).__name__, e)
+                return False
+            self._edit_log.append(msg)
+            self.error = ''
+            self.scene = self._layout.scene_dict(**self._draw_kwargs)
+            return True
+
+        def _handle_custom_msg(self, widget, content, buffers):
+            # ipywidgets also routes its own housekeeping messages here.
+            if isinstance(content, dict) and 'op' in content:
+                self.apply_edit(content)
+
+#}}}
 
     return LayoutViewer
 

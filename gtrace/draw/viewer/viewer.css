@@ -25,6 +25,18 @@
    the widget's height traitlet; .gt-root then fills it. */
 .gt-widget { width: 100%; }
 
+/* Shown when Python refuses an edit. */
+.gt-error {
+    margin-top: 6px;
+    padding: 6px 9px;
+    font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: #8a1c1c;
+    background: #fdeaea;
+    border: 1px solid #f2c2c2;
+    border-radius: 4px;
+}
+
 /* ---------------------------------------------------------- drawing area */
 
 .gt-stage {
@@ -44,6 +56,7 @@
 }
 
 .gt-svg.gt-dragging { cursor: grabbing; }
+.gt-svg.gt-over-optic { cursor: move; }
 
 /* Geometry is drawn in scene units; keep strokes at a constant screen
    width so that lines do not become slabs when zooming in. */
@@ -75,6 +88,22 @@
 .gt-marker.gt-pinned {
     fill: #f5a623;
     stroke: #1f2328;
+}
+
+/* Grab handle of an editable optics: shown on hover, and following the
+   cursor while it is being dragged. */
+.gt-optic-outline {
+    fill: rgba(31, 35, 40, 0.06);
+    stroke: #1f2328;
+    stroke-width: 1.2;
+    stroke-dasharray: 4 3;
+    pointer-events: none;
+}
+
+.gt-optic-outline.gt-dragging {
+    fill: rgba(245, 166, 35, 0.18);
+    stroke: #b45309;
+    stroke-width: 1.6;
 }
 
 /* Which way the selected beam travels. */

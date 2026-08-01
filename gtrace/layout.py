@@ -134,6 +134,35 @@ class TraceRules(object):
 
 #}}}
 
+#{{{ Edit protocol
+
+#: Attributes of an optics that a front end is allowed to change.
+#: Edit messages arrive from a browser, so the set is explicit rather
+#: than "anything setattr accepts". The same list is used by the
+#: notebook widget and, later, by the live server.
+EDITABLE_OPTIC_ATTRS = frozenset([
+    'HRcenter', 'ARcenter', 'center',
+    'normAngleHR', 'normVectHR',
+    'diameter', 'thickness', 'wedgeAngle',
+    'inv_ROC_HR', 'inv_ROC_AR', 'n',
+    'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
+    'HRtransmissive', 'term_on_HR', 'term_on_HR_order',
+])
+
+#: Attributes of the tracing rules that a front end may change.
+EDITABLE_RULE_ATTRS = frozenset([
+    'order', 'power_threshold', 'open_beam_length', 'per_optic_order',
+])
+
+class EditError(ValueError):
+    '''
+    Raised when an edit message cannot be applied: unknown operation,
+    unknown target or an attribute that is not editable.
+    '''
+    pass
+
+#}}}
+
 #{{{ Front end selection
 
 def _in_notebook():
@@ -364,6 +393,86 @@ class OpticalLayout(object):
 
 #}}}
 
+#{{{ apply_edit
+
+    def apply_edit(self, msg):
+        '''
+        Apply an edit message coming from a front end.
+
+        The message is a plain dict, so the same protocol travels over
+        the notebook widget's comm and, later, over a websocket:
+
+            {'op': 'move',   'target': 'M1', 'HRcenter': [0.52, 0.0]}
+            {'op': 'rotate', 'target': 'M1', 'normAngleHR': 2.3}
+            {'op': 'set',    'target': 'M1', 'attrs': {'diameter': 0.15}}
+            {'op': 'rules',  'rules': {'power_threshold': 1e-6}}
+
+        The edit is applied to the registered object itself, which is
+        the same object the user holds in their own code. The trace
+        result is invalidated so that the next draw() or scene_dict()
+        re-traces.
+
+        Parameters
+        ----------
+        msg : dict
+            The edit message.
+
+        Returns
+        -------
+        self : OpticalLayout
+
+        Raises
+        ------
+        EditError
+            If the operation, the target or an attribute is not allowed.
+        '''
+        if not isinstance(msg, dict):
+            raise EditError('An edit message must be a dict, not %s'
+                            % type(msg).__name__)
+
+        op = msg.get('op')
+        if op in ('move', 'rotate', 'set'):
+            name = msg.get('target')
+            try:
+                optics = self.get_optics(name)
+            except KeyError:
+                raise EditError("No optics named %r in the layout." % (name,))
+
+            if op == 'set':
+                attrs = msg.get('attrs') or {}
+            else:
+                # move and rotate are spellings of a one-attribute set;
+                # they exist so that a front end says what it means.
+                keys = (['HRcenter', 'center'] if op == 'move'
+                        else ['normAngleHR', 'normVectHR'])
+                attrs = {k: msg[k] for k in keys if k in msg}
+                if not attrs:
+                    raise EditError("A '%s' message needs one of %s."
+                                    % (op, ' or '.join(keys)))
+
+            for key, value in attrs.items():
+                if key not in EDITABLE_OPTIC_ATTRS:
+                    raise EditError('%r is not an editable attribute of an '
+                                    'optics.' % (key,))
+                setattr(optics, key, value)
+
+        elif op == 'rules':
+            for key, value in (msg.get('rules') or {}).items():
+                if key not in EDITABLE_RULE_ATTRS:
+                    raise EditError('%r is not an editable tracing rule.'
+                                    % (key,))
+                setattr(self.rules, key, value)
+
+        else:
+            raise EditError('Unknown edit operation %r.' % (op,))
+
+        # The trace no longer matches the layout.
+        self.beams = None
+        self.beams_by_source = None
+        return self
+
+#}}}
+
 #{{{ draw
 
     def draw(self, canvas=None, fontSize=False, drawMainWidth=True,
@@ -456,7 +565,7 @@ class OpticalLayout(object):
             Passed to draw().
         '''
         canvas = self.draw(**kwargs)
-        return scene_to_dict(canvas, self.beams)
+        return scene_to_dict(canvas, self.beams, self.optics)
 
 #}}}
 
@@ -488,7 +597,7 @@ class OpticalLayout(object):
         return renderHTML(canvas, self.beams, filename,
                           title=title if title is not None else self.name)
 
-    def widget(self, title=None, height=520, **kwargs):
+    def widget(self, title=None, height=520, editable=True, **kwargs):
         '''
         Return a Jupyter widget showing this layout.
 
@@ -500,6 +609,12 @@ class OpticalLayout(object):
             M1.HRcenter = [0.6, 0]
             w.update()              # re-traces and redraws in place
 
+        The loop also runs the other way: dragging an optics in the
+        viewer sends an edit message, which this layout applies to the
+        registered object before re-tracing and pushing the result back.
+        Since the optics are held by reference, M1 in your own code is
+        the object that moved.
+
         Requires anywidget. Use render_html() or show(backend='html')
         if it is not installed.
 
@@ -509,8 +624,12 @@ class OpticalLayout(object):
             Title shown in the side bar. Defaults to the layout name.
         height : int, optional
             Height of the viewer in pixels. Defaults to 520.
+        editable : bool, optional
+            Whether the optics can be dragged in the viewer.
+            Defaults to True.
         **kwargs
-            Passed to draw().
+            Passed to draw(), and remembered for the redraws that
+            follow an edit.
 
         Returns
         -------
@@ -518,8 +637,9 @@ class OpticalLayout(object):
         '''
         from gtrace.draw.viewer.widget import LayoutViewer
         return LayoutViewer(scene=self.scene_dict(**kwargs), layout=self,
+                            draw_kwargs=kwargs,
                             title=title if title is not None else self.name,
-                            height=height)
+                            height=height, editable=editable)
 
     def show(self, filename=None, browser=True, title=None, backend=None,
              **kwargs):
