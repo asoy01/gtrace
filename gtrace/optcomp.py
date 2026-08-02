@@ -1433,8 +1433,13 @@ class Mirror(Optics):
                  ARcenterC = self.HRcenterC - self.normVectHR * self.thickness)
         self.trait_set(trait_change_notify=False,
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
+        #center is the middle of the substrate, so it lies between the
+        #two chord planes. Averaging with ARcenter instead would mix a
+        #chord centre with a point on the arc, putting center half a
+        #sagitta out and disagreeing with _HRcenter_changed, with
+        #_center_changed's inverse and with get_side_info.
         self.trait_set(trait_change_notify=False,
-                 center = (self.HRcenterC + self.ARcenter)/2.0)
+                 center = (self.HRcenterC + self.ARcenterC)/2.0)
         self.trait_set(trait_change_notify=False,
                  HRcenter = self.HRcenterC + self.sagHR*self.normVectHR)
 
