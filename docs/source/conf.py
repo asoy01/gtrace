@@ -18,11 +18,12 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'gtrace'
-copyright = '2019, 2021, Yoichi Aso'
+copyright = '2019-2026, Yoichi Aso'
 author = 'Yoichi Aso'
 
-# The full version, including alpha/beta/rc tags
-release = '0.2.1'
+# The full version, including alpha/beta/rc tags. Keep in step with
+# setup.py and gtrace.__version__.
+release = '0.2.4'
 
 
 # -- General configuration ---------------------------------------------------
@@ -34,13 +35,27 @@ extensions = ['autoapi.extension','sphinx.ext.autodoc', 'sphinx.ext.napoleon', '
     "nbsphinx"
 ]
 
+# Render the "Attributes" section of a numpydoc docstring as :ivar: fields
+# rather than as separate attribute directives. autoapi already emits a
+# directive for every real class attribute, so without this every attribute
+# that is also documented in the docstring is defined twice, which Sphinx
+# reports as a duplicate object description and which makes the resulting
+# cross references ambiguous.
+napoleon_use_ivar = True
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+#
+# 'api' holds hand-written automodule stubs that predate sphinx-autoapi.
+# autoapi now generates the whole API reference from the source, so
+# building both documents every object twice: Sphinx reports several
+# hundred "duplicate object description" warnings and every cross
+# reference becomes ambiguous. The stubs are kept for now but not built.
+exclude_patterns = ['api']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -56,3 +71,19 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 autoapi_dirs = ['../../gtrace']
+
+# The default list minus 'imported-members'. gtrace re-exports heavily
+# (``from gtrace.draw.draw import *``, ``from numpy import array``), and
+# documenting the imports as well means the same object is described
+# twice under two names. Sphinx then cannot resolve a reference such as
+# ``draw.Canvas``, because both gtrace.draw.Canvas and
+# gtrace.draw.draw.Canvas match it. Each object is now documented once,
+# where it is defined.
+autoapi_options = [
+    'members',
+    'undoc-members',
+    'private-members',
+    'show-inheritance',
+    'show-module-summary',
+    'special-members',
+]

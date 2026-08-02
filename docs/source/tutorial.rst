@@ -17,3 +17,5 @@ Or you can find it directly here:
    tutorial/gtrace-tutorial
 
 ---------------
+
+The tutorial uses the low level interface throughout: it builds mirrors and beams and passes them around itself. For the container that collects them into one object, and for the interactive viewer, see :doc:`layout` and :doc:`viewer`. A runnable demonstration of both lives in the source tree at ``tests/OpticalLayout_demo.ipynb``.

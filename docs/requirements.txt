@@ -1,4 +1,5 @@
 gtrace
 sphinx-autoapi
+sphinx-rtd-theme
 ipykernel
 nbsphinx

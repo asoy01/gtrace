@@ -13,7 +13,9 @@ Welcome to gtrace's documentation!
    intro
    basic_concepts
    propagation
-   tutorial   
+   layout
+   viewer
+   tutorial
 
 Indices and tables
 ==================

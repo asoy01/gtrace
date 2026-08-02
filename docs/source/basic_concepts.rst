@@ -31,6 +31,13 @@ Mirror
 .. image:: imgs/Mirror.png
    :height: 10cm
 
-Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a spherical lense, light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use ``CyMirror`` class instead.
+Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a spherical lense, light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use :py:class:`CyMirror<gtrace.optcomp.CyMirror>` instead; its ``curve_direction`` attribute selects whether the cylinder curves horizontally (``'h'``) or vertically (``'v'``).
 
 The parameters of a Mirror object are shown in the figure above.
+
+The curvature of a surface is held as its *inverse* radius, ``inv_ROC_HR`` and ``inv_ROC_AR``, so that a flat surface is simply zero rather than an infinity that has to be special-cased everywhere. The GUI viewer shows you the radius itself and converts on the way in and out.
+
+Optical systems
+----------------
+
+Mirrors and beams are enough on their own, and the :doc:`tutorial` uses nothing else. When a system grows to the point where carrying lists of optics and beams around becomes the bulk of the code, :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` collects the optics, the source beams and the tracing rules into one object that can be traced, drawn, saved and edited interactively. See :doc:`layout`.

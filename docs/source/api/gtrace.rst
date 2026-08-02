@@ -21,10 +21,10 @@ gtrace.beam module
    :undoc-members:
    :show-inheritance:
 
-gtrace.hello module
--------------------
+gtrace.layout module
+--------------------
 
-.. automodule:: gtrace.hello
+.. automodule:: gtrace.layout
    :members:
    :undoc-members:
    :show-inheritance:

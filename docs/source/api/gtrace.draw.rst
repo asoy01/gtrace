@@ -28,6 +28,30 @@ gtrace.draw.renderer module
    :undoc-members:
    :show-inheritance:
 
+gtrace.draw.serialize module
+----------------------------
+
+.. automodule:: gtrace.draw.serialize
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gtrace.draw.viewer package
+--------------------------
+
+.. automodule:: gtrace.draw.viewer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+gtrace.draw.viewer.widget module
+--------------------------------
+
+.. automodule:: gtrace.draw.viewer.widget
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 gtrace.draw.tools module
 ------------------------
 
