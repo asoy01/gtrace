@@ -7,7 +7,7 @@ setuptools.setup(
     name="gtrace",
     version="0.3.0",
     author="Yoichi Aso",
-    author_email="yoichi.aso@nao.ac.jp",
+    author_email="asoy01@gmail.com",
     description="2D ray tracing package for Gaussian beams",
     long_description=long_description,
     long_description_content_type="text/markdown",

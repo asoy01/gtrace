@@ -9,7 +9,7 @@ pi = np.pi
 
 #{{{ Author and License Infomation
 
-#Copyright (c) 2011-2021, Yoichi Aso
+#Copyright (c) 2011-2026, Yoichi Aso
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without
@@ -37,12 +37,12 @@ pi = np.pi
 # POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = "Yoichi Aso"
-__copyright__ = "Copyright 2011-2021, Yoichi Aso"
+__copyright__ = "Copyright 2011-2026, Yoichi Aso"
 __credits__ = ["Yoichi Aso"]
 __license__ = "BSD"
 __version__ = "0.3.0"
 __maintainer__ = "Yoichi Aso"
-__email__ = "yoichi.aso@nao.ac.jp"
+__email__ = "asoy01@gmail.com"
 __status__ = "Beta"
 
 #}}}
