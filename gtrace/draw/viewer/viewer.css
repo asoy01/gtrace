@@ -184,6 +184,11 @@
 
 .gt-btn:hover { background: #eceff3; }
 
+.gt-btn-danger { color: #8a1c1c; border-color: #e3c4c4; }
+.gt-btn-danger:hover { background: #fdeaea; border-color: #d59a9a; }
+
+.gt-buttons { display: flex; gap: 6px; flex: 0 0 auto; }
+
 .gt-panel {
     border: 1px solid #d8dce3;
     border-radius: 5px;
@@ -301,6 +306,12 @@
     outline: none;
     border-color: #4a7fd4;
     box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.18);
+}
+
+.gt-props-foot {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 5px 2px;
 }
 
 /* --------------------------------------------------------------- layers */

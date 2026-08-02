@@ -289,6 +289,12 @@ Viewer.prototype._build = function () {
     var head = htmlEl('div', 'gt-head');
     head.appendChild(htmlEl('div', 'gt-title', this.opts.title || 'gtrace'));
     var buttons = htmlEl('div', 'gt-buttons');
+    if (this.opts.onEdit) {
+        var addBtn = htmlEl('button', 'gt-btn', '+ Mirror');
+        addBtn.title = 'Add a mirror at the centre of the view';
+        addBtn.addEventListener('click', function () { self.addMirror(); });
+        buttons.appendChild(addBtn);
+    }
     var fitBtn = htmlEl('button', 'gt-btn', 'Fit');
     fitBtn.addEventListener('click', function () { self.fit(); });
     buttons.appendChild(fitBtn);
@@ -335,7 +341,9 @@ Viewer.prototype._build = function () {
     if (this.opts.onEdit) {
         rows.push(['Drag an optics', 'move it'],
                   ['Shift + drag', 'rotate it'],
-                  ['Edit a property', 'apply it to the layout']);
+                  ['Edit a property', 'apply it to the layout'],
+                  ['+ Mirror', 'add one at the centre of the view'],
+                  ['Remove', 'delete the selected optics']);
     }
     rows.forEach(function (row) {
         var li = htmlEl('li');
@@ -537,6 +545,56 @@ Viewer.prototype._buildOpticPanel = function () {
     });
 
     this.opticBody.appendChild(table);
+
+    if (this.onEdit) {
+        var foot = htmlEl('div', 'gt-props-foot');
+        var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
+        delBtn.title = 'Remove this optics from the layout';
+        delBtn.addEventListener('click', function () { self.removeSelected(); });
+        foot.appendChild(delBtn);
+        this.opticBody.appendChild(foot);
+    }
+};
+
+/*
+ * Add a mirror at the centre of the current view.
+ *
+ * The name is chosen here rather than by Python, so that the viewer can
+ * select the new element as soon as the scene comes back without
+ * needing a reply channel. Everything else is left to the layout, which
+ * fills the gaps from the optics already registered.
+ */
+Viewer.prototype.addMirror = function (params) {
+    if (!this.onEdit) { return null; }
+    var name = this._freshOpticName();
+    var msg = {op: 'add', type: 'Mirror', name: name,
+               params: Object.assign({
+                   HRcenter: [this.cx, this.cy],
+                   normAngleHR: Math.PI
+               }, params || {})};
+    // Optimistic: the scene that comes back will contain it, and
+    // _selectedOptic() resolves the name then.
+    this.selectedOptic = name;
+    this.onEdit(msg);
+    return msg;
+};
+
+Viewer.prototype._freshOpticName = function (prefix) {
+    prefix = prefix || 'M';
+    var taken = {};
+    (this.scene.optics || []).forEach(function (o) { taken[o.name] = true; });
+    var i = 1;
+    while (taken[prefix + i]) { i++; }
+    return prefix + i;
+};
+
+Viewer.prototype.removeSelected = function () {
+    if (!this.onEdit || !this.selectedOptic) { return null; }
+    var msg = {op: 'remove', target: this.selectedOptic};
+    this.selectedOptic = null;
+    this._showPanel('beam');
+    this.onEdit(msg);
+    return msg;
 };
 
 /*

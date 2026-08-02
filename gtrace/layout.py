@@ -154,6 +154,25 @@ EDITABLE_RULE_ATTRS = frozenset([
     'order', 'power_threshold', 'open_beam_length', 'per_optic_order',
 ])
 
+#: Constructor parameters a new optics may be given. These are the
+#: arguments of Mirror.__init__ that make sense to set from a GUI.
+CREATABLE_OPTIC_PARAMS = frozenset([
+    'HRcenter', 'normAngleHR', 'normVectHR',
+    'diameter', 'thickness', 'wedgeAngle',
+    'inv_ROC_HR', 'inv_ROC_AR', 'n',
+    'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
+    'HRtransmissive', 'term_on_HR', 'curve_direction',
+])
+
+#: Parameters a new optics copies from the optics already in the layout,
+#: so that a mirror added to a system of 10 cm optics is a 10 cm optics
+#: rather than whatever the class default happens to be.
+_INHERITED_PARAMS = ['diameter', 'thickness', 'wedgeAngle', 'n',
+                     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR']
+
+#: Types that can be created from an edit message.
+CREATABLE_OPTIC_TYPES = {'Mirror': 'Mirror', 'CyMirror': 'CyMirror'}
+
 class EditError(ValueError):
     '''
     Raised when an edit message cannot be applied: unknown operation,
@@ -363,6 +382,18 @@ class OpticalLayout(object):
                 return b
         raise KeyError("No source named '%s' in the layout." % name)
 
+    def unique_optics_name(self, prefix='M'):
+        '''
+        Return a name of the form prefix + number that no registered
+        optics uses. Front ends need a name before they can talk about
+        the element they are asking for.
+        '''
+        taken = set(o.name for o in self.optics)
+        i = 1
+        while '%s%d' % (prefix, i) in taken:
+            i += 1
+        return '%s%d' % (prefix, i)
+
 #}}}
 
 #{{{ trace
@@ -405,6 +436,9 @@ class OpticalLayout(object):
             {'op': 'move',   'target': 'M1', 'HRcenter': [0.52, 0.0]}
             {'op': 'rotate', 'target': 'M1', 'normAngleHR': 2.3}
             {'op': 'set',    'target': 'M1', 'attrs': {'diameter': 0.15}}
+            {'op': 'add',    'type': 'Mirror', 'name': 'M4',
+                             'params': {'HRcenter': [0.3, 0.2]}}
+            {'op': 'remove', 'target': 'M4'}
             {'op': 'rules',  'rules': {'power_threshold': 1e-6}}
 
         The edit is applied to the registered object itself, which is
@@ -456,6 +490,20 @@ class OpticalLayout(object):
                                     'optics.' % (key,))
                 setattr(optics, key, value)
 
+        elif op == 'add':
+            optics = self._optics_from_message(msg)
+            try:
+                self.add_optics(optics)
+            except ValueError as e:
+                raise EditError(str(e))
+
+        elif op == 'remove':
+            name = msg.get('target')
+            try:
+                self.remove_optics(name)
+            except KeyError:
+                raise EditError("No optics named %r in the layout." % (name,))
+
         elif op == 'rules':
             for key, value in (msg.get('rules') or {}).items():
                 if key not in EDITABLE_RULE_ATTRS:
@@ -470,6 +518,51 @@ class OpticalLayout(object):
         self.beams = None
         self.beams_by_source = None
         return self
+
+    def _optics_from_message(self, msg):
+        '''
+        Build the optics described by an 'add' message.
+
+        Parameters not given are taken from the optics already in the
+        layout, so that an element added to a system of 10 cm mirrors
+        comes out a 10 cm mirror instead of a 25 cm one. The surfaces
+        are flat unless asked otherwise: a curvature copied from a
+        neighbour would be a surprise rather than a convenience.
+        '''
+        kind = msg.get('type', 'Mirror')
+        if kind not in CREATABLE_OPTIC_TYPES:
+            raise EditError('Cannot create an optics of type %r. Known '
+                            'types are %s.'
+                            % (kind, ', '.join(sorted(CREATABLE_OPTIC_TYPES))))
+
+        params = msg.get('params') or {}
+        for key in params:
+            if key not in CREATABLE_OPTIC_PARAMS:
+                raise EditError('%r is not a parameter a new optics may be '
+                                'given.' % (key,))
+
+        kwargs = {'inv_ROC_HR': 0.0, 'inv_ROC_AR': 0.0}
+        if self.optics:
+            template = self.optics[-1]
+            for key in _INHERITED_PARAMS:
+                if hasattr(template, key):
+                    kwargs[key] = getattr(template, key)
+        kwargs.update(params)
+
+        # A missing name means "pick one for me"; a name that is present
+        # but unusable is a mistake, not a request to invent one.
+        name = msg.get('name')
+        if name is None:
+            name = self.unique_optics_name()
+        elif not isinstance(name, str) or not name.strip():
+            raise EditError('An optics name must be a non-empty string, '
+                            'not %r.' % (name,))
+        kwargs['name'] = name
+
+        if kind == 'CyMirror':
+            return optcomp.CyMirror(**kwargs)
+        kwargs.pop('curve_direction', None)   # CyMirror only
+        return optcomp.Mirror(**kwargs)
 
 #}}}
 
