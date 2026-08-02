@@ -295,17 +295,23 @@ Viewer.prototype._build = function () {
     head.appendChild(buttons);
     side.appendChild(head);
 
-    // readout panel
+    // Readout panel. It shows either the beam under the cursor or the
+    // properties of the selected optics, whichever was picked last.
     var rpanel = htmlEl('div', 'gt-panel');
     var rtitle = htmlEl('div', 'gt-panel-title');
-    rtitle.appendChild(htmlEl('span', null, 'Beam readout'));
+    this.panelTitle = htmlEl('span', null, 'Beam readout');
+    rtitle.appendChild(this.panelTitle);
     this.pinLabel = htmlEl('span', 'gt-pin', '');
     rtitle.appendChild(this.pinLabel);
     rpanel.appendChild(rtitle);
     this.readoutBody = htmlEl('div', 'gt-readout');
+    this.opticBody = htmlEl('div', 'gt-props');
     rpanel.appendChild(this.readoutBody);
+    rpanel.appendChild(this.opticBody);
     side.appendChild(rpanel);
     this._buildReadout();
+    this._buildOpticPanel();
+    this._showPanel('beam');
 
     // layer panel
     var lpanel = htmlEl('div', 'gt-panel');
@@ -323,11 +329,13 @@ Viewer.prototype._build = function () {
                 ['Move over a beam', 'live readout'],
                 ['Click', 'pin the readout'],
                 ['Click again', 'cycle overlapping beams'],
+                ['Click an optics', 'show its properties'],
                 ['f', 'fit to view'],
-                ['Esc', 'clear readout']];
+                ['Esc', 'clear selection']];
     if (this.opts.onEdit) {
         rows.push(['Drag an optics', 'move it'],
-                  ['Shift + drag', 'rotate it']);
+                  ['Shift + drag', 'rotate it'],
+                  ['Edit a property', 'apply it to the layout']);
     }
     rows.forEach(function (row) {
         var li = htmlEl('li');
@@ -396,6 +404,197 @@ Viewer.prototype._buildReadout = function () {
     });
     this.readoutBody.appendChild(table);
     this.readoutHeader = header;
+};
+
+/*
+ * Properties of an optics, shown in the same panel as the beam readout.
+ *
+ * The fields the user thinks in are not always the traits the model
+ * keeps: an angle is natural in degrees, and a mirror is specified by
+ * its radius of curvature rather than by the inverse the code stores.
+ * The conversion lives here, in the two functions below, so that the
+ * edit messages still speak the model's language.
+ */
+var OPTIC_FIELDS = [
+    {key: 'name', label: 'Name', text: true},
+    {key: 'type', label: 'Type', text: true},
+    {key: 'cx', label: 'Center x', unit: 'm'},
+    {key: 'cy', label: 'Center y', unit: 'm'},
+    {key: 'angle', label: 'Angle', unit: '°'},
+    {key: 'diameter', label: 'Diameter', unit: 'm'},
+    {key: 'thickness', label: 'Thickness', unit: 'm'},
+    {key: 'wedgeAngle', label: 'Wedge', unit: '°'},
+    {key: 'rocHR', label: 'ROC HR', unit: 'm'},
+    {key: 'rocAR', label: 'ROC AR', unit: 'm'},
+    {key: 'n', label: 'Index n'},
+    {key: 'Refl_HR', label: 'Refl HR'},
+    {key: 'Trans_HR', label: 'Trans HR'},
+    {key: 'Refl_AR', label: 'Refl AR'},
+    {key: 'Trans_AR', label: 'Trans AR'}
+];
+
+var DEG = 180 / Math.PI;
+
+function opticFieldValue(o, key) {
+    var c = o.center || o.HRcenter || [0, 0];
+    switch (key) {
+    case 'cx': return c[0];
+    case 'cy': return c[1];
+    case 'angle': return normAngle(o.normAngleHR || 0) * DEG;
+    case 'wedgeAngle': return (o.wedgeAngle || 0) * DEG;
+    case 'rocHR': return o.inv_ROC_HR ? 1 / o.inv_ROC_HR : Infinity;
+    case 'rocAR': return o.inv_ROC_AR ? 1 / o.inv_ROC_AR : Infinity;
+    default: return o[key];
+    }
+}
+
+/*
+ * The edit message that sets one field of an optics.
+ */
+function opticFieldMessage(o, key, value) {
+    var c = o.center || o.HRcenter || [0, 0];
+    var attrs = {};
+    switch (key) {
+    case 'cx':
+        return {op: 'move', target: o.name, center: [value, c[1]]};
+    case 'cy':
+        return {op: 'move', target: o.name, center: [c[0], value]};
+    case 'angle':
+        return {op: 'rotate', target: o.name, normAngleHR: value / DEG};
+    case 'wedgeAngle':
+        attrs.wedgeAngle = value / DEG;
+        break;
+    case 'rocHR':
+        // A flat surface is an infinite radius, which is the inverse
+        // being zero. Anything non-finite means flat.
+        attrs.inv_ROC_HR = isFinite(value) && value !== 0 ? 1 / value : 0;
+        break;
+    case 'rocAR':
+        attrs.inv_ROC_AR = isFinite(value) && value !== 0 ? 1 / value : 0;
+        break;
+    default:
+        attrs[key] = value;
+    }
+    return {op: 'set', target: o.name, attrs: attrs};
+}
+
+/*
+ * Render a number for an editable field: full precision, so that what
+ * is read back is exactly what the model holds.
+ */
+function fmtField(v) {
+    if (v === null || v === undefined) { return ''; }
+    if (typeof v !== 'number') { return String(v); }
+    if (!isFinite(v)) { return v > 0 ? 'inf' : '-inf'; }
+    return String(v);
+}
+
+function parseField(s) {
+    var t = String(s).trim().toLowerCase();
+    if (t === 'inf' || t === 'infinity' || t === '∞') { return Infinity; }
+    if (t === '-inf' || t === '-infinity' || t === '-∞') { return -Infinity; }
+    if (t === '') { return NaN; }
+    var v = Number(t);
+    return isNaN(v) ? NaN : v;
+}
+
+Viewer.prototype._buildOpticPanel = function () {
+    var self = this;
+    var table = htmlEl('table');
+    this.opticFields = {};
+
+    OPTIC_FIELDS.forEach(function (f) {
+        var tr = htmlEl('tr');
+        tr.appendChild(htmlEl('td', 'gt-key',
+                              f.label + (f.unit ? ' [' + f.unit + ']' : '')));
+        var td = htmlEl('td', 'gt-val');
+
+        if (f.text || !self.onEdit) {
+            // Nothing to edit: either an identifier, or a viewer with
+            // no Python behind it.
+            var span = htmlEl('span', 'gt-static', '-');
+            td.appendChild(span);
+            self.opticFields[f.key] = {el: span, editable: false};
+        } else {
+            var input = htmlEl('input', 'gt-input');
+            input.type = 'text';
+            input.spellcheck = false;
+            input.addEventListener('change', function () {
+                self._commitOpticField(f.key, input);
+            });
+            input.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape') {
+                    self._refreshOpticPanel();
+                    input.blur();
+                    ev.stopPropagation();
+                }
+            });
+            td.appendChild(input);
+            self.opticFields[f.key] = {el: input, editable: true};
+        }
+        tr.appendChild(td);
+        table.appendChild(tr);
+    });
+
+    this.opticBody.appendChild(table);
+};
+
+/*
+ * Show one of the two panels.
+ */
+Viewer.prototype._showPanel = function (kind) {
+    this.panelKind = kind;
+    var optic = kind === 'optic';
+    this.readoutBody.style.display = optic ? 'none' : '';
+    this.opticBody.style.display = optic ? '' : 'none';
+    this.panelTitle.textContent = optic ? 'Optics properties' : 'Beam readout';
+    if (optic) { this.pinLabel.textContent = ''; }
+};
+
+Viewer.prototype._selectedOptic = function () {
+    if (!this.selectedOptic) { return null; }
+    var optics = this.scene.optics || [];
+    for (var i = 0; i < optics.length; i++) {
+        if (optics[i].name === this.selectedOptic) { return optics[i]; }
+    }
+    return null;
+};
+
+Viewer.prototype._refreshOpticPanel = function () {
+    var o = this._selectedOptic();
+    var fields = this.opticFields;
+    for (var key in fields) {
+        var f = fields[key];
+        // Never overwrite the field the user is typing into.
+        if (f.editable && document.activeElement === f.el) { continue; }
+        var v = o ? opticFieldValue(o, key) : null;
+        var text = o ? fmtField(v) : (f.editable ? '' : '-');
+        if (f.editable) { f.el.value = text; } else { f.el.textContent = text; }
+    }
+};
+
+Viewer.prototype._selectOptic = function (optic) {
+    this.selectedOptic = optic ? optic.name : null;
+    if (optic) {
+        this._refreshOpticPanel();
+        this._showPanel('optic');
+    } else {
+        this._showPanel('beam');
+    }
+    this._updateOverlay();
+};
+
+Viewer.prototype._commitOpticField = function (key, input) {
+    var o = this._selectedOptic();
+    if (!o || !this.onEdit) { return; }
+    var value = parseField(input.value);
+    if (isNaN(value)) {
+        // Not a number: put back what the model actually holds.
+        this._refreshOpticPanel();
+        return;
+    }
+    if (value === opticFieldValue(o, key)) { return; }
+    this.onEdit(opticFieldMessage(o, key, value));
 };
 
 //}}}
@@ -723,8 +922,17 @@ Viewer.prototype._bindEvents = function () {
 
     on(global, 'keydown', function (ev) {
         if (VIEWERS.length > 1 && !self.pointerInside) { return; }
+        // Not while a property field has the keyboard.
+        if (ev.target && ev.target.classList
+            && ev.target.classList.contains('gt-input')) { return; }
         if (ev.key === 'f' || ev.key === 'F') { self.fit(); }
-        if (ev.key === 'Escape') { self.pinned = null; self._setReadout(null); }
+        if (ev.key === 'Escape') {
+            self.pinned = null;
+            self.selectedOptic = null;
+            self._setReadout(null);
+            self._showPanel('beam');
+            self._updateOverlay();
+        }
     });
 };
 
@@ -777,8 +985,15 @@ Viewer.prototype._endOpticDrag = function (moved) {
     var d = this.dragOptic;
     this.dragOptic = null;
     if (!d) { return; }
-    this._updateOpticOutline(this.hoverOptic);
-    if (!moved || !this.onEdit) { return; }
+    if (!moved) {
+        // A grab that went nowhere is a click: select it instead.
+        this.pinned = null;
+        this._selectOptic(d.optic);
+        return;
+    }
+    // Show the properties of whatever was just moved.
+    this._selectOptic(d.optic);
+    if (!this.onEdit) { return; }
 
     // 'center' is the middle of the substrate, which is the trait the
     // outline was built from, so the optics lands where it was dropped.
@@ -870,13 +1085,16 @@ Viewer.prototype._onHover = function (px, py) {
     this.cursor = pt;
 
     // An optics under the cursor takes precedence: it is what the next
-    // mousedown would grab, so say so before the user presses.
-    this.hoverOptic = this.onEdit ? this._pickOptic(pt[0], pt[1]) : null;
-    this.svg.classList.toggle('gt-over-optic', !!this.hoverOptic);
+    // mousedown would act on, so say so before the user presses.
+    this.hoverOptic = this._pickOptic(pt[0], pt[1]);
+    this.svg.classList.toggle('gt-over-optic',
+                              !!this.hoverOptic && !!this.onEdit);
+    this.svg.classList.toggle('gt-over-pickable',
+                              !!this.hoverOptic && !this.onEdit);
 
     var hit = this._pick(pt[0], pt[1], 12 / this.scale);
     this.hover = hit;
-    if (!this.pinned) { this._setReadout(hit); }
+    if (!this.pinned && this.panelKind !== 'optic') { this._setReadout(hit); }
     this._updateOverlay();
     this._updateStatus();
 };
@@ -894,12 +1112,30 @@ Viewer.prototype._updateOpticOutline = function (o, center, angle) {
     });
     this.outline.setAttribute('points', pts.join(' '));
     this.outline.classList.toggle('gt-dragging', !!this.dragOptic);
+    this.outline.classList.toggle(
+        'gt-selected',
+        !this.dragOptic && !this.hoverOptic && o.name === this.selectedOptic);
     this.outline.style.display = '';
 };
 
 Viewer.prototype._onClick = function (px, py) {
     var pt = this.screenToScene(px, py);
+
+    // Clicking an optics selects it and shows its properties. This works
+    // whether or not the viewer is editable: reading is always allowed.
+    var optic = this._pickOptic(pt[0], pt[1]);
+    if (optic) {
+        this.pinned = null;
+        this._selectOptic(optic);
+        return;
+    }
+
     var hits = this._pickAll(pt[0], pt[1], 12 / this.scale);
+    if (this.panelKind === 'optic') {
+        // Leaving the optics: back to the beam readout.
+        this.selectedOptic = null;
+        this._showPanel('beam');
+    }
     if (!hits.length) {
         this.pinned = null;
         this.cycle = 0;
@@ -959,7 +1195,9 @@ Viewer.prototype._updateOverlay = function () {
         this._updateOpticOutline(this.dragOptic.optic, this.dragOptic.center,
                                  this.dragOptic.angle);
     } else {
-        this._updateOpticOutline(this.hoverOptic);
+        // The selected optics stays outlined so that the panel and the
+        // drawing agree on what is being looked at.
+        this._updateOpticOutline(this.hoverOptic || this._selectedOptic());
     }
 
     var hit = this.pinned || this.hover;
@@ -1081,6 +1319,17 @@ Viewer.prototype.setScene = function (scene) {
     });
     this._renderScene();
     this._setReadout(null);
+
+    // A scene arriving after an edit describes the same optics, so keep
+    // the selection and show the values Python came back with.
+    if (this._selectedOptic()) {
+        this._refreshOpticPanel();
+        this._showPanel('optic');
+    } else if (this.panelKind === 'optic') {
+        this.selectedOptic = null;
+        this._showPanel('beam');
+    }
+
     this._applyTransform();
 };
 

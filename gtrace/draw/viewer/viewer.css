@@ -57,6 +57,7 @@
 
 .gt-svg.gt-dragging { cursor: grabbing; }
 .gt-svg.gt-over-optic { cursor: move; }
+.gt-svg.gt-over-pickable { cursor: pointer; }
 
 /* Geometry is drawn in scene units; keep strokes at a constant screen
    width so that lines do not become slabs when zooming in. */
@@ -104,6 +105,14 @@
     fill: rgba(245, 166, 35, 0.18);
     stroke: #b45309;
     stroke-width: 1.6;
+}
+
+/* The optics whose properties the panel is showing. */
+.gt-optic-outline.gt-selected {
+    fill: rgba(74, 127, 212, 0.10);
+    stroke: #2f5fa8;
+    stroke-width: 1.6;
+    stroke-dasharray: none;
 }
 
 /* Which way the selected beam travels. */
@@ -239,6 +248,60 @@
 }
 
 .gt-readout tr:nth-child(even) { background: #f6f7f9; }
+
+/* ---------------------------------------------------- optics properties */
+
+.gt-props { padding: 4px 6px 6px; }
+
+.gt-props table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.gt-props td {
+    padding: 2px 5px;
+    vertical-align: baseline;
+}
+
+.gt-props .gt-key {
+    width: 108px;
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.gt-props .gt-val { font-size: 13px; }
+
+.gt-props .gt-static {
+    display: block;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* Editable property. Values are full precision, so they are often long:
+   let the field scroll rather than widen the panel. */
+.gt-props .gt-input {
+    width: 100%;
+    padding: 2px 5px;
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #d8dce3;
+    border-radius: 3px;
+}
+
+.gt-props .gt-input:hover { border-color: #b6bdc8; }
+
+.gt-props .gt-input:focus {
+    outline: none;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.18);
+}
 
 /* --------------------------------------------------------------- layers */
 
