@@ -1,0 +1,31 @@
+# Read the Docs build configuration.
+#
+# Read the Docs has required this file since September 2023: a project
+# without one does not build at all, whatever its web interface settings
+# say. https://docs.readthedocs.io/en/stable/config-file/v2.html
+
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
+  apt_packages:
+    # nbsphinx shells out to pandoc to convert the markdown cells of
+    # docs/source/tutorial/gtrace-tutorial.ipynb.
+    - pandoc
+
+sphinx:
+  configuration: docs/source/conf.py
+  # The build is warning free locally. Treating warnings as errors here
+  # is what keeps it that way: a broken cross reference or a malformed
+  # docstring would otherwise be published without anything saying so.
+  fail_on_warning: true
+
+python:
+  install:
+    - requirements: docs/requirements.txt
+    # Install the checked out source, not the release on PyPI, so that
+    # the documentation describes the commit being built.
+    - method: pip
+      path: .

@@ -1,5 +1,9 @@
-gtrace
-sphinx-autoapi
+# Tooling needed to build the documentation. gtrace itself is installed
+# from the checked out source by .readthedocs.yaml; listing it here would
+# pull the last release from PyPI instead, and the docs would describe a
+# version other than the one being built.
+sphinx
 sphinx-rtd-theme
-ipykernel
+sphinx-autoapi
 nbsphinx
+ipykernel
