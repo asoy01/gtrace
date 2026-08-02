@@ -14,6 +14,11 @@ Manuals/Tutorial/.ipynb_checkpoints/gtrace-tutorial-checkpoint.ipynb
 .pixi/*
 !.pixi/config.toml
 
+# The pixi setup is a local development convenience, not part of the
+# package. gtrace itself declares its dependencies in setup.py.
+pixi.toml
+pixi.lock
+
 GUI_Development_Notes.md
 GUI_Development_PLan.md
 HANDOFF.md
