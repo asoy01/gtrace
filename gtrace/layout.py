@@ -99,18 +99,17 @@ class TraceRules(object):
     open_beam_length : float
         Drawn length of beams that do not hit anything.
         Defaults to 1.0.
-    per_optic_order : dict
-        A dictionary mapping an optics name to the internal
-        reflection order used for that optics, overriding the
-        global order. Defaults to {}.
+
+    Note that the order can be overridden for an individual element
+    through its max_stray_order attribute. That setting lives on the
+    optics rather than here, next to term_on_HR, because how deep an
+    element's ghosts are worth chasing is a property of the element.
     '''
 
-    def __init__(self, order=10, power_threshold=0.1, open_beam_length=1.0,
-                 per_optic_order=None):
+    def __init__(self, order=10, power_threshold=0.1, open_beam_length=1.0):
         self.order = order
         self.power_threshold = power_threshold
         self.open_beam_length = open_beam_length
-        self.per_optic_order = dict(per_optic_order) if per_optic_order else {}
 
     def to_dict(self):
         '''
@@ -118,9 +117,7 @@ class TraceRules(object):
         '''
         return {'order': int(self.order),
                 'power_threshold': float(self.power_threshold),
-                'open_beam_length': float(self.open_beam_length),
-                'per_optic_order': {str(k): int(v)
-                                    for k, v in self.per_optic_order.items()}}
+                'open_beam_length': float(self.open_beam_length)}
 
     @classmethod
     def from_dict(cls, d):
@@ -129,8 +126,7 @@ class TraceRules(object):
         '''
         return cls(order=d.get('order', 10),
                    power_threshold=d.get('power_threshold', 0.1),
-                   open_beam_length=d.get('open_beam_length', 1.0),
-                   per_optic_order=d.get('per_optic_order', None))
+                   open_beam_length=d.get('open_beam_length', 1.0))
 
 #}}}
 
@@ -146,12 +142,12 @@ EDITABLE_OPTIC_ATTRS = frozenset([
     'diameter', 'thickness', 'wedgeAngle',
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
-    'HRtransmissive', 'term_on_HR', 'term_on_HR_order',
+    'HRtransmissive', 'term_on_HR', 'term_on_HR_order', 'max_stray_order',
 ])
 
 #: Attributes of the tracing rules that a front end may change.
 EDITABLE_RULE_ATTRS = frozenset([
-    'order', 'power_threshold', 'open_beam_length', 'per_optic_order',
+    'order', 'power_threshold', 'open_beam_length',
 ])
 
 #: Constructor parameters a new optics may be given. These are the
@@ -161,7 +157,7 @@ CREATABLE_OPTIC_PARAMS = frozenset([
     'diameter', 'thickness', 'wedgeAngle',
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
-    'HRtransmissive', 'term_on_HR', 'curve_direction',
+    'HRtransmissive', 'term_on_HR', 'max_stray_order', 'curve_direction',
 ])
 
 #: Parameters a new optics copies from the optics already in the layout,
@@ -222,7 +218,9 @@ def optic_to_dict(m):
          'n': float(m.n),
          'HRtransmissive': bool(m.HRtransmissive),
          'term_on_HR': bool(m.term_on_HR),
-         'term_on_HR_order': int(m.term_on_HR_order)}
+         'term_on_HR_order': int(m.term_on_HR_order),
+         'max_stray_order': (None if m.max_stray_order is None
+                             else int(m.max_stray_order))}
     if isinstance(m, optcomp.CyMirror):
         d['curve_direction'] = str(m.curve_direction)
     return d
@@ -246,7 +244,8 @@ def optic_from_dict(d):
               'n': d['n'],
               'name': d['name'],
               'HRtransmissive': d.get('HRtransmissive', False),
-              'term_on_HR': d.get('term_on_HR', False)}
+              'term_on_HR': d.get('term_on_HR', False),
+              'max_stray_order': d.get('max_stray_order', None)}
     if d['type'] == 'CyMirror':
         m = optcomp.CyMirror(curve_direction=d.get('curve_direction', 'h'),
                              **kwargs)
@@ -416,8 +415,7 @@ class OpticalLayout(object):
             beams = non_seq_trace(self.optics, src.copy(),
                                   order=self.rules.order,
                                   power_threshold=self.rules.power_threshold,
-                                  open_beam_length=self.rules.open_beam_length,
-                                  per_optic_order=self.rules.per_optic_order)
+                                  open_beam_length=self.rules.open_beam_length)
             self.beams_by_source[src.name] = beams
             self.beams.extend(beams)
         return self.beams
@@ -436,6 +434,7 @@ class OpticalLayout(object):
             {'op': 'move',   'target': 'M1', 'HRcenter': [0.52, 0.0]}
             {'op': 'rotate', 'target': 'M1', 'normAngleHR': 2.3}
             {'op': 'set',    'target': 'M1', 'attrs': {'diameter': 0.15}}
+            {'op': 'rename', 'target': 'M1', 'name': 'PRM'}
             {'op': 'add',    'type': 'Mirror', 'name': 'M4',
                              'params': {'HRcenter': [0.3, 0.2]}}
             {'op': 'remove', 'target': 'M4'}
@@ -465,6 +464,9 @@ class OpticalLayout(object):
                             % type(msg).__name__)
 
         op = msg.get('op')
+        # 'name' is deliberately not in EDITABLE_OPTIC_ATTRS: renaming
+        # changes the identity the layout resolves edits by, so it has
+        # its own operation with a uniqueness check.
         if op in ('move', 'rotate', 'set'):
             name = msg.get('target')
             try:
@@ -489,6 +491,23 @@ class OpticalLayout(object):
                     raise EditError('%r is not an editable attribute of an '
                                     'optics.' % (key,))
                 setattr(optics, key, value)
+
+        elif op == 'rename':
+            old = msg.get('target')
+            new = msg.get('name')
+            try:
+                optics = self.get_optics(old)
+            except KeyError:
+                raise EditError("No optics named %r in the layout." % (old,))
+            if not isinstance(new, str) or not new.strip():
+                raise EditError('An optics name must be a non-empty string, '
+                                'not %r.' % (new,))
+            if new != old and any(o.name == new for o in self.optics):
+                raise EditError("An optics named '%s' is already registered."
+                                % new)
+            # Nothing else is keyed by the name: the per-optics tracing
+            # settings live on the optics itself, so they travel with it.
+            optics.name = new
 
         elif op == 'add':
             optics = self._optics_from_message(msg)

@@ -238,6 +238,9 @@ def optic_to_dict(o):
             d[k] = float(getattr(o, k))
     if hasattr(o, 'curve_direction'):
         d['curve_direction'] = str(o.curve_direction)
+    if hasattr(o, 'max_stray_order'):
+        d['max_stray_order'] = (None if o.max_stray_order is None
+                                else int(o.max_stray_order))
     return d
 
 def optics_to_dict(opticsList):

@@ -302,6 +302,12 @@
 
 .gt-props .gt-input:hover { border-color: #b6bdc8; }
 
+/* A name is not a number: left-aligned, and not tabular. */
+.gt-props .gt-input-text {
+    text-align: left;
+    font-variant-numeric: normal;
+}
+
 .gt-props .gt-input:focus {
     outline: none;
     border-color: #4a7fd4;

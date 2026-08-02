@@ -47,8 +47,8 @@ __status__ = "Beta"
 
 #{{{ non_seq_trace
 
-def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_length=1.0,
-                  per_optic_order=None):
+def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1,
+                  open_beam_length=1.0):
     '''
     Perform non-sequential trace of the source beam, src_beam,
     through the optical system represented by a collection of optics,
@@ -62,7 +62,9 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
         The source beam object.
     order: int, optional
         An integer to specify how many times the internal reflections
-        are computed.
+        are computed. An optics whose max_stray_order is set overrides
+        this for itself, since how deep its ghosts are worth chasing is
+        a property of the element rather than of the trace.
         Defaults to 10.
     power_threshold: float, optional
         The power threshold for internal reflection calculation.
@@ -72,11 +74,6 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
     open_beam_length: float, optional
         The default length for beams that are not hitting anything.
         Defaults to 1.0.
-    per_optic_order: dict or None, optional
-        A dictionary mapping an optics name to the internal reflection
-        order used for that optics. Optics not in the dictionary use
-        the global order given by the order argument.
-        Defaults to None.
 
     Returns
     -------
@@ -117,9 +114,9 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
         src_beam.length = final_answer['distance']
         return [src_beam]
 
-    if per_optic_order is not None and hit_optics.name in per_optic_order:
-        hit_order = per_optic_order[hit_optics.name]
-    else:
+    #An optics may cap the stray order it is worth computing for itself.
+    hit_order = getattr(hit_optics, 'max_stray_order', None)
+    if hit_order is None:
         hit_order = order
 
     ans = hit_optics.hit(src_beam, order=hit_order, threshold=power_threshold,
@@ -134,8 +131,7 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1, open_beam_le
         b.stray_order = 0
         beams = non_seq_trace(optList=optList, src_beam=b.copy(), order=order,
                               power_threshold=power_threshold,
-                              open_beam_length=open_beam_length,
-                              per_optic_order=per_optic_order)
+                              open_beam_length=open_beam_length)
         terminated_beam_list.extend(beams)
 
     return terminated_beam_list

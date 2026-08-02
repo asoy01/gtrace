@@ -53,6 +53,10 @@ function render({ model, el }) {
         const msg = model.get('error');
         banner.textContent = msg;
         banner.style.display = msg ? '' : 'none';
+        // A refused edit sends no new scene, so anything the viewer
+        // assumed about it - a rename it followed ahead of Python -
+        // has to be put back.
+        if (msg) { viewer.revertSelection(); }
     };
 
     model.on('change:scene', onScene);

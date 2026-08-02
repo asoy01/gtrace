@@ -425,7 +425,7 @@ Viewer.prototype._buildReadout = function () {
  */
 var OPTIC_FIELDS = [
     {key: 'name', label: 'Name', text: true},
-    {key: 'type', label: 'Type', text: true},
+    {key: 'type', label: 'Type', readonly: true},
     {key: 'cx', label: 'Center x', unit: 'm'},
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
@@ -438,7 +438,8 @@ var OPTIC_FIELDS = [
     {key: 'Refl_HR', label: 'Refl HR'},
     {key: 'Trans_HR', label: 'Trans HR'},
     {key: 'Refl_AR', label: 'Refl AR'},
-    {key: 'Trans_AR', label: 'Trans AR'}
+    {key: 'Trans_AR', label: 'Trans AR'},
+    {key: 'max_stray_order', label: 'Max stray order', nullable: true}
 ];
 
 var DEG = 180 / Math.PI;
@@ -452,6 +453,10 @@ function opticFieldValue(o, key) {
     case 'wedgeAngle': return (o.wedgeAngle || 0) * DEG;
     case 'rocHR': return o.inv_ROC_HR ? 1 / o.inv_ROC_HR : Infinity;
     case 'rocAR': return o.inv_ROC_AR ? 1 / o.inv_ROC_AR : Infinity;
+    case 'max_stray_order':
+        // An optics that does not carry the setting reads as unset,
+        // which is the same thing as far as the panel is concerned.
+        return o.max_stray_order === undefined ? null : o.max_stray_order;
     default: return o[key];
     }
 }
@@ -491,17 +496,23 @@ function opticFieldMessage(o, key, value) {
  * is read back is exactly what the model holds.
  */
 function fmtField(v) {
-    if (v === null || v === undefined) { return ''; }
+    // A field that may be unset shows 'auto', meaning the layout-wide
+    // value applies. Empty would read as "nothing here".
+    if (v === null || v === undefined) { return 'auto'; }
     if (typeof v !== 'number') { return String(v); }
     if (!isFinite(v)) { return v > 0 ? 'inf' : '-inf'; }
     return String(v);
 }
 
+/*
+ * Parse a field. Returns NaN for anything unusable, and null for the
+ * spellings that mean "leave it to the layout".
+ */
 function parseField(s) {
     var t = String(s).trim().toLowerCase();
     if (t === 'inf' || t === 'infinity' || t === '∞') { return Infinity; }
     if (t === '-inf' || t === '-infinity' || t === '-∞') { return -Infinity; }
-    if (t === '') { return NaN; }
+    if (t === '' || t === 'auto' || t === 'none' || t === '-') { return null; }
     var v = Number(t);
     return isNaN(v) ? NaN : v;
 }
@@ -517,15 +528,16 @@ Viewer.prototype._buildOpticPanel = function () {
                               f.label + (f.unit ? ' [' + f.unit + ']' : '')));
         var td = htmlEl('td', 'gt-val');
 
-        if (f.text || !self.onEdit) {
-            // Nothing to edit: either an identifier, or a viewer with
-            // no Python behind it.
+        if (f.readonly || !self.onEdit) {
+            // Nothing to edit: either the class of the element, or a
+            // viewer with no Python behind it.
             var span = htmlEl('span', 'gt-static', '-');
             td.appendChild(span);
             self.opticFields[f.key] = {el: span, editable: false};
         } else {
             var input = htmlEl('input', 'gt-input');
             input.type = 'text';
+            if (f.text) { input.className += ' gt-input-text'; }
             input.spellcheck = false;
             input.addEventListener('change', function () {
                 self._commitOpticField(f.key, input);
@@ -645,14 +657,64 @@ Viewer.prototype._selectOptic = function (optic) {
 Viewer.prototype._commitOpticField = function (key, input) {
     var o = this._selectedOptic();
     if (!o || !this.onEdit) { return; }
+
+    if (key === 'name') {
+        this.renameSelected(input.value);
+        return;
+    }
+
+    var field = null;
+    for (var i = 0; i < OPTIC_FIELDS.length; i++) {
+        if (OPTIC_FIELDS[i].key === key) { field = OPTIC_FIELDS[i]; }
+    }
+
     var value = parseField(input.value);
-    if (isNaN(value)) {
-        // Not a number: put back what the model actually holds.
+    var unusable = (typeof value === 'number' && isNaN(value))
+        || (value === null && !(field && field.nullable));
+    if (unusable) {
+        // Not a usable value: put back what the model actually holds.
         this._refreshOpticPanel();
         return;
     }
     if (value === opticFieldValue(o, key)) { return; }
     this.onEdit(opticFieldMessage(o, key, value));
+};
+
+/*
+ * Rename the selected optics.
+ *
+ * The name is the identity the layout resolves edits by, so this is its
+ * own operation rather than one more property to set. Python decides
+ * whether the new name is free; the viewer follows it optimistically so
+ * that the next edit addresses the right element, and revertSelection()
+ * puts it back if the rename was refused.
+ */
+Viewer.prototype.renameSelected = function (name) {
+    var o = this._selectedOptic();
+    if (!o || !this.onEdit) { return null; }
+    name = String(name).trim();
+    if (!name || name === o.name) {
+        this._refreshOpticPanel();
+        return null;
+    }
+    var msg = {op: 'rename', target: o.name, name: name};
+    this.selectionFallback = o.name;
+    this.selectedOptic = name;
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Undo an optimistic selection change after Python refused the edit.
+ */
+Viewer.prototype.revertSelection = function () {
+    if (this.selectionFallback && !this._selectedOptic()) {
+        this.selectedOptic = this.selectionFallback;
+        this._showPanel('optic');
+    }
+    this.selectionFallback = null;
+    this._refreshOpticPanel();
+    this._updateOverlay();
 };
 
 //}}}
@@ -1379,7 +1441,9 @@ Viewer.prototype.setScene = function (scene) {
     this._setReadout(null);
 
     // A scene arriving after an edit describes the same optics, so keep
-    // the selection and show the values Python came back with.
+    // the selection and show the values Python came back with. Getting
+    // one means the edit went through, so any optimistic rename stands.
+    this.selectionFallback = null;
     if (this._selectedOptic()) {
         this._refreshOpticPanel();
         this._showPanel('optic');
