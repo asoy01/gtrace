@@ -149,7 +149,40 @@ EDITABLE_OPTIC_ATTRS = frozenset([
 #: Values an attribute is restricted to. A whitelist of names keeps a
 #: front end from reaching attributes it should not; this keeps it from
 #: putting nonsense into the ones it may.
-ATTR_CHOICES = {'curve_direction': ('h', 'v')}
+ATTR_CHOICES = {'curve_direction': ('h', 'v'),
+                'width_mode': ('x', 'y', 'avg')}
+
+#: How a layout is drawn, and what each option defaults to. These are
+#: display choices, not part of the model: changing one redraws but does
+#: not re-trace.
+DRAW_OPTIONS = {
+    #: Font size of the annotations, or False for the gtrace default.
+    'fontSize': False,
+    #: Whether to draw the width envelope of the main / stray beams.
+    'drawMainWidth': True,
+    'drawStrayWidth': True,
+    #: Width of the drawn envelope, in units of the 1/e^2 radius.
+    #: 2.7 is the aperture at which the diffraction loss is 1 ppm.
+    'sigma_main': 2.7,
+    'sigma_stray': 2.7,
+    #: Which transverse direction the envelope shows: 'x', 'y', or
+    #: 'avg' for the mean of the two. A beam is not round in general,
+    #: so this is a choice the drawing cannot make for the user.
+    'width_mode': 'x',
+    #: Whether to annotate each beam with its name and power. Off by
+    #: default: the labels of neighbouring beams overlap badly, and the
+    #: viewer reports the same values for whichever beam is clicked.
+    'drawBeamLabels': False,
+    #: Whether to annotate each optics with its name. On, since optics
+    #: carry no other label.
+    'drawOpticsNames': True,
+}
+
+#: Drawing options a front end may change.
+EDITABLE_DRAW_OPTIONS = frozenset([
+    'sigma_main', 'sigma_stray', 'width_mode',
+    'drawMainWidth', 'drawStrayWidth', 'drawBeamLabels', 'drawOpticsNames',
+])
 
 #: Attributes of the tracing rules that a front end may change.
 EDITABLE_RULE_ATTRS = frozenset([
@@ -334,6 +367,9 @@ class OpticalLayout(object):
         self.optics = []
         self.sources = []
         self.rules = rules if rules is not None else TraceRules()
+        #: Overrides for DRAW_OPTIONS, as chosen by a front end. Display
+        #: settings, so changing one redraws but does not re-trace.
+        self.draw_options = {}
         self.beams = None
         self.beams_by_source = None
 
@@ -449,6 +485,8 @@ class OpticalLayout(object):
             {'op': 'move',   'target': 'M1', 'HRcenter': [0.52, 0.0]}
             {'op': 'rotate', 'target': 'M1', 'normAngleHR': 2.3}
             {'op': 'set',    'target': 'M1', 'attrs': {'diameter': 0.15}}
+            {'op': 'draw',   'params': {'sigma_main': 1.0,
+                                        'width_mode': 'y'}}
             {'op': 'rename', 'target': 'M1', 'name': 'PRM'}
             {'op': 'add',    'type': 'Mirror', 'name': 'M4',
                              'params': {'HRcenter': [0.3, 0.2]}}
@@ -546,6 +584,17 @@ class OpticalLayout(object):
                                     % (key,))
                 setattr(self.rules, key, value)
 
+        elif op == 'draw':
+            for key, value in (msg.get('params') or {}).items():
+                if key not in EDITABLE_DRAW_OPTIONS:
+                    raise EditError('%r is not an editable drawing option.'
+                                    % (key,))
+                _check_choice(key, value)
+                self.draw_options[key] = value
+            # A drawing option changes the picture, not the physics, so
+            # the trace stands and is deliberately not invalidated.
+            return self
+
         else:
             raise EditError('Unknown edit operation %r.' % (op,))
 
@@ -604,9 +653,7 @@ class OpticalLayout(object):
 
 #{{{ draw
 
-    def draw(self, canvas=None, fontSize=False, drawMainWidth=True,
-             drawStrayWidth=True, sigma_main=2.7, sigma_stray=2.7,
-             drawBeamLabels=False, drawOpticsNames=True):
+    def draw(self, canvas=None, **options):
         '''
         Draw the optics and the result of the last trace into a canvas.
 
@@ -616,37 +663,19 @@ class OpticalLayout(object):
         ----------
         canvas : draw.Canvas or None, optional
             The canvas to draw into. If None, a new canvas is created.
-        fontSize : float or False, optional
-            Font size for the annotations.
-        drawMainWidth : bool, optional
-            Whether to draw the width envelope of the main beams.
-            Defaults to True.
-        drawStrayWidth : bool, optional
-            Whether to draw the width envelope of the stray beams.
-            Defaults to True. Set it to False to reproduce what
-            drawOptSys draws, which leaves the 'stray_beam_width' layer
-            empty.
-        sigma_main : float, optional
-            Width of the drawn envelope of main beams, in units of the
-            1/e^2 radius of the beam. Defaults to 2.7, the aperture at
-            which the diffraction loss is 1 ppm.
-        sigma_stray : float, optional
-            Same for stray beams. Defaults to 2.7 as well, so that every
-            envelope in the drawing means the same thing.
-        drawBeamLabels : bool, optional
-            Whether to annotate each beam with its name and power.
-            Defaults to False: the labels of neighbouring beams overlap
-            badly, and the viewer reports the same values (and more) for
-            whichever beam is clicked. Set it to True for a DXF export,
-            where there is nothing to click.
-        drawOpticsNames : bool, optional
-            Whether to annotate each optics with its name. Defaults to
-            True: unlike beams, optics are not clickable.
+        **options
+            Any of the keys of DRAW_OPTIONS, which documents what each
+            one does and what it defaults to. Options not given here
+            fall back to self.draw_options, then to those defaults, so
+            a front end can change how the layout is drawn without
+            every caller having to pass the choice along.
 
         Returns
         -------
         canvas : draw.Canvas
         '''
+        opt = self.resolve_draw_options(**options)
+
         if self.beams is None:
             self.trace()
 
@@ -662,20 +691,44 @@ class OpticalLayout(object):
         for b in self.beams:
             if b.stray_order > 0:
                 b.layer = 'stray_beam'
-                sigma = sigma_stray
-                drawWidth = drawStrayWidth
+                sigma = opt['sigma_stray']
+                drawWidth = opt['drawStrayWidth']
             else:
                 b.layer = 'main_beam'
-                sigma = sigma_main
-                drawWidth = drawMainWidth
+                sigma = opt['sigma_main']
+                drawWidth = opt['drawMainWidth']
 
-            b.draw(canvas, sigma=sigma, drawWidth=drawWidth,
-                   drawPower=drawBeamLabels, drawName=drawBeamLabels,
-                   fontSize=fontSize)
+            b.draw(canvas, sigma=sigma, mode=opt['width_mode'],
+                   drawWidth=drawWidth,
+                   drawPower=opt['drawBeamLabels'],
+                   drawName=opt['drawBeamLabels'],
+                   fontSize=opt['fontSize'])
 
-        drawAllOptics(canvas, self.optics, drawName=drawOpticsNames)
+        drawAllOptics(canvas, self.optics, drawName=opt['drawOpticsNames'])
 
         return canvas
+
+    def resolve_draw_options(self, **options):
+        '''
+        The drawing options in force: the defaults, overridden by
+        self.draw_options, overridden by the arguments given here.
+
+        Raises
+        ------
+        TypeError
+            If an option is not one of DRAW_OPTIONS. Accepting a
+            misspelt key silently would mean the setting is ignored
+            without anything saying so.
+        '''
+        for key in list(options) + list(self.draw_options):
+            if key not in DRAW_OPTIONS:
+                raise TypeError('Unknown drawing option %r. Known options '
+                                'are %s.'
+                                % (key, ', '.join(sorted(DRAW_OPTIONS))))
+        resolved = dict(DRAW_OPTIONS)
+        resolved.update(self.draw_options)
+        resolved.update(options)
+        return resolved
 
 #}}}
 
@@ -694,7 +747,8 @@ class OpticalLayout(object):
             Passed to draw().
         '''
         canvas = self.draw(**kwargs)
-        return scene_to_dict(canvas, self.beams, self.optics)
+        return scene_to_dict(canvas, self.beams, self.optics,
+                             display=self.resolve_draw_options(**kwargs))
 
 #}}}
 

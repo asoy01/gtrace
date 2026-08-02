@@ -258,6 +258,7 @@ function Viewer(container, scene, options) {
     VIEWERS.push(this);
     this._build();
     this._renderScene();
+    this._refreshDisplayPanel();
     this._bindEvents();
     this.fit();
 }
@@ -318,6 +319,37 @@ Viewer.prototype._build = function () {
     this._buildReadout();
     this._buildOpticPanel();
     this._showPanel('beam');
+
+    // Display panel. These change how Python draws the scene, so they
+    // exist only when there is a Python to ask.
+    if (this.onEdit) {
+        var dpanel = htmlEl('div', 'gt-panel');
+        dpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Beam width'));
+        var dbody = htmlEl('div', 'gt-display');
+        this.displayControls = {};
+        [{key: 'sigma', label: 'Envelope',
+          options: [['1', '1σ'], ['2.7', '2.7σ  (1 ppm)'], ['3', '3σ']]},
+         {key: 'width_mode', label: 'Direction',
+          options: [['x', 'x'], ['y', 'y'], ['avg', 'average']]}
+        ].forEach(function (spec) {
+            var row = htmlEl('label', 'gt-displayrow');
+            row.appendChild(htmlEl('span', 'gt-key', spec.label));
+            var sel = htmlEl('select', 'gt-select');
+            spec.options.forEach(function (o) {
+                var opt = htmlEl('option', null, o[1]);
+                opt.value = o[0];
+                sel.appendChild(opt);
+            });
+            sel.addEventListener('change', function () {
+                self._commitDisplay(spec.key, sel.value);
+            });
+            row.appendChild(sel);
+            dbody.appendChild(row);
+            self.displayControls[spec.key] = sel;
+        });
+        dpanel.appendChild(dbody);
+        side.appendChild(dpanel);
+    }
 
     // layer panel
     var lpanel = htmlEl('div', 'gt-panel');
@@ -641,6 +673,41 @@ Viewer.prototype.removeSelected = function () {
     this._showPanel('beam');
     this.onEdit(msg);
     return msg;
+};
+
+/*
+ * The display controls, unlike everything else in the side bar, do not
+ * describe the scene: they ask Python to draw it differently. One
+ * envelope width is offered for both beam kinds - two would suggest the
+ * two envelopes mean different things, which is exactly what we spent
+ * an earlier change getting rid of.
+ */
+Viewer.prototype._commitDisplay = function (key, value) {
+    if (!this.onEdit) { return null; }
+    var params = {};
+    if (key === 'sigma') {
+        params.sigma_main = Number(value);
+        params.sigma_stray = Number(value);
+    } else {
+        params[key] = value;
+    }
+    var msg = {op: 'draw', params: params};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Put the controls where the scene says the drawing actually stands.
+ */
+Viewer.prototype._refreshDisplayPanel = function () {
+    if (!this.displayControls) { return; }
+    var d = this.scene.display || {};
+    if (d.sigma_main !== undefined) {
+        this.displayControls.sigma.value = String(d.sigma_main);
+    }
+    if (d.width_mode !== undefined) {
+        this.displayControls.width_mode.value = d.width_mode;
+    }
 };
 
 /*
@@ -1502,6 +1569,7 @@ Viewer.prototype.setScene = function (scene) {
         return !visible[k];
     });
     this._renderScene();
+    this._refreshDisplayPanel();
     this._setReadout(null);
 
     // A scene arriving after an edit describes the same optics, so keep

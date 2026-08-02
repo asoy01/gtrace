@@ -262,22 +262,27 @@ def optics_to_dict(opticsList):
 
 #{{{ scene_to_dict
 
-def scene_to_dict(canvas, beamList=None, opticsList=None):
+def scene_to_dict(canvas, beamList=None, opticsList=None, display=None):
     '''
     Convert a canvas, an optional list of beams and an optional list of
     optics into a single JSON-compatible dict:
 
     {'canvas': canvas dict,
      'beams': [beam dict, ...],
-     'optics': [optic dict, ...]}
+     'optics': [optic dict, ...],
+     'display': {...}}
 
     This is the top-level data structure consumed by the HTML/JS
     viewer. The 'optics' entry is what an editing front end addresses
-    when the user drags an element.
+    when the user drags an element. 'display' tells the front end how
+    the canvas was drawn - the envelope width and which transverse
+    direction it shows - so that its controls can show the choice in
+    force rather than guessing.
     '''
     return {'canvas': canvas_to_dict(canvas),
             'beams': beams_to_dict(beamList) if beamList is not None else [],
             'optics': (optics_to_dict(opticsList)
-                       if opticsList is not None else [])}
+                       if opticsList is not None else []),
+            'display': dict(display) if display else {}}
 
 #}}}
