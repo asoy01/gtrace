@@ -722,9 +722,12 @@ class OpticalLayout(object):
         -------
         filename : str
         '''
-        canvas = self.draw(**kwargs)
-        return renderHTML(canvas, self.beams, filename,
-                          title=title if title is not None else self.name)
+        # Go through scene_dict so that the file gets exactly what the
+        # widget gets - optics channel included, or clicking an element
+        # in the static page would find nothing to show.
+        return renderHTML(None, None, filename,
+                          title=title if title is not None else self.name,
+                          scene=self.scene_dict(**kwargs))
 
     def widget(self, title=None, height=520, editable=True, **kwargs):
         '''

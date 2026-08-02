@@ -125,7 +125,7 @@ def _js_literal(obj):
 #{{{ renderHTML
 
 def renderHTML(canvas, beams=None, filename='gtrace.html', title=None,
-               scene=None):
+               optics=None, scene=None):
     '''
     Render a canvas and the corresponding beams into a self-contained
     HTML file.
@@ -147,10 +147,15 @@ def renderHTML(canvas, beams=None, filename='gtrace.html', title=None,
     title : str or None, optional
         Title shown in the browser tab and in the viewer side bar.
         Defaults to the base name of filename.
+    optics : list of Optics or None, optional
+        The optics of the system. Without them the viewer draws the
+        elements but cannot say which is which, so clicking one shows
+        nothing. Pass them to get the properties panel.
     scene : dict or None, optional
         A scene dict as returned by serialize.scene_to_dict(). If given,
-        it is used directly and canvas / beams are ignored. This is the
-        entry point for callers that already hold a serialized scene.
+        it is used directly and canvas / beams / optics are ignored.
+        This is the entry point for callers that already hold a
+        serialized scene.
 
     Returns
     -------
@@ -158,7 +163,7 @@ def renderHTML(canvas, beams=None, filename='gtrace.html', title=None,
         The name of the file that was written.
     '''
     if scene is None:
-        scene = scene_to_dict(canvas, beams)
+        scene = scene_to_dict(canvas, beams, optics)
 
     if title is None:
         title = os.path.splitext(os.path.basename(filename))[0]
@@ -181,20 +186,21 @@ def renderHTML(canvas, beams=None, filename='gtrace.html', title=None,
 
 #{{{ html_render_func
 
-def html_render_func(beams=None, **kwargs):
+def html_render_func(beams=None, optics=None, **kwargs):
     '''
     Return a render_func(canvas, filename) suitable for
     gtrace.draw.tools.drawOptSys, producing HTML instead of DXF.
 
         drawOptSys(optList, beamList, 'trace.html',
-                   render_func=html_render_func(beamList))
+                   render_func=html_render_func(beamList, optList))
 
-    The beams have to be passed explicitly because drawOptSys only hands
-    the canvas to its renderer, while the HTML viewer also needs the
-    physical parameters of the beams.
+    The beams and the optics have to be passed explicitly because
+    drawOptSys only hands the canvas to its renderer, while the viewer
+    also needs the physical parameters of the beams and the identity of
+    the elements.
     '''
     def _render(canvas, filename):
-        return renderHTML(canvas, beams, filename, **kwargs)
+        return renderHTML(canvas, beams, filename, optics=optics, **kwargs)
     return _render
 
 #}}}
