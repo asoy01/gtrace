@@ -164,7 +164,10 @@ def _build_class():
             self._edit_log = []
             if layout is None:
                 self.editable = False
-            self.on_msg(self._handle_custom_msg)
+            # Note the name: Widget._handle_custom_msg(content, buffers)
+            # is ipywidgets' own dispatcher, and overriding it with a
+            # callback signature breaks every custom message.
+            self.on_msg(self._on_edit_msg)
 
         def update(self, **kwargs):
             '''
@@ -229,8 +232,12 @@ def _build_class():
             self.scene = self._layout.scene_dict(**self._draw_kwargs)
             return True
 
-        def _handle_custom_msg(self, widget, content, buffers):
-            # ipywidgets also routes its own housekeeping messages here.
+        def _on_edit_msg(self, widget, content, buffers):
+            '''
+            Callback registered with on_msg. ipywidgets calls it as
+            (widget, content, buffers) for every custom message the
+            front end sends, so ignore anything that is not an edit.
+            '''
             if isinstance(content, dict) and 'op' in content:
                 self.apply_edit(content)
 
