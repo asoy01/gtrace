@@ -23,7 +23,7 @@ author = 'Yoichi Aso'
 
 # The full version, including alpha/beta/rc tags. Keep in step with
 # setup.py and gtrace.__version__.
-release = '0.2.4'
+release = '0.3.0'
 
 
 # -- General configuration ---------------------------------------------------
