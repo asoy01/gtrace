@@ -43,13 +43,13 @@ def line_plane_intersection(pos,
 
     Parameters
     ----------
-    pos : array
+    pos : numpy.ndarray
         The position of the end point of the line.
-    dirVert : array
+    dirVert : numpy.ndarray
         The directional vector specifying the line.
-    plane_center : array
+    plane_center : numpy.ndarray
         The position of the center of the plane.
-    normalVector: array
+    normalVector: numpy.ndarray
         The normal vector of the plane.
     diameter: float
         The diameter of the plane.
@@ -123,13 +123,13 @@ def line_arc_intersection(pos,
 
     Parameters
     ----------
-    pos : array
+    pos : numpy.ndarray
         Origin of the line.
-    dirVect : array
+    dirVect : numpy.ndarray
         Direction of the line.
-    chord_center : array
+    chord_center : numpy.ndarray
         The center of the chord made by the arc.
-    chordNormVect : array
+    chordNormVect : numpy.ndarray
         Normal vector of the chord.
     invROC : float
         Inverse of the ROC of the arc. Positive for concave surface.
@@ -255,14 +255,14 @@ def vector_rotation_2D(vect, angle):
 
     Parameters
     ----------
-    vect : array
+    vect : numpy.ndarray
         A 2D vector.
     angle : float
         Angle of rotation in radians.
 
     Returns
     -------
-    array
+    numpy.ndarray
         The rotated vector.
     """
     vect = np.array(vect)
@@ -280,12 +280,12 @@ def vector_normalize(vect):
 
     Parameters
     ----------
-    vect : array
+    vect : numpy.ndarray
         The vector to be normalized
 
     Returns
     -------
-    array
+    numpy.ndarray
         The normalized vector.
     '''
 

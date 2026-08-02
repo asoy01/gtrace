@@ -141,13 +141,13 @@ def canvas_to_dict(canvas):
     '''
     Convert a draw.Canvas into a JSON-compatible dict.
 
-    The structure of the returned dict is:
+    The structure of the returned dict is::
 
-    {'unit': 'm',
-     'layers': [{'name': str,
-                 'color': [r, g, b],
-                 'shapes': [shape dict, ...]},
-                ...]}
+        {'unit': 'm',
+         'layers': [{'name': str,
+                     'color': [r, g, b],
+                     'shapes': [shape dict, ...]},
+                    ...]}
 
     Coordinates are kept in the unit of the canvas (no scaling
     is applied, unlike renderDXF which converts to mm).

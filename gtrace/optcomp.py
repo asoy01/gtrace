@@ -167,9 +167,9 @@ class Optics(HasTraits):
             ``beamDict``
             A dictionary containing resultant beams.
 
-            ``face``:
-              An optional string identifying which face of the optics was hit.
-              For a mirror, ``face`` is any of "HR", "AR" or "side".
+            ``face``
+            An optional string identifying which face of the optics was hit.
+            For a mirror, ``face`` is any of "HR", "AR" or "side".
         '''
         #This is an abstract function
         return {False, {}, "side"}  # Is this a bug? Shouldn't it be a tuple?
@@ -195,8 +195,8 @@ class Optics(HasTraits):
             "isHit": A boolean value whether the beam hit the surface or not.
             "Intersection Point": numpy array of the coordinates of the intersection point.
             "distance": Distance between the origin of the beam and the intersection point.
-            "localNormVect": A numpy array representing the normal vector of the surface
-                                        at the intersection point.
+            "localNormVect": A numpy array representing the normal vector
+            of the surface at the intersection point.
             "localNormAngle": The angle of the localNormVect.
         '''
         if np.abs(inv_ROC) < 1e-5:
@@ -691,9 +691,9 @@ class Mirror(Optics):
             ``beamDict``
             A dictionary containing resultant beams.
 
-            ``face``:
-              An optional string identifying which face of the optics was hit.
-              For a mirror, ``face`` is any of "HR", "AR" or "side".
+            ``face``
+            An optional string identifying which face of the optics was hit.
+            For a mirror, ``face`` is any of "HR", "AR" or "side".
         '''
 
         #If an optional argument ``face`` is specified

@@ -539,7 +539,7 @@ class OpticalLayout(object):
         Apply an edit message coming from a front end.
 
         The message is a plain dict, so the same protocol travels over
-        the notebook widget's comm and, later, over a websocket:
+        the notebook widget's comm and, later, over a websocket::
 
             {'op': 'move',   'target': 'M1', 'HRcenter': [0.52, 0.0]}
             {'op': 'rotate', 'target': 'M1', 'normAngleHR': 2.3}
