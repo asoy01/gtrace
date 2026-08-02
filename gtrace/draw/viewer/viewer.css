@@ -302,6 +302,10 @@
     cursor: pointer;
 }
 
+/* A property with a fixed set of values fills its cell, unlike the
+   display selects which sit next to a label. */
+.gt-props .gt-select-prop { width: 100%; max-width: none; }
+
 .gt-props .gt-static {
     display: block;
     text-align: right;

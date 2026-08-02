@@ -496,9 +496,10 @@ var OPTIC_FIELDS = [
     {key: 'HRtransmissive', label: 'HR transmissive', bool: true},
     {key: 'term_on_HR', label: 'Terminate on HR', bool: true},
     {key: 'term_on_HR_order', label: 'Term. on HR order'},
-    // Only a CyMirror has this; the row hides itself otherwise.
-    {key: 'curve_direction', label: 'Curve direction', text: true,
-     optional: true}
+    // Only a CyMirror has this; the row hides itself otherwise. Two
+    // values exist, so it is a choice rather than something to type.
+    {key: 'curve_direction', label: 'Curve direction', optional: true,
+     choices: [['h', 'horizontal'], ['v', 'vertical']]}
 ];
 
 var DEG = 180 / Math.PI;
@@ -615,6 +616,20 @@ Viewer.prototype._buildOpticPanel = function () {
             rec.el = box;
             rec.editable = true;
             rec.kind = 'bool';
+        } else if (f.choices) {
+            var sel = htmlEl('select', 'gt-select gt-select-prop');
+            f.choices.forEach(function (c) {
+                var opt = htmlEl('option', null, c[1]);
+                opt.value = c[0];
+                sel.appendChild(opt);
+            });
+            sel.addEventListener('change', function () {
+                self._commitOpticField(f.key, sel);
+            });
+            td.appendChild(sel);
+            rec.el = sel;
+            rec.editable = true;
+            rec.kind = 'choice';
         } else {
             var input = htmlEl('input', 'gt-input');
             input.type = 'text';
@@ -781,6 +796,8 @@ Viewer.prototype._refreshOpticPanel = function () {
         if (f.kind === 'bool') {
             if (f.editable) { f.el.checked = !!v; }
             else { f.el.textContent = o ? (v ? 'yes' : 'no') : '-'; }
+        } else if (f.kind === 'choice') {
+            f.el.value = v === undefined || v === null ? '' : String(v);
         } else if (f.editable) {
             f.el.value = o ? fmtField(v) : '';
         } else {
@@ -820,7 +837,7 @@ Viewer.prototype._commitOpticField = function (key, input) {
         return;
     }
 
-    if (field && field.text) {
+    if (field && (field.text || field.choices)) {
         var text = String(input.value).trim();
         if (!text || text === opticFieldValue(o, key)) {
             this._refreshOpticPanel();
