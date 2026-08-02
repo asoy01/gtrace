@@ -279,6 +279,23 @@
 
 .gt-props .gt-val { font-size: 13px; }
 
+/* Heading that separates the tracing settings from the geometry. */
+.gt-props .gt-group {
+    padding: 9px 5px 3px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9aa1ac;
+    border-bottom: 1px solid #e5e8ed;
+}
+
+.gt-props .gt-check {
+    margin: 0;
+    float: right;
+    cursor: pointer;
+}
+
 .gt-props .gt-static {
     display: block;
     text-align: right;

@@ -143,7 +143,13 @@ EDITABLE_OPTIC_ATTRS = frozenset([
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
     'HRtransmissive', 'term_on_HR', 'term_on_HR_order', 'max_stray_order',
+    'curve_direction',
 ])
+
+#: Values an attribute is restricted to. A whitelist of names keeps a
+#: front end from reaching attributes it should not; this keeps it from
+#: putting nonsense into the ones it may.
+ATTR_CHOICES = {'curve_direction': ('h', 'v')}
 
 #: Attributes of the tracing rules that a front end may change.
 EDITABLE_RULE_ATTRS = frozenset([
@@ -175,6 +181,15 @@ class EditError(ValueError):
     unknown target or an attribute that is not editable.
     '''
     pass
+
+def _check_choice(key, value):
+    '''
+    Reject a value outside the set an attribute allows.
+    '''
+    choices = ATTR_CHOICES.get(key)
+    if choices is not None and value not in choices:
+        raise EditError('%r must be one of %s, not %r.'
+                        % (key, ', '.join(repr(c) for c in choices), value))
 
 #}}}
 
@@ -490,6 +505,7 @@ class OpticalLayout(object):
                 if key not in EDITABLE_OPTIC_ATTRS:
                     raise EditError('%r is not an editable attribute of an '
                                     'optics.' % (key,))
+                _check_choice(key, value)
                 setattr(optics, key, value)
 
         elif op == 'rename':
@@ -555,10 +571,11 @@ class OpticalLayout(object):
                             % (kind, ', '.join(sorted(CREATABLE_OPTIC_TYPES))))
 
         params = msg.get('params') or {}
-        for key in params:
+        for key, value in params.items():
             if key not in CREATABLE_OPTIC_PARAMS:
                 raise EditError('%r is not a parameter a new optics may be '
                                 'given.' % (key,))
+            _check_choice(key, value)
 
         kwargs = {'inv_ROC_HR': 0.0, 'inv_ROC_AR': 0.0}
         if self.optics:

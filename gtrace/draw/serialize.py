@@ -218,6 +218,8 @@ _OPTIC_SCALARS = ['diameter', 'thickness', 'wedgeAngle', 'inv_ROC_HR',
                   'Trans_AR']
 _OPTIC_POINTS = ['HRcenter', 'ARcenter', 'center']
 _OPTIC_ANGLES = ['normAngleHR', 'normAngleAR']
+_OPTIC_FLAGS = ['HRtransmissive', 'term_on_HR']
+_OPTIC_INTS = ['term_on_HR_order']
 
 def optic_to_dict(o):
     '''
@@ -236,6 +238,12 @@ def optic_to_dict(o):
     for k in _OPTIC_ANGLES + _OPTIC_SCALARS:
         if hasattr(o, k):
             d[k] = float(getattr(o, k))
+    for k in _OPTIC_FLAGS:
+        if hasattr(o, k):
+            d[k] = bool(getattr(o, k))
+    for k in _OPTIC_INTS:
+        if hasattr(o, k):
+            d[k] = int(getattr(o, k))
     if hasattr(o, 'curve_direction'):
         d['curve_direction'] = str(o.curve_direction)
     if hasattr(o, 'max_stray_order'):

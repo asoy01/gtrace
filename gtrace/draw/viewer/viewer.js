@@ -439,7 +439,16 @@ var OPTIC_FIELDS = [
     {key: 'Trans_HR', label: 'Trans HR'},
     {key: 'Refl_AR', label: 'Refl AR'},
     {key: 'Trans_AR', label: 'Trans AR'},
-    {key: 'max_stray_order', label: 'Max stray order', nullable: true}
+    // How this element is to be traced. These belong to the element in
+    // the same way its coatings do: see Optics.max_stray_order.
+    {group: 'Tracing'},
+    {key: 'max_stray_order', label: 'Max stray order', nullable: true},
+    {key: 'HRtransmissive', label: 'HR transmissive', bool: true},
+    {key: 'term_on_HR', label: 'Terminate on HR', bool: true},
+    {key: 'term_on_HR_order', label: 'Term. on HR order'},
+    // Only a CyMirror has this; the row hides itself otherwise.
+    {key: 'curve_direction', label: 'Curve direction', text: true,
+     optional: true}
 ];
 
 var DEG = 180 / Math.PI;
@@ -524,16 +533,38 @@ Viewer.prototype._buildOpticPanel = function () {
 
     OPTIC_FIELDS.forEach(function (f) {
         var tr = htmlEl('tr');
+
+        if (f.group) {
+            var th = htmlEl('td', 'gt-group', f.group);
+            th.setAttribute('colspan', '2');
+            tr.appendChild(th);
+            table.appendChild(tr);
+            return;
+        }
+
         tr.appendChild(htmlEl('td', 'gt-key',
                               f.label + (f.unit ? ' [' + f.unit + ']' : '')));
         var td = htmlEl('td', 'gt-val');
+        var rec = {row: tr, optional: !!f.optional};
 
         if (f.readonly || !self.onEdit) {
             // Nothing to edit: either the class of the element, or a
             // viewer with no Python behind it.
             var span = htmlEl('span', 'gt-static', '-');
             td.appendChild(span);
-            self.opticFields[f.key] = {el: span, editable: false};
+            rec.el = span;
+            rec.editable = false;
+            rec.kind = f.bool ? 'bool' : 'static';
+        } else if (f.bool) {
+            var box = htmlEl('input', 'gt-check');
+            box.type = 'checkbox';
+            box.addEventListener('change', function () {
+                self._commitOpticField(f.key, box);
+            });
+            td.appendChild(box);
+            rec.el = box;
+            rec.editable = true;
+            rec.kind = 'bool';
         } else {
             var input = htmlEl('input', 'gt-input');
             input.type = 'text';
@@ -550,10 +581,13 @@ Viewer.prototype._buildOpticPanel = function () {
                 }
             });
             td.appendChild(input);
-            self.opticFields[f.key] = {el: input, editable: true};
+            rec.el = input;
+            rec.editable = true;
+            rec.kind = f.text ? 'text' : 'num';
         }
         tr.appendChild(td);
         table.appendChild(tr);
+        self.opticFields[f.key] = rec;
     });
 
     this.opticBody.appendChild(table);
@@ -635,11 +669,25 @@ Viewer.prototype._refreshOpticPanel = function () {
     var fields = this.opticFields;
     for (var key in fields) {
         var f = fields[key];
-        // Never overwrite the field the user is typing into.
-        if (f.editable && document.activeElement === f.el) { continue; }
         var v = o ? opticFieldValue(o, key) : null;
-        var text = o ? fmtField(v) : (f.editable ? '' : '-');
-        if (f.editable) { f.el.value = text; } else { f.el.textContent = text; }
+
+        // A row for something this class does not have - the curvature
+        // direction of a plain mirror - is not shown at all.
+        if (f.optional) {
+            f.row.style.display = (v === undefined || v === null) ? 'none' : '';
+        }
+
+        // Never overwrite the field the user is working in.
+        if (f.editable && document.activeElement === f.el) { continue; }
+
+        if (f.kind === 'bool') {
+            if (f.editable) { f.el.checked = !!v; }
+            else { f.el.textContent = o ? (v ? 'yes' : 'no') : '-'; }
+        } else if (f.editable) {
+            f.el.value = o ? fmtField(v) : '';
+        } else {
+            f.el.textContent = o ? fmtField(v) : '-';
+        }
     }
 };
 
@@ -666,6 +714,22 @@ Viewer.prototype._commitOpticField = function (key, input) {
     var field = null;
     for (var i = 0; i < OPTIC_FIELDS.length; i++) {
         if (OPTIC_FIELDS[i].key === key) { field = OPTIC_FIELDS[i]; }
+    }
+
+    if (field && field.bool) {
+        if (input.checked === !!opticFieldValue(o, key)) { return; }
+        this.onEdit(opticFieldMessage(o, key, input.checked));
+        return;
+    }
+
+    if (field && field.text) {
+        var text = String(input.value).trim();
+        if (!text || text === opticFieldValue(o, key)) {
+            this._refreshOpticPanel();
+            return;
+        }
+        this.onEdit(opticFieldMessage(o, key, text));
+        return;
     }
 
     var value = parseField(input.value);
