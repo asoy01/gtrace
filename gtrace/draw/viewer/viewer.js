@@ -337,6 +337,33 @@ Viewer.prototype._build = function () {
     this._buildOpticPanel();
     this._showPanel('beam');
 
+    // Layout file panel. Editing in the browser is only worth anything
+    // if the result can be taken out again, and the file has to be
+    // written by Python: the page has no business touching the disk.
+    if (this.onEdit) {
+        var fpanel = htmlEl('div', 'gt-panel');
+        fpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Layout file'));
+        var fbody = htmlEl('div', 'gt-file');
+        this.pathInput = htmlEl('input', 'gt-input gt-input-text');
+        this.pathInput.type = 'text';
+        this.pathInput.spellcheck = false;
+        this.pathInput.value = this.opts.layoutPath || 'layout.json';
+        this.pathInput.title = 'Relative to where the kernel is running';
+        fbody.appendChild(this.pathInput);
+        var frow = htmlEl('div', 'gt-filebuttons');
+        var saveBtn = htmlEl('button', 'gt-btn', 'Save');
+        saveBtn.title = 'Write the layout to this file';
+        saveBtn.addEventListener('click', function () { self.saveLayout(); });
+        var loadBtn = htmlEl('button', 'gt-btn', 'Load');
+        loadBtn.title = 'Replace the layout with the one in this file';
+        loadBtn.addEventListener('click', function () { self.loadLayout(); });
+        frow.appendChild(saveBtn);
+        frow.appendChild(loadBtn);
+        fbody.appendChild(frow);
+        fpanel.appendChild(fbody);
+        side.appendChild(fpanel);
+    }
+
     // Display panel. These change how Python draws the scene, so they
     // exist only when there is a Python to ask.
     if (this.onEdit) {
@@ -710,6 +737,37 @@ Viewer.prototype._freshOpticName = function (prefix) {
     var i = 1;
     while (taken[prefix + i]) { i++; }
     return prefix + i;
+};
+
+/*
+ * Write the layout to the file named in the panel.
+ */
+Viewer.prototype.saveLayout = function (path) {
+    if (!this.onEdit) { return null; }
+    path = (path || (this.pathInput && this.pathInput.value) || '').trim();
+    if (!path) { return null; }
+    var msg = {op: 'save', path: path};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Replace the layout with the one in that file.
+ *
+ * What comes back is a whole new scene which may be somewhere else
+ * entirely, so the view is fitted to it rather than left where the
+ * previous layout happened to be.
+ */
+Viewer.prototype.loadLayout = function (path) {
+    if (!this.onEdit) { return null; }
+    path = (path || (this.pathInput && this.pathInput.value) || '').trim();
+    if (!path) { return null; }
+    this.selectedOptic = null;
+    this.pinned = null;
+    this.fitOnNextScene = true;
+    var msg = {op: 'load', path: path};
+    this.onEdit(msg);
+    return msg;
 };
 
 Viewer.prototype.removeSelected = function () {
@@ -1632,7 +1690,14 @@ Viewer.prototype.setScene = function (scene) {
         this._showPanel('beam');
     }
 
-    this._applyTransform();
+    // A loaded layout can be anywhere; frame it rather than leaving the
+    // view over wherever the previous one happened to be.
+    if (this.fitOnNextScene) {
+        this.fitOnNextScene = false;
+        this.fit();
+    } else {
+        this._applyTransform();
+    }
 };
 
 var GTraceViewer = {

@@ -27,6 +27,7 @@ function render({ model, el }) {
 
     const viewer = globalThis.GTraceViewer.mount(host, model.get('scene'), {
         title: model.get('title'),
+        layoutPath: model.get('layout_path'),
         onEdit: onEdit
     });
 
@@ -59,11 +60,24 @@ function render({ model, el }) {
         if (msg) { viewer.revertSelection(); }
     };
 
+    // Confirmation of something that leaves no mark on the drawing.
+    const notice = document.createElement('div');
+    notice.className = 'gt-notice';
+    notice.style.display = 'none';
+    el.appendChild(notice);
+    const onNotice = () => {
+        const msg = model.get('notice');
+        notice.textContent = msg;
+        notice.style.display = msg ? '' : 'none';
+    };
+
     model.on('change:scene', onScene);
     model.on('change:title', onTitle);
     model.on('change:height', onHeight);
     model.on('change:error', onError);
+    model.on('change:notice', onNotice);
     onError();
+    onNotice();
 
     // Expose the viewer for debugging and for the tests.
     el.gtraceViewer = viewer;
@@ -73,6 +87,7 @@ function render({ model, el }) {
         model.off('change:title', onTitle);
         model.off('change:height', onHeight);
         model.off('change:error', onError);
+        model.off('change:notice', onNotice);
         viewer.destroy();
     };
 }

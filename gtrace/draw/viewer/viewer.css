@@ -37,6 +37,47 @@
     border-radius: 4px;
 }
 
+/* Shown after something that leaves no mark on the drawing, such as a
+   save: without it the user cannot tell whether anything happened. */
+.gt-notice {
+    margin-top: 6px;
+    padding: 6px 9px;
+    font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: #1c5c2e;
+    background: #eaf6ed;
+    border: 1px solid #bfe0ca;
+    border-radius: 4px;
+}
+
+/* --------------------------------------------------------- layout file */
+
+.gt-file { padding: 6px 8px 8px; }
+
+.gt-file .gt-input {
+    width: 100%;
+    padding: 3px 5px;
+    font: inherit;
+    font-size: 13px;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #d8dce3;
+    border-radius: 3px;
+}
+
+.gt-file .gt-input:focus {
+    outline: none;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.18);
+}
+
+.gt-filebuttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 6px;
+}
+
 /* ---------------------------------------------------------- drawing area */
 
 .gt-stage {

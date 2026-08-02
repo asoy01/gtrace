@@ -320,6 +320,65 @@ def source_to_dict(b):
             'qx': [complex(b.qx).real, complex(b.qx).imag],
             'qy': [complex(b.qy).real, complex(b.qy).imag]}
 
+def _merge_by_name(registered, specs, build, update):
+    '''
+    Rebuild a list of registered objects from their serialized form,
+    reusing an object whenever the name and the class still match.
+
+    This is what lets a load keep the identity of the elements that
+    survived it, which matters because the whole design rests on the
+    layout holding the user's own objects by reference.
+    '''
+    by_name = {}
+    for obj in registered:
+        by_name[(obj.name, type(obj).__name__)] = obj
+
+    result = []
+    for spec in specs:
+        key = (spec.get('name'), spec.get('type', type(None).__name__))
+        existing = by_name.get(key)
+        if existing is None and 'type' not in spec:
+            # Sources carry no type; match on the name alone.
+            existing = next((o for o in registered
+                             if o.name == spec.get('name')), None)
+        if existing is not None:
+            update(existing, spec)
+            result.append(existing)
+        else:
+            result.append(build(spec))
+    return result
+
+def _update_optic(m, d):
+    '''
+    Apply a serialized optics to an existing one, in place.
+    '''
+    for key in ['diameter', 'thickness', 'wedgeAngle', 'n',
+                'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
+                'inv_ROC_HR', 'inv_ROC_AR',
+                'HRtransmissive', 'term_on_HR', 'term_on_HR_order',
+                'max_stray_order', 'curve_direction']:
+        if key in d and hasattr(m, key):
+            setattr(m, key, d[key])
+    # Orientation before position: the position handler works from the
+    # normal vector, so setting them the other way round would leave
+    # the substrate placed off the old orientation.
+    if 'normAngleHR' in d:
+        m.normAngleHR = d['normAngleHR']
+    if 'HRcenter' in d:
+        m.HRcenter = d['HRcenter']
+
+def _update_source(b, d):
+    '''
+    Apply a serialized source beam to an existing one, in place.
+    '''
+    for key in ['pos', 'dirAngle', 'length', 'wl', 'P', 'n', 'layer']:
+        if key in d:
+            setattr(b, key, d[key])
+    if 'qx' in d:
+        b.qx = complex(d['qx'][0], d['qx'][1])
+    if 'qy' in d:
+        b.qy = complex(d['qy'][0], d['qy'][1])
+
 def source_from_dict(d):
     '''
     Construct a source GaussianBeam from a dict produced by
@@ -487,6 +546,8 @@ class OpticalLayout(object):
             {'op': 'set',    'target': 'M1', 'attrs': {'diameter': 0.15}}
             {'op': 'draw',   'params': {'sigma_main': 1.0,
                                         'width_mode': 'y'}}
+            {'op': 'save',   'path': 'layout.json'}
+            {'op': 'load',   'path': 'layout.json'}
             {'op': 'rename', 'target': 'M1', 'name': 'PRM'}
             {'op': 'add',    'type': 'Mirror', 'name': 'M4',
                              'params': {'HRcenter': [0.3, 0.2]}}
@@ -583,6 +644,29 @@ class OpticalLayout(object):
                     raise EditError('%r is not an editable tracing rule.'
                                     % (key,))
                 setattr(self.rules, key, value)
+
+        elif op in ('save', 'load'):
+            # The path comes from the front end. In a notebook the page
+            # and the kernel belong to the same user, so this is no more
+            # than that user naming a file. A front end reachable over a
+            # network would have to confine it instead.
+            path = msg.get('path')
+            if not isinstance(path, str) or not path.strip():
+                raise EditError('A file name is needed, not %r.' % (path,))
+            try:
+                if op == 'save':
+                    self.save(path)
+                    # Saving changes nothing about the layout.
+                    return self
+                self.update_from_file(path)
+            except EditError:
+                raise
+            except OSError as e:
+                raise EditError('%s: %s' % (type(e).__name__, e))
+            except (ValueError, KeyError, TypeError) as e:
+                raise EditError('%s is not a layout file gtrace can read '
+                                '(%s: %s).' % (path, type(e).__name__, e))
+            return self
 
         elif op == 'draw':
             for key, value in (msg.get('params') or {}).items():
@@ -783,7 +867,8 @@ class OpticalLayout(object):
                           title=title if title is not None else self.name,
                           scene=self.scene_dict(**kwargs))
 
-    def widget(self, title=None, height=520, editable=True, **kwargs):
+    def widget(self, title=None, height=520, editable=True,
+               path='layout.json', **kwargs):
         '''
         Return a Jupyter widget showing this layout.
 
@@ -813,6 +898,9 @@ class OpticalLayout(object):
         editable : bool, optional
             Whether the optics can be dragged in the viewer.
             Defaults to True.
+        path : str, optional
+            File the Save and Load buttons start on, relative to where
+            the kernel is running. Defaults to 'layout.json'.
         **kwargs
             Passed to draw(), and remembered for the redraws that
             follow an edit.
@@ -825,7 +913,8 @@ class OpticalLayout(object):
         return LayoutViewer(scene=self.scene_dict(**kwargs), layout=self,
                             draw_kwargs=kwargs,
                             title=title if title is not None else self.name,
-                            height=height, editable=editable)
+                            height=height, editable=editable,
+                            layout_path=path)
 
     def show(self, filename=None, browser=True, title=None, backend=None,
              **kwargs):
@@ -890,20 +979,27 @@ class OpticalLayout(object):
 
     def to_dict(self):
         '''
-        Convert the layout (optics, sources and rules) to a
-        JSON-compatible dict. The trace result is not included;
+        Convert the layout (optics, sources, rules and drawing options)
+        to a JSON-compatible dict. The trace result is not included;
         it can be regenerated with trace().
         '''
         return {'name': str(self.name),
                 'optics': [optic_to_dict(m) for m in self.optics],
                 'sources': [source_to_dict(b) for b in self.sources],
-                'rules': self.rules.to_dict()}
+                'rules': self.rules.to_dict(),
+                'draw_options': dict(self.draw_options)}
 
     @classmethod
     def from_dict(cls, d):
         '''
         Construct an OpticalLayout from a dict produced by to_dict().
         '''
+        layout = cls._from_dict_parts(d)
+        layout.draw_options = dict(d.get('draw_options', {}))
+        return layout
+
+    @classmethod
+    def _from_dict_parts(cls, d):
         return cls(optics=[optic_from_dict(x) for x in d.get('optics', [])],
                    sources=[source_from_dict(x) for x in d.get('sources', [])],
                    rules=TraceRules.from_dict(d.get('rules', {})),
@@ -915,14 +1011,54 @@ class OpticalLayout(object):
         '''
         with open(filename, 'w') as f:
             json.dump(self.to_dict(), f, indent=1)
+        return filename
 
     @classmethod
     def load(cls, filename):
         '''
         Load a layout from a JSON file created by save().
+
+        Returns a new layout. Use update_from_file() to load into an
+        existing one instead.
         '''
         with open(filename, 'r') as f:
             return cls.from_dict(json.load(f))
+
+    def update_from_dict(self, d):
+        '''
+        Replace the contents of this layout with the ones described by
+        d, in place.
+
+        An optics of the file that matches a registered one by name and
+        by class is updated rather than replaced, so a variable holding
+        it - the M1 of the user's own code, or the selection of a front
+        end - keeps pointing at the right object. Anything else is
+        built afresh, and registered elements the file does not mention
+        are dropped.
+
+        Loading a genuinely different layout therefore leaves the
+        variables that named the old elements pointing at objects no
+        longer registered; get_optics() gives the current ones.
+        '''
+        self.optics = _merge_by_name(self.optics, d.get('optics', []),
+                                     optic_from_dict, _update_optic)
+        self.sources = _merge_by_name(self.sources, d.get('sources', []),
+                                      source_from_dict, _update_source)
+        self.rules = TraceRules.from_dict(d.get('rules', {}))
+        self.draw_options = dict(d.get('draw_options', {}))
+        self.name = d.get('name', self.name)
+        self.beams = None
+        self.beams_by_source = None
+        return self
+
+    def update_from_file(self, filename):
+        '''
+        Load a JSON file created by save() into this layout, in place.
+        See update_from_dict for what happens to the objects already
+        registered.
+        '''
+        with open(filename, 'r') as f:
+            return self.update_from_dict(json.load(f))
 
 #}}}
 

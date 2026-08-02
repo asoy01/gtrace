@@ -1487,6 +1487,14 @@ class Mirror(Optics):
         else:
             self.sagAR = 0.0;
 
+    def _diameter_changed(self, old, new):
+        #The sag of a curved surface depends on the aperture as well as
+        #on the ROC, so a new diameter changes it. Recompute both sags
+        #the way a new curvature would, leaving a diameter change and a
+        #curvature change with the same consequences.
+        self._inv_ROC_HR_changed(self.inv_ROC_HR, self.inv_ROC_HR)
+        self._inv_ROC_AR_changed(self.inv_ROC_AR, self.inv_ROC_AR)
+
 #}}}
 
 #}}}

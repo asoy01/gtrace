@@ -152,6 +152,11 @@ def _build_class():
         editable = traitlets.Bool(True).tag(sync=True)
         #: Last edit failure, shown by the front end. Empty when fine.
         error = traitlets.Unicode('').tag(sync=True)
+        #: Confirmation of something that leaves no visible trace, such
+        #: as a save. Empty when there is nothing to say.
+        notice = traitlets.Unicode('').tag(sync=True)
+        #: File the Save and Load buttons start on.
+        layout_path = traitlets.Unicode('layout.json').tag(sync=True)
 
         def __init__(self, scene=None, layout=None, draw_kwargs=None,
                      **kwargs):
@@ -229,6 +234,14 @@ def _build_class():
                 return False
             self._edit_log.append(msg)
             self.error = ''
+
+            # A save leaves the drawing exactly as it was, so without a
+            # word from us the user cannot tell it happened.
+            if msg.get('op') == 'save':
+                self.notice = 'Saved to %s' % (msg.get('path'),)
+                return True
+            self.notice = ('Loaded %s' % (msg.get('path'),)
+                           if msg.get('op') == 'load' else '')
             self.scene = self._layout.scene_dict(**self._draw_kwargs)
             return True
 
