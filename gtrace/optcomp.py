@@ -9,7 +9,8 @@ array = np.array
 sqrt = np.lib.scimath.sqrt
 from numpy.linalg import norm
 
-from traits.api import HasTraits, Int, Float, CFloat, CArray, List, Str
+from traits.api import (HasTraits, Int, Float, CFloat, CArray, List, Str,
+                        Union)
 
 import gtrace.optics as optics
 import gtrace.optics.geometric
@@ -74,10 +75,21 @@ class Optics(HasTraits):
         Center position of the optics. array of shape(2,).
     rotationAngle : float
         This angle defines the orientation of the optics.
+    max_stray_order : int or None
+        Upper limit of the stray order computed when a beam hits this
+        optics, overriding the order given to non_seq_trace. None means
+        the trace-wide order is used.
+
+        How deep the ghost beams inside a substrate are worth chasing
+        depends on the part an element plays in the system - the ghosts
+        of a beam splitter usually matter, those of a steering mirror
+        usually do not - so it belongs to the element, next to
+        term_on_HR, rather than to the trace.
     '''
     name = Str()
     center = CArray(dtype='float64', shape=(2,))
     rotationAngle = CFloat(0.0) #in rad
+    max_stray_order = Union(None, Int)
 
 #{{{ isHit(beam)
 
@@ -288,7 +300,8 @@ class Mirror(Optics):
                  normVectHR=None, diameter=25.0*cm, thickness=15.0*cm,
                  wedgeAngle=0.25*pi/180., inv_ROC_HR=1.0/7000.0, inv_ROC_AR=0.0,
                  Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45,
-                 name="Mirror", HRtransmissive=False, term_on_HR=False):
+                 name="Mirror", HRtransmissive=False, term_on_HR=False,
+                 max_stray_order=None):
         '''
         Create a mirror object.
 
@@ -386,6 +399,7 @@ class Mirror(Optics):
         self.HRtransmissive = HRtransmissive
         self.term_on_HR = term_on_HR
         self.term_on_HR_order = 0
+        self.max_stray_order = max_stray_order
 
 #}}}
 
@@ -398,7 +412,8 @@ class Mirror(Optics):
                       inv_ROC_AR=self.inv_ROC_AR, Refl_HR=self.Refl_HR,
                       Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR, Trans_AR=self.Trans_AR,
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
-                      term_on_HR=self.term_on_HR)
+                      term_on_HR=self.term_on_HR,
+                      max_stray_order=self.max_stray_order)
 
 #}}}
 
@@ -1418,8 +1433,13 @@ class Mirror(Optics):
                  ARcenterC = self.HRcenterC - self.normVectHR * self.thickness)
         self.trait_set(trait_change_notify=False,
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
+        #center is the middle of the substrate, so it lies between the
+        #two chord planes. Averaging with ARcenter instead would mix a
+        #chord centre with a point on the arc, putting center half a
+        #sagitta out and disagreeing with _HRcenter_changed, with
+        #_center_changed's inverse and with get_side_info.
         self.trait_set(trait_change_notify=False,
-                 center = (self.HRcenterC + self.ARcenter)/2.0)
+                 center = (self.HRcenterC + self.ARcenterC)/2.0)
         self.trait_set(trait_change_notify=False,
                  HRcenter = self.HRcenterC + self.sagHR*self.normVectHR)
 
@@ -1472,6 +1492,14 @@ class Mirror(Optics):
         else:
             self.sagAR = 0.0;
 
+    def _diameter_changed(self, old, new):
+        #The sag of a curved surface depends on the aperture as well as
+        #on the ROC, so a new diameter changes it. Recompute both sags
+        #the way a new curvature would, leaving a diameter change and a
+        #curvature change with the same consequences.
+        self._inv_ROC_HR_changed(self.inv_ROC_HR, self.inv_ROC_HR)
+        self._inv_ROC_AR_changed(self.inv_ROC_AR, self.inv_ROC_AR)
+
 #}}}
 
 #}}}
@@ -1521,7 +1549,8 @@ class CyMirror(Mirror):
                  normVectHR=None, diameter=25.0*cm, thickness=15.0*cm,
                  wedgeAngle=0.25*pi/180., inv_ROC_HR=1.0/7000.0, inv_ROC_AR=0.0,
                  Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45,
-                 name="Mirror", HRtransmissive=False, term_on_HR=False, curve_direction='h'):
+                 name="Mirror", HRtransmissive=False, term_on_HR=False,
+                 max_stray_order=None, curve_direction='h'):
         '''
         Create a cylindrical mirror object.
 
@@ -1622,6 +1651,7 @@ class CyMirror(Mirror):
         self.HRtransmissive = HRtransmissive
         self.term_on_HR = term_on_HR
         self.term_on_HR_order = 0
+        self.max_stray_order = max_stray_order
         self.curve_direction = curve_direction
 
 #}}}
@@ -1635,7 +1665,9 @@ class CyMirror(Mirror):
                       inv_ROC_AR=self.inv_ROC_AR, Refl_HR=self.Refl_HR,
                       Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR, Trans_AR=self.Trans_AR,
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
-                      term_on_HR=self.term_on_HR, curve_direction=self.curve_direction)
+                      term_on_HR=self.term_on_HR,
+                      max_stray_order=self.max_stray_order,
+                      curve_direction=self.curve_direction)
 
 #}}}
 

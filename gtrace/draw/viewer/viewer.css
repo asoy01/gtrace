@@ -1,0 +1,482 @@
+/*
+ * Styles for the gtrace viewer core.
+ * All rules are scoped under .gt-root so that the viewer can be embedded
+ * in a notebook output cell without leaking styles into the page.
+ *
+ * Copyright (c) 2011-2026, Yoichi Aso. BSD license.
+ */
+
+.gt-root {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    color: #1f2328;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.gt-root *, .gt-root *::before, .gt-root *::after { box-sizing: inherit; }
+
+/* Host element the notebook widget mounts into. Its height is set from
+   the widget's height traitlet; .gt-root then fills it. */
+.gt-widget { width: 100%; }
+
+/* Shown when Python refuses an edit. */
+.gt-error {
+    margin-top: 6px;
+    padding: 6px 9px;
+    font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: #8a1c1c;
+    background: #fdeaea;
+    border: 1px solid #f2c2c2;
+    border-radius: 4px;
+}
+
+/* Shown after something that leaves no mark on the drawing, such as a
+   save: without it the user cannot tell whether anything happened. */
+.gt-notice {
+    margin-top: 6px;
+    padding: 6px 9px;
+    font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: #1c5c2e;
+    background: #eaf6ed;
+    border: 1px solid #bfe0ca;
+    border-radius: 4px;
+}
+
+/* --------------------------------------------------------- layout file */
+
+.gt-file { padding: 6px 8px 8px; }
+
+.gt-file .gt-input {
+    width: 100%;
+    padding: 3px 5px;
+    font: inherit;
+    font-size: 13px;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #d8dce3;
+    border-radius: 3px;
+}
+
+.gt-file .gt-input:focus {
+    outline: none;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.18);
+}
+
+.gt-filebuttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 6px;
+}
+
+/* ---------------------------------------------------------- drawing area */
+
+.gt-stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.gt-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.gt-svg.gt-dragging { cursor: grabbing; }
+.gt-svg.gt-over-optic { cursor: move; }
+.gt-svg.gt-over-pickable { cursor: pointer; }
+
+/* Geometry is drawn in scene units; keep strokes at a constant screen
+   width so that lines do not become slabs when zooming in. */
+.gt-scene * {
+    fill: none;
+    stroke-width: 1.3;
+    vector-effect: non-scaling-stroke;
+}
+
+.gt-labels text {
+    stroke: none;
+    paint-order: stroke;
+    dominant-baseline: alphabetic;
+}
+
+.gt-highlight {
+    stroke: #1f2328;
+    stroke-width: 3;
+    stroke-opacity: 0.2;
+    fill: none;
+}
+
+.gt-marker {
+    fill: none;
+    stroke: #1f2328;
+    stroke-width: 1.5;
+}
+
+.gt-marker.gt-pinned {
+    fill: #f5a623;
+    stroke: #1f2328;
+}
+
+/* Grab handle of an editable optics: shown on hover, and following the
+   cursor while it is being dragged. */
+.gt-optic-outline {
+    fill: rgba(31, 35, 40, 0.06);
+    stroke: #1f2328;
+    stroke-width: 1.2;
+    stroke-dasharray: 4 3;
+    pointer-events: none;
+}
+
+.gt-optic-outline.gt-dragging {
+    fill: rgba(245, 166, 35, 0.18);
+    stroke: #b45309;
+    stroke-width: 1.6;
+}
+
+/* The optics whose properties the panel is showing. */
+.gt-optic-outline.gt-selected {
+    fill: rgba(74, 127, 212, 0.10);
+    stroke: #2f5fa8;
+    stroke-width: 1.6;
+    stroke-dasharray: none;
+}
+
+/* Which way the selected beam travels. */
+.gt-arrow {
+    fill: #1f2328;
+    stroke: none;
+}
+
+.gt-arrow.gt-pinned {
+    fill: #f5a623;
+    stroke: #1f2328;
+    stroke-width: 1;
+    stroke-linejoin: round;
+}
+
+.gt-status {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: #6b7280;
+    background: rgba(255, 255, 255, 0.88);
+    pointer-events: none;
+    white-space: pre;
+}
+
+/* ----------------------------------------------------------- side panels */
+
+.gt-side {
+    flex: 0 0 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-left: 1px solid #d8dce3;
+    background: #f6f7f9;
+}
+
+.gt-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.gt-title {
+    font-weight: 600;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gt-btn {
+    padding: 3px 10px;
+    font: inherit;
+    font-size: 13px;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #c9cfd8;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.gt-btn:hover { background: #eceff3; }
+
+.gt-btn-danger { color: #8a1c1c; border-color: #e3c4c4; }
+.gt-btn-danger:hover { background: #fdeaea; border-color: #d59a9a; }
+
+.gt-buttons {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.gt-panel {
+    border: 1px solid #d8dce3;
+    border-radius: 5px;
+    background: #ffffff;
+}
+
+.gt-panel-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e8ed;
+}
+
+.gt-pin { font-weight: 400; text-transform: none; color: #b45309; }
+
+/* -------------------------------------------------------------- readout */
+
+.gt-readout { padding: 4px 6px 6px; }
+.gt-readout.gt-empty { opacity: 0.5; }
+
+/* Fixed layout keeps the x and y columns equally wide whatever the
+   values are, so the panel never overflows the side bar. */
+.gt-readout table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.gt-readout th {
+    padding: 3px 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: right;
+}
+
+.gt-readout .gt-rowhead th:first-child { text-align: left; }
+
+.gt-readout td {
+    padding: 3px 5px;
+    vertical-align: baseline;
+}
+
+.gt-readout .gt-key {
+    width: 96px;
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.gt-readout .gt-val {
+    font-size: 13px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.gt-readout tr:nth-child(even) { background: #f6f7f9; }
+
+/* ---------------------------------------------------- optics properties */
+
+.gt-props { padding: 4px 6px 6px; }
+
+.gt-props table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.gt-props td {
+    padding: 2px 5px;
+    vertical-align: baseline;
+}
+
+.gt-props .gt-key {
+    width: 108px;
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.gt-props .gt-val { font-size: 13px; }
+
+/* Heading that separates the tracing settings from the geometry. */
+.gt-props .gt-group {
+    padding: 9px 5px 3px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9aa1ac;
+    border-bottom: 1px solid #e5e8ed;
+}
+
+.gt-props .gt-check {
+    margin: 0;
+    float: right;
+    cursor: pointer;
+}
+
+/* A property with a fixed set of values fills its cell, unlike the
+   display selects which sit next to a label. */
+.gt-props .gt-select-prop { width: 100%; max-width: none; }
+
+.gt-props .gt-static {
+    display: block;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* Editable property. Values are full precision, so they are often long:
+   let the field scroll rather than widen the panel. */
+.gt-props .gt-input {
+    width: 100%;
+    padding: 2px 5px;
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #d8dce3;
+    border-radius: 3px;
+}
+
+.gt-props .gt-input:hover { border-color: #b6bdc8; }
+
+/* A name is not a number: left-aligned, and not tabular. */
+.gt-props .gt-input-text {
+    text-align: left;
+    font-variant-numeric: normal;
+}
+
+.gt-props .gt-input:focus {
+    outline: none;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.18);
+}
+
+.gt-props-foot {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 5px 2px;
+}
+
+/* -------------------------------------------------------------- display */
+
+.gt-display { padding: 6px 8px 8px; }
+
+.gt-displayrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+}
+
+.gt-displayrow .gt-key {
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.gt-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 62%;
+    padding: 2px 4px;
+    font: inherit;
+    font-size: 13px;
+    color: #1f2328;
+    background: #ffffff;
+    border: 1px solid #d8dce3;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.gt-select:hover { border-color: #b6bdc8; }
+
+.gt-select:focus {
+    outline: none;
+    border-color: #4a7fd4;
+    box-shadow: 0 0 0 2px rgba(74, 127, 212, 0.18);
+}
+
+/* --------------------------------------------------------------- layers */
+
+.gt-layerlist { padding: 5px 8px 7px; }
+
+.gt-layerrow {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 0;
+    cursor: pointer;
+}
+
+.gt-layerrow input { margin: 0; cursor: pointer; }
+
+.gt-swatch {
+    width: 12px;
+    height: 12px;
+    border: 1px solid #c9cfd8;
+    border-radius: 2px;
+    flex: 0 0 auto;
+}
+
+.gt-layername {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* A layer that exists but holds no shape at all: without this it just
+   looks as if the viewer failed to draw it. */
+.gt-layerrow.gt-layer-empty { color: #9aa1ac; }
+.gt-layerrow.gt-layer-empty .gt-swatch { opacity: 0.35; }
+.gt-note { font-size: 12px; color: #9aa1ac; flex: 0 0 auto; }
+
+/* ----------------------------------------------------------------- help */
+
+.gt-help ul {
+    margin: 0;
+    padding: 7px 9px 9px 24px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.gt-help li { padding: 2px 0; }
+.gt-help b { color: #1f2328; font-weight: 600; }
+
+/* ------------------------------------------------------------ narrow UI */
+
+@media (max-width: 700px) {
+    .gt-root { flex-direction: column; }
+    .gt-side { flex: 0 0 auto; border-left: none; border-top: 1px solid #d8dce3; }
+}

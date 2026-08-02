@@ -49,37 +49,59 @@ __status__ = "Beta"
 
 #{{{ Draw optical system
 
-def drawOptSys(optList, beamList, filename, fontSize=False):
+def drawOptSys(optList, beamList, filename, fontSize=False, render_func=None):
+    '''
+    Draw an optical system (optics and beams) into a canvas and
+    render it to a file.
+
+    Parameters
+    ----------
+    optList : list of Optics
+        Optics to be drawn.
+    beamList : list of GaussianBeam
+        Beams to be drawn.
+    filename : str
+        Name of the output file.
+    fontSize : float or False, optional
+        Font size for the annotations.
+    render_func : callable, optional
+        A function of the form render_func(canvas, filename) used to
+        render the canvas. Defaults to renderer.renderDXF.
+    '''
+    if render_func is None:
+        render_func = renderer.renderDXF
 
     d = draw.Canvas()
     d.unit = 'm'
 
     d.add_layer("main_beam", color=(255,0,0))
-    d.add_layer("main_beam_width", color=(255,0,255))    
+    d.add_layer("main_beam_width", color=(255,0,255))
     d.add_layer("stray_beam", color=(0,255,0))
-    d.add_layer("stray_beam_width", color=(0,255,255))    
+    d.add_layer("stray_beam_width", color=(0,255,255))
 
     for b in beamList:
+        # sigma = 2.7 is the aperture at which the diffraction loss is
+        # 1 ppm, so every envelope in the drawing means the same thing.
         if b.stray_order > 0:
             b.layer = 'stray_beam'
-            sigma = 1.0
+            sigma = 2.7
             drawWidth=False
         else:
             b.layer = 'main_beam'
-            sigma = 3.0
+            sigma = 2.7
             drawWidth=True
-            
+
         b.draw(d, sigma=sigma, drawWidth=drawWidth, drawPower=True, drawName=True, fontSize=fontSize)
-    
+
     drawAllOptics(d, optList, drawName=True)
 
-    render.renderDXF(d, filename)
-    
+    render_func(d, filename)
+
 #}}}
 
 #{{{ Draw all beams
 
-def drawAllBeams(d, beamList, sigma=3.0, drawWidth=True, drawPower=False,
+def drawAllBeams(d, beamList, sigma=2.7, drawWidth=True, drawPower=False,
                  drawROC=False, drawGouy=False, drawOptDist=False, layer=None, mode='x',
                     fontSize=0.01):
     
