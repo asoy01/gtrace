@@ -229,6 +229,19 @@ function layerColor(rgb) {
  */
 var VIEWERS = [];
 
+/*
+ * What the front end can put into a layout. The name prefix is only a
+ * starting point: the layout has the last word on whether it is free,
+ * and it can be renamed afterwards like any other.
+ */
+var ADDABLE_TYPES = [
+    {type: 'Mirror', label: 'Mirror', prefix: 'M',
+     title: 'Add a mirror'},
+    {type: 'CyMirror', label: 'CyMirror', prefix: 'CY',
+     title: 'Add a cylindrical mirror',
+     params: {curve_direction: 'h'}}
+];
+
 function Viewer(container, scene, options) {
     this.container = container;
     this.scene = scene || {canvas: {layers: []}, beams: []};
@@ -291,10 +304,14 @@ Viewer.prototype._build = function () {
     head.appendChild(htmlEl('div', 'gt-title', this.opts.title || 'gtrace'));
     var buttons = htmlEl('div', 'gt-buttons');
     if (this.opts.onEdit) {
-        var addBtn = htmlEl('button', 'gt-btn', '+ Mirror');
-        addBtn.title = 'Add a mirror at the centre of the view';
-        addBtn.addEventListener('click', function () { self.addMirror(); });
-        buttons.appendChild(addBtn);
+        ADDABLE_TYPES.forEach(function (t) {
+            var btn = htmlEl('button', 'gt-btn', '+ ' + t.label);
+            btn.title = t.title + ' at the centre of the view';
+            btn.addEventListener('click', function () {
+                self.addOptics(t.type);
+            });
+            buttons.appendChild(btn);
+        });
     }
     var fitBtn = htmlEl('button', 'gt-btn', 'Fit');
     fitBtn.addEventListener('click', function () { self.fit(); });
@@ -374,7 +391,8 @@ Viewer.prototype._build = function () {
         rows.push(['Drag an optics', 'move it'],
                   ['Shift + drag', 'rotate it'],
                   ['Edit a property', 'apply it to the layout'],
-                  ['+ Mirror', 'add one at the centre of the view'],
+                  ['+ Mirror / + CyMirror',
+                   'add one at the centre of the view'],
                   ['Remove', 'delete the selected optics']);
     }
     rows.forEach(function (row) {
@@ -635,26 +653,39 @@ Viewer.prototype._buildOpticPanel = function () {
 };
 
 /*
- * Add a mirror at the centre of the current view.
+ * Add an optics at the centre of the current view.
  *
  * The name is chosen here rather than by Python, so that the viewer can
  * select the new element as soon as the scene comes back without
  * needing a reply channel. Everything else is left to the layout, which
  * fills the gaps from the optics already registered.
  */
-Viewer.prototype.addMirror = function (params) {
+Viewer.prototype.addOptics = function (type, params) {
     if (!this.onEdit) { return null; }
-    var name = this._freshOpticName();
-    var msg = {op: 'add', type: 'Mirror', name: name,
+    var spec = null;
+    for (var i = 0; i < ADDABLE_TYPES.length; i++) {
+        if (ADDABLE_TYPES[i].type === type) { spec = ADDABLE_TYPES[i]; }
+    }
+    if (!spec) { return null; }
+
+    var name = this._freshOpticName(spec.prefix);
+    var msg = {op: 'add', type: spec.type, name: name,
                params: Object.assign({
                    HRcenter: [this.cx, this.cy],
                    normAngleHR: Math.PI
-               }, params || {})};
+               }, spec.params || {}, params || {})};
     // Optimistic: the scene that comes back will contain it, and
     // _selectedOptic() resolves the name then.
     this.selectedOptic = name;
     this.onEdit(msg);
     return msg;
+};
+
+/*
+ * Kept for callers that only ever wanted the ordinary kind.
+ */
+Viewer.prototype.addMirror = function (params) {
+    return this.addOptics('Mirror', params);
 };
 
 Viewer.prototype._freshOpticName = function (prefix) {

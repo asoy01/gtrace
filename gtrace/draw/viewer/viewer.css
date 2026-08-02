@@ -187,7 +187,13 @@
 .gt-btn-danger { color: #8a1c1c; border-color: #e3c4c4; }
 .gt-btn-danger:hover { background: #fdeaea; border-color: #d59a9a; }
 
-.gt-buttons { display: flex; gap: 6px; flex: 0 0 auto; }
+.gt-buttons {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
 
 .gt-panel {
     border: 1px solid #d8dce3;
