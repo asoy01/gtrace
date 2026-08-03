@@ -14,12 +14,22 @@ setuptools.setup(
     url="https://github.com/asoy01/gtrace",
     packages=setuptools.find_packages(),
     package_data={'gtrace.draw.viewer': ['*.js', '*.css', '*.html']},
+    # LICENSE grants the two BSD conditions with no non-endorsement
+    # clause, which is BSD-2-Clause rather than BSD-3-Clause. The SPDX
+    # identifier replaces the "License :: OSI Approved :: BSD License"
+    # classifier, which setuptools deprecates and which did not say
+    # which BSD. Note that this lands in the legacy License field, not
+    # in License-Expression: PEP 639 metadata would mean moving the
+    # whole project description into pyproject.toml.
+    license="BSD-2-Clause",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    # numpy 2.x, which the package is developed and tested against, does
+    # not support anything older. Claiming 3.6 only makes pip on an old
+    # interpreter fail later and less clearly.
+    python_requires='>=3.9',
     install_requires = ['numpy>=1.5.0', 'scipy>=0.1.0','traits>=4.0.0'],
     # The HTML viewer needs nothing extra; only the notebook widget does.
     extras_require = {'notebook': ['anywidget>=0.9']}
