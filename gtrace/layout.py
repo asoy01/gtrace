@@ -143,13 +143,19 @@ EDITABLE_OPTIC_ATTRS = frozenset([
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
     'HRtransmissive', 'term_on_HR', 'term_on_HR_order', 'max_stray_order',
-    'curve_direction',
+    'curve_direction', 'ROC_anchor',
+    # Only a Lens has a focal length, and assigning to it re-solves both
+    # curvatures. The check that the target is a lens is in
+    # _set_optic_attr: a whitelist can say which names are allowed, not
+    # which classes carry them.
+    'f',
 ])
 
 #: Values an attribute is restricted to. A whitelist of names keeps a
 #: front end from reaching attributes it should not; this keeps it from
 #: putting nonsense into the ones it may.
 ATTR_CHOICES = {'curve_direction': ('h', 'v'),
+                'ROC_anchor': ('HRcenter', 'center'),
                 'width_mode': ('x', 'y', 'avg')}
 
 #: How a layout is drawn, and what each option defaults to. These are
@@ -205,8 +211,28 @@ CREATABLE_OPTIC_PARAMS = frozenset([
 _INHERITED_PARAMS = ['diameter', 'thickness', 'wedgeAngle', 'n',
                      'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR']
 
+#: Parameters a new Lens may be given on top of CREATABLE_OPTIC_PARAMS.
+#: A lens is ordered by its focal length, which nothing else has.
+CREATABLE_LENS_PARAMS = frozenset(['f', 'shape', 'ROC_HR'])
+
+#: Focal length of a lens added without one being asked for. A front end
+#: offering an "add a lens" button has to put something in the layout,
+#: and 500 mm is an unremarkable lens off a catalogue shelf.
+DEFAULT_LENS_F = 0.5
+
 #: Types that can be created from an edit message.
-CREATABLE_OPTIC_TYPES = {'Mirror': 'Mirror', 'CyMirror': 'CyMirror'}
+CREATABLE_OPTIC_TYPES = {'Mirror': 'Mirror', 'CyMirror': 'CyMirror',
+                         'Lens': 'Lens'}
+
+#: How many edits back undo can go. A snapshot is the serialized
+#: layout, so the cost is a few tens of kilobytes each for a system of
+#: any size, and a bound is what keeps a long session from growing
+#: without limit.
+UNDO_DEPTH = 50
+
+#: Operations that leave the layout as it was, and so are not worth a
+#: snapshot: one writes a file, and the other is the undo itself.
+_NOT_UNDOABLE = frozenset(['save', 'undo'])
 
 class EditError(ValueError):
     '''
@@ -214,6 +240,35 @@ class EditError(ValueError):
     unknown target or an attribute that is not editable.
     '''
     pass
+
+#: The order in which a batch of attributes is applied to an optics.
+#: Applying them is not commutative: the anchor decides what a curvature
+#: then does to the substrate, and the position handlers work from the
+#: orientation, so a position set before an orientation lands off the
+#: old one. A message is a JSON object and a saved layout is a JSON
+#: file, and the key order of neither is something to rest on.
+_ATTR_ORDER = ['ROC_anchor',
+               'diameter', 'thickness', 'wedgeAngle', 'n',
+               'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
+               'inv_ROC_HR', 'inv_ROC_AR', 'f',
+               'HRtransmissive', 'term_on_HR', 'term_on_HR_order',
+               'max_stray_order', 'curve_direction',
+               'normAngleHR', 'normVectHR',
+               'HRcenter', 'ARcenter', 'center']
+
+_ATTR_RANK = dict((k, i) for i, k in enumerate(_ATTR_ORDER))
+
+def _ordered(attrs):
+    '''
+    The items of an attribute dict, in the order they must be applied.
+
+    Anything not in _ATTR_ORDER sorts last, by name, so that an
+    attribute added to the whitelist without a thought about ordering
+    still lands somewhere reproducible.
+    '''
+    return sorted(attrs.items(),
+                  key=lambda kv: (_ATTR_RANK.get(kv[0], len(_ATTR_ORDER)),
+                                  kv[0]))
 
 def _check_choice(key, value):
     '''
@@ -223,6 +278,30 @@ def _check_choice(key, value):
     if choices is not None and value not in choices:
         raise EditError('%r must be one of %s, not %r.'
                         % (key, ', '.join(repr(c) for c in choices), value))
+
+def _set_optic_attr(optics, key, value):
+    '''
+    Set one whitelisted attribute of an optics on behalf of a front end.
+
+    Two things the whitelist cannot express happen here. An attribute
+    may exist on only some classes, and a model that accepts the name
+    may still refuse the value - assigning a focal length re-solves both
+    curvatures, and there are focal lengths a given blank cannot have.
+    Both come back as EditError, so that a front end sees one kind of
+    refusal however the model spelt it, and in both cases the optics is
+    left exactly as it was.
+    '''
+    if key == 'f' and not isinstance(optics, optcomp.Lens):
+        raise EditError("Only a lens has a focal length, and '%s' is a %s. "
+                        'Set inv_ROC_HR or inv_ROC_AR instead.'
+                        % (optics.name, type(optics).__name__))
+    try:
+        setattr(optics, key, value)
+    except EditError:
+        raise
+    except ValueError as e:
+        raise EditError("Cannot set %s on '%s' - %s: %s"
+                        % (key, optics.name, type(e).__name__, e))
 
 #}}}
 
@@ -369,23 +448,13 @@ def _update_optic(m, d):
     '''
     Apply a serialized optics to an existing one, in place.
     '''
-    # ROC_anchor comes first: it decides what a curvature further down
-    # the list does to the rest of the substrate.
-    for key in ['ROC_anchor',
-                'diameter', 'thickness', 'wedgeAngle', 'n',
-                'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
-                'inv_ROC_HR', 'inv_ROC_AR',
-                'HRtransmissive', 'term_on_HR', 'term_on_HR_order',
-                'max_stray_order', 'curve_direction']:
+    # _ATTR_ORDER puts the anchor before the curvatures it governs and
+    # the orientation before the position that is measured from it. The
+    # keys a serialized optics carries that are not attributes to set -
+    # its type and its name - are not in that list, and so are skipped.
+    for key in _ATTR_ORDER:
         if key in d and hasattr(m, key):
             setattr(m, key, d[key])
-    # Orientation before position: the position handler works from the
-    # normal vector, so setting them the other way round would leave
-    # the substrate placed off the old orientation.
-    if 'normAngleHR' in d:
-        m.normAngleHR = d['normAngleHR']
-    if 'HRcenter' in d:
-        m.HRcenter = d['HRcenter']
 
 def _update_source(b, d):
     '''
@@ -451,6 +520,11 @@ class OpticalLayout(object):
         self.draw_options = {}
         self.beams = None
         self.beams_by_source = None
+        #: Serialized states from before each edit, oldest first. The
+        #: history is kept here rather than in a front end so that undo
+        #: means the same thing however the edit arrived - through a
+        #: browser, or from a cell calling apply_edit directly.
+        self._history = []
 
         if optics is not None:
             for m in optics:
@@ -571,13 +645,24 @@ class OpticalLayout(object):
             {'op': 'rename', 'target': 'M1', 'name': 'PRM'}
             {'op': 'add',    'type': 'Mirror', 'name': 'M4',
                              'params': {'HRcenter': [0.3, 0.2]}}
+            {'op': 'add',    'type': 'Lens', 'name': 'L1',
+                             'params': {'f': 0.3, 'shape': 'plano-convex'}}
             {'op': 'remove', 'target': 'M4'}
+            {'op': 'align',  'target': 'L1', 'beam': 'b0',
+                             'beam_index': 0, 'point': [0.4, 0.02]}
+            {'op': 'slide',  'target': 'L1', 'beam': 'b0',
+                             'beam_index': 0, 'distance': 0.05}
             {'op': 'rules',  'rules': {'power_threshold': 1e-6}}
+            {'op': 'undo'}
 
         The edit is applied to the registered object itself, which is
         the same object the user holds in their own code. The trace
         result is invalidated so that the next draw() or scene_dict()
         re-traces.
+
+        The state before the edit is kept, so that undo() can put it
+        back; see there for what that costs and what it restores. An
+        edit that is refused changes nothing and is not recorded.
 
         Parameters
         ----------
@@ -597,6 +682,92 @@ class OpticalLayout(object):
             raise EditError('An edit message must be a dict, not %s'
                             % type(msg).__name__)
 
+        if msg.get('op') == 'undo':
+            return self.undo()
+
+        # Taken before the edit and kept only if the edit goes through:
+        # a refused message leaves the layout alone, and an undo step
+        # that restores what is already there is one press wasted.
+        #
+        # The objects are kept alongside their serialized form. Putting
+        # a state back is then a matter of restoring the values onto the
+        # very objects that held them, rather than matching them up by
+        # name the way loading a file has to - so a rename comes back
+        # without swapping the object it named, and an element that was
+        # removed comes back as itself rather than as a copy.
+        snapshot = (None if msg.get('op') in _NOT_UNDOABLE
+                    else (self.to_dict(), list(self.optics),
+                          list(self.sources)))
+        result = self._apply_edit(msg)
+        if snapshot is not None:
+            self._history.append(snapshot)
+            del self._history[:-UNDO_DEPTH]
+        return result
+
+    def undo(self):
+        '''
+        Put the layout back as it was before the last edit.
+
+        A step of the history holds the elements themselves as well as
+        their values, so undoing restores those values onto those same
+        objects. The ``M1`` of the user's own code, and the selection of
+        a front end, go on naming the right thing - through a rename,
+        and even through a removal, since an element taken out of the
+        layout is put back as itself rather than as a copy. This is
+        stronger than what loading a file can offer, which has only
+        names to match objects up by.
+
+        Only edits applied through apply_edit are recorded. Assigning to
+        an optics directly in Python is not an edit the layout ever sees,
+        and is not undone - though it is captured by the snapshot of the
+        next edit that does go through, and so is restored by undoing
+        that one.
+
+        Returns
+        -------
+        self : OpticalLayout
+
+        Raises
+        ------
+        EditError
+            If there is nothing left to undo.
+        '''
+        if not self._history:
+            raise EditError('There is nothing to undo.')
+        d, optics, sources = self._history.pop()
+
+        # The object lists and the serialized ones were made from the
+        # same lists at the same moment, so they line up entry for
+        # entry. The name is set apart from the rest: it is not an
+        # editable attribute, so _update_optic does not carry it.
+        self.optics = list(optics)
+        self.sources = list(sources)
+        for m, spec in zip(self.optics, d.get('optics', [])):
+            m.name = spec['name']
+            _update_optic(m, spec)
+        for b, spec in zip(self.sources, d.get('sources', [])):
+            b.name = spec['name']
+            _update_source(b, spec)
+
+        self.rules = TraceRules.from_dict(d.get('rules', {}))
+        self.draw_options = dict(d.get('draw_options', {}))
+        self.name = d.get('name', self.name)
+        self.beams = None
+        self.beams_by_source = None
+        return self
+
+    @property
+    def can_undo(self):
+        '''
+        Whether there is an edit left to undo.
+        '''
+        return len(self._history) > 0
+
+    def _apply_edit(self, msg):
+        '''
+        Apply one edit message. See apply_edit, which wraps this with
+        the history that makes an edit undoable.
+        '''
         op = msg.get('op')
         # 'name' is deliberately not in EDITABLE_OPTIC_ATTRS: renaming
         # changes the identity the layout resolves edits by, so it has
@@ -620,12 +791,12 @@ class OpticalLayout(object):
                     raise EditError("A '%s' message needs one of %s."
                                     % (op, ' or '.join(keys)))
 
-            for key, value in attrs.items():
+            for key, value in _ordered(attrs):
                 if key not in EDITABLE_OPTIC_ATTRS:
                     raise EditError('%r is not an editable attribute of an '
                                     'optics.' % (key,))
                 _check_choice(key, value)
-                setattr(optics, key, value)
+                _set_optic_attr(optics, key, value)
 
         elif op == 'rename':
             old = msg.get('target')
@@ -643,6 +814,17 @@ class OpticalLayout(object):
             # Nothing else is keyed by the name: the per-optics tracing
             # settings live on the optics itself, so they travel with it.
             optics.name = new
+
+        elif op in ('align', 'slide'):
+            name = msg.get('target')
+            try:
+                optics = self.get_optics(name)
+            except KeyError:
+                raise EditError("No optics named %r in the layout." % (name,))
+            if op == 'align':
+                self._align_to_beam(optics, msg)
+            else:
+                self._slide_along_beam(optics, msg)
 
         elif op == 'add':
             optics = self._optics_from_message(msg)
@@ -707,6 +889,119 @@ class OpticalLayout(object):
         self.beams_by_source = None
         return self
 
+    def _beam_from_message(self, msg):
+        '''
+        The beam a message names, from the last trace.
+
+        Identified by its index, with the name as a check. The front end
+        is looking at a scene built from that trace, so the index is
+        exact; but two beams can share a name and a stale scene would
+        make an index alone point quietly at the wrong one, so the name
+        has to agree, and is what the search falls back to when the
+        index does not fit.
+        '''
+        beams = self.beams
+        if beams is None:
+            beams = self.trace()
+
+        name = msg.get('beam')
+        index = msg.get('beam_index')
+        b = None
+        if isinstance(index, int) and 0 <= index < len(beams):
+            if name is None or beams[index].name == name:
+                b = beams[index]
+        if b is None and name is not None:
+            b = next((x for x in beams if x.name == name), None)
+        if b is None:
+            raise EditError('The beam named in the message (%r, index %r) is '
+                            'not in the last trace.' % (name, index))
+        return b
+
+    def _slide_along_beam(self, optics, msg):
+        '''
+        Move an optics along a beam's axis by a given distance, in
+        metres, positive in the direction the beam travels.
+
+        Nothing else about the optics changes: not its orientation, not
+        its offset across the beam. An element already square on the
+        beam therefore stays square and simply slides along it, which is
+        the one degree of freedom left after aligning, and the one that
+        wants a number rather than a drag - a lens goes where the mode
+        matching says, not where the mouse happens to land.
+
+        This is a translation of the whole substrate, so which point of
+        it is nominally being moved makes no difference to the result.
+        '''
+        b = self._beam_from_message(msg)
+
+        distance = msg.get('distance')
+        try:
+            distance = float(distance)
+        except (TypeError, ValueError):
+            raise EditError('A slide message needs a distance in metres, '
+                            'not %r.' % (distance,))
+        if not np.isfinite(distance):
+            raise EditError('A slide of %r is not a distance.' % (distance,))
+
+        step = np.asarray(b.dirVect, dtype='float64') * distance
+        if optics.ROC_anchor == 'center':
+            optics.center = np.asarray(optics.center, dtype='float64') + step
+        else:
+            optics.HRcenter = (np.asarray(optics.HRcenter, dtype='float64')
+                               + step)
+
+    def _align_to_beam(self, optics, msg):
+        '''
+        Turn an optics square to a beam and slide it onto that beam's
+        axis, leaving it at the point along the beam it was dropped.
+
+        Almost every element on a bench is meant to sit square across a
+        beam with the beam through its middle. Dragging one gets it
+        approximately there and no closer, and the two things a drag
+        cannot say - the exact angle and the exact offset across the
+        beam - are the two the bench does not leave to chance. The one
+        the user does mean to choose, where along the beam it sits, is
+        the one kept.
+
+        Which point of the element lands on the axis is what
+        ``ROC_anchor`` already names: the apex of the front face for a
+        mirror, since that is where the beam stops, and the middle of
+        the substrate for a lens, since the beam goes through. At normal
+        incidence the two are on the same line anyway, so the choice
+        only shifts the element along the beam - which is the direction
+        that was left approximate to begin with.
+
+        The beam is identified by its index in the last trace, with its
+        name as a check: the viewer is looking at a scene built from
+        that trace, and an index alone would quietly align to the wrong
+        beam if the two had drifted apart.
+        '''
+        b = self._beam_from_message(msg)
+
+        point = msg.get('point')
+        try:
+            p = np.asarray([float(point[0]), float(point[1])])
+        except (TypeError, ValueError, IndexError, KeyError):
+            raise EditError('An align message needs a point on the beam, '
+                            'not %r.' % (point,))
+
+        pos = np.asarray(b.pos, dtype='float64')
+        direction = np.asarray(b.dirVect, dtype='float64')
+        # Clamped to the drawn segment: past either end the beam does
+        # not exist, and the element would be aligned to a continuation
+        # of it that nothing in the layout says anything about.
+        along = float(np.dot(p - pos, direction))
+        along = min(max(along, 0.0), float(b.length))
+        foot = pos + direction * along
+
+        # Facing back down the beam is what "square to it" means: the
+        # front face normal points at where the light is coming from.
+        optics.normAngleHR = float(np.arctan2(-direction[1], -direction[0]))
+        if optics.ROC_anchor == 'center':
+            optics.center = foot
+        else:
+            optics.HRcenter = foot
+
     def _optics_from_message(self, msg):
         '''
         Build the optics described by an 'add' message.
@@ -716,6 +1011,14 @@ class OpticalLayout(object):
         comes out a 10 cm mirror instead of a 25 cm one. The surfaces
         are flat unless asked otherwise: a curvature copied from a
         neighbour would be a surprise rather than a convenience.
+
+        A lens is the exception, and inherits nothing. Its coatings, its
+        aperture and its wedge are the lens's own: a lens given a
+        mirror's 99% front face is one the main beam does not go
+        through, and an aperture taken from a large mirror is a focal
+        length the blank cannot be ground to. A lens comes off the
+        catalogue shelf instead, at DEFAULT_LENS_F unless the message
+        says otherwise.
         '''
         kind = msg.get('type', 'Mirror')
         if kind not in CREATABLE_OPTIC_TYPES:
@@ -723,20 +1026,15 @@ class OpticalLayout(object):
                             'types are %s.'
                             % (kind, ', '.join(sorted(CREATABLE_OPTIC_TYPES))))
 
+        allowed = CREATABLE_OPTIC_PARAMS
+        if kind == 'Lens':
+            allowed = allowed | CREATABLE_LENS_PARAMS
         params = msg.get('params') or {}
         for key, value in params.items():
-            if key not in CREATABLE_OPTIC_PARAMS:
-                raise EditError('%r is not a parameter a new optics may be '
-                                'given.' % (key,))
+            if key not in allowed:
+                raise EditError('%r is not a parameter a new %s may be '
+                                'given.' % (key, kind))
             _check_choice(key, value)
-
-        kwargs = {'inv_ROC_HR': 0.0, 'inv_ROC_AR': 0.0}
-        if self.optics:
-            template = self.optics[-1]
-            for key in _INHERITED_PARAMS:
-                if hasattr(template, key):
-                    kwargs[key] = getattr(template, key)
-        kwargs.update(params)
 
         # A missing name means "pick one for me"; a name that is present
         # but unusable is a mistake, not a request to invent one.
@@ -746,12 +1044,50 @@ class OpticalLayout(object):
         elif not isinstance(name, str) or not name.strip():
             raise EditError('An optics name must be a non-empty string, '
                             'not %r.' % (name,))
+
+        if kind == 'Lens':
+            return self._lens_from_params(params, name)
+
+        kwargs = {'inv_ROC_HR': 0.0, 'inv_ROC_AR': 0.0}
+        if self.optics:
+            template = self.optics[-1]
+            for key in _INHERITED_PARAMS:
+                if hasattr(template, key):
+                    kwargs[key] = getattr(template, key)
+        kwargs.update(params)
         kwargs['name'] = name
 
         if kind == 'CyMirror':
             return optcomp.CyMirror(**kwargs)
         kwargs.pop('curve_direction', None)   # CyMirror only
         return optcomp.Mirror(**kwargs)
+
+    def _lens_from_params(self, params, name):
+        '''
+        Build the lens described by an 'add' message.
+
+        Raises
+        ------
+        EditError
+            If the lens asked for cannot be made. The solver says why -
+            a blank too thin for the faces, a shape that contradicts the
+            sign of f - and that reason is what the front end shows.
+        '''
+        kwargs = dict(params)
+        kwargs.pop('curve_direction', None)   # CyMirror only
+        # Curvatures given outright describe the lens completely, and
+        # Lens refuses a focal length on top of them rather than
+        # silently preferring one. Only fill in the default when there
+        # is nothing else to go on.
+        if 'f' not in kwargs and not ('inv_ROC_HR' in kwargs
+                                      or 'inv_ROC_AR' in kwargs):
+            kwargs['f'] = DEFAULT_LENS_F
+        kwargs['name'] = name
+        try:
+            return optcomp.Lens(**kwargs)
+        except ValueError as e:
+            raise EditError('Cannot make that lens - %s: %s'
+                            % (type(e).__name__, e))
 
 #}}}
 
@@ -851,8 +1187,15 @@ class OpticalLayout(object):
             Passed to draw().
         '''
         canvas = self.draw(**kwargs)
-        return scene_to_dict(canvas, self.beams, self.optics,
-                             display=self.resolve_draw_options(**kwargs))
+        scene = scene_to_dict(canvas, self.beams, self.optics,
+                              display=self.resolve_draw_options(**kwargs))
+        # Not part of the drawing, and not a property of any element:
+        # whether the front end's Undo has anything to work with. It
+        # travels with the scene because the scene is what a front end
+        # is handed after every edit, which is exactly when the answer
+        # can have changed.
+        scene['can_undo'] = self.can_undo
+        return scene
 
 #}}}
 

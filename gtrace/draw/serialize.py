@@ -246,6 +246,15 @@ def optic_to_dict(o):
             d[k] = int(getattr(o, k))
     if hasattr(o, 'curve_direction'):
         d['curve_direction'] = str(o.curve_direction)
+    if hasattr(o, 'ROC_anchor'):
+        d['ROC_anchor'] = str(o.ROC_anchor)
+    if hasattr(o, 'f'):
+        # The power rather than the focal length itself. A substrate
+        # with no power left in it focuses at infinity, and JSON has no
+        # infinity to carry that with; the viewer inverts this back,
+        # exactly as it already does with the curvatures.
+        fl = float(o.f)
+        d['inv_f'] = 0.0 if not np.isfinite(fl) else 1.0/fl
     if hasattr(o, 'max_stray_order'):
         d['max_stray_order'] = (None if o.max_stray_order is None
                                 else int(o.max_stray_order))

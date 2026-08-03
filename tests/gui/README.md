@@ -35,9 +35,9 @@ counts it as skipped rather than passed.
 | `verify_interact.py` | Headless browser with real `MouseEvent`s: hover readout against gtrace, pinning, cycling through overlapping beams, the direction arrow, layer visibility, zoom about the cursor |
 | `verify_stage2.py` | The widget: ESM assembly, traitlets, `update()`, backend selection |
 | `verify_stage2_browser.py` | The ESM imported from a blob URL **the way anywidget imports it**, driven with a stand-in model |
-| `verify_stage2b.py` | The edit protocol end to end, what it refuses, save/load, and the model invariants underneath (sagitta, substrate centre, `max_stray_order`) |
+| `verify_stage2b.py` | The edit protocol end to end, what it refuses, save/load, and the model invariants underneath (sagitta, substrate centre, `max_stray_order`). Also lenses through the protocol: what a lens inherits and what it must not, setting `f`, the anchor, and that a scene carrying one is still strict JSON |
 | `verify_stage2b_browser.py` | Headless browser: dragging an optics, and feeding the resulting messages back through `apply_edit` |
-| `verify_props_browser.py` | Headless browser: the properties panel, its unit conversions, add and remove, rename, the display controls, the layout file buttons |
+| `verify_props_browser.py` | Headless browser: the properties panel, its unit conversions, add and remove, rename, the display controls, the layout file buttons, and the rows only some classes have (curve direction, focal length, ROC anchor) |
 
 `tests/test_gtrace.py` (the DXF renderer) and
 `tests/test_beam_propagation.py` (the propagation convention) are run

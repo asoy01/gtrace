@@ -37,6 +37,8 @@ The parameters of a Mirror object are shown in the figure above.
 
 The curvature of a surface is held as its *inverse* radius, ``inv_ROC_HR`` and ``inv_ROC_AR``, so that a flat surface is simply zero rather than an infinity that has to be special-cased everywhere. The GUI viewer shows you the radius itself and converts on the way in and out.
 
+.. _changing-a-curvature:
+
 Changing a curvature
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -84,6 +86,11 @@ adds is the way you order one: by focal length::
 The radii are solved for as a *thick* lens, which is what gtrace then traces: the beam refracts at both faces with the substrate in between, so radii taken from the thin lens formula would land a few parts in a thousand off, and considerably further for a short focal length. ``thickness`` is the :py:class:`Mirror<gtrace.optcomp.Mirror>` thickness, measured between the two chord planes, so it is the thickness at the rim; ``center_thickness`` reports the distance between the apexes that a catalogue would quote.
 
 A lens that cannot be made out of the blank it was given is refused, with the number you need in the message: two concave faces that would meet in the middle, a face steeper than its own aperture, or a focal length no substrate of that thickness can reach.
+
+Both faces reflect nothing by default, so a lens makes no ghost beams. A real lens does reflect, but a system of them produces so many faint ghosts that the picture becomes unreadable and the trace slow, and most of the time a lens is in a layout to bend the main beam. Chasing those ghosts is then something you ask for::
+
+    L = Lens(f=500*mm, Refl_HR=0.005, Trans_HR=0.995,
+             Refl_AR=0.005, Trans_AR=0.995)
 
 The focal length is not stored. Reading ``f`` computes it from the curvatures, the thickness and the index as they stand, and assigning to it reshapes the faces to match, keeping the shape of the lens and leaving it where it is. Tuning a lens against a mode matching target is therefore a loop::
 

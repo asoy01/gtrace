@@ -82,7 +82,8 @@ check('_css set on the class', len(w._css) > 500, '(%d chars)' % len(w._css))
 
 scene = w.scene
 check('scene has the expected keys',
-      set(scene.keys()) == {'canvas', 'beams', 'optics', 'display'},
+      set(scene.keys()) == {'canvas', 'beams', 'optics', 'display',
+                            'can_undo'},
       str(list(scene.keys())))
 check('scene carries the beams', len(scene['beams']) == len(layout.beams),
       '(%d)' % len(scene['beams']))

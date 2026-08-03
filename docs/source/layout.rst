@@ -141,10 +141,44 @@ The viewer changes a layout by sending it messages, which you can also send your
     layout.apply_edit({'op': 'set', 'target': 'PRM',
                        'attrs': {'diameter': 0.15}})
 
-The operations are ``move``, ``rotate``, ``set``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save`` and ``load``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
+The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load`` and ``undo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
+
+A ``set`` may carry several attributes at once, and they are not applied in the order the message happens to list them: the anchor goes on before the curvatures it governs, and the orientation before the position that is measured from it. A message is a JSON object, whose key order is not something to rest on.
+
+``align`` puts an element square across a beam, which is where almost every element on a bench is meant to sit and what a drag cannot say precisely. It names the beam by its index in the last trace, with the name as a check, and gives a point; the element is turned to face the beam and slid onto its axis at the projection of that point. See :doc:`viewer` for the Ctrl-drag that sends it.
+
+``slide`` is the degree of freedom aligning leaves: it moves an element along a beam's axis by a distance in metres, positive downstream, and touches nothing else. It names the beam the same way::
+
+    layout.apply_edit({'op': 'slide', 'target': 'L1',
+                       'beam': 'b0', 'beam_index': 0, 'distance': 0.05})
 
 The set of attributes a message may touch is an explicit whitelist (``EDITABLE_OPTIC_ATTRS``), and some attributes are further restricted to a set of permitted values (``ATTR_CHOICES``). Messages arrive from a browser, so "anything ``setattr`` accepts" is not a safe rule. An operation, target or attribute outside those sets raises :py:class:`EditError<gtrace.layout.EditError>` and leaves the layout untouched.
+
+An attribute on the whitelist may still be one the target does not have, or one that refuses the value it is given. ``f`` is both: only a :py:class:`Lens<gtrace.optcomp.Lens>` has a focal length, and assigning to it re-solves both curvatures, which not every blank can be ground to. Either refusal comes back as an ``EditError`` with the reason, and the optics is left as it was.
+
+``add`` builds a :py:class:`Mirror<gtrace.optcomp.Mirror>`, a :py:class:`CyMirror<gtrace.optcomp.CyMirror>` or a :py:class:`Lens<gtrace.optcomp.Lens>` (``CREATABLE_OPTIC_TYPES``). A mirror fills the parameters it was not given from the optics already registered, so that an element added to a system of 10 cm optics is a 10 cm optics. A lens does not: its coatings, aperture and wedge are the lens's own, and it is built from catalogue defaults at ``DEFAULT_LENS_F`` instead. It also accepts the parameters only a lens has (``CREATABLE_LENS_PARAMS``: ``f``, ``shape`` and ``ROC_HR``):
+
+.. code-block:: python
+
+    layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                       'params': {'f': 0.3, 'shape': 'plano-convex',
+                                  'HRcenter': [0.4, 0.0]}})
 
 Renaming has its own operation rather than being an editable attribute, because the name is the identity that edits are resolved by; changing it needs a uniqueness check.
 
 Two operations deliberately do *not* invalidate the trace result: ``draw`` changes display settings and ``save`` writes a file. Neither changes the physics, so neither causes a re-trace.
+
+Undo
+-----
+
+Every edit that goes through ``apply_edit`` keeps the state before it, so it can be taken back:
+
+.. code-block:: python
+
+    layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
+    layout.can_undo             # True
+    layout.undo()               # or apply_edit({'op': 'undo'})
+
+The history lives on the layout rather than in a front end, so undo means the same thing however the edit arrived. It goes back ``UNDO_DEPTH`` edits; there is no redo. A refused edit changes nothing and costs no step, and neither does ``save``, which only writes a file.
+
+A step holds the registered elements themselves alongside their serialized values, and restoring one puts those values back onto those same objects — through a rename, and through a removal, since an element taken out of the layout is held in the history and put back as itself. See :py:meth:`undo<gtrace.layout.OpticalLayout.undo>` for what that does *not* cover.

@@ -17,7 +17,7 @@ import gtrace.beam as beam
 import gtrace.optcomp as opt
 import gtrace.optics.gaussian as gauss
 from gtrace.layout import (OpticalLayout, TraceRules, EditError,
-                           EDITABLE_OPTIC_ATTRS)
+                           EDITABLE_OPTIC_ATTRS, DEFAULT_LENS_F, UNDO_DEPTH)
 from gtrace.nonsequential import non_seq_trace
 from gtrace.draw.viewer import widget as wmod
 from gtrace.unit import *
@@ -389,6 +389,370 @@ check('a value outside the allowed set is refused', refused_choice,
 check('and the old value stands', cy.curve_direction == 'h')
 layout.apply_edit({'op': 'remove', 'target': 'Cy'})
 
+print('--- Lens through the protocol ---')
+layout, (M1, M2, M3) = make_layout()
+layout.trace()
+
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                   'params': {'HRcenter': [0.6, 0.0],
+                              'normAngleHR': np.pi}})
+lens = layout.get_optics('L1')
+check('a Lens can be created', type(lens).__name__ == 'Lens',
+      type(lens).__name__)
+check('it comes out at the default focal length',
+      abs(float(lens.f) - DEFAULT_LENS_F) < 1e-9,
+      'f=%.6f (default %.3f)' % (float(lens.f), DEFAULT_LENS_F))
+check('it is where it was asked for',
+      np.allclose(np.asarray(lens.HRcenter), [0.6, 0.0]),
+      str(list(np.asarray(lens.HRcenter))))
+
+# A mirror inherits its size and coatings from the layout; a lens must
+# not. A "lens" wearing a mirror's 99% front face is one the main beam
+# does not go through, and an aperture off a big mirror is a focal
+# length the blank cannot be ground to.
+check('a lens inherits no aperture from the mirrors',
+      abs(float(lens.diameter) - float(M3.diameter)) > 1e-6
+      and abs(float(lens.diameter) - 25.4*mm) < 1e-12,
+      'd=%.5f (the mirrors are %.5f)'
+      % (float(lens.diameter), float(M3.diameter)))
+check('nor their coatings: a new lens reflects nothing at all',
+      float(lens.Refl_HR) == 0.0 and float(lens.Refl_AR) == 0.0
+      and float(M3.Refl_HR) > 0.5,
+      'lens R=%g, mirror R=%g' % (float(lens.Refl_HR), float(M3.Refl_HR)))
+check('the front face transmits', bool(lens.HRtransmissive))
+check('and it has no wedge', float(lens.wedgeAngle) == 0.0)
+check('its curvature anchor is the substrate centre',
+      lens.ROC_anchor == 'center', str(lens.ROC_anchor))
+
+sc = {o['name']: o for o in layout.scene_dict()['optics']}
+check('the scene carries the power, not the focal length',
+      'inv_f' in sc['L1'] and 'f' not in sc['L1'], str(sorted(sc['L1'])))
+check('and it inverts to the focal length',
+      abs(1.0/sc['L1']['inv_f'] - float(lens.f)) < 1e-9,
+      '1/%.6f = %.6f' % (sc['L1']['inv_f'], 1.0/sc['L1']['inv_f']))
+check('a mirror has no such key', 'inv_f' not in sc['M1'],
+      str(sorted(sc['M1'])))
+check('every optics reports its anchor',
+      sc['M1']['ROC_anchor'] == 'HRcenter'
+      and sc['L1']['ROC_anchor'] == 'center',
+      '%s / %s' % (sc['M1']['ROC_anchor'], sc['L1']['ROC_anchor']))
+
+# Nothing in a scene may be an infinity: JSON has none, and what would
+# reach the browser is a token JSON.parse refuses.
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'Flat',
+                   'params': {'inv_ROC_HR': 0.0, 'inv_ROC_AR': 0.0}})
+flat = layout.get_optics('Flat')
+check('a lens with no power has an infinite focal length',
+      not np.isfinite(float(flat.f)), str(flat.f))
+sc = {o['name']: o for o in layout.scene_dict()['optics']}
+check('which the scene reports as zero power', sc['Flat']['inv_f'] == 0.0,
+      str(sc['Flat']['inv_f']))
+strict = True
+try:
+    json.dumps(layout.scene_dict(), allow_nan=False)
+except ValueError:
+    strict = False
+check('the whole scene is strict JSON', strict)
+layout.apply_edit({'op': 'remove', 'target': 'Flat'})
+
+# Assigning a focal length re-solves both curvatures. The lens keeps its
+# shape and stays where it is, which is what makes a mode-matching
+# sweep work: L.f = ... in a loop, and nothing walks up the bench.
+c_before = np.array(lens.center, dtype=float)
+roc_before = (float(lens.inv_ROC_HR), float(lens.inv_ROC_AR))
+shape_before = lens.shape
+layout.trace()
+layout.apply_edit({'op': 'set', 'target': 'L1', 'attrs': {'f': 0.25}})
+check('setting f through the protocol re-solves the lens',
+      abs(float(lens.f) - 0.25) < 1e-9, 'f=%.9f' % float(lens.f))
+check('both curvatures moved',
+      abs(float(lens.inv_ROC_HR) - roc_before[0]) > 1e-6
+      and abs(float(lens.inv_ROC_AR) - roc_before[1]) > 1e-6)
+check('the shape is kept', lens.shape == shape_before,
+      '%s -> %s' % (shape_before, lens.shape))
+check('and the lens did not move',
+      np.abs(np.array(lens.center, dtype=float) - c_before).max() < 1e-15,
+      str(list(np.array(lens.center, dtype=float) - c_before)))
+check('the trace was invalidated', layout.beams is None)
+
+# The whitelist can say which names are allowed, not which classes
+# carry them. Only a lens has a focal length.
+refused({'op': 'set', 'target': 'M1', 'attrs': {'f': 0.5}},
+        'a focal length on a mirror')
+check('and no stray attribute was left on it', not hasattr(M1, 'f'))
+
+# A focal length the blank cannot be ground to. The solve happens
+# before anything is assigned, so the lens is untouched.
+f_before = float(lens.f)
+roc_before = (float(lens.inv_ROC_HR), float(lens.inv_ROC_AR))
+refused({'op': 'set', 'target': 'L1', 'attrs': {'f': 1e-6}},
+        'a focal length no lens of that shape can have')
+check('the lens is exactly as it was',
+      float(lens.f) == f_before
+      and (float(lens.inv_ROC_HR), float(lens.inv_ROC_AR)) == roc_before,
+      'f=%.9f' % float(lens.f))
+
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L2',
+                   'params': {'f': 0.15, 'shape': 'convex-plano'}})
+L2 = layout.get_optics('L2')
+check('a lens can be ordered by shape as well',
+      L2.shape == 'convex-plano' and abs(float(L2.f) - 0.15) < 1e-9,
+      '%s, f=%.6f' % (L2.shape, float(L2.f)))
+check('a flat face really is flat', float(L2.inv_ROC_AR) == 0.0)
+
+# A meniscus is the one shape f alone does not determine: one radius is
+# given and the other solved for. That third lens-only parameter has to
+# reach the constructor too.
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'Men',
+                   'params': {'f': 0.2, 'shape': 'meniscus',
+                              'ROC_HR': -50*mm}})
+men = layout.get_optics('Men')
+check('a meniscus can be pinned by one radius',
+      men.shape == 'convex-concave'
+      and abs(1.0/float(men.inv_ROC_HR) + 50*mm) < 1e-12
+      and abs(float(men.f) - 0.2) < 1e-9,
+      '%s, R_HR=%.6f, f=%.6f'
+      % (men.shape, 1.0/float(men.inv_ROC_HR), float(men.f)))
+layout.apply_edit({'op': 'remove', 'target': 'Men'})
+
+# Curvatures describe a lens completely, and Lens refuses a focal
+# length on top of them rather than quietly preferring one. The
+# default must not be imposed in that case.
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L3',
+                   'params': {'inv_ROC_HR': -2.0, 'inv_ROC_AR': 2.0}})
+L3 = layout.get_optics('L3')
+check('a lens can be given its curvatures instead',
+      float(L3.inv_ROC_HR) == -2.0 and float(L3.inv_ROC_AR) == 2.0,
+      '%g / %g' % (float(L3.inv_ROC_HR), float(L3.inv_ROC_AR)))
+check('and its focal length follows from them',
+      np.isfinite(float(L3.f)) and float(L3.f) > 0, str(L3.f))
+
+refused({'op': 'add', 'type': 'Mirror', 'name': 'Mf',
+         'params': {'f': 0.15}}, 'a focal length on a new mirror')
+refused({'op': 'add', 'type': 'Lens', 'name': 'Bad',
+         'params': {'f': -0.05, 'thickness': 0.1*mm}},
+        'a lens the blank cannot be ground to')
+check('and it was not registered',
+      'Bad' not in [o.name for o in layout.optics])
+refused({'op': 'add', 'type': 'Prism', 'name': 'P1', 'params': {}},
+        'an unknown optics type')
+
+# The anchor is a choice, like curve_direction, and every optics has one.
+layout.apply_edit({'op': 'set', 'target': 'M1',
+                   'attrs': {'ROC_anchor': 'center'}})
+check('the anchor can be changed', M1.ROC_anchor == 'center',
+      str(M1.ROC_anchor))
+refused({'op': 'set', 'target': 'M1', 'attrs': {'ROC_anchor': 'rim'}},
+        'an anchor outside the allowed set')
+check('and the old value stands', M1.ROC_anchor == 'center')
+layout.apply_edit({'op': 'set', 'target': 'M1',
+                   'attrs': {'ROC_anchor': 'HRcenter'}})
+
+check('the layout still traces with lenses in it',
+      len(layout.trace()) > 0, '(%d beams)' % len(layout.beams))
+
+# A lens survives the file as a lens, by its curvatures. Re-solving
+# from f would reshape one whose radii had been edited since.
+lens_path = os.path.join(OUT, 'lens_roundtrip.json')
+layout.apply_edit({'op': 'save', 'path': lens_path})
+reloaded = OpticalLayout.load(lens_path)
+r1 = reloaded.get_optics('L1')
+check('a lens reloads as a lens', type(r1).__name__ == 'Lens',
+      type(r1).__name__)
+check('with the same focal length',
+      abs(float(r1.f) - float(lens.f)) < 1e-12,
+      '%.9f vs %.9f' % (float(r1.f), float(lens.f)))
+check('the same curvatures',
+      float(r1.inv_ROC_HR) == float(lens.inv_ROC_HR)
+      and float(r1.inv_ROC_AR) == float(lens.inv_ROC_AR))
+check('and the same anchor', r1.ROC_anchor == lens.ROC_anchor,
+      str(r1.ROC_anchor))
+check('the plano face survived too',
+      float(reloaded.get_optics('L2').inv_ROC_AR) == 0.0)
+
+print('--- align: putting an optics on a beam ---')
+layout, (M1, M2, M3) = make_layout()
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                   'params': {'HRcenter': [0.2, 0.06], 'normAngleHR': 1.1}})
+lens = layout.get_optics('L1')
+layout.trace()
+idx = [b.name for b in layout.beams].index('b0')
+src = layout.beams[idx]
+bpos = np.asarray(src.pos, dtype=float)
+bdir = np.asarray(src.dirVect, dtype=float)
+
+def _offsets(optics, point_attr):
+    '''
+    How far a point of an optics is across the source beam and how far
+    along it. Across is what aligning has to drive to zero; along is
+    what it has to leave alone.
+    '''
+    off = np.asarray(getattr(optics, point_attr), dtype=float) - bpos
+    return abs(off[0]*bdir[1] - off[1]*bdir[0]), float(np.dot(off, bdir))
+
+layout.apply_edit({'op': 'align', 'target': 'L1', 'beam': 'b0',
+                   'beam_index': idx, 'point': [0.3, 0.05]})
+across, along = _offsets(lens, 'center')
+check('a lens lands on the beam axis', across < 1e-15, '(%.3e m)' % across)
+check('square to the beam',
+      abs(float(np.dot(np.asarray(lens.normVectHR), bdir)) + 1) < 1e-12,
+      '(n.d = %.15f)' % float(np.dot(np.asarray(lens.normVectHR), bdir)))
+# The one thing a drag does say is how far along the beam to put it.
+check('at the distance along the beam it was dropped',
+      abs(along - 0.3) < 1e-12, '(%.12f)' % along)
+check('the trace was invalidated', layout.beams is None)
+check('the layout still traces afterwards',
+      len(layout.trace()) > 0, '(%d beams)' % len(layout.beams))
+
+# A mirror is held by the apex of its HR face, and that is the point
+# the beam has to arrive at: it is where the beam stops.
+idx = [b.name for b in layout.beams].index('b0')
+layout.apply_edit({'op': 'align', 'target': 'M1', 'beam': 'b0',
+                   'beam_index': idx, 'point': [0.42, -0.07]})
+across, along = _offsets(M1, 'HRcenter')
+check('a mirror lands by the apex of its HR face', across < 1e-15,
+      '(%.3e m)' % across)
+check('and it too is square to the beam',
+      abs(float(np.dot(np.asarray(M1.normVectHR), bdir)) + 1) < 1e-12)
+
+# Past the end of the drawn beam there is no beam: aligning to a
+# continuation of it would be aligning to something the layout does not
+# say exists.
+layout.trace()
+idx = [b.name for b in layout.beams].index('b0')
+length = float(layout.beams[idx].length)
+layout.apply_edit({'op': 'align', 'target': 'L1', 'beam': 'b0',
+                   'beam_index': idx, 'point': [length + 5.0, 0.0]})
+across, along = _offsets(lens, 'center')
+check('a point past the end of the beam is clamped to it',
+      abs(along - length) < 1e-12, '(%.6f, beam is %.6f long)' % (along, length))
+
+# The index is how the viewer names a beam, since two can share a name;
+# the name is the check that the scene it was picked from is still the
+# trace we have.
+layout.trace()
+layout.apply_edit({'op': 'align', 'target': 'L1', 'beam': 'b0',
+                   'beam_index': 999, 'point': [0.25, 0.0]})
+across, along = _offsets(lens, 'center')
+check('an index that is out of date falls back to the name',
+      across < 1e-15 and abs(along - 0.25) < 1e-12,
+      '(%.3e m across, %.6f along)' % (across, along))
+
+layout.trace()
+refused({'op': 'align', 'target': 'L1', 'beam': 'ghost-beam',
+         'beam_index': 999, 'point': [0.3, 0.0]}, 'a beam not in the trace')
+refused({'op': 'align', 'target': 'L1', 'beam': 'b0', 'beam_index': 0},
+        'an align with no point')
+refused({'op': 'align', 'target': 'L1', 'beam': 'b0', 'beam_index': 0,
+         'point': 'over there'}, 'a point that is not a pair of numbers')
+refused({'op': 'align', 'target': 'nope', 'beam': 'b0', 'point': [0, 0]},
+        'an unknown target')
+
+print('--- slide: moving along a beam by a given distance ---')
+layout, (M1, M2, M3) = make_layout()
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                   'params': {'HRcenter': [0.2, 0.06], 'normAngleHR': 1.1}})
+lens = layout.get_optics('L1')
+layout.trace()
+idx = [b.name for b in layout.beams].index('b0')
+bdir = np.asarray(layout.beams[idx].dirVect, dtype=float)
+layout.apply_edit({'op': 'align', 'target': 'L1', 'beam': 'b0',
+                   'beam_index': idx, 'point': [0.25, 0.0]})
+
+c0 = np.asarray(lens.center, dtype=float).copy()
+hr0 = np.asarray(lens.HRcenter, dtype=float).copy()
+a0 = float(lens.normAngleHR)
+layout.trace()
+idx = [b.name for b in layout.beams].index('b0')
+layout.apply_edit({'op': 'slide', 'target': 'L1', 'beam': 'b0',
+                   'beam_index': idx, 'distance': 0.05})
+moved = np.asarray(lens.center, dtype=float) - c0
+check('the optics moves by exactly the distance given',
+      abs(float(np.dot(moved, bdir)) - 0.05) < 1e-15,
+      '(%.15f along the beam)' % float(np.dot(moved, bdir)))
+check('and not at all across it',
+      abs(moved[0]*bdir[1] - moved[1]*bdir[0]) < 1e-15,
+      '(%.3e m)' % abs(moved[0]*bdir[1] - moved[1]*bdir[0]))
+check('its orientation is untouched', float(lens.normAngleHR) == a0,
+      '%.15f' % float(lens.normAngleHR))
+# A translation moves every point of the substrate alike, so it makes
+# no difference which one is nominally being moved.
+check('the whole substrate went with it',
+      np.allclose(np.asarray(lens.HRcenter, dtype=float) - hr0, moved,
+                  atol=0),
+      str(list(np.asarray(lens.HRcenter, dtype=float) - hr0 - moved)))
+check('the trace was invalidated', layout.beams is None)
+
+# Positive is downstream, so the opposite sign has to undo it exactly.
+layout.trace()
+idx = [b.name for b in layout.beams].index('b0')
+layout.apply_edit({'op': 'slide', 'target': 'L1', 'beam': 'b0',
+                   'beam_index': idx, 'distance': -0.05})
+check('the opposite sign puts it back exactly',
+      np.array_equal(np.asarray(lens.center, dtype=float), c0),
+      str(list(np.asarray(lens.center, dtype=float) - c0)))
+
+# Sliding a mirror that sits at an angle uses the beam's direction, not
+# the mirror's: 'along the beam' is the beam's business.
+layout.trace()
+idx = [b.name for b in layout.beams].index('b0')
+m1c = np.asarray(M1.center, dtype=float).copy()
+layout.apply_edit({'op': 'slide', 'target': 'M1', 'beam': 'b0',
+                   'beam_index': idx, 'distance': 0.02})
+step = np.asarray(M1.center, dtype=float) - m1c
+check('an optics at an angle still moves along the beam',
+      np.allclose(step, bdir*0.02, atol=1e-15),
+      str(list(step.round(15))))
+
+layout.trace()
+refused({'op': 'slide', 'target': 'L1', 'beam': 'b0', 'beam_index': 0},
+        'a slide with no distance')
+refused({'op': 'slide', 'target': 'L1', 'beam': 'b0', 'beam_index': 0,
+         'distance': 'a long way'}, 'a distance that is not a number')
+refused({'op': 'slide', 'target': 'L1', 'beam': 'b0', 'beam_index': 0,
+         'distance': float('inf')}, 'an infinite distance')
+refused({'op': 'slide', 'target': 'L1', 'beam': 'ghost-beam',
+         'beam_index': 999, 'distance': 0.01}, 'a beam not in the trace')
+refused({'op': 'slide', 'target': 'nope', 'beam': 'b0', 'distance': 0.01},
+        'an unknown target')
+
+print('--- a set applies its attributes in a fixed order ---')
+# An edit message is a JSON object, and its key order is not something
+# to rest on: the position handlers work from the orientation, so a
+# position applied first lands off the old one.
+lay_a, (Ma, _, _) = make_layout()
+lay_a.apply_edit({'op': 'set', 'target': 'M1',
+                  'attrs': {'center': [0.7, 0.1], 'normAngleHR': 0.3}})
+lay_b, (Mb, _, _) = make_layout()
+lay_b.apply_edit({'op': 'set', 'target': 'M1',
+                  'attrs': {'normAngleHR': 0.3, 'center': [0.7, 0.1]}})
+check('the same attributes in either order give the same optics',
+      np.array_equal(np.asarray(Ma.center, dtype=float),
+                     np.asarray(Mb.center, dtype=float))
+      and float(Ma.normAngleHR) == float(Mb.normAngleHR),
+      '%s vs %s' % (list(np.asarray(Ma.center).round(12)),
+                    list(np.asarray(Mb.center).round(12))))
+check('and the centre is where it was asked for',
+      np.allclose(np.asarray(Ma.center, dtype=float), [0.7, 0.1], atol=1e-12),
+      str(list(np.asarray(Ma.center).round(12))))
+# This is what a lens gets when it is turned in the viewer: it is held
+# by the middle of its substrate, so the middle is sent along with the
+# angle and has to be applied second.
+lay_c, _ = make_layout()
+lay_c.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                  'params': {'HRcenter': [0.2, 0.06]}})
+Lc = lay_c.get_optics('L1')
+c_before = np.asarray(Lc.center, dtype=float).copy()
+lay_c.apply_edit({'op': 'set', 'target': 'L1',
+                  'attrs': {'center': list(c_before),
+                            'normAngleHR': float(Lc.normAngleHR) + 0.4}})
+check('turning a lens about its middle leaves the middle alone',
+      np.allclose(np.asarray(Lc.center, dtype=float), c_before, atol=1e-15),
+      str(list(np.asarray(Lc.center) - c_before)))
+check('while the apex of its front face moves',
+      not np.allclose(np.asarray(Lc.HRcenter, dtype=float),
+                      [0.2, 0.06], atol=1e-9))
+
 print('--- apply_edit: rename ---')
 layout, (M1, M2, M3) = make_layout()
 M1.max_stray_order = 0
@@ -476,6 +840,115 @@ check('the name becomes free again',
       layout.apply_edit({'op': 'add', 'name': 'Curved',
                          'params': {}}) is layout)
 layout.apply_edit({'op': 'remove', 'target': 'Curved'})
+
+print('--- undo ---')
+# This section works on layouts of its own, and refused() reads whatever
+# `layout` names, so borrow the name and give it back: the sections
+# after this one carry on from the one built above.
+_borrowed = (layout, M1, M2, M3)
+layout, (M1, M2, M3) = make_layout()
+check('a fresh layout has nothing to undo', not layout.can_undo)
+check('and the scene says so', layout.scene_dict()['can_undo'] is False)
+refused({'op': 'undo'}, 'an undo with nothing behind it')
+
+home = np.asarray(M1.HRcenter, dtype=float).copy()
+layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
+check('an edit gives it something to undo', layout.can_undo)
+check('which the scene reports', layout.scene_dict()['can_undo'] is True)
+layout.apply_edit({'op': 'undo'})
+check('undoing a move puts it back exactly',
+      np.array_equal(np.asarray(M1.HRcenter, dtype=float), home),
+      str(list(np.asarray(M1.HRcenter, dtype=float) - home)))
+# The whole design rests on the layout holding the user's own objects,
+# so an undo must not swap them for new ones.
+check('and it is still the same object', layout.get_optics('M1') is M1)
+check('the trace was invalidated', layout.beams is None)
+check('with nothing left behind it', not layout.can_undo)
+
+# Several steps, undone in order.
+layout.apply_edit({'op': 'set', 'target': 'M1', 'attrs': {'diameter': 0.2}})
+layout.apply_edit({'op': 'set', 'target': 'M1', 'attrs': {'diameter': 0.3}})
+layout.apply_edit({'op': 'set', 'target': 'M1', 'attrs': {'diameter': 0.4}})
+layout.apply_edit({'op': 'undo'})
+check('undo walks back one edit at a time',
+      abs(float(M1.diameter) - 0.3) < 1e-15, str(float(M1.diameter)))
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'undo'})
+check('all the way to where it started',
+      abs(float(M1.diameter) - 0.1) < 1e-15, str(float(M1.diameter)))
+refused({'op': 'undo'}, 'an undo past the beginning')
+
+# Adding and removing, which change what is registered rather than a
+# number on it.
+n0 = len(layout.optics)
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                   'params': {'HRcenter': [0.2, 0.2]}})
+layout.apply_edit({'op': 'undo'})
+check('undoing an add takes the optics away again',
+      len(layout.optics) == n0
+      and 'L1' not in [o.name for o in layout.optics],
+      str([o.name for o in layout.optics]))
+
+layout.apply_edit({'op': 'remove', 'target': 'M2'})
+layout.apply_edit({'op': 'undo'})
+check('undoing a remove brings it back',
+      'M2' in [o.name for o in layout.optics]
+      and len(layout.optics) == n0, str([o.name for o in layout.optics]))
+# The history holds the elements, not only their values, so what comes
+# back is the object that was taken out - the M2 of the user's own code
+# still names the registered optics.
+check('as the very object that was removed',
+      layout.get_optics('M2') is M2)
+
+layout.apply_edit({'op': 'rename', 'target': 'M1', 'name': 'PRM'})
+layout.apply_edit({'op': 'undo'})
+check('undoing a rename gives the name back to the same object',
+      M1.name == 'M1' and layout.get_optics('M1') is M1, str(M1.name))
+
+layout.apply_edit({'op': 'rules', 'rules': {'order': 9}})
+layout.apply_edit({'op': 'undo'})
+check('the tracing rules are undone too', layout.rules.order == 5,
+      str(layout.rules.order))
+layout.apply_edit({'op': 'draw', 'params': {'width_mode': 'y'}})
+layout.apply_edit({'op': 'undo'})
+check('and so are the drawing options',
+      layout.draw_options.get('width_mode') != 'y',
+      str(layout.draw_options))
+
+# A refused edit changes nothing, so it must not cost an undo step:
+# pressing Undo after one would take back the edit before it instead.
+layout, (M1, M2, M3) = make_layout()
+layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
+depth = len(layout._history)
+refused({'op': 'set', 'target': 'M1', 'attrs': {'nonsense': 1}},
+        'an unknown attribute')
+refused({'op': 'explode', 'target': 'M1'}, 'an unknown operation')
+check('a refused edit leaves the history alone',
+      len(layout._history) == depth, '(%d vs %d)' % (len(layout._history),
+                                                     depth))
+check('so undo still reaches the edit before it',
+      layout.apply_edit({'op': 'undo'}) is layout
+      and not layout.can_undo)
+
+# Saving writes a file and changes nothing, so it is not a step either.
+save_path = os.path.join(OUT, 'undo_save.json')
+layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.7, 0.1]})
+layout.apply_edit({'op': 'save', 'path': save_path})
+check('nor does saving', len(layout._history) == 1,
+      str(len(layout._history)))
+
+# The bound is what keeps a long session from growing without limit.
+layout, (M1, M2, M3) = make_layout()
+for i in range(UNDO_DEPTH + 20):
+    layout.apply_edit({'op': 'set', 'target': 'M1',
+                       'attrs': {'diameter': 0.1 + i*0.001}})
+check('the history is bounded', len(layout._history) == UNDO_DEPTH,
+      '(%d, bound is %d)' % (len(layout._history), UNDO_DEPTH))
+for i in range(UNDO_DEPTH):
+    layout.apply_edit({'op': 'undo'})
+check('and undoes exactly that many times', not layout.can_undo)
+
+layout, M1, M2, M3 = _borrowed
 
 print('--- apply_edit: what is refused ---')
 

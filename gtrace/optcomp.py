@@ -3155,13 +3155,22 @@ class Lens(Mirror):
     ================  =========  ====================================
     wedgeAngle        0.25 deg   0, or the faces are not coaxial
     HRtransmissive    False      True: the front face is meant to pass
-    Refl_HR/Trans_HR  0.99/0.01  0.005/0.995: both faces coated
+    Refl_HR/Trans_HR  0.99/0.01  0/1: both faces reflect nothing
     ================  =========  ====================================
 
     HRtransmissive matters more than it looks. With it False a beam
     passing through the front face counts as one order of stray, so the
     main beam through a lens would be a ghost, and non_seq_trace would
     stop following it at a low order.
+
+    Both faces default to reflecting nothing. A real lens does reflect,
+    but a system of them makes so many faint ghosts that the picture is
+    unreadable and the trace slow, and most of the time a lens is there
+    to bend the main beam. Someone chasing the ghosts off a lens knows
+    they are, and says so::
+
+        L = Lens(f=500*mm, Refl_HR=0.005, Trans_HR=0.995,
+                 Refl_AR=0.005, Trans_AR=0.995)
 
     Attributes
     ----------
@@ -3193,7 +3202,7 @@ class Lens(Mirror):
     and the other is solved for. ROC_HR is positive for a concave front
     face, as everywhere in gtrace::
 
-        L = Lens(f=200*mm, shape='meniscus', ROC_HR=-0.1)
+        L = Lens(f=200*mm, shape='meniscus', ROC_HR=-50*mm)
     '''
 
     #A lens is placed by its middle: the beam goes through it, so there
@@ -3212,8 +3221,8 @@ class Lens(Mirror):
                  center=None, HRcenter=None, normAngleHR=0.0,
                  normVectHR=None, diameter=1*inch, thickness=6*mm,
                  n=1.45, ROC_HR=None, inv_ROC_HR=None, inv_ROC_AR=None,
-                 wedgeAngle=0.0, Refl_HR=0.005, Trans_HR=0.995,
-                 Refl_AR=0.005, Trans_AR=0.995, name="Lens",
+                 wedgeAngle=0.0, Refl_HR=0.0, Trans_HR=1.0,
+                 Refl_AR=0.0, Trans_AR=1.0, name="Lens",
                  HRtransmissive=True, term_on_HR=False,
                  max_stray_order=None):
         '''
@@ -3268,8 +3277,10 @@ class Lens(Mirror):
             length solved for here assumes coaxial faces.
         Refl_HR, Trans_HR, Refl_AR, Trans_AR : float, optional
             Power reflectivity and transmissivity of the two faces.
-            Default to a 0.5% coating on both, which keeps the ghost
-            beams a lens really does make.
+            Default to reflecting nothing, so that a lens makes no
+            ghosts. Give the faces a real coating - 0.5% is typical -
+            when the ghosts are what you are after. See the class
+            docstring.
         name : str, optional
             Defaults "Lens".
         HRtransmissive : boolean, optional

@@ -239,7 +239,13 @@ var ADDABLE_TYPES = [
      title: 'Add a mirror'},
     {type: 'CyMirror', label: 'CyMirror', prefix: 'CY',
      title: 'Add a cylindrical mirror',
-     params: {curve_direction: 'h'}}
+     params: {curve_direction: 'h'}},
+    // No params: a lens is not cut to match the mirrors around it, so
+    // Python builds it from its own catalogue defaults rather than from
+    // anything the view can say. Its focal length is edited afterwards
+    // in the panel, like any other property.
+    {type: 'Lens', label: 'Lens', prefix: 'L',
+     title: 'Add a lens'}
 ];
 
 function Viewer(container, scene, options) {
@@ -263,6 +269,13 @@ function Viewer(container, scene, options) {
     this.hover = null;
     this.cycle = 0;         // index into the bundle of overlapping beams
     this.lastClick = null;
+    // The same pair again for picking the beam to move an optics along.
+    // Kept apart from the readout's so that the two cycles do not step
+    // each other on: they are answers to different questions asked at
+    // the same place.
+    this.slideBeam = null;  // {name, index} of the chosen beam
+    this.slideCycle = 0;
+    this.lastSlideClick = null;
 
     // Editing is available only when the transport gave us somewhere to
     // send the edits: the notebook widget and the live server do, the
@@ -275,6 +288,7 @@ function Viewer(container, scene, options) {
     this._build();
     this._renderScene();
     this._refreshDisplayPanel();
+    this._refreshUndo();
     this._bindEvents();
     this.fit();
 }
@@ -315,6 +329,15 @@ Viewer.prototype._build = function () {
             });
             buttons.appendChild(btn);
         });
+    }
+    if (this.opts.onEdit) {
+        // Undo is Python's: it holds the layout, so it is the only
+        // thing that knows what the layout was. Disabled until the
+        // scene says there is something to go back to.
+        this.undoBtn = htmlEl('button', 'gt-btn', 'Undo');
+        this.undoBtn.title = 'Undo the last edit';
+        this.undoBtn.addEventListener('click', function () { self.undo(); });
+        buttons.appendChild(this.undoBtn);
     }
     var fitBtn = htmlEl('button', 'gt-btn', 'Fit');
     fitBtn.addEventListener('click', function () { self.fit(); });
@@ -419,11 +442,14 @@ Viewer.prototype._build = function () {
                 ['Esc', 'clear selection']];
     if (this.opts.onEdit) {
         rows.push(['Drag an optics', 'move it'],
+                  ['Ctrl + drag', 'drop it square on a beam'],
                   ['Shift + drag', 'rotate it'],
+                  ['Ctrl + click a beam', 'move the selected optics along it'],
                   ['Edit a property', 'apply it to the layout'],
-                  ['+ Mirror / + CyMirror',
+                  ['+ Mirror / + CyMirror / + Lens',
                    'add one at the centre of the view'],
-                  ['Remove', 'delete the selected optics']);
+                  ['Remove', 'delete the selected optics'],
+                  ['Undo, or Ctrl + Z', 'put the last edit back']);
     }
     rows.forEach(function (row) {
         var li = htmlEl('li');
@@ -506,14 +532,40 @@ Viewer.prototype._buildReadout = function () {
 var OPTIC_FIELDS = [
     {key: 'name', label: 'Name', text: true},
     {key: 'type', label: 'Type', readonly: true},
+    // First of the numbers, because for a lens it is the one that
+    // matters: the two radii below are how the model holds it, but the
+    // focal length is what the lens is for. In millimetres, which is
+    // how a catalogue lists one and how anyone speaks of it, unlike
+    // everything else on a bench of this size. Only a lens has one, and
+    // the row hides itself for anything else. 'inf' is refused rather
+    // than sent: a lens with no power is a flat window, which is a
+    // different element and not something to arrive at by typing.
+    {key: 'f', label: 'Focal length', unit: 'mm', optional: true,
+     finite: true},
     {key: 'cx', label: 'Center x', unit: 'm'},
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
+    // Once an element is square on a beam, the one placement left is
+    // how far along that beam it sits, and that is a number rather
+    // than something to find with a mouse: a lens goes where the mode
+    // matching says. The two rows are one control - which beam, and
+    // how far - and they hide together when no beam passes through the
+    // element. The distance is relative and in millimetres: it is an
+    // adjustment, and an adjustment on a bench is spoken of in mm.
+    {key: 'slide_beam', label: 'Along beam', optional: true,
+     choices: [], dynamicChoices: true},
+    {key: 'slide_by', label: 'Move by', unit: 'mm', optional: true},
     {key: 'diameter', label: 'Diameter', unit: 'm'},
     {key: 'thickness', label: 'Thickness', unit: 'm'},
     {key: 'wedgeAngle', label: 'Wedge', unit: '°'},
     {key: 'rocHR', label: 'ROC HR', unit: 'm'},
     {key: 'rocAR', label: 'ROC AR', unit: 'm'},
+    // What stays put when a curvature changes: the apex of the front
+    // face, or the middle of the substrate. A mirror pins its HR face
+    // so the beam spot on it does not move; a lens pins its middle,
+    // since the beam goes through.
+    {key: 'ROC_anchor', label: 'ROC anchor', optional: true,
+     choices: [['HRcenter', 'HR apex'], ['center', 'substrate centre']]},
     {key: 'n', label: 'Index n'},
     {key: 'Refl_HR', label: 'Refl HR'},
     {key: 'Trans_HR', label: 'Trans HR'},
@@ -533,6 +585,23 @@ var OPTIC_FIELDS = [
 ];
 
 var DEG = 180 / Math.PI;
+var MM = 0.001;
+
+/*
+ * The point an optics is held by: what stays put when its curvature
+ * changes, and what it therefore turns about. ``ROC_anchor`` names it -
+ * the apex of the front face for a mirror, the middle of the substrate
+ * for a lens. An optics from a scene old enough not to carry one is
+ * held by its front face, which is what a mirror does.
+ */
+function opticAnchorIsCenter(o) {
+    return o.ROC_anchor === 'center' && !!o.center;
+}
+
+function opticAnchorPoint(o) {
+    if (opticAnchorIsCenter(o)) { return o.center; }
+    return o.HRcenter || o.center || [0, 0];
+}
 
 function opticFieldValue(o, key) {
     var c = o.center || o.HRcenter || [0, 0];
@@ -543,6 +612,13 @@ function opticFieldValue(o, key) {
     case 'wedgeAngle': return (o.wedgeAngle || 0) * DEG;
     case 'rocHR': return o.inv_ROC_HR ? 1 / o.inv_ROC_HR : Infinity;
     case 'rocAR': return o.inv_ROC_AR ? 1 / o.inv_ROC_AR : Infinity;
+    case 'f':
+        // Python sends the power, which is finite even for a substrate
+        // with no power left in it; JSON could not have carried the
+        // infinite focal length that one has. An element with no entry
+        // at all is not a lens, and reads as absent so the row hides.
+        if (o.inv_f === undefined || o.inv_f === null) { return undefined; }
+        return o.inv_f ? 1 / (o.inv_f * MM) : Infinity;
     case 'max_stray_order':
         // An optics that does not carry the setting reads as unset,
         // which is the same thing as far as the panel is concerned.
@@ -574,6 +650,11 @@ function opticFieldMessage(o, key, value) {
         break;
     case 'rocAR':
         attrs.inv_ROC_AR = isFinite(value) && value !== 0 ? 1 / value : 0;
+        break;
+    case 'f':
+        // The panel is in millimetres; the model, like everything else
+        // in gtrace, is in metres.
+        attrs.f = value * MM;
         break;
     default:
         attrs[key] = value;
@@ -773,6 +854,26 @@ Viewer.prototype.loadLayout = function (path) {
     return msg;
 };
 
+/*
+ * Ask Python to put the layout back as it was before the last edit.
+ *
+ * The selection is left alone: undoing a move means looking at the same
+ * element again, in its old place. If the element was one the undone
+ * edit had removed, it comes back and the name resolves to it again;
+ * if it was one the undone edit had added, it goes, and the panel falls
+ * back to the readout when the scene arrives without it.
+ */
+Viewer.prototype.undo = function () {
+    if (!this.onEdit || !this.scene.can_undo) { return null; }
+    var msg = {op: 'undo'};
+    this.onEdit(msg);
+    return msg;
+};
+
+Viewer.prototype._refreshUndo = function () {
+    if (this.undoBtn) { this.undoBtn.disabled = !this.scene.can_undo; }
+};
+
 Viewer.prototype.removeSelected = function () {
     if (!this.onEdit || !this.selectedOptic) { return null; }
     var msg = {op: 'remove', target: this.selectedOptic};
@@ -838,10 +939,143 @@ Viewer.prototype._selectedOptic = function () {
     return null;
 };
 
+/*
+ * The beams that pass through an optics, nearest to the point it is
+ * held by first. The same reach a Ctrl-drag snaps over, so what can be
+ * slid along is what could have been dropped onto.
+ */
+Viewer.prototype._beamsThrough = function (o) {
+    if (!o) { return []; }
+    var c = opticAnchorPoint(o);
+    var rad = opticRadius(o);
+    return this._pickAll(c[0], c[1], rad).filter(function (h) {
+        // A beam that both begins and ends inside the substrate is one
+        // of the element's own internal reflections. It passes through
+        // the element in the arithmetic sense, but there is no axis
+        // there to move an element along, and no part of it outside the
+        // element to point at either.
+        var b = h.beam;
+        return Math.max(Math.hypot(b.pos[0] - c[0], b.pos[1] - c[1]),
+                        Math.hypot(b.end[0] - c[0], b.end[1] - c[1])) > rad;
+    });
+};
+
+/*
+ * Fill the beam picker from the beams currently through the element,
+ * keeping the one already chosen if it is still among them.
+ *
+ * Beams are offered by index, since two of them can share a name, but
+ * remembered by name: an index is only meaningful against one trace,
+ * and every edit produces a new one.
+ */
+Viewer.prototype._refreshSlideBeams = function (o) {
+    var hits = this._beamsThrough(o);
+    var sel = this.opticFields.slide_beam.el;
+    var seen = {}, i;
+    while (sel.firstChild) { sel.removeChild(sel.firstChild); }
+    for (i = 0; i < hits.length; i++) {
+        var name = hits[i].beam.name;
+        seen[name] = (seen[name] || 0) + 1;
+        var opt = htmlEl('option', null,
+                         seen[name] > 1 ? name + ' (' + seen[name] + ')'
+                                        : name);
+        opt.value = String(hits[i].index);
+        sel.appendChild(opt);
+    }
+    if (!hits.length) { this.slideBeam = null; return hits; }
+
+    // The exact beam first, then any of that name. Two beams can share
+    // one, so matching on the name alone would undo a choice made by
+    // clicking through the bundle; but an index is only meaningful
+    // against one trace, so the name is what carries the choice across
+    // the re-trace that follows every edit.
+    var want = this.slideBeam;
+    var chosen = -1;
+    for (i = 0; want && i < hits.length; i++) {
+        if (hits[i].index === want.index && hits[i].beam.name === want.name) {
+            chosen = i;
+            break;
+        }
+    }
+    for (i = 0; want && chosen < 0 && i < hits.length; i++) {
+        if (hits[i].beam.name === want.name) { chosen = i; }
+    }
+    if (chosen < 0) { chosen = 0; }
+    this.slideBeam = {name: hits[chosen].beam.name, index: hits[chosen].index};
+    sel.value = String(hits[chosen].index);
+    return hits;
+};
+
+/*
+ * Name one of the beams under the cursor in the Along beam row.
+ *
+ * Only a beam that passes through the selected optics can be chosen,
+ * which is the same set the row offers: sliding along a beam that
+ * misses the element is not a thing to mean. A click on any other beam
+ * is left to fall through to the readout, as an unmodified click would.
+ *
+ * The hits come in nearest-first, so the deeper ones are considered
+ * only when the nearest is not one of the element's own.
+ */
+Viewer.prototype._chooseSlideBeam = function (hits, px, py) {
+    var o = this._selectedOptic();
+    if (!o || !this.onEdit) { return false; }
+    var through = {};
+    this._beamsThrough(o).forEach(function (h) { through[h.index] = true; });
+    var bundle = hits.filter(function (h) { return through[h.index]; });
+    if (!bundle.length) { return false; }
+
+    // Clicking the same place again steps to the next beam of the
+    // bundle, as it does for the readout. Beams routinely lie on top of
+    // one another - a beam and its return share a line, and a stray
+    // often runs along a main beam - so pointing cannot tell them
+    // apart, and the one meant is frequently not the nearest.
+    var same = this.lastSlideClick
+        && Math.abs(px - this.lastSlideClick[0]) < 5
+        && Math.abs(py - this.lastSlideClick[1]) < 5;
+    this.slideCycle = same ? (this.slideCycle + 1) % bundle.length : 0;
+    this.lastSlideClick = [px, py];
+
+    var pick = bundle[this.slideCycle];
+    this.slideBeam = {name: pick.beam.name, index: pick.index};
+    return true;
+};
+
+/*
+ * Move the selected optics along the chosen beam. The distance is in
+ * millimetres, as the panel shows it, and positive downstream.
+ */
+Viewer.prototype.slideSelected = function (mm) {
+    var o = this._selectedOptic();
+    if (!o || !this.onEdit || !this.slideBeam) { return null; }
+    if (typeof mm !== 'number' || !isFinite(mm) || mm === 0) { return null; }
+    var msg = {op: 'slide', target: o.name, beam: this.slideBeam.name,
+               beam_index: this.slideBeam.index, distance: mm * MM};
+    this.onEdit(msg);
+    return msg;
+};
+
 Viewer.prototype._refreshOpticPanel = function () {
     var o = this._selectedOptic();
     var fields = this.opticFields;
+
+    // The two beam rows describe neither the optics nor anything in the
+    // scene: which beam to slide along is a choice made here, and the
+    // distance is an instruction rather than a value. They are filled
+    // in first, and skipped by the loop below.
+    if (fields.slide_beam) {
+        var hits = this.onEdit ? this._refreshSlideBeams(o) : [];
+        var shown = hits.length > 0;
+        fields.slide_beam.row.style.display = shown ? '' : 'none';
+        fields.slide_by.row.style.display = shown ? '' : 'none';
+        if (fields.slide_by.editable
+                && document.activeElement !== fields.slide_by.el) {
+            fields.slide_by.el.value = '0';
+        }
+    }
+
     for (var key in fields) {
+        if (key === 'slide_beam' || key === 'slide_by') { continue; }
         var f = fields[key];
         var v = o ? opticFieldValue(o, key) : null;
 
@@ -887,6 +1121,28 @@ Viewer.prototype._commitOpticField = function (key, input) {
         return;
     }
 
+    // Which beam to slide along is remembered here, not sent anywhere:
+    // nothing in the model records it.
+    if (key === 'slide_beam') {
+        var hits = this._beamsThrough(o);
+        for (var h = 0; h < hits.length; h++) {
+            if (String(hits[h].index) === input.value) {
+                this.slideBeam = {name: hits[h].beam.name,
+                                  index: hits[h].index};
+            }
+        }
+        return;
+    }
+    // A distance to move by, not a value to hold: the field goes back
+    // to zero whether or not the move is accepted, so that leaning on
+    // Enter does not walk the element down the bench.
+    if (key === 'slide_by') {
+        var by = parseField(input.value);
+        input.value = '0';
+        if (typeof by === 'number' && isFinite(by)) { this.slideSelected(by); }
+        return;
+    }
+
     var field = null;
     for (var i = 0; i < OPTIC_FIELDS.length; i++) {
         if (OPTIC_FIELDS[i].key === key) { field = OPTIC_FIELDS[i]; }
@@ -910,7 +1166,12 @@ Viewer.prototype._commitOpticField = function (key, input) {
 
     var value = parseField(input.value);
     var unusable = (typeof value === 'number' && isNaN(value))
-        || (value === null && !(field && field.nullable));
+        || (value === null && !(field && field.nullable))
+        // An infinity would not survive the trip: JSON has none, and
+        // what arrives on the Python side is a null the model cannot
+        // use. A field that cannot mean it must not send it.
+        || (field && field.finite && typeof value === 'number'
+            && !isFinite(value));
     if (unusable) {
         // Not a usable value: put back what the model actually holds.
         this._refreshOpticPanel();
@@ -1045,12 +1306,25 @@ Viewer.prototype._renderScene = function () {
     this.arrow = svgEl('path', {'class': 'gt-arrow'});
     this.marker = svgEl('circle', {'class': 'gt-marker', r: 4});
     this.outline = svgEl('polygon', {'class': 'gt-optic-outline'});
+    // The beam the Along beam row names. A name like 'b0:M1t1' says
+    // nothing about which line in the picture it is, so the choice is
+    // drawn. Underneath everything else, since it is a standing mark
+    // rather than an answer to where the cursor is.
+    this.slideMark = svgEl('line', {'class': 'gt-slide-beam'});
+    // Which way that beam travels, which is the sign of Move by. Two
+    // beams lying on the same line often run opposite ways, so stepping
+    // through them has to show more than that the mark moved.
+    this.slideArrow = svgEl('path', {'class': 'gt-slide-arrow'});
+    this.overlayGroup.appendChild(this.slideMark);
+    this.overlayGroup.appendChild(this.slideArrow);
     this.overlayGroup.appendChild(this.outline);
     this.overlayGroup.appendChild(this.highlight);
     this.overlayGroup.appendChild(this.arrow);
     this.overlayGroup.appendChild(this.marker);
     this._showMarker(false);
     this.outline.style.display = 'none';
+    this.slideMark.style.display = 'none';
+    this.slideArrow.style.display = 'none';
 };
 
 Viewer.prototype._addLayerToggle = function (name, color, count) {
@@ -1283,7 +1557,8 @@ Viewer.prototype._bindEvents = function () {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
             self._updateOpticDrag(
-                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
+                ev.ctrlKey);
             return;
         }
         if (dragging) {
@@ -1304,6 +1579,13 @@ Viewer.prototype._bindEvents = function () {
         if (self.dragOptic) {
             dragging = false;
             self.svg.classList.remove('gt-dragging');
+            // Re-read the pose at the moment of release: Ctrl may have
+            // been pressed or let go since the last movement, and it is
+            // the state on release that the user is answering for.
+            var ru = self.svg.getBoundingClientRect();
+            self._updateOpticDrag(
+                self.screenToScene(ev.clientX - ru.left, ev.clientY - ru.top),
+                ev.ctrlKey);
             self._endOpticDrag(moved >= 4);
             return;
         }
@@ -1312,7 +1594,8 @@ Viewer.prototype._bindEvents = function () {
         self.svg.classList.remove('gt-dragging');
         if (moved < 4) {
             var r = self.svg.getBoundingClientRect();
-            self._onClick(ev.clientX - r.left, ev.clientY - r.top);
+            self._onClick(ev.clientX - r.left, ev.clientY - r.top,
+                          ev.ctrlKey);
         }
     });
 
@@ -1322,6 +1605,13 @@ Viewer.prototype._bindEvents = function () {
         if (ev.target && ev.target.classList
             && ev.target.classList.contains('gt-input')) { return; }
         if (ev.key === 'f' || ev.key === 'F') { self.fit(); }
+        // Ctrl+Z, but only with the pointer over this viewer: the page
+        // around a notebook cell has its own undo, and taking the key
+        // from everywhere would undo edits the user meant for that.
+        if ((ev.key === 'z' || ev.key === 'Z') && (ev.ctrlKey || ev.metaKey)
+                && self.pointerInside) {
+            if (self.undo()) { ev.preventDefault(); }
+        }
         if (ev.key === 'Escape') {
             self.pinned = null;
             self.selectedOptic = null;
@@ -1344,34 +1634,86 @@ Viewer.prototype._bindEvents = function () {
  * edit, re-traces and sends back a whole new scene. Nothing here tries
  * to guess what the beams will do.
  */
+/*
+ * How near a beam has to pass, in screen pixels, for a Ctrl-drag to
+ * snap onto it. A floor rather than the whole rule: the beam counts as
+ * caught if it passes anywhere within the element itself, and this only
+ * adds a little reach around a small element in a wide view.
+ */
+var SNAP_TOL = 12;
+
 Viewer.prototype._beginOpticDrag = function (optic, scenePt, rotate) {
     var c = optic.center || optic.HRcenter;
+    // An optics turns about the point it is held by, not about the
+    // middle of its substrate: a mirror swings about the apex of its
+    // HR face, so that turning it does not walk the beam spot off it.
+    // That is the same point Python keeps fixed, so the outline shown
+    // while dragging is where the element actually ends up.
+    var pivot = opticAnchorPoint(optic);
     this.dragOptic = {
         optic: optic,
         rotate: !!rotate,
         grab: scenePt,
         center0: [c[0], c[1]],
+        pivot: [pivot[0], pivot[1]],
         angle0: optic.normAngleHR || 0,
         // Angle of the grab point as seen from the pivot, so that the
         // optics turns with the cursor instead of jumping to it.
-        grabAngle: Math.atan2(scenePt[1] - c[1], scenePt[0] - c[0]),
+        grabAngle: Math.atan2(scenePt[1] - pivot[1], scenePt[0] - pivot[0]),
         center: [c[0], c[1]],
-        angle: optic.normAngleHR || 0
+        angle: optic.normAngleHR || 0,
+        snap: null
     };
     this._updateOpticOutline(optic, this.dragOptic.center,
                              this.dragOptic.angle);
 };
 
-Viewer.prototype._updateOpticDrag = function (scenePt) {
+/*
+ * Where the middle of the substrate goes when the element is turned by
+ * da about the point it is held by.
+ */
+function _centreAfterTurn(d, da, pivot) {
+    var ca = Math.cos(da), sa = Math.sin(da);
+    var ox = d.center0[0] - d.pivot[0], oy = d.center0[1] - d.pivot[1];
+    return [pivot[0] + ox * ca - oy * sa, pivot[1] + ox * sa + oy * ca];
+}
+
+Viewer.prototype._updateOpticDrag = function (scenePt, snap) {
     var d = this.dragOptic;
     if (!d) { return; }
     if (d.rotate) {
-        var a = Math.atan2(scenePt[1] - d.center0[1],
-                           scenePt[0] - d.center0[0]);
+        var a = Math.atan2(scenePt[1] - d.pivot[1], scenePt[0] - d.pivot[0]);
         d.angle = d.angle0 + (a - d.grabAngle);
+        d.center = _centreAfterTurn(d, d.angle - d.angle0, d.pivot);
     } else {
-        d.center = [d.center0[0] + scenePt[0] - d.grab[0],
-                    d.center0[1] + scenePt[1] - d.grab[1]];
+        var dx = scenePt[0] - d.grab[0], dy = scenePt[1] - d.grab[1];
+        d.center = [d.center0[0] + dx, d.center0[1] + dy];
+        d.snap = null;
+        // Held down, Ctrl asks for the element to be put on the beam it
+        // was dropped over properly - square to it, and centred on it -
+        // rather than merely near it. The preview shows the answer, so
+        // that the modifier is not a leap of faith.
+        //
+        // What has to be over the beam is the element, not the cursor.
+        // An element is grabbed wherever the user took hold of it, and
+        // zoomed in that can be a long way from the point it is held
+        // by; testing the cursor made the whole thing stop working
+        // above a certain zoom. So the test is at the held point, and
+        // a beam passing anywhere within the element's own footprint
+        // counts - which is what "dropped it on that beam" means, and
+        // does not shrink as the view is zoomed in.
+        if (snap) {
+            var ax = d.pivot[0] + dx, ay = d.pivot[1] + dy;
+            var tol = Math.max(opticRadius(d.optic), SNAP_TOL / this.scale);
+            var hit = this._pick(ax, ay, tol);
+            if (hit) {
+                var v = hit.beam.dirVect;
+                d.angle = Math.atan2(-v[1], -v[0]);
+                d.center = _centreAfterTurn(d, d.angle - d.angle0, hit.point);
+                d.snap = {beam: hit.beam.name, index: hit.index,
+                          point: hit.point};
+            }
+        }
     }
     this._updateOpticOutline(d.optic, d.center, d.angle);
     this._updateStatus();
@@ -1391,11 +1733,28 @@ Viewer.prototype._endOpticDrag = function (moved) {
     this._selectOptic(d.optic);
     if (!this.onEdit) { return; }
 
-    // 'center' is the middle of the substrate, which is the trait the
-    // outline was built from, so the optics lands where it was dropped.
-    var msg = d.rotate
-        ? {op: 'rotate', target: d.optic.name, normAngleHR: d.angle}
-        : {op: 'move', target: d.optic.name, center: d.center};
+    var msg;
+    if (d.snap) {
+        // Python does the geometry, from the beam objects themselves
+        // rather than from the copy of them in this scene.
+        msg = {op: 'align', target: d.optic.name, beam: d.snap.beam,
+               beam_index: d.snap.index, point: d.snap.point};
+    } else if (d.rotate) {
+        // Python turns an optics about the apex of its front face. When
+        // that is the point it is held by there is nothing more to say;
+        // when it is held by the middle of its substrate, say where the
+        // middle ended up as well, and Python applies the orientation
+        // before the position that is measured from it.
+        msg = opticAnchorIsCenter(d.optic)
+            ? {op: 'set', target: d.optic.name,
+               attrs: {normAngleHR: d.angle, center: d.center}}
+            : {op: 'rotate', target: d.optic.name, normAngleHR: d.angle};
+    } else {
+        // 'center' is the middle of the substrate, which is the trait
+        // the outline was built from, so the optics lands where it was
+        // dropped.
+        msg = {op: 'move', target: d.optic.name, center: d.center};
+    }
     this.onEdit(msg);
 };
 
@@ -1514,7 +1873,7 @@ Viewer.prototype._updateOpticOutline = function (o, center, angle) {
     this.outline.style.display = '';
 };
 
-Viewer.prototype._onClick = function (px, py) {
+Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     var pt = this.screenToScene(px, py);
 
     // Clicking an optics selects it and shows its properties. This works
@@ -1527,6 +1886,24 @@ Viewer.prototype._onClick = function (px, py) {
     }
 
     var hits = this._pickAll(pt[0], pt[1], 12 / this.scale);
+
+    // With Ctrl held and an optics selected, a click on a beam names it
+    // in the Along beam row instead of doing anything to the readout.
+    // Ctrl already means "this optics, against that beam" in a drag, so
+    // it means the same here, and the selection is left alone: picking
+    // the beam to move along is part of working on that element, not a
+    // move away from it.
+    if (pickBeamFor && this.panelKind === 'optic' && hits.length) {
+        // lastClick is deliberately left alone: it belongs to the
+        // readout's cycle, and a plain click after this one should
+        // start that cycle at the nearest beam rather than partway in.
+        if (this._chooseSlideBeam(hits, px, py)) {
+            this._refreshOpticPanel();
+            this._updateOverlay();
+            return;
+        }
+    }
+
     if (this.panelKind === 'optic') {
         // Leaving the optics: back to the beam readout.
         this.selectedOptic = null;
@@ -1596,6 +1973,31 @@ Viewer.prototype._updateOverlay = function () {
         this._updateOpticOutline(this.hoverOptic || this._selectedOptic());
     }
 
+    // The beam the Along beam row names, marked along its whole length
+    // so that the name in the panel and a line in the picture are the
+    // same thing. Only while that panel is up: it belongs to the
+    // element being worked on, not to the drawing.
+    var sb = (this.panelKind === 'optic' && this.slideBeam)
+        ? (this.scene.beams || [])[this.slideBeam.index] : null;
+    if (sb && sb.name === this.slideBeam.name) {
+        var q0 = this.sceneToScreen(sb.pos[0], sb.pos[1]);
+        var q1 = this.sceneToScreen(sb.end[0], sb.end[1]);
+        this.slideMark.setAttribute('x1', q0[0]);
+        this.slideMark.setAttribute('y1', q0[1]);
+        this.slideMark.setAttribute('x2', q1[0]);
+        this.slideMark.setAttribute('y2', q1[1]);
+        this.slideMark.style.display = '';
+        // Halfway along, where there is room for it and where it cannot
+        // be mistaken for the readout's arrow at the cursor.
+        this.slideArrow.setAttribute(
+            'd', this._arrowPath((q0[0] + q1[0]) / 2, (q0[1] + q1[1]) / 2,
+                                 sb.dirVect));
+        this.slideArrow.style.display = '';
+    } else {
+        this.slideMark.style.display = 'none';
+        this.slideArrow.style.display = 'none';
+    }
+
     var hit = this.pinned || this.hover;
     if (!hit) { this._showMarker(false); return; }
     var b = hit.beam;
@@ -1617,11 +2019,17 @@ Viewer.prototype._updateOverlay = function () {
 Viewer.prototype._updateStatus = function () {
     var d = this.dragOptic;
     if (d) {
-        this.statusBar.textContent = d.rotate
-            ? d.optic.name + ':  ' + fmtDeg(normAngle(d.angle)) +
-              '   (was ' + fmtDeg(normAngle(d.angle0)) + ')'
-            : d.optic.name + ':  ' + fmtLen(d.center[0]) + ',  ' +
-              fmtLen(d.center[1]);
+        if (d.snap) {
+            this.statusBar.textContent =
+                d.optic.name + ':  square onto ' + d.snap.beam + ' at  ' +
+                fmtLen(d.snap.point[0]) + ',  ' + fmtLen(d.snap.point[1]);
+        } else {
+            this.statusBar.textContent = d.rotate
+                ? d.optic.name + ':  ' + fmtDeg(normAngle(d.angle)) +
+                  '   (was ' + fmtDeg(normAngle(d.angle0)) + ')'
+                : d.optic.name + ':  ' + fmtLen(d.center[0]) + ',  ' +
+                  fmtLen(d.center[1]);
+        }
         return;
     }
     var parts = [];
@@ -1715,6 +2123,7 @@ Viewer.prototype.setScene = function (scene) {
     });
     this._renderScene();
     this._refreshDisplayPanel();
+    this._refreshUndo();
     this._setReadout(null);
 
     // A scene arriving after an edit describes the same optics, so keep

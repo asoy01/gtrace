@@ -249,6 +249,26 @@ check('both faces are coated alike',
 check('power is conserved at each face',
       abs(L.Refl_HR + L.Trans_HR - 1) < 1e-12
       and abs(L.Refl_AR + L.Trans_AR - 1) < 1e-12)
+# A real lens reflects, but a bench full of them makes so many faint
+# ghosts that the picture is unreadable. Whoever wants those says so.
+check('neither face reflects by default',
+      L.Refl_HR == 0.0 and L.Refl_AR == 0.0,
+      '(%.4g / %.4g)' % (L.Refl_HR, L.Refl_AR))
+Lg = Lens(f=500*mm, Refl_HR=0.005, Trans_HR=0.995,
+          Refl_AR=0.005, Trans_AR=0.995, name='Lg')
+b_ghost = beam.GaussianBeam(q0=gauss.Rw2q(np.inf, 0.5*mm), wl=1064*nm,
+                            pos=[-0.2, 0.0], dirAngle=0.0, name='bg')
+n_plain = len(OpticalLayout(
+    optics=[Lens(f=500*mm, center=[0, 0], normAngleHR=np.pi, name='Lp')],
+    sources=[b_ghost.copy()],
+    rules=TraceRules(order=3, power_threshold=1e-9)).trace())
+Lg.center = [0, 0]
+Lg.normAngleHR = np.pi
+n_coated = len(OpticalLayout(optics=[Lg], sources=[b_ghost.copy()],
+                             rules=TraceRules(order=3,
+                                              power_threshold=1e-9)).trace())
+check('so an uncoated lens makes fewer beams than a coated one',
+      n_plain < n_coated, '(%d vs %d)' % (n_plain, n_coated))
 check('one inch across by default', abs(L.diameter - 25.4*mm) < 1e-15,
       '(%.4f mm)' % (L.diameter/mm))
 check('six millimetres at the rim', abs(L.thickness - 6*mm) < 1e-15,
@@ -578,8 +598,8 @@ check('and stays a main beam throughout',
 #through it is a ghost, which is the behaviour Lens has to differ from.
 M = opt.Mirror(HRcenter=[0.0, 0.0], normAngleHR=np.pi, diameter=1*inch,
                thickness=6*mm, wedgeAngle=0.0, inv_ROC_HR=0.0,
-               inv_ROC_AR=0.0, Refl_HR=0.005, Trans_HR=0.995,
-               Refl_AR=0.005, Trans_AR=0.995, n=1.45, name='M')
+               inv_ROC_AR=0.0, Refl_HR=0.0, Trans_HR=1.0,
+               Refl_AR=0.0, Trans_AR=1.0, n=1.45, name='M')
 layout2 = OpticalLayout(optics=[M], sources=[b0.copy()],
                         rules=TraceRules(order=0, power_threshold=1e-3),
                         name='mirror instead')

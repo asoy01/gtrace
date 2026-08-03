@@ -22,6 +22,7 @@ import sys
 import numpy as np
 
 import gtrace.beam as beam
+import gtrace.draw.serialize as ser
 import gtrace.optcomp as opt
 import gtrace.optics.gaussian as gauss
 from gtrace.draw.viewer import viewer_css
@@ -63,6 +64,15 @@ def make_layout():
 layout, (M1, M2, M3) = make_layout()
 scene = layout.scene_dict()
 
+# A real lens, serialized the way a scene carries one, handed to the
+# page separately. It is pushed into the scene from the browser rather
+# than registered in the layout, so that adding it does not disturb the
+# trace the checks above it are written against - the same trick the
+# CyMirror row uses. What Python actually puts in a scene is checked in
+# verify_stage2b.py; this is the panel's side of the same dict.
+LENS_OPTIC = ser.optic_to_dict(
+    opt.Lens(f=0.3, center=[0.7, 0.15], normAngleHR=np.pi, name='L1'))
+
 with open(os.path.join(SP, 'stage2_widget.mjs'), encoding='utf-8') as f:
     esm = f.read()
 
@@ -82,6 +92,7 @@ __CSS__
 var ESM_SRC = __ESM__;
 var SCENE = __SCENE__;
 var EDITABLE = __EDITABLE__;
+var LENS = __LENS__;
 </script>
 <script type="module">
 (async function () {
@@ -164,7 +175,14 @@ var EDITABLE = __EDITABLE__;
         }
         out.addButton = !!button('+ Mirror');
         out.addCyButton = !!button('+ CyMirror');
+        out.addLensButton = !!button('+ Lens');
         out.removeButton = !!button('Remove');
+        out.undoButton = button('Undo') ? {
+            // The scene handed over has no history behind it, so the
+            // button has to start out of reach.
+            disabled: button('Undo').disabled,
+            sceneSays: v.scene.can_undo
+        } : null;
         out.saveButton = !!button('Save');
         out.loadButton = !!button('Load');
         out.pathShown = v.pathInput ? v.pathInput.value : null;
@@ -306,6 +324,208 @@ var EDITABLE = __EDITABLE__;
             out.curve.sentAfterSame = sent.length - nCurve;
             out.curve.shownAfterEcho = v.opticFields.curve_direction.el.value;
 
+            // --- a lens: the focal length row and the anchor ---
+            var withLens = JSON.parse(JSON.stringify(v.scene));
+            withLens.optics.push(JSON.parse(JSON.stringify(LENS)));
+            model.set('scene', withLens);
+            var lensOptic = withLens.optics[withLens.optics.length - 1];
+            v._selectOptic(lensOptic);
+            out.lens = {
+                type: fields().type,
+                rowShown: rowShown('f'),
+                shown: v.opticFields.f.el.value,
+                // The panel is in millimetres; the scene carries the
+                // power, in reciprocal metres.
+                wantF: 1 / (LENS.inv_f * 0.001),
+                label: v.opticFields.f.row.querySelector('.gt-key')
+                        .textContent,
+                anchorRowShown: rowShown('ROC_anchor'),
+                anchorShown: v.opticFields.ROC_anchor.el.value,
+                anchorKind: v.opticFields.ROC_anchor.kind,
+                anchorOptions: Array.prototype.map.call(
+                    v.opticFields.ROC_anchor.el.options,
+                    function (o) { return o.value; })
+            };
+
+            var nLens = sent.length;
+            setField('f', '200');
+            out.lens.msg = sent[sent.length - 1];
+            out.lens.sent = sent.length - nLens;
+
+            // An infinity would not survive JSON: what reaches Python is
+            // a null it cannot use. The field must refuse it outright
+            // and put back what the model holds.
+            setField('f', 'inf');
+            out.lens.afterInf = {sent: sent.length - nLens,
+                                 shown: v.opticFields.f.el.value};
+
+            // The anchor is a choice, like the curve direction.
+            var nAnchor = sent.length;
+            setField('ROC_anchor', 'HRcenter');
+            out.lens.anchorMsg = sent[sent.length - 1];
+            out.lens.anchorSent = sent.length - nAnchor;
+
+            // A mirror has no focal length, so that row is not for it.
+            v._selectOptic(v.scene.optics[0]);
+            out.lens.rowOnMirror = rowShown('f');
+            out.lens.anchorRowOnMirror = rowShown('ROC_anchor');
+            out.lens.anchorOnMirror = v.opticFields.ROC_anchor.el.value;
+
+            // --- moving along a beam by a typed distance ---
+            // M1 has the source beam landing on it, so the rows are
+            // offered; the third mirror has nothing through it.
+            var slideBeams = v._beamsThrough(v.scene.optics[0]);
+            out.slide = {
+                rowShown: rowShown('slide_beam'),
+                byRowShown: rowShown('slide_by'),
+                kind: v.opticFields.slide_beam.kind,
+                options: Array.prototype.map.call(
+                    v.opticFields.slide_beam.el.options,
+                    function (o) { return o.textContent; }),
+                chosen: v.slideBeam,
+                nearest: slideBeams.length ? slideBeams[0].beam.name : null,
+                byShown: v.opticFields.slide_by.el.value,
+                label: v.opticFields.slide_by.row.querySelector('.gt-key')
+                        .textContent
+            };
+            var nSlide = sent.length;
+            setField('slide_by', '50');
+            out.slide.msg = sent[sent.length - 1];
+            out.slide.sent = sent.length - nSlide;
+            // A distance is an instruction, not a value to hold: the
+            // field has to come back to zero without waiting for a
+            // scene, or leaning on Enter walks the optics down the
+            // bench.
+            out.slide.byAfter = v.opticFields.slide_by.el.value;
+            setField('slide_by', '0');
+            setField('slide_by', 'sideways');
+            out.slide.afterQuiet = {sent: sent.length - nSlide,
+                                    shown: v.opticFields.slide_by.el.value};
+
+            // --- Ctrl + click a beam names it in the row ---
+            // Pick a beam through M1 other than the one already chosen,
+            // and click it with Ctrl held.
+            // Somewhere along a different beam and clear of every
+            // optics: over an optics the click grabs the optics, which
+            // is what a click there is for.
+            var other = null, pickPt = null;
+            slideBeams.forEach(function (h) {
+                if (other || h.beam.name === v.slideBeam.name) { return; }
+                var bb = h.beam, q = null;
+                for (var t = 0.1; t < 0.95 && !q; t += 0.05) {
+                    var p = [bb.pos[0] + bb.dirVect[0] * bb.length * t,
+                             bb.pos[1] + bb.dirVect[1] * bb.length * t];
+                    if (!v._pickOptic(p[0], p[1])) { q = p; }
+                }
+                if (q) { other = h; pickPt = q; }
+            });
+            out.slide.otherBeam = other ? other.beam.name : null;
+            out.slide.pickPoint = pickPt;
+            if (other && pickPt) {
+                var pc = screenOf(pickPt);
+                var nCtrl = sent.length;
+                mouse(window, 'mousemove', pc[0], pc[1]);
+                mouse(v.svg, 'mousedown', pc[0], pc[1], {ctrlKey: true});
+                mouse(window, 'mouseup', pc[0], pc[1], {ctrlKey: true});
+                out.slide.byClick = {
+                    chosen: v.slideBeam,
+                    // Several beams routinely lie on top of each other,
+                    // so what was clicked is not one beam but a bundle.
+                    // What the choice has to be is one of that bundle
+                    // and one that passes through the optics.
+                    under: v._pickAll(pickPt[0], pickPt[1],
+                                      12 / v.scale).map(function (h) {
+                        return h.beam.name;
+                    }),
+                    through: v._beamsThrough(v.scene.optics[0])
+                              .map(function (h) { return h.beam.name; }),
+                    shownInPicker: v.opticFields.slide_beam.el.value,
+                    // The selection must survive: choosing what to move
+                    // along is part of working on that element.
+                    stillSelected: v.selectedOptic,
+                    panel: panel(),
+                    markShown: v.slideMark.style.display !== 'none',
+                    sent: sent.length - nCtrl
+                };
+
+                // Clicking the same place again steps through the beams
+                // that lie on top of each other there.
+                var through = {};
+                v._beamsThrough(v.scene.optics[0]).forEach(function (h) {
+                    through[h.index] = true;
+                });
+                var bundle = v._pickAll(pickPt[0], pickPt[1], 12 / v.scale)
+                              .filter(function (h) { return through[h.index]; });
+                out.slide.cycle = {
+                    bundle: bundle.map(function (h) { return h.index; }),
+                    dirs: bundle.map(function (h) {
+                        return h.beam.dirVect;
+                    }),
+                    picks: [],
+                    // The mark and its arrow have to follow the choice:
+                    // two beams on one line commonly run opposite ways,
+                    // and which way is the sign of Move by.
+                    arrows: [],
+                    marks: []
+                };
+                for (var k = 0; k <= bundle.length; k++) {
+                    mouse(window, 'mousemove', pc[0], pc[1]);
+                    mouse(v.svg, 'mousedown', pc[0], pc[1], {ctrlKey: true});
+                    mouse(window, 'mouseup', pc[0], pc[1], {ctrlKey: true});
+                    out.slide.cycle.picks.push(v.slideBeam.index);
+                    out.slide.cycle.arrows.push(
+                        v.slideArrow.getAttribute('d'));
+                    out.slide.cycle.marks.push((function () {
+                        var b = v.scene.beams[v.slideBeam.index];
+                        var a0 = v.sceneToScreen(b.pos[0], b.pos[1]);
+                        var a1 = v.sceneToScreen(b.end[0], b.end[1]);
+                        var m = ['x1', 'y1', 'x2', 'y2'].map(function (k) {
+                            return parseFloat(v.slideMark.getAttribute(k));
+                        });
+                        return Math.max(Math.abs(m[0] - a0[0]),
+                                        Math.abs(m[1] - a0[1]),
+                                        Math.abs(m[2] - a1[0]),
+                                        Math.abs(m[3] - a1[1])) < 1e-6;
+                    })());
+                }
+                // A Ctrl-click somewhere else starts the cycle over
+                // rather than carrying on from where it was.
+                var pFar = screenOf([pickPt[0], pickPt[1] + 0.25]);
+                mouse(window, 'mousemove', pFar[0], pFar[1]);
+                mouse(v.svg, 'mousedown', pFar[0], pFar[1], {ctrlKey: true});
+                mouse(window, 'mouseup', pFar[0], pFar[1], {ctrlKey: true});
+                mouse(window, 'mousemove', pc[0], pc[1]);
+                mouse(v.svg, 'mousedown', pc[0], pc[1], {ctrlKey: true});
+                mouse(window, 'mouseup', pc[0], pc[1], {ctrlKey: true});
+                out.slide.cycle.afterElsewhere = v.slideBeam.index;
+
+                // Without Ctrl the same click is the readout, as before.
+                mouse(window, 'mousemove', pc[0], pc[1]);
+                mouse(v.svg, 'mousedown', pc[0], pc[1]);
+                mouse(window, 'mouseup', pc[0], pc[1]);
+                out.slide.plainClick = {
+                    panel: panel(),
+                    selected: v.selectedOptic,
+                    pinned: v.pinned ? v.pinned.beam.name : null,
+                    markShown: v.slideMark.style.display !== 'none'
+                };
+                v._selectOptic(v.scene.optics[0]);
+            }
+
+            // An optics with no beam through it has nothing to slide
+            // along, and the pair of rows goes away.
+            var lonely = JSON.parse(JSON.stringify(v.scene.optics[0]));
+            lonely.name = 'Lonely';
+            lonely.center = [9.0, 9.0];
+            lonely.HRcenter = [9.0, 9.0];
+            var withLonely = JSON.parse(JSON.stringify(v.scene));
+            withLonely.optics.push(lonely);
+            model.set('scene', withLonely);
+            v._selectOptic(lonely);
+            out.slide.rowsWhenNoBeam = [rowShown('slide_beam'),
+                                        rowShown('slide_by')];
+            v._selectOptic(v.scene.optics[0]);
+
             // Back to M1 for the checks that follow.
             mouse(window, 'mousemove', p[0], p[1]);
             mouse(v.svg, 'mousedown', p[0], p[1]);
@@ -399,12 +619,49 @@ var EDITABLE = __EDITABLE__;
                          sent: sent.length - nCy,
                          selected: v.selectedOptic};
 
+            // A lens carries no parameters of its own from the view:
+            // Python builds it from catalogue defaults, since a lens is
+            // not cut to match the mirrors around it.
+            var nLensBtn = sent.length;
+            button('+ Lens').click();
+            out.addLens = {msg: sent[sent.length - 1],
+                           sent: sent.length - nLensBtn,
+                           selected: v.selectedOptic};
+
             // Put the first one back in the panel, then remove it.
             v._selectOptic(added);
             button('Remove').click();
             out.remove = {msg: sent[sent.length - 1],
                           selected: v.selectedOptic,
                           panel: panel()};
+
+            // --- undo ---
+            // Python answers an edit with a scene that says whether
+            // there is now something to go back to.
+            var nUndo = sent.length;
+            button('Undo').click();
+            out.undo = {sentWhileEmpty: sent.length - nUndo};
+            var withHistory = JSON.parse(JSON.stringify(v.scene));
+            withHistory.can_undo = true;
+            model.set('scene', withHistory);
+            out.undo.enabled = !button('Undo').disabled;
+            button('Undo').click();
+            out.undo.msg = sent[sent.length - 1];
+            out.undo.sent = sent.length - nUndo;
+            // Ctrl+Z does the same, but only with the pointer over this
+            // viewer: a notebook page has its own undo.
+            v.pointerInside = true;
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'z', ctrlKey: true, bubbles: true}));
+            out.undo.byKey = sent.length - nUndo;
+            v.pointerInside = false;
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'z', ctrlKey: true, bubbles: true}));
+            out.undo.byKeyOutside = sent.length - nUndo;
+            var noHistory = JSON.parse(JSON.stringify(v.scene));
+            noHistory.can_undo = false;
+            model.set('scene', noHistory);
+            out.undo.disabledAgain = button('Undo').disabled;
         }
 
         // --- clicking a beam goes back to the readout ---
@@ -485,6 +742,7 @@ def run(editable):
     page = PAGE.replace('__CSS__', viewer_css()) \
                .replace('__ESM__', js(esm)) \
                .replace('__SCENE__', js(scene)) \
+               .replace('__LENS__', js(LENS_OPTIC)) \
                .replace('__EDITABLE__', 'true' if editable else 'false')
     path = os.path.join(SP, 'props_page_%s.html' % editable)
     with open(path, 'w', encoding='utf-8') as f:
@@ -550,7 +808,14 @@ check('everything but the type is editable',
                                      'rocAR', 'n', 'Refl_HR', 'Trans_HR',
                                      'Refl_AR', 'Trans_AR', 'max_stray_order',
                                      'HRtransmissive', 'term_on_HR',
-                                     'term_on_HR_order', 'curve_direction'},
+                                     'term_on_HR_order', 'curve_direction',
+                                     # Built for every optics; the rows hide
+                                     # themselves where they do not apply -
+                                     # a focal length on anything but a lens,
+                                     # a beam to slide along where none
+                                     # passes through.
+                                     'f', 'ROC_anchor',
+                                     'slide_beam', 'slide_by'},
       str(sorted(res['editableFields'])))
 check('the type is not editable', 'type' not in res['editableFields'])
 check('an unset max stray order reads as auto',
@@ -717,6 +982,179 @@ check('the echoed value is selected', cur['shownAfterEcho'] == 'h',
 check('picking the value it already has sends nothing',
       cur['sentAfterSame'] == 0, str(cur['sentAfterSame']))
 
+print('--- the focal length of a lens ---')
+ln = res['lens']
+check('the panel knows it is a lens', ln['type'] == 'Lens', str(ln['type']))
+check('a lens shows a focal length row', ln['rowShown'])
+check('but a mirror does not', not ln['rowOnMirror'])
+check('the focal length shown is the one the scene carries',
+      abs(float(ln['shown']) - ln['wantF']) < 1e-6,
+      '%s vs %.9f' % (ln['shown'], ln['wantF']))
+# A lens is listed in a catalogue in millimetres and spoken of that
+# way, unlike everything else on a bench of this size.
+check('the row is labelled in millimetres', ln['label'] == 'Focal length [mm]',
+      str(ln['label']))
+check('and shows the focal length asked for, in those units',
+      abs(float(ln['shown']) - 300.0) < 1e-6, ln['shown'])
+check('editing it sends one message', ln['sent'] == 1, str(ln['sent']))
+check('which is a set of f itself, not of a curvature',
+      ln['msg']['op'] == 'set' and set(ln['msg']['attrs']) == {'f'},
+      str(ln['msg']))
+check('carrying metres, whatever the panel shows',
+      abs(ln['msg']['attrs']['f'] - 0.2) < 1e-15,
+      '200 mm -> %r m' % ln['msg']['attrs']['f'])
+
+# JSON has no infinity, so an infinite focal length would arrive as a
+# null. A lens with no power is a flat window: a different element,
+# not somewhere to get to by typing.
+check('an infinite focal length is not sent',
+      ln['afterInf']['sent'] == 1, str(ln['afterInf']['sent']))
+check('and the field goes back to what the model holds',
+      abs(float(ln['afterInf']['shown']) - ln['wantF']) < 1e-6,
+      str(ln['afterInf']['shown']))
+
+check('the anchor row is shown for a lens', ln['anchorRowShown'])
+check('and for a mirror too, since both have one', ln['anchorRowOnMirror'])
+check('as a choice, not a text box', ln['anchorKind'] == 'choice',
+      str(ln['anchorKind']))
+check('offering exactly the values gtrace allows',
+      ln['anchorOptions'] == ['HRcenter', 'center'],
+      str(ln['anchorOptions']))
+check('a lens is anchored at the middle of its substrate',
+      ln['anchorShown'] == 'center', str(ln['anchorShown']))
+check('a mirror at the apex of its HR face',
+      ln['anchorOnMirror'] == 'HRcenter', str(ln['anchorOnMirror']))
+check('changing it sends a set', ln['anchorSent'] == 1
+      and ln['anchorMsg']['op'] == 'set'
+      and ln['anchorMsg']['attrs']['ROC_anchor'] == 'HRcenter',
+      str(ln['anchorMsg']))
+
+print('--- moving along a beam by a typed distance ---')
+sl = res['slide']
+check('an optics with a beam through it offers the pair of rows',
+      sl['rowShown'] and sl['byRowShown'],
+      '%s / %s' % (sl['rowShown'], sl['byRowShown']))
+check('and neither is offered when no beam passes through it',
+      sl['rowsWhenNoBeam'] == [False, False], str(sl['rowsWhenNoBeam']))
+check('the beam is picked from a list, not typed', sl['kind'] == 'choice',
+      str(sl['kind']))
+check('offering the beams that actually reach the optics',
+      len(sl['options']) > 0 and sl['nearest'] in sl['options'],
+      '%s (nearest %s)' % (sl['options'], sl['nearest']))
+check('with the nearest one chosen to start from',
+      sl['chosen'] and sl['chosen']['name'] == sl['nearest'],
+      str(sl['chosen']))
+# The one row on the panel in millimetres besides the focal length: an
+# adjustment on a bench is spoken of in mm, and 0.05 invites the slip.
+check('the distance row is labelled in millimetres',
+      sl['label'] == 'Move by [mm]', str(sl['label']))
+check('and starts at zero, since it is a distance to move, not a place',
+      sl['byShown'] == '0', str(sl['byShown']))
+check('typing one sends a single message', sl['sent'] == 1, str(sl['sent']))
+check("it is a 'slide' naming the optics and the beam",
+      sl['msg']['op'] == 'slide' and sl['msg']['target'] == 'M1'
+      and sl['msg']['beam'] == sl['chosen']['name']
+      and sl['msg']['beam_index'] == sl['chosen']['index'],
+      str(sl['msg']))
+check('carrying metres, whatever the panel shows',
+      abs(sl['msg']['distance'] - 0.05) < 1e-15,
+      '50 mm -> %r m' % sl['msg']['distance'])
+check('the field goes back to zero at once',
+      sl['byAfter'] == '0', str(sl['byAfter']))
+check('zero and rubbish send nothing and leave it at zero',
+      sl['afterQuiet']['sent'] == 1 and sl['afterQuiet']['shown'] == '0',
+      str(sl['afterQuiet']))
+
+# A name like 'b0:M1t1' says nothing about which line in the picture it
+# is, so the beam is chosen by clicking it. Ctrl, because that already
+# means "this optics, against that beam" in a drag.
+check('there is a second beam through the optics to pick',
+      sl['otherBeam'] is not None and sl['otherBeam'] != sl['chosen']['name'],
+      str(sl['otherBeam']))
+check('and a point on it clear of every optics to click',
+      sl['pickPoint'] is not None, str(sl['pickPoint']))
+bc = sl['byClick']
+check('Ctrl + clicking a beam changes the row to one under the cursor',
+      bc['chosen']['name'] != sl['chosen']['name']
+      and bc['chosen']['name'] in bc['under'],
+      '%s (was %s, under the cursor: %s)'
+      % (bc['chosen']['name'], sl['chosen']['name'], bc['under']))
+# Only ever a beam of the element's own: sliding along one that misses
+# it is not something to mean, and such a click stays a readout.
+check('and never one that misses the optics',
+      bc['chosen']['name'] in bc['through'],
+      '%s not in %s' % (bc['chosen']['name'], bc['through']))
+check('and the picker shows it',
+      bc['shownInPicker'] == str(bc['chosen']['index']),
+      '%s vs %s' % (bc['shownInPicker'], bc['chosen']['index']))
+# Choosing what to move along is part of working on that element, so it
+# must not throw the element away the way a plain click does.
+check('the optics stays selected', bc['stillSelected'] == 'M1',
+      str(bc['stillSelected']))
+check('and its properties stay on screen', bc['panel']['propsShown'],
+      str(bc['panel']))
+check('the chosen beam is marked in the drawing', bc['markShown'])
+check('nothing is sent: the choice lives in the viewer', bc['sent'] == 0,
+      str(bc['sent']))
+
+# Beams routinely lie on top of one another, so pointing cannot tell
+# them apart. Clicking again steps through the bundle, as it does for
+# the readout.
+cy = sl['cycle']
+n = len(cy['bundle'])
+check('there is a bundle of beams at that point to step through',
+      n >= 2, str(cy['bundle']))
+# The order within a bundle of near-coincident beams is settled by
+# distances that differ in the last digits, and a click coordinate
+# makes a round trip through the screen to get here, so which of them
+# comes first is not something to pin down. That every one of them is
+# reachable, once each, is.
+check('each Ctrl + click takes a different beam of it',
+      len(set(cy['picks'][:n])) == n, str(cy['picks'][:n]))
+check('between them they cover the whole bundle',
+      set(cy['picks'][:n]) == set(cy['bundle']),
+      '%s vs %s' % (sorted(set(cy['picks'][:n])), sorted(cy['bundle'])))
+check('and it comes back round to where it started',
+      cy['picks'][n] == cy['picks'][0],
+      '%s after %d' % (cy['picks'], n))
+
+# Stepping through a bundle has to be visible, and moving a faint mark
+# from one line onto the same line is not visible at all: what tells
+# two beams on one axis apart is which way they run, and that is also
+# the sign of Move by.
+dir_of = dict(zip(cy['bundle'], [tuple(d) for d in cy['dirs']]))
+check('the bundle holds beams running opposite ways',
+      len(set(dir_of.values())) > 1, str(sorted(set(dir_of.values()))))
+check('the arrow is drawn for the chosen beam throughout',
+      all(a for a in cy['arrows']), str(cy['arrows'][:2]))
+# Between two picks that run different ways the arrow must differ; the
+# mark alone need not, since they lie on the same line.
+pairs = [(i, j) for i in range(n) for j in range(i + 1, n)
+         if dir_of[cy['picks'][i]] != dir_of[cy['picks'][j]]]
+check('there are two picks running different ways to compare',
+      len(pairs) > 0, str(len(pairs)))
+check('and the arrow turns round between them',
+      all(cy['arrows'][i] != cy['arrows'][j] for i, j in pairs),
+      str([(cy['picks'][i], cy['picks'][j]) for i, j in pairs][:3]))
+check('and the mark spans the chosen beam every time',
+      all(cy['marks']), str(cy['marks']))
+# The cycle belongs to the place that was clicked, not to the viewer:
+# clicking elsewhere and coming back starts at the nearest again, which
+# is what the first click here gave.
+check('a Ctrl + click somewhere else starts the cycle again',
+      cy['afterElsewhere'] == bc['chosen']['index'],
+      '%s (the first click here gave %s)'
+      % (cy['afterElsewhere'], bc['chosen']['index']))
+
+pc = sl['plainClick']
+check('the same click without Ctrl is still the readout',
+      pc['panel']['beamShown'] and pc['selected'] is None,
+      str(pc['panel']))
+check('pinning one of the beams it was over',
+      pc['pinned'] in bc['under'],
+      '%s (under the cursor: %s)' % (pc['pinned'], bc['under']))
+check('and the mark goes with the panel', not pc['markShown'])
+
 print('--- renaming ---')
 ren = res['rename']
 check('one message', ren['sent'] == 1, str(ren['sent']))
@@ -791,6 +1229,51 @@ check('placed at the centre of the view like the others',
 check('and selected right away', cy['selected'] == cy['msg']['name'],
       str(cy['selected']))
 
+print('--- adding a lens ---')
+check('it has its own button', res['addLensButton'])
+ln2 = res['addLens']
+check('one message per click', ln2['sent'] == 1, str(ln2['sent']))
+check('of the lens type', ln2['msg']['type'] == 'Lens',
+      str(ln2['msg'].get('type')))
+# The view has nothing to say about what kind of lens: Python owns the
+# catalogue defaults, and there is one place they live.
+check('carrying only where to put it',
+      set(ln2['msg']['params']) == {'HRcenter', 'normAngleHR'},
+      str(sorted(ln2['msg']['params'])))
+check('named apart from the mirrors',
+      ln2['msg']['name'].startswith('L')
+      and ln2['msg']['name'] not in (add['msg']['name'], cy['msg']['name']),
+      str(ln2['msg']['name']))
+check('placed at the centre of the view like the others',
+      ln2['msg']['params']['HRcenter'] == add['msg']['params']['HRcenter'],
+      str(ln2['msg']['params']['HRcenter']))
+check('and selected right away', ln2['selected'] == ln2['msg']['name'],
+      str(ln2['selected']))
+
+print('--- undo ---')
+ub = res['undoButton']
+check('there is an Undo button', ub is not None)
+check('out of reach until there is something to go back to',
+      ub['disabled'] and ub['sceneSays'] is False, str(ub))
+un = res['undo']
+check('and pressing it then sends nothing',
+      un['sentWhileEmpty'] == 0, str(un['sentWhileEmpty']))
+check('a scene with a history behind it enables it', un['enabled'])
+check('pressing it sends one undo',
+      un['sent'] == 1 and un['msg'] == {'op': 'undo'}, str(un['msg']))
+# The layout is Python's, so the button asks rather than guesses: an
+# undo carries nothing but the word.
+check('carrying nothing else', list(un['msg'].keys()) == ['op'],
+      str(list(un['msg'].keys())))
+check('Ctrl+Z over the viewer does the same', un['byKey'] == 2,
+      str(un['byKey']))
+# A notebook page has its own undo, and taking the key from everywhere
+# would undo edits meant for that.
+check('but not with the pointer elsewhere', un['byKeyOutside'] == 2,
+      str(un['byKeyOutside']))
+check('a scene with nothing behind it puts it out of reach again',
+      un['disabledAgain'])
+
 print('--- removing an optics ---')
 rem = res['remove']
 check("it is a 'remove'", rem['msg']['op'] == 'remove', str(rem['msg']))
@@ -816,6 +1299,46 @@ check('so is the cylindrical one',
 check('and it appears in the scene as a CyMirror',
       [o for o in lay2.scene_dict()['optics']
        if o['name'] == made.name][0]['type'] == 'CyMirror')
+
+lay2.apply_edit(res['addLens']['msg'])
+lens2 = lay2.get_optics(res['addLens']['msg']['name'])
+check('the lens button builds a lens',
+      type(lens2).__name__ == 'Lens', type(lens2).__name__)
+check('with a focal length Python chose',
+      np.isfinite(float(lens2.f)) and float(lens2.f) > 0,
+      'f=%.4f' % float(lens2.f))
+# The two messages the panel sent for a lens have to be ones Python
+# takes: this is the only place both halves meet on the same values.
+lay2.apply_edit({'op': 'set', 'target': lens2.name,
+                 'attrs': dict(res['lens']['msg']['attrs'])})
+check('and the focal length the panel sent is applied',
+      abs(float(lens2.f) - res['lens']['msg']['attrs']['f']) < 1e-9,
+      'f=%.9f' % float(lens2.f))
+lay2.apply_edit({'op': 'set', 'target': lens2.name,
+                 'attrs': dict(res['lens']['anchorMsg']['attrs'])})
+check('so is the anchor', lens2.ROC_anchor == 'HRcenter',
+      str(lens2.ROC_anchor))
+check('and it appears in the scene as a Lens carrying its power',
+      [o for o in lay2.scene_dict()['optics']
+       if o['name'] == lens2.name][0]['type'] == 'Lens'
+      and 'inv_f' in [o for o in lay2.scene_dict()['optics']
+                      if o['name'] == lens2.name][0])
+
+# The slide, on its own: it moves M1, which the replay above is written
+# around.
+lay2.trace()
+m1s = lay2.get_optics('M1')
+slide_msg = res['slide']['msg']
+slide_along = [b for b in lay2.beams if b.name == slide_msg['beam']][0]
+bdir = np.asarray(slide_along.dirVect, dtype='float64')
+before = np.asarray(m1s.center, dtype='float64').copy()
+angle_before = float(m1s.normAngleHR)
+lay2.apply_edit(slide_msg)
+step = np.asarray(m1s.center, dtype='float64') - before
+check('Python moves it 50 mm along the beam the panel named',
+      np.allclose(step, bdir*0.05, atol=1e-15),
+      '%s (want %s)' % (list(step.round(15)), list((bdir*0.05).round(15))))
+check('without turning it', float(m1s.normAngleHR) == angle_before)
 new = lay2.get_optics(res['add']['msg']['name'])
 check('the mirror is where the view was',
       np.allclose(np.asarray(new.HRcenter),
@@ -857,14 +1380,17 @@ check('center x lands exactly where it was typed',
 
 hr_before = np.asarray(o.HRcenter).copy()
 center_before = np.asarray(o.center).copy()
-# Three kinds of message are left out. The renames deliberately include
-# one Python refuses, so the sequence is not a coherent script; 'Cy'
-# exists only in the synthetic scene the browser was handed, so this
-# layout has never heard of it; and save/load would write files into the
-# repository, which a check has no business doing.
+# Four kinds of message are left out. The renames deliberately include
+# one Python refuses, so the sequence is not a coherent script; 'Cy' and
+# 'L1' exist only in the synthetic scene the browser was handed, so this
+# layout has never heard of them; save/load would write files into the
+# repository, which a check has no business doing; and the slide moves
+# M1 off the place the checks below expect it, so it is applied on its
+# own further down instead.
+SYNTHETIC = ('Cy', 'L1')
 for msg in sent[1:]:
-    if (msg['op'] not in ('rename', 'save', 'load')
-            and msg.get('target') != 'Cy'):
+    if (msg['op'] not in ('rename', 'save', 'load', 'slide')
+            and msg.get('target') not in SYNTHETIC):
         lay.apply_edit(msg)
 check('angle', abs(float(o.normAngleHR) - math.radians(120)) < 1e-12,
       str(float(o.normAngleHR)))
@@ -933,7 +1459,8 @@ check('its properties are shown',
 check('but nothing is editable', res['editableFields'] == [],
       str(res['editableFields']))
 check('there are no add buttons',
-      not res['addButton'] and not res['addCyButton'])
+      not res['addButton'] and not res['addCyButton']
+      and not res['addLensButton'])
 check('there is no remove button', not res['removeButton'])
 check('and no beam width controls, since redrawing needs Python',
       not res['display']['present'])
