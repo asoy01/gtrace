@@ -1490,6 +1490,12 @@ class Mirror(Optics):
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
 
     def _inv_ROC_HR_changed(self, old, new):
+        #HRcenter is the fixed point, on purpose. Regrinding the HR of a
+        #telescope mirror is done to change the magnification, not to
+        #move the beam, and a layout puts the spot on the HR surface, so
+        #the arc has to stay under the spot and the substrate move back
+        #behind it.
+        #
         #First update the sag
         if np.abs(self.inv_ROC_HR) > 1./(10*km):
             R = 1./self.inv_ROC_HR
@@ -1497,9 +1503,13 @@ class Mirror(Optics):
             self.sagHR =  - np.sign(R)*(np.abs(R) - np.sqrt(R**2 - r**2))
         else:
             self.sagHR = 0.0;
-        #Update the HRcenterC
-        self.trait_set(trait_change_notify=False,
-                 HRcenterC = self.HRcenter - self.sagHR*self.normVectHR)
+        #Update the HRcenterC, and let the notification carry it into
+        #the rest of the substrate. Suppressing it left ARcenterC,
+        #ARcenter and center where the old sagitta had put them.
+        #_HRcenterC_changed cannot come back round: every assignment it
+        #makes is silent, and the HRcenter it recomputes is the inverse
+        #of the line below, so the fixed point survives the trip.
+        self.HRcenterC = self.HRcenter - self.sagHR*self.normVectHR
 
     def _inv_ROC_AR_changed(self, old, new):
         #First update the sag
@@ -1509,6 +1519,12 @@ class Mirror(Optics):
             self.sagAR =  - np.sign(R)*(np.abs(R) - np.sqrt(R**2 - r**2))
         else:
             self.sagAR = 0.0;
+        #The AR arc stands on ARcenterC, which the thickness fixes, so
+        #nothing moves but the apex. There is no position written here
+        #for a notification to ride on, unlike the HR above, so this one
+        #has to be explicit.
+        self.trait_set(trait_change_notify=False,
+                 ARcenter = self.ARcenterC + self.normVectAR*self.sagAR)
 
     def _diameter_changed(self, old, new):
         #The sag of a curved surface depends on the aperture as well as

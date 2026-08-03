@@ -269,6 +269,76 @@ for cls in [opt.Mirror, opt.CyMirror]:
         check('%s the arc ends on the outline' % label, worst <= 1e-12,
               '(largest gap %.3e m)' % worst)
 
+print('--- changing a curvature carries the rest of the substrate ---')
+
+#HRcenter is the fixed point on purpose: a layout puts the beam on the
+#HR surface, and regrinding a telescope mirror to change its
+#magnification must not move the beam. The substrate moves back behind
+#the arc instead - and everything else has to move with it. The
+#notification that says so used to be suppressed, leaving ARcenterC,
+#ARcenter and center behind by a sagitta.
+
+def in_step(m, tol=1e-15):
+    return (np.linalg.norm(m.HRcenter
+                           - (m.HRcenterC + m.normVectHR*m.sagHR)) <= tol
+            and np.linalg.norm(m.ARcenterC
+                               - (m.HRcenterC
+                                  - m.normVectHR*m.thickness)) <= tol
+            and np.linalg.norm(m.ARcenter
+                               - (m.ARcenterC
+                                  + m.normVectAR*m.sagAR)) <= tol
+            and np.linalg.norm(m.center
+                               - (m.HRcenterC + m.ARcenterC)/2) <= tol)
+
+for cls in [opt.Mirror, opt.CyMirror]:
+    label = cls.__name__
+    kw = {'curve_direction': 'h'} if cls is opt.CyMirror else {}
+
+    for cname, c in CURVATURES:
+        if c == 0.0:
+            continue
+
+        m = make(cls, 0.0, 0.0, **kw)
+        m.translate([0.4, -0.2])
+        m.rotate(0.6)
+        apex = np.array(m.HRcenter)
+        centre = np.array(m.center)
+
+        m.inv_ROC_HR = c
+        check('%s HR %s: the HR surface stays put' % (label, cname),
+              np.allclose(m.HRcenter, apex, atol=1e-15),
+              '(moved %.3e m)' % np.linalg.norm(m.HRcenter - apex))
+        check('%s HR %s: the substrate moves with it' % (label, cname),
+              in_step(m), '(centre off by %.6f mm)'
+              % (np.linalg.norm(m.center
+                                - (m.HRcenterC + m.ARcenterC)/2)/mm))
+        #A whole sagitta, not half of one: both chord planes move
+        #together, since the thickness between them has not changed.
+        #Half a sagitta was the signature of the bug, where HRcenterC
+        #moved and ARcenterC stayed.
+        check('%s HR %s: by a whole sagitta, both planes together'
+              % (label, cname),
+              np.allclose(m.center - centre, -m.sagHR*m.normVectHR,
+                          atol=1e-15),
+              '(%.6f mm, sag %.6f mm)'
+              % (np.linalg.norm(m.center - centre)/mm, m.sagHR/mm))
+
+        m2 = make(cls, 0.0, 0.0, **kw)
+        m2.translate([0.4, -0.2])
+        m2.rotate(0.6)
+        before = (np.array(m2.center), np.array(m2.HRcenterC),
+                  np.array(m2.ARcenterC), np.array(m2.HRcenter))
+        m2.inv_ROC_AR = c
+        check('%s AR %s: nothing moves but its own apex' % (label, cname),
+              all(np.allclose(got, want, atol=1e-15) for got, want in
+                  zip([m2.center, m2.HRcenterC, m2.ARcenterC, m2.HRcenter],
+                      before)))
+        check('%s AR %s: and the substrate stays in step' % (label, cname),
+              in_step(m2), '(ARcenter off by %.6f mm)'
+              % (np.linalg.norm(m2.ARcenter
+                                - (m2.ARcenterC
+                                   + m2.normVectAR*m2.sagAR))/mm))
+
 print('--- a flat AR is untouched by any of this ---')
 
 for cls in [opt.Mirror, opt.CyMirror]:
