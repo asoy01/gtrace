@@ -23,6 +23,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 #: (script, what it covers). Order is a dependency order, not a
 #: preference.
 SUITES = [
+    ('verify_surfaces.py',
+     'where the two faces of a substrate are, against an independent arc'),
     ('verify_stage1.py',
      'renderHTML: self-containment, the embedded scene, every entry point'),
     ('verify_stage1.js',

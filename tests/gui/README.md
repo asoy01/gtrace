@@ -27,6 +27,7 @@ counts it as skipped rather than passed.
 
 | Suite | Checks |
 |---|---|
+| `verify_surfaces.py` | Where the two faces of a substrate are, against an arc derived independently of the class: both curvature signs, both faces, at four heights across the aperture, plus `isHit` agreeing with what `hitFrom*` then traces, and the drawn arc meeting the drawn sides. Not a GUI check, but it wants counted assertions and this is where those live |
 | `verify_stage1.py` | `renderHTML`: self-containment (no fetched URL, no surviving placeholder), the embedded scene's channels, every entry point, the optics channel the properties panel needs |
 | `verify_stage1.js` | **`viewer.js` physics against gtrace**: `beamParamsAt` and `projectOnBeam` over every beam of a traced system at five points each, plus the waist relations. Runs in Node against the real file |
 | `verify_browser.py` | Headless browser: the DOM the viewer builds, empty-layer marking, and **the HTML file `renderHTML` actually writes** |

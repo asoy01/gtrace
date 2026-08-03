@@ -242,7 +242,14 @@ class Mirror(Optics):
     normAngleHR : float
         Angle of the HR normal vector. In radians.
     ARcenter : array
-        The position of the center of the AR surface. shape(2,)
+        The position of the apex of the arc of the AR surface. shape(2,).
+        Note that this is the counterpart of HRcenter, not of HRcenterC:
+        it lies one sagitta out of the substrate. Anything that asks for
+        the centre of a chord - line_arc_intersection(), or an arc drawn
+        from its own chord - wants ARcenterC instead.
+    ARcenterC : array
+        The position of the center of the chord of the AR surface.
+        shape(2,).
     normVectAR : array
         Normal vector of the HR surface. shape(2,)
     normAngleAR : float
@@ -549,7 +556,11 @@ class Mirror(Optics):
             y = np.hstack((y2,y))
             v = np.vstack((x,y))
             v = optics.geometric.vector_rotation_2D(v, self.normAngleAR - pi/2)
-            v = v.T + self.ARcenter
+            #The polyline above is measured from the chord of the arc, so
+            #it belongs on the chord centre. ARcenter is the apex, one
+            #sagitta further out, and putting the arc there would leave
+            #the AR surface hanging off the ends of the sides.
+            v = v.T + self.ARcenterC
             cv.add_shape(draw.PolyLine(x=v[:,0], y=v[:,1]), layername="Mirrors")
             #dxf.append(sdxf.LwPolyLine(points=list(v), layer="Mirrors"))
         else:
@@ -609,8 +620,15 @@ class Mirror(Optics):
 
         HRsurface = {'center': self.HRcenterC, 'normal_vector': self.normVectHR,
                      'size': self.diameter, 'inv_ROC': self.inv_ROC_HR, 'name': 'HR'}
-        ARsurface = {'center': self.ARcenter, 'normal_vector': self.normVectAR,
-                     'size': self.diameter, 'inv_ROC': 0.0, 'name': 'AR'}
+        #The AR surface has to be described here exactly as hitFromAR()
+        #describes it: on its chord centre, with its own curvature and
+        #its own chord length. Calling it flat made isHit() answer for a
+        #different surface than the one the beam is then traced against,
+        #which is invisible while the AR is flat and first order once it
+        #is not.
+        ARsurface = {'center': self.ARcenterC, 'normal_vector': self.normVectAR,
+                     'size': self.ARdiameter, 'inv_ROC': self.inv_ROC_AR,
+                     'name': 'AR'}
 
         # #The vector parallel to the HR surface, pointing left.
         # v1 = np.array((-self.normVectHR[1], self.normVectHR[0]))
@@ -825,7 +843,7 @@ class Mirror(Optics):
 
         #Hit AR from back
         ans = optics.geometric.line_arc_intersection(pos=beam_s1.pos, dirVect=beam_s1.dirVect,
-                                                     chord_center=self.ARcenter,
+                                                     chord_center=self.ARcenterC,
                                                      chordNormVect=-self.normVectAR,
                                                      invROC=-self.inv_ROC_AR,
                                                      diameter=self.ARdiameter)
@@ -990,7 +1008,7 @@ class Mirror(Optics):
 
             #Hit AR from back
             ans = optics.geometric.line_arc_intersection(pos=beam_s1.pos, dirVect=beam_s1.dirVect,
-                                                         chord_center=self.ARcenter,
+                                                         chord_center=self.ARcenterC,
                                                          chordNormVect=-self.normVectAR,
                                                          invROC=-self.inv_ROC_AR,
                                                          diameter=self.ARdiameter)
@@ -1106,7 +1124,7 @@ class Mirror(Optics):
 
         #Get the intersection point
         ans = optics.geometric.line_arc_intersection(pos=beam.pos, dirVect=beam.dirVect,
-                                                     chord_center=self.ARcenter,
+                                                     chord_center=self.ARcenterC,
                                                      chordNormVect=self.normVectAR,
                                                      invROC=self.inv_ROC_AR,
                                                      diameter=self.ARdiameter)
@@ -1246,7 +1264,7 @@ class Mirror(Optics):
 
             #Get the intersection point
             ans = optics.geometric.line_arc_intersection(pos=beam_sr.pos, dirVect=beam_sr.dirVect,
-                                                         chord_center=self.ARcenter,
+                                                         chord_center=self.ARcenterC,
                                                          chordNormVect=-self.normVectAR,
                                                          invROC=-self.inv_ROC_AR,
                                                          diameter=self.ARdiameter)
@@ -1523,7 +1541,14 @@ class CyMirror(Mirror):
     normAngleHR : float
         Angle of the HR normal vector. In radians.
     ARcenter : array
-        The position of the center of the AR surface. shape(2,)
+        The position of the apex of the arc of the AR surface. shape(2,).
+        Note that this is the counterpart of HRcenter, not of HRcenterC:
+        it lies one sagitta out of the substrate. Anything that asks for
+        the centre of a chord - line_arc_intersection(), or an arc drawn
+        from its own chord - wants ARcenterC instead.
+    ARcenterC : array
+        The position of the center of the chord of the AR surface.
+        shape(2,).
     normVectAR : array
         Normal vector of the HR surface. shape(2,)
     normAngleAR : float
@@ -1755,8 +1780,8 @@ class CyMirror(Mirror):
         if self.curve_direction == 'h':
             HRsurface = {'center': self.HRcenterC, 'normal_vector': self.normVectHR,
                          'size': self.diameter, 'inv_ROC': self.inv_ROC_HR, 'name': 'HR'}
-            ARsurface = {'center': self.ARcenter, 'normal_vector': self.normVectAR,
-                             'size': self.diameter, 'inv_ROC': self.inv_ROC_AR, 'name': 'AR'}
+            ARsurface = {'center': self.ARcenterC, 'normal_vector': self.normVectAR,
+                             'size': self.ARdiameter, 'inv_ROC': self.inv_ROC_AR, 'name': 'AR'}
         else:
             HRsurface = {'center': self.HRcenter, 'normal_vector': self.normVectHR,
                          'size': self.diameter, 'inv_ROC': 0.0, 'name': 'HR'}
@@ -1875,7 +1900,8 @@ class CyMirror(Mirror):
             y = np.hstack((y2,y))
             v = np.vstack((x,y))
             v = optics.geometric.vector_rotation_2D(v, self.normAngleAR - pi/2)
-            v = v.T + self.ARcenter
+            #On the chord centre, not the apex. See Mirror.draw().
+            v = v.T + self.ARcenterC
             cv.add_shape(draw.PolyLine(x=v[:,0], y=v[:,1]), layername="Mirrors")
             #dxf.append(sdxf.LwPolyLine(points=list(v), layer="Mirrors"))
         else:
