@@ -31,7 +31,7 @@ Mirror
 .. image:: imgs/Mirror.png
    :height: 10cm
 
-Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a spherical lense, light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use :py:class:`CyMirror<gtrace.optcomp.CyMirror>` instead; its ``curve_direction`` attribute selects whether the cylinder curves horizontally (``'h'``) or vertically (``'v'``).
+Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a lens, a light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use :py:class:`CyMirror<gtrace.optcomp.CyMirror>` instead; its ``curve_direction`` attribute selects whether the cylinder curves horizontally (``'h'``) or vertically (``'v'``). For a lens, :py:class:`Lens<gtrace.optcomp.Lens>` is the same substrate ordered by its focal length rather than by the radii of its two faces.
 
 The parameters of a Mirror object are shown in the figure above.
 
@@ -57,11 +57,40 @@ For an optics the beam passes *through* rather than reflects off, that is the wr
     M.ROC_anchor = 'center'
     M.inv_ROC_HR = 1.0/newROC   # M.center unchanged, M.HRcenter moves
 
-:py:class:`Mirror<gtrace.optcomp.Mirror>` and :py:class:`CyMirror<gtrace.optcomp.CyMirror>` default to ``'HRcenter'``.
+:py:class:`Lens<gtrace.optcomp.Lens>` defaults to ``'center'`` for this reason; :py:class:`Mirror<gtrace.optcomp.Mirror>` and :py:class:`CyMirror<gtrace.optcomp.CyMirror>` default to ``'HRcenter'``.
 
 Either way the rest of the substrate follows: the far face, the sides and the centre are all recomputed, so the body stays closed and the tracer and the drawing agree about where it is. The anchor only chooses which end of the sagitta is held fixed while that happens.
 
 Changing ``diameter`` goes through the same machinery, since the sagitta depends on the aperture as well as on the radius. Changing ``inv_ROC_AR`` never moves the substrate at all: the back face has no spot to keep still, so its chord plane stays and only its apex moves.
+
+Lens
+-----------
+
+A lens is a substrate whose two faces both refract, which a
+:py:class:`Mirror<gtrace.optcomp.Mirror>` with two curved surfaces and a
+low reflectivity already is. What :py:class:`Lens<gtrace.optcomp.Lens>`
+adds is the way you order one: by focal length::
+
+    from gtrace.optcomp import Lens
+    from gtrace.unit import mm, inch
+
+    L = Lens(f=500*mm)                                    # biconvex, 1 inch
+    L = Lens(f=-100*mm, thickness=3*mm)                   # f < 0 comes out biconcave
+    L = Lens(f=150*mm, shape='convex-plano')              # curved front, flat back
+    L = Lens(f=150*mm, shape='meniscus', ROC_HR=-60*mm)
+
+``shape`` is spelt the way a catalogue spells it, the front face first and the back face second, so ``'plano-convex'`` and ``'convex-plano'`` are the same lens the two ways round. Left out, it gives an equiconvex lens for a positive focal length and an equiconcave one for a negative one. Asking for a shape that contradicts the sign of the focal length is an error rather than a surprise.
+
+The radii are solved for as a *thick* lens, which is what gtrace then traces: the beam refracts at both faces with the substrate in between, so radii taken from the thin lens formula would land a few parts in a thousand off, and considerably further for a short focal length. ``thickness`` is the :py:class:`Mirror<gtrace.optcomp.Mirror>` thickness, measured between the two chord planes, so it is the thickness at the rim; ``center_thickness`` reports the distance between the apexes that a catalogue would quote.
+
+A lens that cannot be made out of the blank it was given is refused, with the number you need in the message: two concave faces that would meet in the middle, a face steeper than its own aperture, or a focal length no substrate of that thickness can reach.
+
+The focal length is not stored. Reading ``f`` computes it from the curvatures, the thickness and the index as they stand, and assigning to it reshapes the faces to match, keeping the shape of the lens and leaving it where it is. Tuning a lens against a mode matching target is therefore a loop::
+
+    for f in np.arange(150, 400, 10)*mm:
+        L.f = f
+        layout.trace()
+        ...
 
 Optical systems
 ----------------

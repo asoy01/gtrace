@@ -52,6 +52,10 @@ cm = 0.01
 mm = 1e-3
 um = 1e-6
 nm = 1e-9
+
+#Catalogue optics come in inches, so a diameter is often quoted that
+#way even where everything else is metric.
+inch = 25.4*mm
 #}}}
 
 #{{{ Power units

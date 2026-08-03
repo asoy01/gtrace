@@ -25,6 +25,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = [
     ('verify_surfaces.py',
      'where the two faces of a substrate are, against an independent arc'),
+    ('verify_lens.py',
+     'Lens: the focal length ordered, measured by tracing a ray through it'),
     ('verify_stage1.py',
      'renderHTML: self-containment, the embedded scene, every entry point'),
     ('verify_stage1.js',

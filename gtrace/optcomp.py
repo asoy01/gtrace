@@ -280,7 +280,7 @@ class Mirror(Optics):
 
         'center' is for an optics the beam goes through rather than off,
         where the substrate is what is bolted to the bench and the faces
-        are free to move on it.
+        are free to move on it. Lens defaults to it.
     '''
 
 #{{{ Traits definitions
@@ -315,6 +315,12 @@ class Mirror(Optics):
     #Which point of the substrate stays put when the HR curvature
     #changes. See the class docstring.
     ROC_anchor = Enum(['HRcenter', 'center'])
+
+    #Whether draw() marks the reflective side with a line just inside
+    #the HR face. It says which face carries the coating, which is worth
+    #saying for a mirror and misleading for a substrate meant to
+    #transmit, so Lens turns it off.
+    draw_HR_marker = True
 
 
 #}}}
@@ -535,10 +541,11 @@ class Mirror(Optics):
         cv.add_shape(draw.Line(p2,p3), layername="Mirrors")
         cv.add_shape(draw.Line(p4,p1), layername="Mirrors")
 
-        d = self.thickness/10
-        l1 = p1 - self.normVectHR * d
-        l2 = p2 - self.normVectHR * d
-        cv.add_shape(draw.Line(l1,l2), layername="Mirrors")
+        if self.draw_HR_marker:
+            d = self.thickness/10
+            l1 = p1 - self.normVectHR * d
+            l2 = p2 - self.normVectHR * d
+            cv.add_shape(draw.Line(l1,l2), layername="Mirrors")
 
         #Draw Curved surface
 
@@ -1901,10 +1908,11 @@ class CyMirror(Mirror):
         cv.add_shape(draw.Line(p2,p3), layername="Mirrors")
         cv.add_shape(draw.Line(p4,p1), layername="Mirrors")
 
-        d = self.thickness/10
-        l1 = p1 - self.normVectHR * d
-        l2 = p2 - self.normVectHR * d
-        cv.add_shape(draw.Line(l1,l2), layername="Mirrors")
+        if self.draw_HR_marker:
+            d = self.thickness/10
+            l1 = p1 - self.normVectHR * d
+            l2 = p2 - self.normVectHR * d
+            cv.add_shape(draw.Line(l1,l2), layername="Mirrors")
 
         #Draw Curved surface
 
@@ -2659,6 +2667,810 @@ class CyMirror(Mirror):
             ii=ii+1
 
         return beams
+
+#}}}
+
+#}}}
+
+#{{{ Lens Class
+
+class LensGeometryError(ValueError):
+    '''
+    Raised when the lens asked for cannot be made out of the blank it
+    was given: a face steeper than its own aperture, two concave faces
+    that would meet in the middle, or a focal length no substrate of
+    that thickness can reach.
+
+    A subclass of ValueError, so that code catching the ordinary bad
+    argument still catches these.
+    '''
+    pass
+
+#: Curvature below which Mirror's sagitta bookkeeping calls a face flat
+#: (a radius over 10 km). Kept in step with _inv_ROC_HR_changed so that
+#: the sagitta computed here is the one the traits carry.
+_FLAT_CURVATURE = 1./(10*km)
+
+#: Lens shapes, spelled the way a catalogue spells them: the HR face
+#: first, the AR face second, so 'plano-convex' is flat towards the
+#: front and convex towards the back, and 'convex-plano' is the same
+#: lens turned round.
+#:
+#: 'symmetric' and 'meniscus' name a family without saying which way it
+#: curves, and let the sign of f decide. The spelt-out names are the
+#: same families with each face pinned, so that asking for a biconvex
+#: lens of negative focal length is an error instead of a surprise.
+#:
+#: Each entry is (family, HR face, AR face).
+_LENS_SHAPES = {
+    'symmetric':      ('symmetric', None, None),
+    'biconvex':       ('symmetric', 'convex', 'convex'),
+    'biconcave':      ('symmetric', 'concave', 'concave'),
+    'plano-convex':   ('plano', 'plano', 'convex'),
+    'convex-plano':   ('plano', 'convex', 'plano'),
+    'plano-concave':  ('plano', 'plano', 'concave'),
+    'concave-plano':  ('plano', 'concave', 'plano'),
+    'meniscus':       ('meniscus', None, None),
+    'convex-concave': ('meniscus', 'convex', 'concave'),
+    'concave-convex': ('meniscus', 'concave', 'convex'),
+}
+
+#: Iterations allowed while the centre thickness and the curvatures
+#: settle on each other. The dependence is weak - the thickness moves by
+#: a sagitta - so this converges in a handful; the count is a backstop.
+_SOLVE_ITERATIONS = 100
+
+#{{{ Lens geometry, as free functions
+
+def sagitta(inv_ROC, diameter):
+    '''
+    Sagitta of a spherical face spanning an aperture.
+
+    Parameters
+    ----------
+    inv_ROC : float
+        1/ROC of the face. Positive for a concave face, as everywhere
+        else in gtrace.
+    diameter : float
+        Aperture the face has to span.
+
+    Returns
+    -------
+    float
+        The sagitta, positive when the face bulges out of the substrate
+        and negative when it is hollowed into it. Zero for a face
+        gtrace treats as flat.
+
+    Raises
+    ------
+    LensGeometryError
+        If the radius is smaller than the semi-aperture, in which case
+        no arc of that radius reaches across the face. Left to run,
+        this is where the square root in Mirror's sagitta goes complex
+        and NaN starts spreading through the geometry.
+    '''
+    inv_ROC = float(inv_ROC)
+    if np.abs(inv_ROC) <= _FLAT_CURVATURE:
+        return 0.0
+    R = 1./inv_ROC
+    r = diameter/2.
+    if np.abs(R) < r:
+        raise LensGeometryError(
+            'A face of ROC %.6g m cannot span an aperture of %.6g m: the '
+            'radius has to be at least the semi-aperture, %.6g m.'
+            % (R, diameter, r))
+    return -np.sign(R)*(np.abs(R) - np.sqrt(R**2 - r**2))
+
+def lens_power(inv_ROC_HR, inv_ROC_AR, center_thickness, n):
+    '''
+    Optical power 1/f of a thick lens, in gtrace's sign convention.
+
+    The lensmaker's equation with the thickness term, rewritten in terms
+    of the inverse radii gtrace stores. Those are positive for a concave
+    face on both sides of the substrate, where the usual convention
+    measures both radii along the direction of propagation, so
+    1/R1 = -inv_ROC_HR and 1/R2 = +inv_ROC_AR.
+
+    Parameters
+    ----------
+    inv_ROC_HR, inv_ROC_AR : float
+        1/ROC of the two faces.
+    center_thickness : float
+        Distance between the two apexes, which is what the thickness
+        term means. For a Mirror-like substrate this is
+        ``thickness + sagHR + sagAR``, not ``thickness``.
+    n : float
+        Index of refraction.
+
+    Returns
+    -------
+    float
+        1/f. Positive for a converging lens.
+    '''
+    c1 = float(inv_ROC_HR)
+    c2 = float(inv_ROC_AR)
+    return (n - 1.)*(-(c1 + c2) - (n - 1.)*center_thickness*c1*c2/n)
+
+def _lens_shape(shape):
+    '''
+    Look a shape name up, defaulting to the symmetric family.
+    '''
+    if shape is None:
+        shape = 'symmetric'
+    try:
+        return _LENS_SHAPES[shape]
+    except (KeyError, TypeError):
+        raise LensGeometryError(
+            'Unknown lens shape %r. Choose one of: %s. The two-part names '
+            'are spelt HR face first, AR face second.'
+            % (shape, ', '.join(sorted(_LENS_SHAPES))))
+
+def _check_center_thickness(thickness, sag_HR, sag_AR):
+    '''
+    Refuse a blank the two faces would eat through.
+
+    Raises
+    ------
+    LensGeometryError
+        If nothing is left in the middle.
+    '''
+    center_thickness = thickness + sag_HR + sag_AR
+    if center_thickness > 0.:
+        return center_thickness
+    raise LensGeometryError(
+        'The two faces would meet inside the substrate: a rim thickness '
+        'of %.6g mm with sagittae of %.6g and %.6g mm leaves a centre '
+        'thickness of %.6g mm. This lens needs a rim thickness over '
+        '%.6g mm.'
+        % (thickness/mm, sag_HR/mm, sag_AR/mm, center_thickness/mm,
+           -(sag_HR + sag_AR)/mm))
+
+def _check_lens_inputs(f, n, diameter, thickness):
+    '''
+    Reject the arguments no lens can be made from, whatever its shape.
+
+    Returns
+    -------
+    float
+        The focal length, as a float.
+    '''
+    f = float(f)
+    if f == 0. or not np.isfinite(f):
+        raise LensGeometryError(
+            'A lens needs a finite, non-zero focal length; got %r. A flat '
+            'substrate is a Mirror with both curvatures zero.' % (f,))
+    if n <= 1.:
+        raise LensGeometryError(
+            'A lens needs a substrate denser than its surroundings; got '
+            'n = %r.' % (n,))
+    if diameter <= 0. or thickness <= 0.:
+        raise LensGeometryError(
+            'diameter and thickness must be positive; got %r and %r.'
+            % (diameter, thickness))
+    return f
+
+def _face_kind(inv_ROC):
+    '''
+    Whether a face is convex, concave or flat, in the vocabulary the
+    shape names use.
+    '''
+    if np.abs(inv_ROC) <= _FLAT_CURVATURE:
+        return 'plano'
+    return 'concave' if inv_ROC > 0 else 'convex'
+
+def _curvatures_at(f, family, flat_face, n, center_thickness, fixed):
+    '''
+    The two curvatures giving focal length f, for a centre thickness
+    held fixed. solve_lens_curvatures() iterates on the thickness
+    around this.
+    '''
+    if family == 'plano':
+        #One face flat kills the thickness term outright, so this is
+        #exact rather than a starting point.
+        c = -1./((n - 1.)*f)
+        return (0.0, c) if flat_face == 'HR' else (c, 0.0)
+
+    if family == 'symmetric':
+        #Both faces the same: a quadratic in the shared curvature.
+        A = (n - 1.)**2*center_thickness/n
+        B = 2.*(n - 1.)
+        C = 1./f
+        if A <= 0.:
+            c = -C/B
+            return c, c
+        disc = B*B - 4.*A*C
+        if disc < 0.:
+            raise LensGeometryError(
+                'No symmetric lens of f = %.6g m can be made from a blank '
+                '%.6g m thick with n = %.6g. Once the substrate is that '
+                'thick relative to the focal length the two faces stop '
+                'being able to reach it; f would have to exceed d/n = '
+                '%.6g m.' % (f, center_thickness, n, center_thickness/n))
+        #Of the two roots this is the weakly curved one; the other bends
+        #the faces back on themselves and would fail the aperture check.
+        c = (-B + np.sqrt(disc))/(2.*A)
+        return c, c
+
+    #Meniscus: one face is given, the other follows linearly.
+    k = (n - 1.)*center_thickness/n
+    denom = 1. + k*fixed
+    if np.abs(denom) < 1e-12:
+        raise LensGeometryError(
+            'A meniscus with an HR face of ROC %.6g m has no solution for '
+            'the AR face: at this curvature the substrate cancels the '
+            'face it stands on.' % (1./fixed,))
+    c_AR = -(1./((n - 1.)*f) + fixed)/denom
+    return fixed, c_AR
+
+def solve_lens_curvatures(f, shape=None, diameter=1*inch, thickness=6*mm,
+                          n=1.45, inv_ROC_HR=None):
+    '''
+    Curvatures of the two faces of a lens of focal length f.
+
+    Solved as a thick lens, which is what gtrace then traces: the beam
+    is refracted at both faces with the substrate in between, so a
+    curvature taken from the thin lens formula would come out a few
+    parts in a thousand away from the focal length asked for. The
+    centre thickness the thickness term needs itself depends on the
+    curvatures through the sagittae, so the two are iterated to
+    convergence. For a plano lens the thickness term vanishes and the
+    answer is exact in one step.
+
+    Parameters
+    ----------
+    f : float
+        Focal length. Positive converges.
+    shape : str or None, optional
+        One of the names in _LENS_SHAPES, spelt HR face first. None
+        means the symmetric family: biconvex for a positive f,
+        biconcave for a negative one.
+    diameter : float, optional
+        Aperture the faces have to span. Defaults 1 inch.
+    thickness : float, optional
+        Distance between the two chord planes, which is Mirror's
+        thickness and the thickness at the rim. Defaults 6 mm.
+    n : float, optional
+        Index of refraction. Defaults 1.45.
+    inv_ROC_HR : float or None, optional
+        1/ROC of the HR face, for a meniscus, which f alone does not
+        determine. Not accepted for the other families, where it is
+        solved for.
+
+    Returns
+    -------
+    (float, float)
+        ``(inv_ROC_HR, inv_ROC_AR)``.
+
+    Raises
+    ------
+    LensGeometryError
+        If the lens cannot be made: a face steeper than its aperture,
+        a centre eaten through by two concave faces, a focal length out
+        of reach of the substrate, or a shape contradicting the sign of
+        f.
+    '''
+    family, want_HR, want_AR = _lens_shape(shape)
+    f = _check_lens_inputs(f, n, diameter, thickness)
+
+    if family == 'meniscus' and inv_ROC_HR is None:
+        raise LensGeometryError(
+            'A meniscus is not determined by f alone: a whole family of '
+            'them has the same focal length. Give ROC_HR (or inv_ROC_HR) '
+            'to pin the front face, and the back face is solved for.')
+    if family != 'meniscus' and inv_ROC_HR is not None:
+        raise LensGeometryError(
+            'Both faces of a %s lens are solved for from f. Only a '
+            'meniscus takes one of its radii as an input.'
+            % (shape or 'symmetric',))
+
+    flat_face = 'HR' if want_HR == 'plano' else 'AR'
+    fixed = None if inv_ROC_HR is None else float(inv_ROC_HR)
+
+    #Iterate the centre thickness and the curvatures onto each other.
+    #Starting from the rim thickness, which is off by the sagittae.
+    d = thickness
+    c_HR, c_AR = _curvatures_at(f, family, flat_face, n, d, fixed)
+    for _ in range(_SOLVE_ITERATIONS):
+        c_HR, c_AR = _curvatures_at(f, family, flat_face, n, d, fixed)
+        d_next = (thickness + sagitta(c_HR, diameter)
+                  + sagitta(c_AR, diameter))
+        if np.abs(d_next - d) <= 1e-15*max(1., np.abs(d_next)):
+            d = d_next
+            break
+        d = d_next
+    c_HR, c_AR = _curvatures_at(f, family, flat_face, n, d, fixed)
+
+    #Whether the blank survives the faces comes first: with a negative
+    #centre thickness the iteration above is solving for a substrate
+    #that does not exist, and the residual check below would report
+    #that as a solver failure rather than as the impossible lens it is.
+    d = _check_center_thickness(thickness, sagitta(c_HR, diameter),
+                                sagitta(c_AR, diameter))
+
+    #What came out has to actually have the focal length asked for.
+    #This catches a solve that wandered as well as one that never
+    #converged, and it costs nothing.
+    got = lens_power(c_HR, c_AR, d, n)
+    if np.abs(got - 1./f) > 1e-9*np.abs(1./f):
+        raise LensGeometryError(
+            'The curvatures did not settle on f = %.6g m (they give '
+            '%.6g m). This is a bug in the solver, not in the lens asked '
+            'for.' % (f, 1./got if got else np.inf))
+
+    for face, want, c in [('HR', want_HR, c_HR), ('AR', want_AR, c_AR)]:
+        if want is not None and _face_kind(c) != want:
+            raise LensGeometryError(
+                'A %r lens wants a %s %s face, but f = %.6g m makes it %s. '
+                'A converging lens is convex where a diverging one is '
+                'concave; either change the shape or the sign of f.'
+                % (shape, want, face, f, _face_kind(c)))
+
+    #A meniscus curves the same way throughout, which in this sign
+    #convention - each face measured from its own side - means the two
+    #curvatures have opposite signs. Pinning the front face too gently
+    #puts the solution outside that family, and asking for a meniscus
+    #and quietly getting a biconvex lens is exactly what naming the
+    #shape is supposed to prevent.
+    if family == 'meniscus' and c_HR*c_AR >= 0:
+        #c_AR passes through zero when the front face alone carries the
+        #whole power, so the boundary is exact rather than thin-lens.
+        boundary = (n - 1.)*np.abs(f)
+        raise LensGeometryError(
+            'ROC_HR = %.6g m at f = %.6g m comes out %s, not a meniscus. '
+            'A front face curving the same way as the lens as a whole '
+            'makes a meniscus only while |ROC_HR| < (n-1)|f| = %.6g m; '
+            'curving it the other way always does.'
+            % (1./c_HR if c_HR else np.inf, f,
+               '%s-%s' % (_face_kind(c_HR), _face_kind(c_AR)), boundary))
+
+    return c_HR, c_AR
+
+def rescale_lens_curvatures(inv_ROC_HR, inv_ROC_AR, f, diameter=1*inch,
+                            thickness=6*mm, n=1.45):
+    '''
+    Scale both curvatures by one common factor until the lens has focal
+    length f.
+
+    This is how a lens changes focal length without changing shape. The
+    ratio between the two faces is what makes a lens biconvex or
+    plano-convex or a meniscus, and multiplying both by the same number
+    leaves that ratio alone: a flat face stays flat, an equiconvex lens
+    stays equiconvex, a meniscus keeps its bend. A negative factor
+    turns the whole lens inside out, which is what asking a converging
+    lens for a negative focal length means.
+
+    Parameters
+    ----------
+    inv_ROC_HR, inv_ROC_AR : float
+        The curvatures to scale. At least one must be non-zero: a flat
+        substrate has no shape to keep.
+    f : float
+        The focal length wanted.
+    diameter, thickness, n : float, optional
+        The substrate, as for solve_lens_curvatures().
+
+    Returns
+    -------
+    (float, float)
+        ``(inv_ROC_HR, inv_ROC_AR)``, scaled.
+
+    Raises
+    ------
+    LensGeometryError
+        If no scaling of this shape reaches that focal length, or if
+        the one that does cannot be cut from the substrate.
+    '''
+    c1 = float(inv_ROC_HR)
+    c2 = float(inv_ROC_AR)
+    f = _check_lens_inputs(f, n, diameter, thickness)
+
+    if c1 == 0. and c2 == 0.:
+        raise LensGeometryError(
+            'A substrate with two flat faces has no shape to scale. Say '
+            'which shape the lens should take as well as its focal '
+            'length.')
+
+    #Power as a function of the scale s is a s^2 + b s, and at least one
+    #of a and b is non-zero once the two faces are not both flat.
+    C = 1./f
+    b = -(n - 1.)*(c1 + c2)
+    #Thin lens estimate, and the branch to stay on: as the substrate
+    #thins the physical root goes to this one.
+    s0 = C/b if b else 0.0
+
+    d = thickness
+    s = s0
+    for _ in range(_SOLVE_ITERATIONS):
+        a = -(n - 1.)**2*d*c1*c2/n
+        s = _scale_root(a, b, C, s0, f)
+        d_next = (thickness + sagitta(s*c1, diameter)
+                  + sagitta(s*c2, diameter))
+        if np.abs(d_next - d) <= 1e-15*max(1., np.abs(d_next)):
+            d = d_next
+            break
+        d = d_next
+    s = _scale_root(-(n - 1.)**2*d*c1*c2/n, b, C, s0, f)
+
+    c_HR, c_AR = s*c1, s*c2
+    d = _check_center_thickness(thickness, sagitta(c_HR, diameter),
+                                sagitta(c_AR, diameter))
+    got = lens_power(c_HR, c_AR, d, n)
+    if np.abs(got - C) > 1e-9*np.abs(C):
+        raise LensGeometryError(
+            'Scaling this shape did not settle on f = %.6g m (it gives '
+            '%.6g m). This is a bug in the solver, not in the lens asked '
+            'for.' % (f, 1./got if got else np.inf))
+    return c_HR, c_AR
+
+def _scale_root(a, b, C, s0, f):
+    '''
+    Solve a*s^2 + b*s = C for the scale factor, on the branch that
+    survives as the substrate thins.
+    '''
+    if a == 0.:
+        return C/b
+    disc = b*b + 4.*a*C
+    if disc < 0.:
+        raise LensGeometryError(
+            'No lens of this shape has f = %.6g m: scaling its two faces '
+            'together cannot reach that focal length from either '
+            'direction. Give a shape as well, and the faces are solved '
+            'for from scratch.' % (f,))
+    root = np.sqrt(disc)
+    lo = (-b + root)/(2.*a)
+    hi = (-b - root)/(2.*a)
+    return lo if np.abs(lo - s0) <= np.abs(hi - s0) else hi
+
+#}}}
+
+class Lens(Mirror):
+    '''
+    A lens: a substrate that refracts at both faces.
+
+    Mechanically a Mirror whose two faces are both curved and both
+    transmit, so everything a Mirror can do - non-sequential tracing,
+    ghost beams off either face, drawing, dragging in the viewer - works
+    unchanged. What it adds is the constructor: a lens is ordered by its
+    focal length, and the curvatures follow.
+
+    The focal length is not stored anywhere. ``f`` is computed from the
+    curvatures, the thickness and the index whenever it is read, and
+    assigning to it reshapes the faces to match. The curvatures stay the
+    one description of the lens, so the two can never disagree, and
+    tuning a lens is what it looks like::
+
+        for f in np.arange(150, 400, 10)*mm:
+            L.f = f
+            layout.trace()
+            ...
+
+    Setting f keeps the shape - both curvatures are scaled together -
+    and keeps the lens where it is. set_focal_length() takes a shape as
+    well, for changing that too.
+
+    Three defaults differ from Mirror, because they have to:
+
+    ================  =========  ====================================
+    ..                Mirror     Lens
+    ================  =========  ====================================
+    wedgeAngle        0.25 deg   0, or the faces are not coaxial
+    HRtransmissive    False      True: the front face is meant to pass
+    Refl_HR/Trans_HR  0.99/0.01  0.005/0.995: both faces coated
+    ================  =========  ====================================
+
+    HRtransmissive matters more than it looks. With it False a beam
+    passing through the front face counts as one order of stray, so the
+    main beam through a lens would be a ghost, and non_seq_trace would
+    stop following it at a low order.
+
+    Attributes
+    ----------
+    f : float
+        Focal length. Readable and writable; see the property.
+    center_thickness : float
+        Distance between the two apexes, which is what a catalogue calls
+        the thickness. ``thickness`` itself is Mirror's: the distance
+        between the two chord planes, i.e. at the rim. Read only.
+
+    Examples
+    --------
+    A 500 mm biconvex lens, 1 inch across::
+
+        L = Lens(f=500*mm)
+
+    The same power as a plano-convex lens with the curved face towards
+    the back, put 20 cm along the axis and turned to face the beam::
+
+        L = Lens(f=500*mm, shape='convex-plano', center=[0.2, 0.0],
+                 normAngleHR=pi)
+
+    A diverging lens. The symmetric default follows the sign of f, so
+    this is biconcave::
+
+        L = Lens(f=-100*mm, thickness=3*mm)
+
+    A meniscus, which f alone does not determine: one radius is given
+    and the other is solved for. ROC_HR is positive for a concave front
+    face, as everywhere in gtrace::
+
+        L = Lens(f=200*mm, shape='meniscus', ROC_HR=-0.1)
+    '''
+
+    #A lens is placed by its middle: the beam goes through it, so there
+    #is no reflection point for the faces to stay under, and it is the
+    #substrate that sits at a position on the bench. Changing a
+    #curvature therefore moves the faces and leaves the lens where it
+    #is - the opposite of a mirror, and the reason ROC_anchor exists.
+    ROC_anchor = Enum(['center', 'HRcenter'])
+
+    #A lens has no reflective side to mark.
+    draw_HR_marker = False
+
+#{{{ __init__
+
+    def __init__(self, f=None, shape=None,
+                 center=None, HRcenter=None, normAngleHR=0.0,
+                 normVectHR=None, diameter=1*inch, thickness=6*mm,
+                 n=1.45, ROC_HR=None, inv_ROC_HR=None, inv_ROC_AR=None,
+                 wedgeAngle=0.0, Refl_HR=0.005, Trans_HR=0.995,
+                 Refl_AR=0.005, Trans_AR=0.995, name="Lens",
+                 HRtransmissive=True, term_on_HR=False,
+                 max_stray_order=None):
+        '''
+        Create a lens.
+
+        Parameters
+        ----------
+        f : float or None, optional
+            Focal length. Positive converges. The curvatures are solved
+            for from it. None instead takes the curvatures directly
+            through inv_ROC_HR and inv_ROC_AR, which is how copy() and
+            the layout loader rebuild a lens whose radii may since have
+            been edited.
+        shape : str or None, optional
+            Which shape of that focal length, spelt HR face first:
+            'biconvex', 'biconcave', 'plano-convex', 'convex-plano',
+            'plano-concave', 'concave-plano', 'convex-concave',
+            'concave-convex', or the family names 'symmetric' and
+            'meniscus'. None means symmetric, which follows the sign of
+            f. Only meaningful together with f.
+        center : array or None, optional
+            Position of the centre of the substrate. A lens is normally
+            placed by its middle rather than by a face. Defaults
+            [0.0, 0.0] when HRcenter is not given either.
+        HRcenter : array or None, optional
+            Position of the apex of the front face, as for a Mirror.
+            Mutually exclusive with center.
+        normAngleHR : float, optional
+            Direction angle of the normal of the front face, in radians.
+            Defaults 0.0.
+        normVectHR : array or None, optional
+            The same as a vector. Defaults None.
+        diameter : float, optional
+            Aperture. Defaults 1 inch.
+        thickness : float, optional
+            Distance between the two chord planes: the thickness at the
+            rim, and Mirror's thickness. Defaults 6 mm. For a concave
+            lens this is the thick part, and it has to be enough to
+            leave the middle standing.
+        n : float, optional
+            Index of refraction. Defaults 1.45.
+        ROC_HR : float or None, optional
+            Radius of the front face, for a meniscus. Positive for a
+            concave face. Mutually exclusive with inv_ROC_HR.
+        inv_ROC_HR, inv_ROC_AR : float or None, optional
+            The curvatures themselves, for building a lens without
+            solving for one. inv_ROC_HR doubles as the given face of a
+            meniscus.
+        wedgeAngle : float, optional
+            Wedge between the faces, in radians. Defaults 0: a lens
+            with a wedge is a prism as well as a lens, and the focal
+            length solved for here assumes coaxial faces.
+        Refl_HR, Trans_HR, Refl_AR, Trans_AR : float, optional
+            Power reflectivity and transmissivity of the two faces.
+            Default to a 0.5% coating on both, which keeps the ghost
+            beams a lens really does make.
+        name : str, optional
+            Defaults "Lens".
+        HRtransmissive : boolean, optional
+            Defaults True, unlike Mirror. See the class docstring.
+        term_on_HR : boolean, optional
+            Defaults False.
+        max_stray_order : int or None, optional
+            Defaults None.
+
+        Raises
+        ------
+        LensGeometryError
+            If the lens cannot be made out of the blank given, or if the
+            arguments over- or under-determine it.
+        '''
+        if ROC_HR is not None:
+            if inv_ROC_HR is not None:
+                raise LensGeometryError(
+                    'Give ROC_HR or inv_ROC_HR, not both.')
+            if ROC_HR == 0:
+                raise LensGeometryError(
+                    'ROC_HR cannot be zero. A flat face is inv_ROC_HR=0, '
+                    'or one of the plano shapes.')
+            inv_ROC_HR = 1./ROC_HR
+
+        if center is not None and HRcenter is not None:
+            raise LensGeometryError(
+                'Give center or HRcenter, not both: one is the middle of '
+                'the substrate, the other the apex of its front face.')
+
+        if f is None:
+            if shape is not None:
+                raise LensGeometryError(
+                    'shape=%r has no meaning without f. With no focal '
+                    'length to solve for, the faces are whatever '
+                    'inv_ROC_HR and inv_ROC_AR say.' % (shape,))
+            c_HR = 0.0 if inv_ROC_HR is None else float(inv_ROC_HR)
+            c_AR = 0.0 if inv_ROC_AR is None else float(inv_ROC_AR)
+        else:
+            if inv_ROC_AR is not None:
+                raise LensGeometryError(
+                    'inv_ROC_AR is solved for from f. Giving both would '
+                    'over-determine the lens.')
+            #Which shapes take a radius, and which insist on one, is the
+            #solver's business; it raises for both.
+            c_HR, c_AR = solve_lens_curvatures(
+                f, shape=shape, diameter=diameter, thickness=thickness,
+                n=n, inv_ROC_HR=inv_ROC_HR)
+
+        #The blank has to survive the faces cut into it. The solver
+        #checks this too; repeating it here covers the f=None path,
+        #where a lens is rebuilt from curvatures that may have been
+        #edited into something impossible since.
+        _check_center_thickness(thickness, sagitta(c_HR, diameter),
+                                sagitta(c_AR, diameter))
+
+        Mirror.__init__(self,
+                        HRcenter=[0.0, 0.0] if HRcenter is None else HRcenter,
+                        normAngleHR=normAngleHR, normVectHR=normVectHR,
+                        diameter=diameter, thickness=thickness,
+                        wedgeAngle=wedgeAngle, inv_ROC_HR=c_HR,
+                        inv_ROC_AR=c_AR, Refl_HR=Refl_HR,
+                        Trans_HR=Trans_HR, Refl_AR=Refl_AR,
+                        Trans_AR=Trans_AR, n=n, name=name,
+                        HRtransmissive=HRtransmissive,
+                        term_on_HR=term_on_HR,
+                        max_stray_order=max_stray_order)
+
+        #Placing by the middle is the natural thing for a lens, and it
+        #is also the default: HRcenter=[0,0] above is only a stand-in
+        #for the constructor, replaced here unless it was asked for.
+        if HRcenter is None:
+            self.center = [0.0, 0.0] if center is None else center
+
+#}}}
+
+#{{{ copy
+
+    def copy(self):
+        #From the curvatures, not from f: a lens whose radii were edited
+        #after it was built is that lens, not the one originally
+        #ordered, and re-solving would quietly reshape it.
+        m = Lens(inv_ROC_HR=self.inv_ROC_HR, inv_ROC_AR=self.inv_ROC_AR,
+                    HRcenter=self.HRcenter, normAngleHR=self.normAngleHR,
+                    diameter=self.diameter, thickness=self.thickness,
+                    wedgeAngle=self.wedgeAngle, Refl_HR=self.Refl_HR,
+                    Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR,
+                    Trans_AR=self.Trans_AR, n=self.n, name=self.name,
+                    HRtransmissive=self.HRtransmissive,
+                    term_on_HR=self.term_on_HR,
+                    max_stray_order=self.max_stray_order)
+        m.ROC_anchor = self.ROC_anchor
+        return m
+
+#}}}
+
+#{{{ Derived quantities
+
+    @property
+    def center_thickness(self):
+        '''
+        Distance between the two apexes: the thickness a catalogue
+        quotes. thickness is the distance between the chord planes,
+        i.e. at the rim.
+        '''
+        return self.thickness + self.sagHR + self.sagAR
+
+    @property
+    def f(self):
+        '''
+        Focal length of the lens.
+
+        Reading it computes it from the curvatures, the centre thickness
+        and the index as they stand, so it cannot go stale. Infinite for
+        a substrate with no power left in it.
+
+        Assigning to it reshapes the two faces until the lens has that
+        focal length, keeping its shape and leaving it where it is::
+
+            for f in np.arange(150, 400, 10)*mm:
+                L.f = f
+                layout.trace()
+
+        See set_focal_length(), which this calls, for what "keeping its
+        shape" means and for how to change the shape as well.
+        '''
+        P = lens_power(self.inv_ROC_HR, self.inv_ROC_AR,
+                       self.center_thickness, self.n)
+        return np.inf if P == 0. else 1./P
+
+    @f.setter
+    def f(self, value):
+        self.set_focal_length(value)
+
+    def set_focal_length(self, f, shape=None, ROC_HR=None):
+        '''
+        Give the lens a new focal length.
+
+        Parameters
+        ----------
+        f : float
+            The focal length wanted.
+        shape : str or None, optional
+            None, the usual case, keeps the shape the lens already has:
+            both curvatures are scaled by one common factor, so a flat
+            face stays flat and a meniscus keeps its bend. Asking a
+            converging lens for a negative focal length turns it inside
+            out, and the shape name follows.
+
+            A name from the list the constructor takes instead solves
+            both faces from scratch, which is how a lens changes shape
+            without being rebuilt and losing its place in the layout.
+        ROC_HR : float or None, optional
+            The front radius, when shape is 'meniscus'.
+
+        Raises
+        ------
+        LensGeometryError
+            If the new focal length cannot be had. The lens is left
+            exactly as it was: the whole solve, and every check on it,
+            happens before anything is assigned.
+
+        Notes
+        -----
+        Whatever ROC_anchor names stays put, which for a lens is the
+        centre of the substrate. The faces move, since the sagittae
+        change with the curvature, but the lens as a whole does not
+        wander up the bench as it is tuned.
+        '''
+        if shape is None:
+            c_HR, c_AR = rescale_lens_curvatures(
+                self.inv_ROC_HR, self.inv_ROC_AR, f, diameter=self.diameter,
+                thickness=self.thickness, n=self.n)
+            if ROC_HR is not None:
+                raise LensGeometryError(
+                    'ROC_HR pins the front face of a meniscus solved from '
+                    'scratch. Without a shape the faces keep the ratio '
+                    'they already have, and there is nothing to pin.')
+        else:
+            c_HR, c_AR = solve_lens_curvatures(
+                f, shape=shape, diameter=self.diameter,
+                thickness=self.thickness, n=self.n,
+                inv_ROC_HR=None if ROC_HR is None else 1./ROC_HR)
+
+        #Everything above can raise, and none of it has touched the
+        #lens. From here on nothing can: ROC_anchor holds the substrate
+        #still while the faces move on it.
+        self.inv_ROC_HR = c_HR
+        self.inv_ROC_AR = c_AR
+
+    @property
+    def shape(self):
+        '''
+        The name of the shape this lens currently has, spelt HR face
+        first, or 'plano-plano' for a substrate with no power.
+        '''
+        faces = (_face_kind(self.inv_ROC_HR), _face_kind(self.inv_ROC_AR))
+        for name, (family, want_HR, want_AR) in sorted(_LENS_SHAPES.items()):
+            if (want_HR, want_AR) == faces:
+                return name
+        return '%s-%s' % faces
 
 #}}}
 

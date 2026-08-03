@@ -247,8 +247,13 @@ def _in_notebook():
 
 def optic_to_dict(m):
     '''
-    Convert a Mirror or CyMirror to a JSON-compatible dict of its
+    Convert a Mirror, CyMirror or Lens to a JSON-compatible dict of its
     construction parameters.
+
+    A Lens is written out by its curvatures, like any other optics, and
+    not by its focal length: the focal length is derived from them, and
+    a lens whose radii were edited after it was built is that lens, not
+    the one originally ordered.
     '''
     d = {'type': type(m).__name__,
          'name': str(m.name),
@@ -277,7 +282,7 @@ def optic_to_dict(m):
 
 def optic_from_dict(d):
     '''
-    Construct a Mirror or CyMirror from a dict produced by
+    Construct a Mirror, CyMirror or Lens from a dict produced by
     optic_to_dict().
     '''
     kwargs = {'HRcenter': d['HRcenter'],
@@ -299,13 +304,19 @@ def optic_from_dict(d):
     if d['type'] == 'CyMirror':
         m = optcomp.CyMirror(curve_direction=d.get('curve_direction', 'h'),
                              **kwargs)
+    elif d['type'] == 'Lens':
+        #f=None: build from the curvatures written out above rather
+        #than re-solving, which would reshape a lens whose radii had
+        #been edited since.
+        m = optcomp.Lens(f=None, **kwargs)
     elif d['type'] == 'Mirror':
         m = optcomp.Mirror(**kwargs)
     else:
         raise ValueError('Unknown optics type: %s' % d['type'])
     m.term_on_HR_order = d.get('term_on_HR_order', 0)
-    #Absent from a file written before the anchor existed, the class
-    #default stands.
+    #Absent from an older file, or from one written before the anchor
+    #existed, the class default stands: 'HRcenter' for a mirror,
+    #'center' for a lens.
     if 'ROC_anchor' in d:
         m.ROC_anchor = d['ROC_anchor']
     return m
