@@ -254,6 +254,9 @@ function Viewer(container, scene, options) {
     this.width = 1;
     this.height = 1;
 
+    this.fitMargin = 0.06;  // fraction of the view left clear around the scene
+    this.fitPending = false; // a fit waiting for the view to have a size
+
     this.labels = [];       // {el, x, y, rotation, layer}
     this.layerGroups = {};  // layer name -> {geom, label, visible}
     this.pinned = null;     // pinned readout {beam, d, point, rank, count}
@@ -1119,11 +1122,22 @@ Viewer.prototype._applyTransform = function () {
     this._updateStatus();
 };
 
-Viewer.prototype._resize = function () {
+Viewer.prototype._measure = function () {
     var rect = this.svg.getBoundingClientRect();
     this.width = Math.max(1, rect.width);
     this.height = Math.max(1, rect.height);
     this.svg.setAttribute('viewBox', '0 0 ' + this.width + ' ' + this.height);
+};
+
+Viewer.prototype._resize = function () {
+    this._measure();
+    // A fit that could not be done for want of a viewport is done now.
+    // See fit() for why that happens.
+    if (this.fitPending && this.width > 1 && this.height > 1) {
+        this.fitPending = false;
+        this._fitToBBox();
+        return;
+    }
     this._applyTransform();
 };
 
@@ -1166,16 +1180,41 @@ Viewer.prototype.bbox = function () {
     return {minx: minx, miny: miny, maxx: maxx, maxy: maxy};
 };
 
-Viewer.prototype.fit = function (margin) {
-    this._resize();
+Viewer.prototype._fitToBBox = function () {
     var bb = this.bbox();
     var w = Math.max(bb.maxx - bb.minx, 1e-9);
     var h = Math.max(bb.maxy - bb.miny, 1e-9);
-    var m = margin === undefined ? 0.06 : margin;
+    var m = this.fitMargin;
     this.scale = Math.min(this.width / w, this.height / h) * (1 - 2 * m);
     this.cx = (bb.minx + bb.maxx) / 2;
     this.cy = (bb.miny + bb.maxy) / 2;
     this._applyTransform();
+};
+
+/*
+ * Frame the whole scene.
+ *
+ * This needs to know how big the view is, and there is one situation
+ * where it cannot: a notebook. anywidget calls render() before the
+ * output area has been laid out, so the element measures zero, and a
+ * scale worked out from that is wrong by whatever the real size turns
+ * out to be - three orders of magnitude, in practice, which puts the
+ * whole drawing in a dot.
+ *
+ * So when there is nothing to fit into, the fit is remembered instead
+ * of being done wrongly, and _resize() carries it out as soon as a real
+ * size arrives. The static HTML page never takes this path: its script
+ * runs after the body is laid out, so the first measurement is real.
+ */
+Viewer.prototype.fit = function (margin) {
+    this.fitMargin = margin === undefined ? 0.06 : margin;
+    this._measure();
+    if (this.width <= 1 || this.height <= 1) {
+        this.fitPending = true;
+        return;
+    }
+    this.fitPending = false;
+    this._fitToBBox();
 };
 
 //}}}

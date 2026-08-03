@@ -51,6 +51,7 @@ __CSS__
 </style></head>
 <body>
 <div id="host"></div>
+<div id="host2"></div>
 <div id="out" style="display:none"></div>
 <script>
 var ESM_SRC = __ESM__;
@@ -130,6 +131,46 @@ var SCENES = __SCENES__;
         out.afterCleanup = {
             root: el.querySelectorAll('.gt-root').length,
             listeners: v._listeners ? v._listeners.length : null
+        };
+
+        // --- mounting the way a notebook does ---
+        // anywidget calls render() before the output area has been laid
+        // out, so the element measures zero. Everything above mounts
+        // into an element that is already in the document and sized,
+        // which is why it never saw this: the initial fit was worked
+        // out from a 1x1 view and left three orders of magnitude out.
+        var det = document.createElement('div');
+        det.style.width = '900px';
+        det.style.height = '600px';
+        var st2 = {scene: SCENES.a, title: 'Detached', height: 600};
+        var h2 = {};
+        var model2 = {
+            get: function (k) { return st2[k]; },
+            set: function (k, val) {
+                st2[k] = val;
+                (h2['change:' + k] || []).forEach(function (f) { f(); });
+            },
+            on: function (ev, fn) { (h2[ev] = h2[ev] || []).push(fn); },
+            off: function () {}
+        };
+        mod.default.render({model: model2, el: det});
+        var v2 = det.gtraceViewer;
+        out.detached = {width: v2.width, height: v2.height,
+                        scale: v2.scale, pending: !!v2.fitPending};
+
+        document.getElementById('host2').appendChild(det);
+        await new Promise(function (r) { setTimeout(r, 300); });
+
+        var bb2 = v2.bbox();
+        var want = Math.min(v2.width / (bb2.maxx - bb2.minx),
+                            v2.height / (bb2.maxy - bb2.miny)) * (1 - 2 * 0.06);
+        out.attachedLater = {
+            width: v2.width, height: v2.height,
+            scale: v2.scale, wantScale: want,
+            cx: v2.cx, cy: v2.cy,
+            wantCx: (bb2.minx + bb2.maxx) / 2,
+            wantCy: (bb2.miny + bb2.maxy) / 2,
+            pending: !!v2.fitPending
         };
     } catch (e) {
         out.error = String((e && e.stack) || e);
@@ -219,6 +260,30 @@ c = res.get('afterCleanup') or {}
 check('the viewer DOM is removed', c.get('root') == 0, str(c.get('root')))
 check('every listener is released', c.get('listeners') == 0,
       str(c.get('listeners')))
+
+print('--- rendered before the view has a size (what a notebook does) ---')
+d = res.get('detached') or {}
+l = res.get('attachedLater') or {}
+check('the view really does measure nothing at render time',
+      d.get('width') == 1 and d.get('height') == 1,
+      '(%sx%s)' % (d.get('width'), d.get('height')))
+check('the fit is deferred rather than done against nothing',
+      d.get('pending') is True)
+check('the view has a size once it is in the document',
+      (l.get('width') or 0) > 100 and (l.get('height') or 0) > 100,
+      '(%sx%s)' % (l.get('width'), l.get('height')))
+check('the deferred fit ran', l.get('pending') is False)
+
+scale, want = l.get('scale'), l.get('wantScale')
+check('and the scene is framed',
+      scale is not None and want and abs(scale / want - 1) < 1e-6,
+      '(scale %s, a fit would give %s)' % (scale, want))
+check('centred on the scene',
+      l.get('cx') is not None
+      and abs(l['cx'] - l['wantCx']) < 1e-9
+      and abs(l['cy'] - l['wantCy']) < 1e-9,
+      '((%s,%s) vs (%s,%s))' % (l.get('cx'), l.get('cy'),
+                                l.get('wantCx'), l.get('wantCy')))
 
 print()
 print('%d passed, %d failed' % (npass, nfail))
