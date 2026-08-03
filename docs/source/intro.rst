@@ -18,9 +18,9 @@ The main ingredients of gtrace are mirrors and beams. A mirror is represented as
 Two ways of working
 --------------------
 
-The description above is the low level interface: you hold the mirrors and the beams yourself and pass them around. Everything in gtrace can be done this way, and the :doc:`tutorial` follows it.
+The description above is the low level interface: you hold the mirrors and the beams yourself and pass them around. Everything in gtrace can be done this way, and the :doc:`tutorial` starts there.
 
-On top of it there is a container, :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, which holds the optics, the source beams and the tracing rules as one object. Registering your optics into a layout buys you tracing, drawing, JSON persistence and the interactive viewer without having to carry the lists around by hand. The optics are held *by reference*, so the mirror you registered and the mirror in your own variable are the same object, and an edit made in the viewer changes the object in your code. See :doc:`layout` and :doc:`viewer`.
+On top of it there is a container, :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, which holds the optics, the source beams and the tracing rules as one object. Registering your optics into a layout buys you tracing, drawing, JSON persistence and the interactive viewer without having to carry the lists around by hand. The optics are held *by reference*, so the mirror you registered and the mirror in your own variable are the same object, and an edit made in the viewer changes the object in your code. The last part of the :doc:`tutorial` goes through it; :doc:`layout` and :doc:`viewer` describe it in reference detail.
 
 Installation
 -------------

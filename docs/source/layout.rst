@@ -3,7 +3,7 @@ Optical layouts
 
 An :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` holds a whole optical system in one object: the optics, the source beams and the rules that govern the non-sequential trace. It is what you draw, what you save to disk, and what the interactive viewer edits.
 
-Nothing forces you to use it. The optics and beams described in :doc:`basic_concepts` and :doc:`propagation` work on their own, and the :doc:`tutorial` never mentions a layout. What the layout adds is a single place to keep a system that you intend to trace, redraw and adjust repeatedly.
+Nothing forces you to use it. The optics and beams described in :doc:`basic_concepts` and :doc:`propagation` work on their own, and the :doc:`tutorial` gets as far as a traced mode cleaner without one. What the layout adds is a single place to keep a system that you intend to trace, redraw and adjust repeatedly.
 
 The two phases
 ---------------

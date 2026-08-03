@@ -7,9 +7,18 @@ gtrace.egg-info/
 gtrace-*/
 /Manuals/references/
 /docs/_build/
-/docs/autoapi/
+# sphinx-autoapi generates its pages next to conf.py and removes them
+# again when the build finishes. If that cleanup fails - on Windows a
+# sync client or a virus scanner can hold the directory open - the tree
+# is left behind, so it is ignored rather than committed by accident.
+/docs/source/autoapi/
 
-Manuals/Tutorial/.ipynb_checkpoints/gtrace-tutorial-checkpoint.ipynb
+# Jupyter's autosaves, wherever a notebook happens to be opened
+.ipynb_checkpoints/
+
+# rope's cache, which an editor drops next to whatever it refactored
+.ropeproject/
+
 # pixi environments
 .pixi/*
 !.pixi/config.toml
@@ -36,3 +45,9 @@ HANDOFF.md
 /tests/OpticalLayout_demo.html
 /tests/OpticalLayout_demo_layout.json
 /tests/OpticalLayout_demo_gui.json
+
+# Written by the layout / viewer section of the tutorial when it is run.
+# The DXF files beside them predate this and are still tracked.
+/docs/source/tutorial/tutorial_viewer.html
+/docs/source/tutorial/tutorial_layout.json
+/docs/source/tutorial/tutorial_layout.dxf

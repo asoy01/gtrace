@@ -57,12 +57,23 @@ file actually carries - so the static HTML shipped without its optics
 channel, and clicking a mirror in it did nothing. `verify_browser.py`
 now opens the file `renderHTML` wrote and clicks a mirror in it.
 
-## The demo notebook
+## The tutorial notebook
 
 ```
 pixi run python tests/gui/run_notebook.py
 ```
 
-Executes `tests/OpticalLayout_demo.ipynb` and strips the saved widget
-state, which otherwise embeds a copy of `viewer.js` in the notebook and
-makes every front-end change show up as a notebook diff.
+Executes `docs/source/tutorial/gtrace-tutorial.ipynb` in place. This is
+the only check that runs the documented code end to end, so an example
+that has drifted away from the library turns up here rather than in a
+reader's session.
+
+It then removes three things that would otherwise change on every run
+for reasons that have nothing to do with the notebook: the saved widget
+state, which embeds a copy of `viewer.js`; the widget outputs, whose
+text is an object repr carrying a memory address; and nbconvert's
+per-cell wall-clock timings. Consecutive stream outputs are joined, since
+where the flushes fell is not information either.
+
+The result is reproducible: run it twice without changing anything and
+the file does not change, so a diff against it means something real did.
