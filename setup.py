@@ -1,6 +1,11 @@
 import setuptools
 
-with open("README.md", "r") as fh:
+# The encoding has to be explicit. open() otherwise decodes with the
+# locale's preferred encoding, so on a Japanese Windows this reads
+# README.md as cp932 and dies on the first non-ASCII character - which
+# means the package cannot be built or installed from source there at
+# all, while working fine everywhere UTF-8 is the default.
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(

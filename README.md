@@ -12,22 +12,68 @@ It was written for KAGRA and is used to lay out its optical benches.
 
 ## Installation
 
-```sh
-pip install gtrace
-```
-
-Python 3.9 or newer, with numpy, scipy and traits. The notebook widget
-additionally needs `anywidget`:
+### From PyPI
 
 ```sh
-pip install gtrace[notebook]
+pip install gtrace              # the library and the HTML viewer
+pip install "gtrace[notebook]"  # ... and the viewer as a Jupyter widget
 ```
 
-To install from a checkout instead:
+Python 3.9 or newer. gtrace itself needs only numpy, scipy and traits.
+
+### What the viewer needs
+
+The viewer has two front ends, and they do not cost the same:
+
+| front end | needs |
+|---|---|
+| self-contained HTML — `render_html()`, `show(backend='html')` | nothing beyond gtrace and a web browser |
+| Jupyter widget — `widget()`, or `show()` inside a notebook | `anywidget` (≥ 0.9), which brings `ipywidgets` with it, and a Jupyter front end |
+
+Neither route involves Node.js, a build step, a CDN or any network
+access: the viewer's JavaScript and CSS ship inside the package and are
+inlined into the page it writes. No CAD software either — not needing it
+is rather the point.
+
+`show()` picks the widget when it finds itself in a Jupyter kernel with
+anywidget installed, and writes the HTML file otherwise, so the same code
+works both ways. Without anywidget the widget raises `WidgetNotAvailable`
+and says so.
+
+### From a clone
 
 ```sh
-pip install .
+git clone https://github.com/asoy01/gtrace.git
+cd gtrace
+pip install ".[notebook]"
 ```
+
+Use `pip install -e ".[notebook]"` instead if you intend to change gtrace
+itself. The quotes matter in zsh, which would otherwise try to expand the
+brackets as a glob.
+
+## Running the tutorial
+
+The tutorial is a Jupyter notebook, and it lives in the source tree, so
+it needs the clone above and a Jupyter front end:
+
+```sh
+pip install jupyterlab
+jupyter lab docs/source/tutorial/gtrace-tutorial.ipynb
+```
+
+VS Code's notebook editor works just as well: open the file and select
+the interpreter you installed gtrace into.
+
+Run the cells from the top. The last chapter opens the viewer in the cell
+output, which is the part that wants `anywidget`; everything before it
+works without. The notebook writes its results next to itself —
+`SeqTrace.dxf`, `NonSeq.dxf` and `MC.dxf` from the tracing sections, and
+`tutorial_viewer.html`, `tutorial_layout.json` and `tutorial_layout.dxf`
+from the layout section.
+
+To read it rather than run it:
+<https://gtrace.readthedocs.io/en/latest/tutorial.html>.
 
 ## Usage
 

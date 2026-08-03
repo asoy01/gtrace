@@ -27,11 +27,53 @@ Installation
 
 ::
 
-    pip install gtrace
+    pip install gtrace              # the library and the HTML viewer
+    pip install "gtrace[notebook]"  # ... and the viewer as a Jupyter widget
 
-gtrace itself needs only numpy, scipy and traits. The HTML viewer needs nothing beyond that. The notebook widget additionally needs ``anywidget``::
+Python 3.9 or newer. gtrace itself needs only numpy, scipy and traits.
 
-    pip install gtrace[notebook]
+What the viewer needs
+^^^^^^^^^^^^^^^^^^^^^^
+
+The viewer has two front ends, and they do not cost the same:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Front end
+     - Needs
+   * - Self-contained HTML — ``render_html()``,
+       ``show(backend='html')``
+     - Nothing beyond gtrace and a web browser
+   * - Jupyter widget — ``widget()``, or ``show()`` inside a notebook
+     - ``anywidget`` (>= 0.9), which brings ``ipywidgets`` with it,
+       and a Jupyter front end
+
+Neither route involves Node.js, a build step, a CDN or any network access: the viewer's JavaScript and CSS ship inside the package and are inlined into the page it writes. No CAD software either — not needing it is rather the point.
+
+:py:meth:`show<gtrace.layout.OpticalLayout.show>` picks the widget when it finds itself in a Jupyter kernel with anywidget installed, and writes the HTML file otherwise, so the same code works both ways. Without anywidget the widget raises ``WidgetNotAvailable`` and says so.
+
+From a clone
+^^^^^^^^^^^^^
+
+To work from the source tree instead, which is also what running the :doc:`tutorial` needs::
+
+    git clone https://github.com/asoy01/gtrace.git
+    cd gtrace
+    pip install ".[notebook]"
+
+Use ``pip install -e ".[notebook]"`` if you intend to change gtrace itself. The quotes matter in zsh, which would otherwise try to expand the brackets as a glob.
+
+Running the tutorial
+^^^^^^^^^^^^^^^^^^^^^
+
+The :doc:`tutorial` is a Jupyter notebook in that source tree, so it needs a Jupyter front end::
+
+    pip install jupyterlab
+    jupyter lab docs/source/tutorial/gtrace-tutorial.ipynb
+
+VS Code's notebook editor works just as well: open the file and select the interpreter you installed gtrace into. Run the cells from the top; the last chapter opens the viewer in the cell output, which is the part that wants anywidget, and everything before it works without.
 
 Limitations
 ------------
