@@ -271,6 +271,8 @@ def optic_to_dict(m):
                              else int(m.max_stray_order))}
     if isinstance(m, optcomp.CyMirror):
         d['curve_direction'] = str(m.curve_direction)
+    if hasattr(m, 'ROC_anchor'):
+        d['ROC_anchor'] = str(m.ROC_anchor)
     return d
 
 def optic_from_dict(d):
@@ -302,6 +304,10 @@ def optic_from_dict(d):
     else:
         raise ValueError('Unknown optics type: %s' % d['type'])
     m.term_on_HR_order = d.get('term_on_HR_order', 0)
+    #Absent from a file written before the anchor existed, the class
+    #default stands.
+    if 'ROC_anchor' in d:
+        m.ROC_anchor = d['ROC_anchor']
     return m
 
 def source_to_dict(b):
@@ -352,7 +358,10 @@ def _update_optic(m, d):
     '''
     Apply a serialized optics to an existing one, in place.
     '''
-    for key in ['diameter', 'thickness', 'wedgeAngle', 'n',
+    # ROC_anchor comes first: it decides what a curvature further down
+    # the list does to the rest of the substrate.
+    for key in ['ROC_anchor',
+                'diameter', 'thickness', 'wedgeAngle', 'n',
                 'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
                 'inv_ROC_HR', 'inv_ROC_AR',
                 'HRtransmissive', 'term_on_HR', 'term_on_HR_order',

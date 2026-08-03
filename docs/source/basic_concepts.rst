@@ -37,6 +37,32 @@ The parameters of a Mirror object are shown in the figure above.
 
 The curvature of a surface is held as its *inverse* radius, ``inv_ROC_HR`` and ``inv_ROC_AR``, so that a flat surface is simply zero rather than an infinity that has to be special-cased everywhere. The GUI viewer shows you the radius itself and converts on the way in and out.
 
+Changing a curvature
+~~~~~~~~~~~~~~~~~~~~~
+
+A curved surface is an arc, and an arc has two natural reference points: the apex, where it crosses the optical axis, and the centre of the chord it spans, out at the rim. They lie a *sagitta* apart, and the sagitta depends on the radius. ``HRcenter`` is the apex and ``HRcenterC`` the chord centre; ``ARcenter`` and ``ARcenterC`` are the same pair on the back face. The thickness of the substrate is measured between the two chord planes, so it is the thickness at the rim.
+
+That means assigning a new curvature cannot leave both points alone. One of them has to move, and which one is a question about what you are doing::
+
+    M.inv_ROC_HR = 1.0/newROC
+
+By default the *apex stays put* and the substrate slides back behind it. This is what a reflective telescope wants. Such a telescope is tuned by sweeping the radii of its mirrors to get the magnification right, a layout puts the beam spot on the HR surface, and the point of the sweep is to change the beam size rather than to move the beam::
+
+    for R in np.arange(-30, -20, 0.5):
+        MMT1.inv_ROC_HR = 1.0/R
+        layout.trace()          # the beam still lands where it did
+
+For an optics the beam passes *through* rather than reflects off, that is the wrong choice: there is no spot on a surface to keep still, and what is bolted to the bench is the substrate. Setting ``ROC_anchor`` to ``'center'`` keeps the middle of the substrate where it is and lets the faces move on it instead::
+
+    M.ROC_anchor = 'center'
+    M.inv_ROC_HR = 1.0/newROC   # M.center unchanged, M.HRcenter moves
+
+:py:class:`Mirror<gtrace.optcomp.Mirror>` and :py:class:`CyMirror<gtrace.optcomp.CyMirror>` default to ``'HRcenter'``.
+
+Either way the rest of the substrate follows: the far face, the sides and the centre are all recomputed, so the body stays closed and the tracer and the drawing agree about where it is. The anchor only chooses which end of the sagitta is held fixed while that happens.
+
+Changing ``diameter`` goes through the same machinery, since the sagitta depends on the aperture as well as on the radius. Changing ``inv_ROC_AR`` never moves the substrate at all: the back face has no spot to keep still, so its chord plane stays and only its apex moves.
+
 Optical systems
 ----------------
 

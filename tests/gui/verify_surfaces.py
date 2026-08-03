@@ -271,12 +271,15 @@ for cls in [opt.Mirror, opt.CyMirror]:
 
 print('--- changing a curvature carries the rest of the substrate ---')
 
-#HRcenter is the fixed point on purpose: a layout puts the beam on the
-#HR surface, and regrinding a telescope mirror to change its
-#magnification must not move the beam. The substrate moves back behind
-#the arc instead - and everything else has to move with it. The
-#notification that says so used to be suppressed, leaving ARcenterC,
-#ARcenter and center behind by a sagitta.
+#ROC_anchor says which end of the sagitta stays put. 'HRcenter', the
+#default, keeps the arc under the beam and moves the substrate back
+#behind it: regrinding a telescope mirror changes the magnification and
+#must not move the spot. 'center' keeps the substrate still and moves
+#the face on it, which is what an optics the beam goes through wants.
+#
+#Either way the rest of the substrate has to follow. The notification
+#that carries it used to be suppressed, leaving ARcenterC, ARcenter and
+#center where the old sagitta had put them.
 
 def in_step(m, tol=1e-15):
     return (np.linalg.norm(m.HRcenter
@@ -294,10 +297,15 @@ for cls in [opt.Mirror, opt.CyMirror]:
     label = cls.__name__
     kw = {'curve_direction': 'h'} if cls is opt.CyMirror else {}
 
+    check('%s anchors on HRcenter by default' % label,
+          make(cls, 0.0, 0.0, **kw).ROC_anchor == 'HRcenter',
+          '(%r)' % make(cls, 0.0, 0.0, **kw).ROC_anchor)
+
     for cname, c in CURVATURES:
         if c == 0.0:
             continue
 
+        # Anchored on the HR surface, the default.
         m = make(cls, 0.0, 0.0, **kw)
         m.translate([0.4, -0.2])
         m.rotate(0.6)
@@ -322,6 +330,36 @@ for cls in [opt.Mirror, opt.CyMirror]:
                           atol=1e-15),
               '(%.6f mm, sag %.6f mm)'
               % (np.linalg.norm(m.center - centre)/mm, m.sagHR/mm))
+
+        # Anchored on the substrate instead.
+        m3 = make(cls, 0.0, 0.0, **kw)
+        m3.translate([0.4, -0.2])
+        m3.rotate(0.6)
+        m3.ROC_anchor = 'center'
+        apex3 = np.array(m3.HRcenter)
+        centre3 = np.array(m3.center)
+        planes3 = (np.array(m3.HRcenterC), np.array(m3.ARcenterC))
+
+        m3.inv_ROC_HR = c
+        check("%s HR %s: anchored on center, the substrate stays put"
+              % (label, cname),
+              np.allclose(m3.center, centre3, atol=1e-15)
+              and np.allclose(m3.HRcenterC, planes3[0], atol=1e-15)
+              and np.allclose(m3.ARcenterC, planes3[1], atol=1e-15),
+              '(centre moved %.3e m)'
+              % np.linalg.norm(m3.center - centre3))
+        check('%s HR %s: and the apex moves by the sagitta' % (label, cname),
+              np.allclose(m3.HRcenter - apex3, m3.sagHR*m3.normVectHR,
+                          atol=1e-15),
+              '(%.6f mm, sag %.6f mm)'
+              % (np.linalg.norm(m3.HRcenter - apex3)/mm, m3.sagHR/mm))
+        check('%s HR %s: with the substrate still in step' % (label, cname),
+              in_step(m3))
+        check('%s HR %s: the two anchors differ by one sagitta'
+              % (label, cname),
+              abs(np.linalg.norm(m3.center - m.center)
+                  - abs(m.sagHR)) <= 1e-15,
+              '(%.6f mm)' % (np.linalg.norm(m3.center - m.center)/mm))
 
         m2 = make(cls, 0.0, 0.0, **kw)
         m2.translate([0.4, -0.2])

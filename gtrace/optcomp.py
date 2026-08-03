@@ -9,8 +9,8 @@ array = np.array
 sqrt = np.lib.scimath.sqrt
 from numpy.linalg import norm
 
-from traits.api import (HasTraits, Int, Float, CFloat, CArray, List, Str,
-                        Union)
+from traits.api import (HasTraits, Enum, Int, Float, CFloat, CArray, List,
+                        Str, Union)
 
 import gtrace.optics as optics
 import gtrace.optics.geometric
@@ -267,6 +267,20 @@ class Mirror(Optics):
     term_on_HR_order : int
         Integer to specify the upper limit of the stray order used to judge
         whether to terminate the non sequential trace or not on HR reflection.
+    ROC_anchor : str
+        Which point stays put when inv_ROC_HR changes: 'HRcenter', the
+        apex of the HR arc, or 'center', the middle of the substrate.
+        The other one moves, since the sagitta between them is what the
+        curvature changed.
+
+        Defaults to 'HRcenter'. Regrinding a telescope mirror is done to
+        change the magnification, not to move the beam, and a layout
+        puts the spot on the HR surface, so the arc has to stay under
+        the spot while the substrate moves back behind it.
+
+        'center' is for an optics the beam goes through rather than off,
+        where the substrate is what is bolted to the bench and the faces
+        are free to move on it.
     '''
 
 #{{{ Traits definitions
@@ -297,6 +311,10 @@ class Mirror(Optics):
 
     Refl_AR = CFloat(0.01) #Power reflectivity of the AR side.
     Trans_AR = CFloat(99.99) #Power transmittance of the HR side.
+
+    #Which point of the substrate stays put when the HR curvature
+    #changes. See the class docstring.
+    ROC_anchor = Enum(['HRcenter', 'center'])
 
 
 #}}}
@@ -413,7 +431,7 @@ class Mirror(Optics):
 #{{{ copy
 
     def copy(self):
-        return Mirror(HRcenter=self.HRcenter, normAngleHR=self.normAngleHR,
+        m = Mirror(HRcenter=self.HRcenter, normAngleHR=self.normAngleHR,
                       diameter=self.diameter, thickness=self.thickness,
                       wedgeAngle=self.wedgeAngle, inv_ROC_HR=self.inv_ROC_HR,
                       inv_ROC_AR=self.inv_ROC_AR, Refl_HR=self.Refl_HR,
@@ -421,6 +439,10 @@ class Mirror(Optics):
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
                       term_on_HR=self.term_on_HR,
                       max_stray_order=self.max_stray_order)
+        #Not a constructor argument: it says what a later change to the
+        #curvature does, and construction has none.
+        m.ROC_anchor = self.ROC_anchor
+        return m
 
 #}}}
 
@@ -1490,12 +1512,6 @@ class Mirror(Optics):
                  ARcenter = self.ARcenterC + self.normVectAR * self.sagAR)
 
     def _inv_ROC_HR_changed(self, old, new):
-        #HRcenter is the fixed point, on purpose. Regrinding the HR of a
-        #telescope mirror is done to change the magnification, not to
-        #move the beam, and a layout puts the spot on the HR surface, so
-        #the arc has to stay under the spot and the substrate move back
-        #behind it.
-        #
         #First update the sag
         if np.abs(self.inv_ROC_HR) > 1./(10*km):
             R = 1./self.inv_ROC_HR
@@ -1503,13 +1519,23 @@ class Mirror(Optics):
             self.sagHR =  - np.sign(R)*(np.abs(R) - np.sqrt(R**2 - r**2))
         else:
             self.sagHR = 0.0;
-        #Update the HRcenterC, and let the notification carry it into
-        #the rest of the substrate. Suppressing it left ARcenterC,
-        #ARcenter and center where the old sagitta had put them.
-        #_HRcenterC_changed cannot come back round: every assignment it
-        #makes is silent, and the HRcenter it recomputes is the inverse
-        #of the line below, so the fixed point survives the trip.
-        self.HRcenterC = self.HRcenter - self.sagHR*self.normVectHR
+
+        #Then move whichever end of the sagitta ROC_anchor does not pin.
+        if self.ROC_anchor == 'HRcenter':
+            #The arc stays under the beam and the substrate moves back
+            #behind it. The notification is what carries it: suppressing
+            #it left ARcenterC, ARcenter and center where the old
+            #sagitta had put them. _HRcenterC_changed cannot come back
+            #round - every assignment it makes is silent - and the
+            #HRcenter it recomputes is the inverse of the line below, so
+            #the fixed point survives the trip.
+            self.HRcenterC = self.HRcenter - self.sagHR*self.normVectHR
+        else:
+            #The substrate stays where it was put and the arc moves on
+            #it. Nothing else needs saying: the chord planes, and so the
+            #centre, are untouched.
+            self.trait_set(trait_change_notify=False,
+                     HRcenter = self.HRcenterC + self.sagHR*self.normVectHR)
 
     def _inv_ROC_AR_changed(self, old, new):
         #First update the sag
@@ -1700,7 +1726,7 @@ class CyMirror(Mirror):
 #{{{ copy
 
     def copy(self):
-        return CyMirror(HRcenter=self.HRcenter, normAngleHR=self.normAngleHR,
+        m = CyMirror(HRcenter=self.HRcenter, normAngleHR=self.normAngleHR,
                       diameter=self.diameter, thickness=self.thickness,
                       wedgeAngle=self.wedgeAngle, inv_ROC_HR=self.inv_ROC_HR,
                       inv_ROC_AR=self.inv_ROC_AR, Refl_HR=self.Refl_HR,
@@ -1709,6 +1735,8 @@ class CyMirror(Mirror):
                       term_on_HR=self.term_on_HR,
                       max_stray_order=self.max_stray_order,
                       curve_direction=self.curve_direction)
+        m.ROC_anchor = self.ROC_anchor
+        return m
 
 #}}}
 
