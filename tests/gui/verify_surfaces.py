@@ -271,7 +271,7 @@ for cls in [opt.Mirror, opt.CyMirror]:
 
 print('--- changing a curvature carries the rest of the substrate ---')
 
-#ROC_anchor says which end of the sagitta stays put. 'HRcenter', the
+#anchor_point says which end of the sagitta stays put. 'HRcenter', the
 #default, keeps the arc under the beam and moves the substrate back
 #behind it: regrinding a telescope mirror changes the magnification and
 #must not move the spot. 'center' keeps the substrate still and moves
@@ -298,8 +298,8 @@ for cls in [opt.Mirror, opt.CyMirror]:
     kw = {'curve_direction': 'h'} if cls is opt.CyMirror else {}
 
     check('%s anchors on HRcenter by default' % label,
-          make(cls, 0.0, 0.0, **kw).ROC_anchor == 'HRcenter',
-          '(%r)' % make(cls, 0.0, 0.0, **kw).ROC_anchor)
+          make(cls, 0.0, 0.0, **kw).anchor_point == 'HRcenter',
+          '(%r)' % make(cls, 0.0, 0.0, **kw).anchor_point)
 
     for cname, c in CURVATURES:
         if c == 0.0:
@@ -335,7 +335,7 @@ for cls in [opt.Mirror, opt.CyMirror]:
         m3 = make(cls, 0.0, 0.0, **kw)
         m3.translate([0.4, -0.2])
         m3.rotate(0.6)
-        m3.ROC_anchor = 'center'
+        m3.anchor_point = 'center'
         apex3 = np.array(m3.HRcenter)
         centre3 = np.array(m3.center)
         planes3 = (np.array(m3.HRcenterC), np.array(m3.ARcenterC))

@@ -422,7 +422,7 @@ check('nor their coatings: a new lens reflects nothing at all',
 check('the front face transmits', bool(lens.HRtransmissive))
 check('and it has no wedge', float(lens.wedgeAngle) == 0.0)
 check('its curvature anchor is the substrate centre',
-      lens.ROC_anchor == 'center', str(lens.ROC_anchor))
+      lens.anchor_point == 'center', str(lens.anchor_point))
 
 sc = {o['name']: o for o in layout.scene_dict()['optics']}
 check('the scene carries the power, not the focal length',
@@ -433,9 +433,9 @@ check('and it inverts to the focal length',
 check('a mirror has no such key', 'inv_f' not in sc['M1'],
       str(sorted(sc['M1'])))
 check('every optics reports its anchor',
-      sc['M1']['ROC_anchor'] == 'HRcenter'
-      and sc['L1']['ROC_anchor'] == 'center',
-      '%s / %s' % (sc['M1']['ROC_anchor'], sc['L1']['ROC_anchor']))
+      sc['M1']['anchor_point'] == 'HRcenter'
+      and sc['L1']['anchor_point'] == 'center',
+      '%s / %s' % (sc['M1']['anchor_point'], sc['L1']['anchor_point']))
 
 # Nothing in a scene may be an infinity: JSON has none, and what would
 # reach the browser is a token JSON.parse refuses.
@@ -539,14 +539,14 @@ refused({'op': 'add', 'type': 'Prism', 'name': 'P1', 'params': {}},
 
 # The anchor is a choice, like curve_direction, and every optics has one.
 layout.apply_edit({'op': 'set', 'target': 'M1',
-                   'attrs': {'ROC_anchor': 'center'}})
-check('the anchor can be changed', M1.ROC_anchor == 'center',
-      str(M1.ROC_anchor))
-refused({'op': 'set', 'target': 'M1', 'attrs': {'ROC_anchor': 'rim'}},
+                   'attrs': {'anchor_point': 'center'}})
+check('the anchor can be changed', M1.anchor_point == 'center',
+      str(M1.anchor_point))
+refused({'op': 'set', 'target': 'M1', 'attrs': {'anchor_point': 'rim'}},
         'an anchor outside the allowed set')
-check('and the old value stands', M1.ROC_anchor == 'center')
+check('and the old value stands', M1.anchor_point == 'center')
 layout.apply_edit({'op': 'set', 'target': 'M1',
-                   'attrs': {'ROC_anchor': 'HRcenter'}})
+                   'attrs': {'anchor_point': 'HRcenter'}})
 
 check('the layout still traces with lenses in it',
       len(layout.trace()) > 0, '(%d beams)' % len(layout.beams))
@@ -565,8 +565,8 @@ check('with the same focal length',
 check('the same curvatures',
       float(r1.inv_ROC_HR) == float(lens.inv_ROC_HR)
       and float(r1.inv_ROC_AR) == float(lens.inv_ROC_AR))
-check('and the same anchor', r1.ROC_anchor == lens.ROC_anchor,
-      str(r1.ROC_anchor))
+check('and the same anchor', r1.anchor_point == lens.anchor_point,
+      str(r1.anchor_point))
 check('the plano face survived too',
       float(reloaded.get_optics('L2').inv_ROC_AR) == 0.0)
 
@@ -735,23 +735,36 @@ check('the same attributes in either order give the same optics',
 check('and the centre is where it was asked for',
       np.allclose(np.asarray(Ma.center, dtype=float), [0.7, 0.1], atol=1e-12),
       str(list(np.asarray(Ma.center).round(12))))
-# This is what a lens gets when it is turned in the viewer: it is held
-# by the middle of its substrate, so the middle is sent along with the
-# angle and has to be applied second.
+# A lens is held by the middle of its substrate, and assigning its
+# orientation turns it about that anchor, so a bare rotate is enough.
 lay_c, _ = make_layout()
 lay_c.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
                   'params': {'HRcenter': [0.2, 0.06]}})
 Lc = lay_c.get_optics('L1')
 c_before = np.asarray(Lc.center, dtype=float).copy()
-lay_c.apply_edit({'op': 'set', 'target': 'L1',
-                  'attrs': {'center': list(c_before),
-                            'normAngleHR': float(Lc.normAngleHR) + 0.4}})
-check('turning a lens about its middle leaves the middle alone',
+lay_c.apply_edit({'op': 'rotate', 'target': 'L1',
+                  'normAngleHR': float(Lc.normAngleHR) + 0.4})
+check('turning a lens turns it about its middle',
       np.allclose(np.asarray(Lc.center, dtype=float), c_before, atol=1e-15),
       str(list(np.asarray(Lc.center) - c_before)))
 check('while the apex of its front face moves',
       not np.allclose(np.asarray(Lc.HRcenter, dtype=float),
                       [0.2, 0.06], atol=1e-9))
+# An older front end sent the middle along with the angle; the pair
+# still lands the same way, since the angle keeps the anchor and the
+# centre then rewrites it with itself.
+lay_d, _ = make_layout()
+lay_d.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                  'params': {'HRcenter': [0.2, 0.06]}})
+Ld = lay_d.get_optics('L1')
+lay_d.apply_edit({'op': 'set', 'target': 'L1',
+                  'attrs': {'center': list(c_before),
+                            'normAngleHR': float(Ld.normAngleHR) + 0.4}})
+check('the angle-and-centre pair an older front end sent still works',
+      np.allclose(np.asarray(Ld.center, dtype=float), c_before, atol=1e-15)
+      and np.allclose(np.asarray(Ld.HRcenter, dtype=float),
+                      np.asarray(Lc.HRcenter, dtype=float), atol=1e-15),
+      str(list(np.asarray(Ld.center) - c_before)))
 
 print('--- apply_edit: rename ---')
 layout, (M1, M2, M3) = make_layout()

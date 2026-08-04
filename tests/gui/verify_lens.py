@@ -374,13 +374,13 @@ for f in [200*mm, 300*mm, 80*mm, 1000*mm, 150*mm]:
 #A lens anchors on its centre, unlike a mirror: the beam goes through
 #it, so there is no reflection point for the faces to stay under, and
 #the substrate is what sits at a position on the bench. That is
-#ROC_anchor, not something set_focal_length arranges, so assigning a
+#anchor_point, not something set_focal_length arranges, so assigning a
 #curvature by hand behaves the same way.
 direct = Lens(f=150*mm, center=[0.4, 0.1], normAngleHR=np.pi, name='direct')
-check('a lens anchors on its centre', direct.ROC_anchor == 'center',
-      '(%r)' % direct.ROC_anchor)
+check('a lens anchors on its centre', direct.anchor_point == 'center',
+      '(%r)' % direct.anchor_point)
 check('a mirror anchors on its HR surface',
-      opt.Mirror().ROC_anchor == 'HRcenter', '(%r)' % opt.Mirror().ROC_anchor)
+      opt.Mirror().anchor_point == 'HRcenter', '(%r)' % opt.Mirror().anchor_point)
 
 apex = np.array(direct.HRcenter)
 direct.inv_ROC_HR = -1.0/0.1
@@ -399,7 +399,7 @@ check('the same for the back face',
 
 #Turning the anchor round makes a lens behave like a mirror.
 asmirror = Lens(f=150*mm, center=[0.4, 0.1], normAngleHR=np.pi, name='m')
-asmirror.ROC_anchor = 'HRcenter'
+asmirror.anchor_point = 'HRcenter'
 apex = np.array(asmirror.HRcenter)
 asmirror.f = 300*mm
 check('a lens anchored on HRcenter keeps its face still instead',
@@ -410,6 +410,76 @@ check('and is still a consistent substrate',
       substrate_is_consistent(asmirror))
 check('and still has the focal length asked for',
       rel(measure_focal_length(asmirror), 300*mm) <= FOCAL_TOL)
+
+print('--- the anchor is the turning point too ---')
+
+#Assigning an orientation turns the optics about its anchor point: a
+#mirror pivots the reflection point, which is what gtrace has always
+#done, and a lens pivots the middle of its substrate.
+M = opt.Mirror(HRcenter=[0.3, 0.2], normAngleHR=0.5)
+h0, c0 = np.array(M.HRcenter), np.array(M.center)
+M.normAngleHR = 1.3
+check('a mirror assigned an angle keeps its HR apex still',
+      np.allclose(M.HRcenter, h0, atol=1e-15)
+      and not np.allclose(M.center, c0, atol=1e-6),
+      '(centre moved %.6f mm)' % (np.linalg.norm(M.center - c0)/mm))
+
+L = Lens(f=200*mm, center=[0.4, 0.1], normAngleHR=np.pi, name='L')
+h0, c0 = np.array(L.HRcenter), np.array(L.center)
+L.normAngleHR = np.pi + 0.7
+check('a lens assigned an angle keeps its middle still',
+      np.allclose(L.center, c0, atol=1e-15)
+      and not np.allclose(L.HRcenter, h0, atol=1e-6),
+      '(apex moved %.6f mm)' % (np.linalg.norm(L.HRcenter - h0)/mm))
+check('and is still a consistent substrate', substrate_is_consistent(L))
+check('and still focuses where it says',
+      rel(measure_focal_length(L), 200*mm) <= FOCAL_TOL)
+
+L2 = Lens(f=200*mm, center=[0.4, 0.1], normAngleHR=np.pi, name='L2')
+c0 = np.array(L2.center)
+L2.normVectHR = [0.6, 0.8]
+check('assigning the vector turns about the same point',
+      np.allclose(L2.center, c0, atol=1e-15)
+      and substrate_is_consistent(L2), '(%s)' % (L2.center,))
+
+#rotate() pivots the anchor point by default, so a mirror - anchored
+#on its HR apex - turns exactly as it always has, and a lens turns
+#about its middle. True asks for the middle whatever the anchor says.
+for label, pivot_arg, pin in [
+        ('the default pivots the anchor of a lens, its middle',
+         None, 'center'),
+        ('True pivots the middle', True, 'center'),
+        ('False spells the default out', False, 'center')]:
+    Lr = Lens(f=200*mm, center=[0.4, 0.1], normAngleHR=np.pi, name='Lr')
+    p0 = np.array(getattr(Lr, pin))
+    if pivot_arg is None:
+        Lr.rotate(0.3)
+    else:
+        Lr.rotate(0.3, center=pivot_arg)
+    check('rotate: %s' % label,
+          np.allclose(np.array(getattr(Lr, pin)), p0, atol=1e-15)
+          and substrate_is_consistent(Lr),
+          '(%s at %s)' % (pin, np.array(getattr(Lr, pin))))
+
+for label, kwargs in [('the default pivots the anchor of a mirror, '
+                       'its HR apex - as rotate() always has', {}),
+                      ('False spells that out', {'center': False})]:
+    Mr = opt.Mirror(HRcenter=[0.3, 0.2], normAngleHR=0.5)
+    h0 = np.array(Mr.HRcenter)
+    Mr.rotate(0.3, **kwargs)
+    check('rotate: %s' % label,
+          np.allclose(Mr.HRcenter, h0, atol=1e-15))
+
+#An explicit point still works, and is a rigid turn about it.
+Mp = opt.Mirror(HRcenter=[0.3, 0.2], normAngleHR=0.5)
+p = np.array([1.0, -0.5])
+r0 = np.linalg.norm(Mp.HRcenter - p)
+a0 = float(Mp.normAngleHR)
+Mp.rotate(0.4, center=p)
+check('rotate about a given point keeps the distance to it',
+      abs(np.linalg.norm(Mp.HRcenter - p) - r0) < 1e-12)
+check('and turns by the angle asked',
+      abs(float(Mp.normAngleHR) - (a0 + 0.4)) < 1e-12)
 
 print('--- and it keeps the shape it had ---')
 
@@ -532,11 +602,11 @@ print('--- copying and saving ---')
 L = Lens(f=-120*mm, shape='concave-plano', thickness=8*mm,
          diameter=2*inch, n=1.52, center=[0.1, 0.2],
          normAngleHR=0.7, name='L1', max_stray_order=3)
-L.ROC_anchor = 'HRcenter'          # not the default, so it has to travel
+L.anchor_point = 'HRcenter'          # not the default, so it has to travel
 c = L.copy()
 check('a copy is a Lens', type(c) is Lens, '(%s)' % type(c).__name__)
-check('a copy keeps ROC_anchor', c.ROC_anchor == 'HRcenter',
-      '(%r)' % c.ROC_anchor)
+check('a copy keeps anchor_point', c.anchor_point == 'HRcenter',
+      '(%r)' % c.anchor_point)
 for attr in ['inv_ROC_HR', 'inv_ROC_AR', 'diameter', 'thickness',
              'wedgeAngle', 'n', 'Refl_HR', 'Trans_HR', 'Refl_AR',
              'Trans_AR', 'normAngleHR', 'max_stray_order']:
@@ -551,11 +621,11 @@ d = optic_to_dict(L)
 check('it saves as a Lens', d['type'] == 'Lens', '(%r)' % d['type'])
 r = optic_from_dict(d)
 check('and loads as a Lens', type(r) is Lens, '(%s)' % type(r).__name__)
-check('with ROC_anchor as it was saved', r.ROC_anchor == 'HRcenter',
-      '(%r)' % r.ROC_anchor)
+check('with anchor_point as it was saved', r.anchor_point == 'HRcenter',
+      '(%r)' % r.anchor_point)
 check('while a file without one takes the class default',
       optic_from_dict({k: v for k, v in d.items()
-                       if k != 'ROC_anchor'}).ROC_anchor == 'center')
+                       if k != 'anchor_point'}).anchor_point == 'center')
 check('the loaded lens has the same focal length', rel(r.f, L.f) <= 1e-15,
       '(%.9f vs %.9f)' % (r.f, L.f))
 for attr in ['inv_ROC_HR', 'inv_ROC_AR', 'diameter', 'thickness', 'n']:

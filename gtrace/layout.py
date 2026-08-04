@@ -266,7 +266,7 @@ EDITABLE_OPTIC_ATTRS = frozenset([
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
     'HRtransmissive', 'term_on_HR', 'term_on_HR_order', 'max_stray_order',
-    'curve_direction', 'ROC_anchor',
+    'curve_direction', 'anchor_point',
     # Only a Lens has a focal length, and assigning to it re-solves both
     # curvatures. The check that the target is a lens is in
     # _set_optic_attr: a whitelist can say which names are allowed, not
@@ -278,7 +278,7 @@ EDITABLE_OPTIC_ATTRS = frozenset([
 #: front end from reaching attributes it should not; this keeps it from
 #: putting nonsense into the ones it may.
 ATTR_CHOICES = {'curve_direction': ('h', 'v'),
-                'ROC_anchor': ('HRcenter', 'center'),
+                'anchor_point': ('HRcenter', 'center'),
                 'width_mode': ('x', 'y', 'avg')}
 
 #: How a layout is drawn, and what each option defaults to. These are
@@ -408,7 +408,7 @@ class EditError(ValueError):
 #: orientation, so a position set before an orientation lands off the
 #: old one. A message is a JSON object and a saved layout is a JSON
 #: file, and the key order of neither is something to rest on.
-_ATTR_ORDER = ['ROC_anchor',
+_ATTR_ORDER = ['anchor_point',
                'diameter', 'thickness', 'wedgeAngle', 'n',
                'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
                'inv_ROC_HR', 'inv_ROC_AR', 'f',
@@ -548,8 +548,8 @@ def optic_to_dict(m):
                              else int(m.max_stray_order))}
     if isinstance(m, optcomp.CyMirror):
         d['curve_direction'] = str(m.curve_direction)
-    if hasattr(m, 'ROC_anchor'):
-        d['ROC_anchor'] = str(m.ROC_anchor)
+    if hasattr(m, 'anchor_point'):
+        d['anchor_point'] = str(m.anchor_point)
     return d
 
 def optic_from_dict(d):
@@ -595,8 +595,8 @@ def optic_from_dict(d):
     #Absent from an older file, or from one written before the anchor
     #existed, the class default stands: 'HRcenter' for a mirror,
     #'center' for a lens.
-    if 'ROC_anchor' in d:
-        m.ROC_anchor = d['ROC_anchor']
+    if 'anchor_point' in d:
+        m.anchor_point = d['anchor_point']
     return m
 
 def source_to_dict(b):
@@ -1481,7 +1481,7 @@ class OpticalLayout(object):
             raise EditError('A slide of %r is not a distance.' % (distance,))
 
         step = np.asarray(b.dirVect, dtype='float64') * distance
-        if optics.ROC_anchor == 'center':
+        if optics.anchor_point == 'center':
             optics.center = np.asarray(optics.center, dtype='float64') + step
         else:
             optics.HRcenter = (np.asarray(optics.HRcenter, dtype='float64')
@@ -1501,7 +1501,7 @@ class OpticalLayout(object):
         the one kept.
 
         Which point of the element lands on the axis is what
-        ``ROC_anchor`` already names: the apex of the front face for a
+        ``anchor_point`` already names: the apex of the front face for a
         mirror, since that is where the beam stops, and the middle of
         the substrate for a lens, since the beam goes through. At normal
         incidence the two are on the same line anyway, so the choice
@@ -1534,7 +1534,7 @@ class OpticalLayout(object):
         # Facing back down the beam is what "square to it" means: the
         # front face normal points at where the light is coming from.
         optics.normAngleHR = float(np.arctan2(-direction[1], -direction[0]))
-        if optics.ROC_anchor == 'center':
+        if optics.anchor_point == 'center':
             optics.center = foot
         else:
             optics.HRcenter = foot

@@ -688,11 +688,11 @@ var OPTIC_FIELDS = [
     {key: 'wedgeAngle', label: 'Wedge', unit: '°'},
     {key: 'rocHR', label: 'ROC HR', unit: 'm'},
     {key: 'rocAR', label: 'ROC AR', unit: 'm'},
-    // What stays put when a curvature changes: the apex of the front
-    // face, or the middle of the substrate. A mirror pins its HR face
-    // so the beam spot on it does not move; a lens pins its middle,
-    // since the beam goes through.
-    {key: 'ROC_anchor', label: 'ROC anchor', optional: true,
+    // The point the element is held by: what stays put when a
+    // curvature changes, and what it turns about. A mirror pins its HR
+    // face so the beam spot on it does not move; a lens pins its
+    // middle, since the beam goes through.
+    {key: 'anchor_point', label: 'Anchor', optional: true,
      choices: [['HRcenter', 'HR apex'], ['center', 'substrate centre']]},
     {key: 'n', label: 'Index n'},
     {key: 'Refl_HR', label: 'Refl HR'},
@@ -717,13 +717,13 @@ var MM = 0.001;
 
 /*
  * The point an optics is held by: what stays put when its curvature
- * changes, and what it therefore turns about. ``ROC_anchor`` names it -
+ * changes, and what it therefore turns about. ``anchor_point`` names it -
  * the apex of the front face for a mirror, the middle of the substrate
  * for a lens. An optics from a scene old enough not to carry one is
  * held by its front face, which is what a mirror does.
  */
 function opticAnchorIsCenter(o) {
-    return o.ROC_anchor === 'center' && !!o.center;
+    return o.anchor_point === 'center' && !!o.center;
 }
 
 function opticAnchorPoint(o) {
@@ -2703,15 +2703,9 @@ Viewer.prototype._endOpticDrag = function (moved) {
         msg = {op: 'align', target: d.optic.name, beam: d.snap.beam,
                beam_index: d.snap.index, point: d.snap.point};
     } else if (d.rotate) {
-        // Python turns an optics about the apex of its front face. When
-        // that is the point it is held by there is nothing more to say;
-        // when it is held by the middle of its substrate, say where the
-        // middle ended up as well, and Python applies the orientation
-        // before the position that is measured from it.
-        msg = opticAnchorIsCenter(d.optic)
-            ? {op: 'set', target: d.optic.name,
-               attrs: {normAngleHR: d.angle, center: d.center}}
-            : {op: 'rotate', target: d.optic.name, normAngleHR: d.angle};
+        // Python turns an optics about its anchor point, which is the
+        // pivot the preview turned it about, so the angle says it all.
+        msg = {op: 'rotate', target: d.optic.name, normAngleHR: d.angle};
     } else {
         // 'center' is the middle of the substrate, which is the trait
         // the outline was built from, so the optics lands where it was

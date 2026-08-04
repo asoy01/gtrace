@@ -316,7 +316,7 @@ L = CyLens(f=500*mm)
 check('a CyLens curves in the plane by default',
       L.curve_direction == 'h', '(%r)' % L.curve_direction)
 check('and is named for what it is', L.name == 'CyLens')
-check('anchors on its centre like a Lens', L.ROC_anchor == 'center')
+check('anchors on its centre like a Lens', L.anchor_point == 'center')
 check('transmits on the front face', L.HRtransmissive is True)
 check('reflects nothing by default',
       L.Refl_HR == 0.0 and L.Refl_AR == 0.0)
@@ -404,11 +404,11 @@ L = CyLens(f=-120*mm, shape='plano-concave', thickness=8*mm,
            diameter=2*inch, n=1.52, center=[0.1, 0.2],
            normAngleHR=0.7, name='CL1', curve_direction='v',
            max_stray_order=3)
-L.ROC_anchor = 'HRcenter'          # not the default, so it has to travel
+L.anchor_point = 'HRcenter'          # not the default, so it has to travel
 c = L.copy()
 check('a copy is a CyLens', type(c) is CyLens, '(%s)' % type(c).__name__)
 check('a copy keeps the direction', c.curve_direction == 'v')
-check('a copy keeps ROC_anchor', c.ROC_anchor == 'HRcenter')
+check('a copy keeps anchor_point', c.anchor_point == 'HRcenter')
 for attr in ['inv_ROC_HR', 'inv_ROC_AR', 'diameter', 'thickness',
              'wedgeAngle', 'n', 'Refl_HR', 'Trans_HR', 'Refl_AR',
              'Trans_AR', 'normAngleHR', 'max_stray_order']:
@@ -424,7 +424,7 @@ check('with its direction', d['curve_direction'] == 'v')
 r = optic_from_dict(d)
 check('and loads as one', type(r) is CyLens, '(%s)' % type(r).__name__)
 check('curved the way it was saved', r.curve_direction == 'v')
-check('with ROC_anchor as it was saved', r.ROC_anchor == 'HRcenter')
+check('with anchor_point as it was saved', r.anchor_point == 'HRcenter')
 check('and the same focal length', rel(r.f, L.f) <= 1e-15)
 check('a file without a direction curves in the plane',
       optic_from_dict({k: v for k, v in d.items()

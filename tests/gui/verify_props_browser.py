@@ -428,11 +428,11 @@ var LENS = __LENS__;
                 wantF: 1 / (LENS.inv_f * 0.001),
                 label: v.opticFields.f.row.querySelector('.gt-key')
                         .textContent,
-                anchorRowShown: rowShown('ROC_anchor'),
-                anchorShown: v.opticFields.ROC_anchor.el.value,
-                anchorKind: v.opticFields.ROC_anchor.kind,
+                anchorRowShown: rowShown('anchor_point'),
+                anchorShown: v.opticFields.anchor_point.el.value,
+                anchorKind: v.opticFields.anchor_point.kind,
                 anchorOptions: Array.prototype.map.call(
-                    v.opticFields.ROC_anchor.el.options,
+                    v.opticFields.anchor_point.el.options,
                     function (o) { return o.value; })
             };
 
@@ -450,15 +450,15 @@ var LENS = __LENS__;
 
             // The anchor is a choice, like the curve direction.
             var nAnchor = sent.length;
-            setField('ROC_anchor', 'HRcenter');
+            setField('anchor_point', 'HRcenter');
             out.lens.anchorMsg = sent[sent.length - 1];
             out.lens.anchorSent = sent.length - nAnchor;
 
             // A mirror has no focal length, so that row is not for it.
             v._selectOptic(v.scene.optics[0]);
             out.lens.rowOnMirror = rowShown('f');
-            out.lens.anchorRowOnMirror = rowShown('ROC_anchor');
-            out.lens.anchorOnMirror = v.opticFields.ROC_anchor.el.value;
+            out.lens.anchorRowOnMirror = rowShown('anchor_point');
+            out.lens.anchorOnMirror = v.opticFields.anchor_point.el.value;
 
             // --- moving along a beam by a typed distance ---
             // M1 has the source beam landing on it, so the rows are
@@ -1031,7 +1031,7 @@ check('everything but the type is editable',
                                      # a focal length on anything but a lens,
                                      # a beam to slide along where none
                                      # passes through.
-                                     'f', 'ROC_anchor',
+                                     'f', 'anchor_point',
                                      'slide_beam', 'slide_by'},
       str(sorted(res['editableFields'])))
 check('the type is not editable', 'type' not in res['editableFields'])
@@ -1268,7 +1268,7 @@ check('a mirror at the apex of its HR face',
       ln['anchorOnMirror'] == 'HRcenter', str(ln['anchorOnMirror']))
 check('changing it sends a set', ln['anchorSent'] == 1
       and ln['anchorMsg']['op'] == 'set'
-      and ln['anchorMsg']['attrs']['ROC_anchor'] == 'HRcenter',
+      and ln['anchorMsg']['attrs']['anchor_point'] == 'HRcenter',
       str(ln['anchorMsg']))
 
 print('--- moving along a beam by a typed distance ---')
@@ -1610,8 +1610,8 @@ check('and the focal length the panel sent is applied',
       'f=%.9f' % float(lens2.f))
 lay2.apply_edit({'op': 'set', 'target': lens2.name,
                  'attrs': dict(res['lens']['anchorMsg']['attrs'])})
-check('so is the anchor', lens2.ROC_anchor == 'HRcenter',
-      str(lens2.ROC_anchor))
+check('so is the anchor', lens2.anchor_point == 'HRcenter',
+      str(lens2.anchor_point))
 check('and it appears in the scene as a Lens carrying its power',
       [o for o in lay2.scene_dict()['optics']
        if o['name'] == lens2.name][0]['type'] == 'Lens'

@@ -26,11 +26,17 @@ Slated for 0.4.0. Not yet on PyPI.
   shaped like a `CyMirror`, so the focal length lands in the plane
   `curve_direction` names and the other plane is a plain window. A
   `+ CyLens` button in the viewer goes with it.
-- `Optics.ROC_anchor` chooses what stays put when a curvature changes:
-  the apex of the front face, or the middle of the substrate. `Mirror`
-  and `CyMirror` default to the apex, so that sweeping a telescope's
-  radii does not walk the beam spot off it; `Lens` defaults to the
-  middle, since the beam goes through.
+- `Optics.anchor_point` names the point an optics is held by: the apex
+  of the front face, or the middle of the substrate. It is what stays
+  put when a curvature changes, and what the optics turns about when
+  `normAngleHR` or `normVectHR` is assigned. `Mirror` and `CyMirror`
+  default to the apex, so that sweeping a telescope's radii does not
+  walk the beam spot off it and steering it pivots the reflection
+  point; `Lens` and `CyLens` default to the middle, since the beam
+  goes through. `rotate()` pivots the anchor point by default - for
+  every mirror that is the HR apex, exactly what it has always done -
+  with `center=True` for the middle of the substrate and an array for
+  a given point.
 - `Optics.get_corners()`, `Optics.contains_segment()` and
   `Optics.contains_point()` answer where the substrate is, rather than
   what a beam meeting it does.
@@ -59,7 +65,7 @@ Slated for 0.4.0. Not yet on PyPI.
   optical distance there, since that is a question about surfaces.
 - **Redo**, beside undo, on the button, Ctrl+Shift+Z and Ctrl+Y.
 - **Lenses**: a `+ Lens` button, a focal-length row in millimetres, and
-  a ROC-anchor row.
+  an Anchor row naming the point the element is held by.
 - **Placing an element against a beam**: Ctrl+drag drops it square
   across a beam and centred on it; an *Along beam* / *Move by* pair
   slides it along that beam by a typed distance; Ctrl+click picks which

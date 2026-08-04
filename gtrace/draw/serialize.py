@@ -246,8 +246,8 @@ def optic_to_dict(o):
             d[k] = int(getattr(o, k))
     if hasattr(o, 'curve_direction'):
         d['curve_direction'] = str(o.curve_direction)
-    if hasattr(o, 'ROC_anchor'):
-        d['ROC_anchor'] = str(o.ROC_anchor)
+    if hasattr(o, 'anchor_point'):
+        d['anchor_point'] = str(o.anchor_point)
     if hasattr(o, 'f'):
         # The power rather than the focal length itself. A substrate
         # with no power left in it focuses at infinity, and JSON has no

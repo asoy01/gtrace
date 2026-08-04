@@ -54,14 +54,16 @@ By default the *apex stays put* and the substrate slides back behind it. This is
         MMT1.inv_ROC_HR = 1.0/R
         layout.trace()          # the beam still lands where it did
 
-For an optics the beam passes *through* rather than reflects off, that is the wrong choice: there is no spot on a surface to keep still, and what is bolted to the bench is the substrate. Setting ``ROC_anchor`` to ``'center'`` keeps the middle of the substrate where it is and lets the faces move on it instead::
+For an optics the beam passes *through* rather than reflects off, that is the wrong choice: there is no spot on a surface to keep still, and what is bolted to the bench is the substrate. Setting ``anchor_point`` to ``'center'`` keeps the middle of the substrate where it is and lets the faces move on it instead::
 
-    M.ROC_anchor = 'center'
+    M.anchor_point = 'center'
     M.inv_ROC_HR = 1.0/newROC   # M.center unchanged, M.HRcenter moves
 
 :py:class:`Lens<gtrace.optcomp.Lens>` defaults to ``'center'`` for this reason; :py:class:`Mirror<gtrace.optcomp.Mirror>` and :py:class:`CyMirror<gtrace.optcomp.CyMirror>` default to ``'HRcenter'``.
 
 Either way the rest of the substrate follows: the far face, the sides and the centre are all recomputed, so the body stays closed and the tracer and the drawing agree about where it is. The anchor only chooses which end of the sagitta is held fixed while that happens.
+
+The anchor point is also what the optics *turns about*. Assigning ``normAngleHR`` or ``normVectHR`` rotates the substrate rigidly about the anchor, and so does ``rotate()`` by default: a mirror pivots the apex of its HR face, so steering it does not walk the beam spot off it — which is what ``rotate()`` has always done — and a lens pivots the middle of its substrate, so turning it does not carry it up the bench. ``rotate(a, center=True)`` pivots the middle whatever the anchor says, and ``rotate(a, center=[x, y])`` a given point.
 
 Changing ``diameter`` goes through the same machinery, since the sagitta depends on the aperture as well as on the radius. Changing ``inv_ROC_AR`` never moves the substrate at all: the back face has no spot to keep still, so its chord plane stays and only its apex moves.
 

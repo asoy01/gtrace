@@ -440,16 +440,19 @@ class Mirror(Optics):
     term_on_HR_order : int
         Integer to specify the upper limit of the stray order used to judge
         whether to terminate the non sequential trace or not on HR reflection.
-    ROC_anchor : str
-        Which point stays put when inv_ROC_HR changes: 'HRcenter', the
-        apex of the HR arc, or 'center', the middle of the substrate.
-        The other one moves, since the sagitta between them is what the
-        curvature changed.
+    anchor_point : str
+        The point the optics is held by: 'HRcenter', the apex of the HR
+        arc, or 'center', the middle of the substrate. It is the point
+        that stays put when inv_ROC_HR changes - the other one moves,
+        since the sagitta between them is what the curvature changed -
+        and the point the optics turns about when normAngleHR or
+        normVectHR is assigned.
 
         Defaults to 'HRcenter'. Regrinding a telescope mirror is done to
         change the magnification, not to move the beam, and a layout
         puts the spot on the HR surface, so the arc has to stay under
-        the spot while the substrate moves back behind it.
+        the spot while the substrate moves back behind it; steering a
+        mirror likewise pivots the reflection point, not the substrate.
 
         'center' is for an optics the beam goes through rather than off,
         where the substrate is what is bolted to the bench and the faces
@@ -487,7 +490,7 @@ class Mirror(Optics):
 
     #Which point of the substrate stays put when the HR curvature
     #changes. See the class docstring.
-    ROC_anchor = Enum(['HRcenter', 'center'])
+    anchor_point = Enum(['HRcenter', 'center'])
 
     #Whether draw() marks the reflective side with a line just inside
     #the HR face. It says which face carries the coating, which is worth
@@ -620,7 +623,7 @@ class Mirror(Optics):
                       max_stray_order=self.max_stray_order)
         #Not a constructor argument: it says what a later change to the
         #curvature does, and construction has none.
-        m.ROC_anchor = self.ROC_anchor
+        m.anchor_point = self.anchor_point
         return m
 
 #}}}
@@ -698,24 +701,38 @@ class Mirror(Optics):
 
     def rotate(self, angle, center=False):
         '''
-        Rotate the mirror. If center is not specified, the center of rotation is
-        HRcenter. If center is given (as a vector), the center of rotation is
-        center. center is a position vector in the global coordinates.
+        Rotate the optics rigidly about a pivot.
 
         Parameters
         ----------
         angle : float
-            Angle of rotation.
-        center: array or boolean, optional
-            Center of rotation, or False.
+            Angle of rotation, in radians.
+        center : boolean or array, optional
+            The pivot. False, the default, is whatever point
+            ``anchor_point`` names - the point the optics is held by,
+            and the pivot the viewer turns it about. A mirror anchors
+            on the apex of its HR face, so for every mirror this is
+            what rotate() has always done; a lens anchors on the middle
+            of its substrate and turns about that. True is the middle
+            of the substrate whatever the anchor says. An array is a
+            point in global coordinates.
         '''
-        if center is not False:
-            center = np.array(center)
-            pointer = self.HRcenter - center
-            pointer = optics.geometric.vector_rotation_2D(pointer, angle)
-            self.HRcenter = center + pointer
+        if center is True:
+            pivot = np.array(self.center)
+        elif center is False:
+            pivot = np.array(self.center if self.anchor_point == 'center'
+                             else self.HRcenter)
+        else:
+            pivot = np.array(center)
 
+        #The orientation first - the assignment turns the substrate
+        #about its anchor point, wherever that is - and then HRcenter is
+        #placed where a rigid turn about the pivot puts it, which fully
+        #determines the position whatever the assignment did.
+        h0 = np.array(self.HRcenter)
         self.normAngleHR = self.normAngleHR + angle
+        self.HRcenter = pivot + optics.geometric.vector_rotation_2D(
+            h0 - pivot, angle)
 #}}}
 
 #{{{ Translate
@@ -1654,6 +1671,16 @@ class Mirror(Optics):
 #{{{ Notification handlers
 
     def _normAngleHR_changed(self, old, new):
+        #The point the optics is held by must not move when it turns.
+        #Captured before any geometry is rewritten, while the positions
+        #still describe the old orientation. Only when the angle really
+        #changed: __init__ calls this by hand with (0, 0) to settle the
+        #derived geometry, at a moment when center is still computed
+        #from half-assigned traits and must not be re-imposed.
+        anchor = (np.array(self.center)
+                  if self.anchor_point == 'center' and new != old
+                  else None)
+
         self.trait_set(trait_change_notify=False,
                  normVectHR = array([np.cos(self.normAngleHR), np.sin(self.normAngleHR)]))
         self.trait_set(trait_change_notify=False,
@@ -1663,7 +1690,23 @@ class Mirror(Optics):
         self.normAngleAR = np.mod(self.normAngleHR + pi + self.wedgeAngle, 2*pi)
         self.HRcenterC = self.HRcenter - self.normVectHR * self.sagHR
 
+        #The update above pinned HRcenter, which is the anchor of every
+        #mirror and costs nothing to keep. When the anchor is the middle
+        #of the substrate, put it back: a rigid turn about any pivot
+        #followed by the translation that returns the anchor is exactly
+        #the turn about the anchor. _center_changed rebuilds every
+        #position from it, all silently, so nothing comes back round.
+        if anchor is not None:
+            self.center = anchor
+
     def _normVectHR_changed(self, old, new):
+        #See _normAngleHR_changed; assigning the vector is the same
+        #turn ordered by other means.
+        anchor = (np.array(self.center)
+                  if self.anchor_point == 'center'
+                  and not np.array_equal(old, new)
+                  else None)
+
         #Normalize
         self.trait_set(trait_change_notify=False,
                  normVectHR = self.normVectHR/np.linalg.norm(array(self.normVectHR)))
@@ -1675,6 +1718,9 @@ class Mirror(Optics):
         self.normVectAR = optics.geometric.vector_rotation_2D(self.normVectHR, pi+self.wedgeAngle)
         self.normAngleAR = np.mod(self.normAngleHR + pi + self.wedgeAngle, 2*pi)
         self.HRcenterC = self.HRcenter - self.normVectHR * self.sagHR
+
+        if anchor is not None:
+            self.center = anchor
 
     def _HRcenterC_changed(self, old, new):
         self.trait_set(trait_change_notify=False,
@@ -1728,8 +1774,8 @@ class Mirror(Optics):
         else:
             self.sagHR = 0.0;
 
-        #Then move whichever end of the sagitta ROC_anchor does not pin.
-        if self.ROC_anchor == 'HRcenter':
+        #Then move whichever end of the sagitta anchor_point does not pin.
+        if self.anchor_point == 'HRcenter':
             #The arc stays under the beam and the substrate moves back
             #behind it. The notification is what carries it: suppressing
             #it left ARcenterC, ARcenter and center where the old
@@ -1961,7 +2007,7 @@ class CyMirror(Mirror):
                       term_on_HR=self.term_on_HR,
                       max_stray_order=self.max_stray_order,
                       curve_direction=self.curve_direction)
-        m.ROC_anchor = self.ROC_anchor
+        m.anchor_point = self.anchor_point
         return m
 
 #}}}
@@ -3483,8 +3529,8 @@ class Lens(Mirror):
     #is no reflection point for the faces to stay under, and it is the
     #substrate that sits at a position on the bench. Changing a
     #curvature therefore moves the faces and leaves the lens where it
-    #is - the opposite of a mirror, and the reason ROC_anchor exists.
-    ROC_anchor = Enum(['center', 'HRcenter'])
+    #is - the opposite of a mirror, and the reason anchor_point exists.
+    anchor_point = Enum(['center', 'HRcenter'])
 
     #A lens has no reflective side to mark.
     draw_HR_marker = False
@@ -3646,7 +3692,7 @@ class Lens(Mirror):
                     HRtransmissive=self.HRtransmissive,
                     term_on_HR=self.term_on_HR,
                     max_stray_order=self.max_stray_order)
-        m.ROC_anchor = self.ROC_anchor
+        m.anchor_point = self.anchor_point
         return m
 
 #}}}
@@ -3719,7 +3765,7 @@ class Lens(Mirror):
 
         Notes
         -----
-        Whatever ROC_anchor names stays put, which for a lens is the
+        Whatever anchor_point names stays put, which for a lens is the
         centre of the substrate. The faces move, since the sagittae
         change with the curvature, but the lens as a whole does not
         wander up the bench as it is tuned.
@@ -3740,7 +3786,7 @@ class Lens(Mirror):
                 inv_ROC_HR=None if ROC_HR is None else 1./ROC_HR)
 
         #Everything above can raise, and none of it has touched the
-        #lens. From here on nothing can: ROC_anchor holds the substrate
+        #lens. From here on nothing can: anchor_point holds the substrate
         #still while the faces move on it.
         self.inv_ROC_HR = c_HR
         self.inv_ROC_AR = c_AR
@@ -3878,7 +3924,7 @@ class CyLens(Lens, CyMirror):
                    term_on_HR=self.term_on_HR,
                    max_stray_order=self.max_stray_order,
                    curve_direction=self.curve_direction)
-        m.ROC_anchor = self.ROC_anchor
+        m.anchor_point = self.anchor_point
         return m
 
 #}}}
