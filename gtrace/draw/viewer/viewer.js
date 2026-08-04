@@ -284,6 +284,18 @@ function Viewer(container, scene, options) {
     this.hoverOptic = null;
     this.dragOptic = null;
 
+    // Measuring. The tool is a mode because it takes two clicks, and
+    // between them the picture has to answer to the cursor rather than
+    // to what is under it.
+    this.measuring = false;
+    this.measureFrom = null;  // scene point of the first click
+    this.measureTo = null;    // scene point of the second
+    this.measureOffset = 0;   // how far aside the line is being carried
+    this.snapped = null;      // the snap point under the cursor, or null
+    this.selectedDim = null;  // name of the selected dimension
+    this.dimEls = {};         // dimension name -> its SVG elements
+    this.pendingEls = null;   // the SVG of the dimension being placed
+
     VIEWERS.push(this);
     this._build();
     this._renderScene();
@@ -304,9 +316,14 @@ Viewer.prototype._build = function () {
     this.svg = svgEl('svg', {'class': 'gt-svg'});
     this.sceneGroup = svgEl('g', {'class': 'gt-scene'});
     this.labelGroup = svgEl('g', {'class': 'gt-labels'});
+    // Dimensions sit above the drawing and below the overlay: they are
+    // notes on the picture rather than part of it, but they are standing
+    // marks rather than an answer to where the cursor is.
+    this.dimGroup = svgEl('g', {'class': 'gt-dims'});
     this.overlayGroup = svgEl('g', {'class': 'gt-overlay'});
     this.svg.appendChild(this.sceneGroup);
     this.svg.appendChild(this.labelGroup);
+    this.svg.appendChild(this.dimGroup);
     this.svg.appendChild(this.overlayGroup);
     stage.appendChild(this.svg);
 
@@ -317,32 +334,61 @@ Viewer.prototype._build = function () {
     // --- side bar ---
     var side = htmlEl('div', 'gt-side');
 
+    // The head is two rows of buttons: the ones that put something into
+    // the layout, then the ones that act on it or on the view. They are
+    // kept to their own rows rather than left to wrap wherever they fit
+    // - which row a button lands on would otherwise depend on how wide
+    // the panel happened to be.
+    //
+    // The layout has no heading here. In a notebook it is already
+    // labelled by the cell that made it, and a written page carries its
+    // name in the browser tab; a line of the side bar spent repeating
+    // it is a line not spent on the readout.
     var head = htmlEl('div', 'gt-head');
-    head.appendChild(htmlEl('div', 'gt-title', this.opts.title || 'gtrace'));
-    var buttons = htmlEl('div', 'gt-buttons');
+
     if (this.opts.onEdit) {
+        var addRow = htmlEl('div', 'gt-btnrow');
         ADDABLE_TYPES.forEach(function (t) {
             var btn = htmlEl('button', 'gt-btn', '+ ' + t.label);
             btn.title = t.title + ' at the centre of the view';
             btn.addEventListener('click', function () {
                 self.addOptics(t.type);
             });
-            buttons.appendChild(btn);
+            addRow.appendChild(btn);
         });
+        head.appendChild(addRow);
     }
+
+    var viewRow = htmlEl('div', 'gt-btnrow');
     if (this.opts.onEdit) {
-        // Undo is Python's: it holds the layout, so it is the only
-        // thing that knows what the layout was. Disabled until the
-        // scene says there is something to go back to.
+        // Undo and redo are Python's: it holds the layout, so it is the
+        // only thing that knows what the layout was. Disabled until the
+        // scene says there is something to go back - or forward - to.
         this.undoBtn = htmlEl('button', 'gt-btn', 'Undo');
         this.undoBtn.title = 'Undo the last edit';
         this.undoBtn.addEventListener('click', function () { self.undo(); });
-        buttons.appendChild(this.undoBtn);
+        viewRow.appendChild(this.undoBtn);
+        this.redoBtn = htmlEl('button', 'gt-btn', 'Redo');
+        this.redoBtn.title = 'Redo the last undone edit';
+        this.redoBtn.addEventListener('click', function () { self.redo(); });
+        viewRow.appendChild(this.redoBtn);
     }
+    // Measuring needs no Python: the points to snap to are in the scene
+    // and the distance between two of them is arithmetic. A viewer with
+    // nowhere to send edits keeps the measurement to itself - see
+    // _addLocalDimension for what that costs.
+    this.measureBtn = htmlEl('button', 'gt-btn', 'Measure');
+    this.measureBtn.title = 'Measure between two points, then place '
+        + 'the dimension line';
+    this.measureBtn.addEventListener('click', function () {
+        self.toggleMeasure();
+    });
+    viewRow.appendChild(this.measureBtn);
     var fitBtn = htmlEl('button', 'gt-btn', 'Fit');
+    fitBtn.title = 'Frame the whole layout';
     fitBtn.addEventListener('click', function () { self.fit(); });
-    buttons.appendChild(fitBtn);
-    head.appendChild(buttons);
+    viewRow.appendChild(fitBtn);
+    head.appendChild(viewRow);
     side.appendChild(head);
 
     // Readout panel. It shows either the beam under the cursor or the
@@ -356,11 +402,14 @@ Viewer.prototype._build = function () {
     rpanel.appendChild(rtitle);
     this.readoutBody = htmlEl('div', 'gt-readout');
     this.opticBody = htmlEl('div', 'gt-props');
+    this.dimBody = htmlEl('div', 'gt-props');
     rpanel.appendChild(this.readoutBody);
     rpanel.appendChild(this.opticBody);
+    rpanel.appendChild(this.dimBody);
     side.appendChild(rpanel);
     this._buildReadout();
     this._buildOpticPanel();
+    this._buildDimPanel();
     this._showPanel('beam');
 
     // Layout file panel. Editing in the browser is only worth anything
@@ -439,6 +488,7 @@ Viewer.prototype._build = function () {
                 ['Click again', 'cycle overlapping beams'],
                 ['Click an optics', 'show its properties'],
                 ['f', 'fit to view'],
+                ['Measure, or m', 'measure between two points'],
                 ['Esc', 'clear selection']];
     if (this.opts.onEdit) {
         rows.push(['Drag an optics', 'move it'],
@@ -448,8 +498,9 @@ Viewer.prototype._build = function () {
                   ['Edit a property', 'apply it to the layout'],
                   ['+ Mirror / + CyMirror / + Lens',
                    'add one at the centre of the view'],
-                  ['Remove', 'delete the selected optics'],
-                  ['Undo, or Ctrl + Z', 'put the last edit back']);
+                  ['Remove', 'delete the selection'],
+                  ['Undo, or Ctrl + Z', 'put the last edit back'],
+                  ['Redo, or Ctrl + Shift + Z', 'take the undo back']);
     }
     rows.forEach(function (row) {
         var li = htmlEl('li');
@@ -688,6 +739,95 @@ function parseField(s) {
     return isNaN(v) ? NaN : v;
 }
 
+/*
+ * A dimension in the panel: where its ends are, and what it comes to.
+ *
+ * The two ends are editable, so that a measurement placed by eye can be
+ * given exact coordinates afterwards. What it comes to is not: the
+ * length is the answer, not an input, and typing over it would only
+ * raise the question of which end was supposed to move.
+ */
+var DIM_FIELDS = [
+    {key: 'name', label: 'Name', text: true},
+    {key: 'p1x', label: 'From x', unit: 'm'},
+    {key: 'p1y', label: 'From y', unit: 'm'},
+    {key: 'p2x', label: 'To x', unit: 'm'},
+    {key: 'p2y', label: 'To y', unit: 'm'},
+    // Where the line is drawn, not what is measured. In millimetres,
+    // like the other rows that are an adjustment rather than a place:
+    // it is nudged until the line clears whatever it was covering.
+    {key: 'offset', label: 'Line offset', unit: 'mm'},
+    {group: 'Measurement'},
+    {key: 'length', label: 'Distance', readonly: true},
+    {key: 'angle', label: 'Direction', readonly: true},
+    // Only when the span runs inside a substrate, which is the one case
+    // where an optical distance is a distance of anything. The rows hide
+    // themselves otherwise; see Dimension.measure in layout.py.
+    {key: 'inside', label: 'Inside', readonly: true, optional: true},
+    {key: 'n', label: 'Index n', readonly: true, optional: true},
+    {key: 'optical', label: 'Optical dist.', readonly: true, optional: true}
+];
+
+Viewer.prototype._buildDimPanel = function () {
+    var self = this;
+    var table = htmlEl('table');
+    this.dimFields = {};
+
+    DIM_FIELDS.forEach(function (f) {
+        var tr = htmlEl('tr');
+        if (f.group) {
+            var th = htmlEl('td', 'gt-group', f.group);
+            th.setAttribute('colspan', '2');
+            tr.appendChild(th);
+            table.appendChild(tr);
+            return;
+        }
+        tr.appendChild(htmlEl('td', 'gt-key',
+                              f.label + (f.unit ? ' [' + f.unit + ']' : '')));
+        var td = htmlEl('td', 'gt-val');
+        var rec = {row: tr, optional: !!f.optional};
+        if (f.readonly || !self.onEdit) {
+            var span = htmlEl('span', 'gt-static', '-');
+            td.appendChild(span);
+            rec.el = span;
+            rec.editable = false;
+        } else {
+            var input = htmlEl('input', 'gt-input');
+            input.type = 'text';
+            if (f.text) { input.className += ' gt-input-text'; }
+            input.spellcheck = false;
+            input.addEventListener('change', function () {
+                self._commitDimField(f.key, input);
+            });
+            input.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape') {
+                    self._refreshDimPanel();
+                    input.blur();
+                    ev.stopPropagation();
+                }
+            });
+            td.appendChild(input);
+            rec.el = input;
+            rec.editable = true;
+        }
+        tr.appendChild(td);
+        table.appendChild(tr);
+        self.dimFields[f.key] = rec;
+    });
+
+    this.dimBody.appendChild(table);
+
+    // Built even where there is nothing to send: a viewer with no Python
+    // behind it can still take back a measurement it drew itself.
+    // _refreshDimPanel decides whether it is on offer.
+    this.dimFoot = htmlEl('div', 'gt-props-foot');
+    var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
+    delBtn.title = 'Remove this dimension';
+    delBtn.addEventListener('click', function () { self.removeSelected(); });
+    this.dimFoot.appendChild(delBtn);
+    this.dimBody.appendChild(this.dimFoot);
+};
+
 Viewer.prototype._buildOpticPanel = function () {
     var self = this;
     var table = htmlEl('table');
@@ -870,15 +1010,51 @@ Viewer.prototype.undo = function () {
     return msg;
 };
 
-Viewer.prototype._refreshUndo = function () {
-    if (this.undoBtn) { this.undoBtn.disabled = !this.scene.can_undo; }
+/*
+ * Ask Python to put back the state the last undo stepped out of. The
+ * selection is left alone for the same reasons as in undo().
+ */
+Viewer.prototype.redo = function () {
+    if (!this.onEdit || !this.scene.can_redo) { return null; }
+    var msg = {op: 'redo'};
+    this.onEdit(msg);
+    return msg;
 };
 
+Viewer.prototype._refreshUndo = function () {
+    if (this.undoBtn) { this.undoBtn.disabled = !this.scene.can_undo; }
+    if (this.redoBtn) { this.redoBtn.disabled = !this.scene.can_redo; }
+};
+
+/*
+ * Remove whatever the panel is showing. One button serves both kinds
+ * because the message is the same: 'remove' names its target, and the
+ * layout resolves it across optics and dimensions alike.
+ */
 Viewer.prototype.removeSelected = function () {
-    if (!this.onEdit || !this.selectedOptic) { return null; }
-    var msg = {op: 'remove', target: this.selectedOptic};
+    var target = this.panelKind === 'dimension'
+        ? this.selectedDim : this.selectedOptic;
+    if (!target) { return null; }
+
+    // A dimension the viewer drew itself is the viewer's to take back.
+    // Anything else needs Python, which owns the layout: a read-only
+    // viewer must not appear to change what it was handed.
+    var local = this.panelKind === 'dimension' && this._selectedDim()
+        && this._selectedDim().local;
+    if (!this.onEdit && !local) { return null; }
+
+    var msg = {op: 'remove', target: target};
     this.selectedOptic = null;
+    this.selectedDim = null;
     this._showPanel('beam');
+    if (local && !this.onEdit) {
+        this.scene.dimensions = this.scene.dimensions.filter(
+            function (d) { return d.name !== target; });
+        this._renderDimensions();
+        this._updateDimensions();
+        this._updateOverlay();
+        return msg;
+    }
     this.onEdit(msg);
     return msg;
 };
@@ -921,13 +1097,16 @@ Viewer.prototype._refreshDisplayPanel = function () {
 /*
  * Show one of the two panels.
  */
+var PANEL_TITLES = {optic: 'Optics properties', dimension: 'Dimension',
+                    beam: 'Beam readout'};
+
 Viewer.prototype._showPanel = function (kind) {
     this.panelKind = kind;
-    var optic = kind === 'optic';
-    this.readoutBody.style.display = optic ? 'none' : '';
-    this.opticBody.style.display = optic ? '' : 'none';
-    this.panelTitle.textContent = optic ? 'Optics properties' : 'Beam readout';
-    if (optic) { this.pinLabel.textContent = ''; }
+    this.readoutBody.style.display = kind === 'beam' ? '' : 'none';
+    this.opticBody.style.display = kind === 'optic' ? '' : 'none';
+    this.dimBody.style.display = kind === 'dimension' ? '' : 'none';
+    this.panelTitle.textContent = PANEL_TITLES[kind] || PANEL_TITLES.beam;
+    if (kind !== 'beam') { this.pinLabel.textContent = ''; }
 };
 
 Viewer.prototype._selectedOptic = function () {
@@ -1213,10 +1392,411 @@ Viewer.prototype.revertSelection = function () {
         this.selectedOptic = this.selectionFallback;
         this._showPanel('optic');
     }
+    if (this.dimFallback && !this._selectedDim()) {
+        this.selectedDim = this.dimFallback;
+        this._showPanel('dimension');
+    }
     this.selectionFallback = null;
+    this.dimFallback = null;
     this._refreshOpticPanel();
+    this._refreshDimPanel();
     this._updateOverlay();
 };
+
+//}}}
+
+//{{{ Measuring
+
+/*
+ * How near the cursor has to be, in screen pixels, for a measurement to
+ * take a marked point rather than the cursor itself. Wider than the beam
+ * pick radius: a measurement is meant to land on something exactly, and
+ * the points on offer are far apart compared with the beams, so being
+ * generous costs nothing.
+ */
+var SNAP_RADIUS = 16;
+
+/*
+ * How near the cursor has to be to a dimension line to take hold of it,
+ * in screen pixels.
+ */
+var DIM_PICK = 8;
+
+/*
+ * Two marked points closer together than this, in metres, are the same
+ * point as far as snapping is concerned, and the first of them wins.
+ * Well below anything on a bench and well above what a trace rounds to.
+ */
+var SNAP_TIE = 1e-9;
+
+/*
+ * The points a measurement may be taken from.
+ *
+ * The optics contribute theirs through the scene: corners, the apex of
+ * each face and the middle, all worked out by Python where the wedge and
+ * the sagitta of a curved face are already understood. Beams contribute
+ * their two ends, which are carried literally in the scene and so need
+ * no geometry here - deriving them would be a second description of
+ * something already stated.
+ *
+ * Hidden layers are left out. A layer switched off is one the user has
+ * said they are not looking at, and snapping to an invisible point would
+ * put an end of the measurement somewhere nothing appears to be.
+ */
+Viewer.prototype._snapCandidates = function () {
+    var out = (this.scene.snap || []).slice();
+    var beams = this.scene.beams || [];
+    for (var i = 0; i < beams.length; i++) {
+        var b = beams[i];
+        var g = this.layerGroups[b.layer];
+        if (g && !g.visible) { continue; }
+        out.push({point: b.pos, kind: 'beam', label: b.name + ' start'});
+        out.push({point: b.end, kind: 'beam', label: b.name + ' end'});
+    }
+    return out;
+};
+
+/*
+ * The marked point nearest a scene point, or null if none is near
+ * enough. The reach is in screen pixels, so it is the same on the screen
+ * however far the view is zoomed in - the alternative would be a tool
+ * that stops snapping as soon as the drawing is enlarged.
+ */
+Viewer.prototype._snapAt = function (x, y) {
+    var reach = SNAP_RADIUS / this.scale;
+    var best = null, bestD = reach;
+    var cands = this._snapCandidates();
+    for (var i = 0; i < cands.length; i++) {
+        var p = cands[i].point;
+        var d = Math.hypot(x - p[0], y - p[1]);
+        // A later candidate has to be nearer by a real distance, not by
+        // rounding. A beam ends on the face it hit, so its end and the
+        // apex of that face are the same point to within what the trace
+        // could resolve; the optics comes first in the list and should
+        // win, both because it is the exact value the model holds and
+        // because 'M2 HR' says more than 'b0 end'.
+        if (d < bestD - SNAP_TIE) { best = cands[i]; bestD = d; }
+    }
+    return best;
+};
+
+/*
+ * Where the next click of a measurement would land: the marked point
+ * under the cursor if there is one, the cursor itself if not.
+ */
+Viewer.prototype._measurePoint = function (x, y) {
+    var s = this._snapAt(x, y);
+    this.snapped = s;
+    return s ? [s.point[0], s.point[1]] : [x, y];
+};
+
+/*
+ * Arm or disarm the measuring tool.
+ *
+ * It is a mode rather than a modifier because it takes three clicks with
+ * the picture answering to the cursor between them, and because those
+ * clicks have to mean "here" rather than whatever clicking there would
+ * otherwise have meant.
+ */
+Viewer.prototype.toggleMeasure = function (on) {
+    this.measuring = on === undefined ? !this.measuring : !!on;
+    this.measureFrom = null;
+    this.measureTo = null;
+    this.measureOffset = 0;
+    this.snapped = null;
+    if (this.measureBtn) {
+        this.measureBtn.classList.toggle('gt-btn-on', this.measuring);
+    }
+    this.svg.classList.toggle('gt-measuring', this.measuring);
+    this._updateOverlay();
+    this._updateStatus();
+    return this.measuring;
+};
+
+/*
+ * How far, in screen pixels, the cursor has to be off the line between
+ * the two points before the dimension line is carried aside at all.
+ * Inside it the offset is zero, so a line drawn straight between them -
+ * which is what a short measurement inside an element wants - can be
+ * had without hitting it exactly.
+ */
+var OFFSET_DEADZONE = 5;
+
+/*
+ * A click while measuring. The first two fix the points being measured;
+ * the third fixes where the dimension line is drawn, and asks Python
+ * for it.
+ *
+ * There is a third click because the two points worth measuring between
+ * are usually the two the drawing is busiest around - along a beam, or
+ * through an element - and a line drawn straight between them lands on
+ * top of what it is measuring. Carrying it aside is a choice about the
+ * drawing, so it is made by eye, like the rest of the drawing.
+ *
+ * The tool disarms itself at the end rather than staying up for another
+ * measurement: a mode that stays on until it is switched off is a mode
+ * that gets left on, and the button is right there.
+ */
+Viewer.prototype._onMeasureClick = function (x, y) {
+    if (!this.measureFrom) {
+        this.measureFrom = this._measurePoint(x, y);
+        this._updateOverlay();
+        this._updateStatus();
+        return null;
+    }
+    if (!this.measureTo) {
+        var pt = this._measurePoint(x, y);
+        if (this.measureFrom[0] === pt[0] && this.measureFrom[1] === pt[1]) {
+            // Both ends in the same place is not a measurement. Left
+            // armed, so the click can be tried again somewhere else.
+            return null;
+        }
+        this.measureTo = pt;
+        this.measureOffset = 0;
+        this._updateOverlay();
+        this._updateStatus();
+        return null;
+    }
+    var name = this._freshDimName();
+    var msg = {op: 'add', type: 'Dimension', name: name,
+               params: {p1: [this.measureFrom[0], this.measureFrom[1]],
+                        p2: [this.measureTo[0], this.measureTo[1]],
+                        offset: this._offsetAt(x, y)}};
+    this.toggleMeasure(false);
+    this.selectedOptic = null;
+    this.selectedDim = name;
+    if (this.onEdit) {
+        this.onEdit(msg);
+    } else {
+        this._addLocalDimension(name, msg.params);
+    }
+    return msg;
+};
+
+/*
+ * Add a dimension to the scene in hand, without telling anyone.
+ *
+ * This is what a viewer with nowhere to send edits does: a written HTML
+ * file, or a widget made read-only. The two points and the distance
+ * between them are arithmetic, and the points to snap to are already in
+ * the scene, so measuring needs no Python - which is the whole reason a
+ * file you can mail to a collaborator is worth having.
+ *
+ * Two things it cannot do, both because Python is what would have done
+ * them. There is no optical distance: whether a span runs inside a
+ * substrate is a question about the surfaces, and those live in the
+ * model rather than in the drawing. And the measurement is not saved -
+ * it lasts as long as the page, and a scene pushed from Python replaces
+ * it along with everything else.
+ */
+Viewer.prototype._addLocalDimension = function (name, params) {
+    var p1 = params.p1, p2 = params.p2;
+    var off = params.offset || 0;
+    var vx = p2[0] - p1[0], vy = p2[1] - p1[1];
+    var len = Math.hypot(vx, vy);
+    var nx = len ? -vy / len * off : 0;
+    var ny = len ? vx / len * off : 0;
+    var dim = {type: 'Dimension', name: name, p1: p1, p2: p2, offset: off,
+               line: [[p1[0] + nx, p1[1] + ny], [p2[0] + nx, p2[1] + ny]],
+               length: len, optical: null, inside: null, n: null,
+               // Marks it as the viewer's own, so that Remove offers to
+               // take back what the reader drew and nothing else.
+               local: true};
+    if (!this.scene.dimensions) { this.scene.dimensions = []; }
+    this.scene.dimensions.push(dim);
+    this._renderDimensions();
+    this._refreshDimPanel();
+    this._showPanel('dimension');
+    this._updateDimensions();
+    this._updateOverlay();
+    return dim;
+};
+
+/*
+ * Where the cursor puts the dimension line: its distance from the line
+ * between the two points, signed to the left of the way they run.
+ *
+ * Not snapped to anything. The points being measured are exact and the
+ * marked points are there for them; where the line is drawn is a matter
+ * of where there is room, and nothing in the model has an opinion.
+ */
+Viewer.prototype._offsetAt = function (x, y) {
+    var a = this.measureFrom, b = this.measureTo;
+    if (!a || !b) { return 0; }
+    var vx = b[0] - a[0], vy = b[1] - a[1];
+    var len = Math.hypot(vx, vy);
+    if (!len) { return 0; }
+    var off = ((x - a[0]) * (-vy) + (y - a[1]) * vx) / len;
+    return Math.abs(off) * this.scale < OFFSET_DEADZONE ? 0 : off;
+};
+
+/*
+ * The dimension as it would be added, for the preview. The same shape
+ * Python sends back, so the preview and the result are drawn by the
+ * same code.
+ */
+Viewer.prototype._pendingDim = function () {
+    var a = this.measureFrom, b = this.measureTo;
+    if (!a || !b) { return null; }
+    var off = this.measureOffset || 0;
+    var vx = b[0] - a[0], vy = b[1] - a[1];
+    var len = Math.hypot(vx, vy);
+    var nx = len ? -vy / len * off : 0;
+    var ny = len ? vx / len * off : 0;
+    return {name: null, p1: a, p2: b, offset: off, length: len,
+            line: [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny]],
+            optical: null, inside: null, n: null};
+};
+
+/*
+ * A name no element of the scene is using. Chosen here, like the name of
+ * a new optics, so that the viewer can select what it just asked for as
+ * soon as the scene comes back.
+ */
+Viewer.prototype._freshDimName = function () {
+    var taken = {};
+    (this.scene.optics || []).forEach(function (o) { taken[o.name] = true; });
+    (this.scene.dimensions || []).forEach(function (d) { taken[d.name] = true; });
+    var i = 1;
+    while (taken['D' + i]) { i++; }
+    return 'D' + i;
+};
+
+Viewer.prototype._selectedDim = function () {
+    if (!this.selectedDim) { return null; }
+    var dims = this.scene.dimensions || [];
+    for (var i = 0; i < dims.length; i++) {
+        if (dims[i].name === this.selectedDim) { return dims[i]; }
+    }
+    return null;
+};
+
+Viewer.prototype._selectDim = function (dim) {
+    this.selectedDim = dim ? dim.name : null;
+    this.selectedOptic = null;
+    this.pinned = null;
+    if (dim) {
+        this._refreshDimPanel();
+        this._showPanel('dimension');
+    } else {
+        this._showPanel('beam');
+    }
+    // Which dimension is marked is part of how they are drawn, and the
+    // drawing is what has to agree with the panel.
+    this._updateDimensions();
+    this._updateOverlay();
+};
+
+/*
+ * The dimension nearest a scene point, or null.
+ *
+ * Aimed at the dimension line, which is where it was put to be read,
+ * and not at the span between the measured points - that one usually
+ * runs along a beam or through an element, and taking hold of it there
+ * is what carrying the line aside was for. Measured to the segment
+ * rather than to its ends, so it can be picked anywhere along its
+ * length.
+ */
+Viewer.prototype._pickDimension = function (x, y) {
+    var dims = this.scene.dimensions || [];
+    // Tighter than the snapping reach: this one is taken from whatever
+    // lies underneath, so it should ask for aim rather than accept the
+    // neighbourhood.
+    var reach = DIM_PICK / this.scale;
+    var best = null, bestD = reach;
+    for (var i = 0; i < dims.length; i++) {
+        var ends = dimLineEnds(dims[i]);
+        var d = distToSegment(x, y, ends[0], ends[1]);
+        if (d <= bestD) { best = dims[i]; bestD = d; }
+    }
+    return best;
+};
+
+Viewer.prototype._refreshDimPanel = function () {
+    var d = this._selectedDim();
+    var f = this.dimFields;
+    var values = {};
+    if (this.dimFoot) {
+        this.dimFoot.style.display =
+            (d && (this.onEdit || d.local)) ? '' : 'none';
+    }
+    if (d) {
+        values = {name: d.name,
+                  p1x: d.p1[0], p1y: d.p1[1],
+                  p2x: d.p2[0], p2y: d.p2[1],
+                  offset: (d.offset || 0) / MM,
+                  length: fmtLen(d.length),
+                  angle: fmtDeg(Math.atan2(d.p2[1] - d.p1[1],
+                                           d.p2[0] - d.p1[0])),
+                  inside: d.inside,
+                  n: d.n === null || d.n === undefined ? null : fmtNum(d.n, 6),
+                  optical: d.optical === null || d.optical === undefined
+                      ? null : fmtLen(d.optical)};
+    }
+    for (var key in f) {
+        var rec = f[key];
+        var v = values[key];
+        if (rec.optional) {
+            rec.row.style.display = (v === undefined || v === null)
+                ? 'none' : '';
+        }
+        if (rec.editable && document.activeElement === rec.el) { continue; }
+        if (rec.editable) {
+            rec.el.value = d ? (typeof v === 'number' ? fmtField(v)
+                                : String(v === undefined ? '' : v)) : '';
+        } else {
+            rec.el.textContent = (d && v !== undefined && v !== null)
+                ? String(v) : '-';
+        }
+    }
+};
+
+Viewer.prototype._commitDimField = function (key, input) {
+    var d = this._selectedDim();
+    if (!d || !this.onEdit) { return; }
+
+    if (key === 'name') {
+        var name = String(input.value).trim();
+        if (!name || name === d.name) { this._refreshDimPanel(); return; }
+        var rmsg = {op: 'rename', target: d.name, name: name};
+        this.dimFallback = d.name;
+        this.selectedDim = name;
+        this.onEdit(rmsg);
+        return;
+    }
+
+    var value = parseField(input.value);
+    if (typeof value !== 'number' || !isFinite(value)) {
+        this._refreshDimPanel();
+        return;
+    }
+
+    if (key === 'offset') {
+        this.onEdit({op: 'set', target: d.name,
+                     attrs: {offset: value * MM}});
+        return;
+    }
+
+    // Which end, and which of its two coordinates. The message carries
+    // the whole end, since that is what the model holds.
+    var end = key.charAt(0) === 'p' && key.charAt(1) === '1' ? 'p1' : 'p2';
+    var point = [d[end][0], d[end][1]];
+    point[key.charAt(2) === 'x' ? 0 : 1] = value;
+    var attrs = {};
+    attrs[end] = point;
+    this.onEdit({op: 'set', target: d.name, attrs: attrs});
+};
+
+/*
+ * Distance from a point to a segment, in scene units.
+ */
+function distToSegment(x, y, a, b) {
+    var vx = b[0] - a[0], vy = b[1] - a[1];
+    var len2 = vx * vx + vy * vy;
+    var t = len2 > 0 ? ((x - a[0]) * vx + (y - a[1]) * vy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(x - (a[0] + vx * t), y - (a[1] + vy * t));
+}
 
 //}}}
 
@@ -1300,6 +1880,12 @@ Viewer.prototype._renderScene = function () {
         if (hidden.indexOf(ly.name) >= 0) { self.setLayerVisible(ly.name, false); }
     });
 
+    // Dimensions are drawn in screen coordinates, like the labels and
+    // for the same reason: the ticks and the numbers have to keep their
+    // size whatever the zoom, or a measurement of a lens would vanish
+    // next to one across the bench.
+    this._renderDimensions();
+
     // Overlay elements for the readout marker, the highlighted beam and
     // the arrow telling which way that beam travels.
     this.highlight = svgEl('line', {'class': 'gt-highlight'});
@@ -1315,8 +1901,17 @@ Viewer.prototype._renderScene = function () {
     // beams lying on the same line often run opposite ways, so stepping
     // through them has to show more than that the mark moved.
     this.slideArrow = svgEl('path', {'class': 'gt-slide-arrow'});
+    // The measurement being placed, and the marked point the next click
+    // would take.
+    this.rubber = svgEl('line', {'class': 'gt-rubber'});
+    this.snapMark = svgEl('circle', {'class': 'gt-snap', r: 5});
+    // The preview of the dimension being placed lives in this group
+    // too, so it goes with it and has to be built again.
+    this.pendingEls = null;
     this.overlayGroup.appendChild(this.slideMark);
     this.overlayGroup.appendChild(this.slideArrow);
+    this.overlayGroup.appendChild(this.rubber);
+    this.overlayGroup.appendChild(this.snapMark);
     this.overlayGroup.appendChild(this.outline);
     this.overlayGroup.appendChild(this.highlight);
     this.overlayGroup.appendChild(this.arrow);
@@ -1325,6 +1920,167 @@ Viewer.prototype._renderScene = function () {
     this.outline.style.display = 'none';
     this.slideMark.style.display = 'none';
     this.slideArrow.style.display = 'none';
+    this.rubber.style.display = 'none';
+    this.snapMark.style.display = 'none';
+};
+
+/*
+ * Length of the ticks at the ends of a dimension line, and how far the
+ * numbers sit off it. In screen pixels.
+ */
+var DIM_TICK = 6;
+var DIM_TEXT_GAP = 7;
+
+/*
+ * The extension lines that carry the measured points out to wherever
+ * the dimension line has been placed: a small gap at the point being
+ * measured, so that the line does not cover the very thing it points
+ * at, and a small overshoot past the dimension line, as on any
+ * engineering drawing. In screen pixels.
+ */
+var DIM_EXT_GAP = 3;
+var DIM_EXT_OVERSHOOT = 4;
+
+/*
+ * Build the SVG for the dimensions in the scene.
+ *
+ * Each one is a dimension line with a tick across each end, an
+ * extension line carrying each measured point out to it, the physical
+ * distance written above the line and, when the span runs inside a
+ * substrate, the optical distance below. Above and below rather than
+ * side by side, so that the two numbers cannot be read as one.
+ */
+Viewer.prototype._renderDimensions = function () {
+    var self = this;
+    this.dimEls = {};
+    this.dimGroup.textContent = '';
+    (this.scene.dimensions || []).forEach(function (d) {
+        self.dimEls[d.name] = self._buildDimEls(d, self.dimGroup);
+    });
+};
+
+/*
+ * The SVG for one dimension, appended to a group. Used both for the
+ * dimensions in the scene and for the one being placed, which is drawn
+ * the same way so that what is previewed is what will appear.
+ */
+Viewer.prototype._buildDimEls = function (d, parent, cls) {
+    var g = svgEl('g', {'class': 'gt-dim' + (cls ? ' ' + cls : '')});
+    var rec = {
+        e1: svgEl('line', {'class': 'gt-dim-ext'}),
+        e2: svgEl('line', {'class': 'gt-dim-ext'}),
+        line: svgEl('line', {'class': 'gt-dim-line'}),
+        t1: svgEl('line', {'class': 'gt-dim-tick'}),
+        t2: svgEl('line', {'class': 'gt-dim-tick'}),
+        label: svgEl('text', {'class': 'gt-dim-label',
+                              'font-size': this.fontSize}),
+        optical: svgEl('text', {'class': 'gt-dim-label gt-dim-optical',
+                                'font-size': this.fontSize}),
+        group: g,
+        dim: d
+    };
+    ['e1', 'e2', 'line', 't1', 't2', 'label', 'optical'].forEach(
+        function (k) { g.appendChild(rec[k]); });
+    parent.appendChild(g);
+    this._setDimText(rec, d);
+    return rec;
+};
+
+Viewer.prototype._setDimText = function (rec, d) {
+    rec.label.textContent = fmtLen(d.length);
+    if (d.optical === null || d.optical === undefined) {
+        rec.optical.style.display = 'none';
+    } else {
+        rec.optical.style.display = '';
+        rec.optical.textContent = fmtLen(d.optical) + ' optical';
+    }
+};
+
+/*
+ * The two ends of a dimension's line. Python works them out and sends
+ * them, so a front end does not have to know which way round the offset
+ * goes; the fallback is for a dimension being previewed, which Python
+ * has not been told about yet.
+ */
+function dimLineEnds(d) {
+    if (d.line) { return [d.line[0], d.line[1]]; }
+    return [d.p1, d.p2];
+}
+
+/*
+ * Place the dimensions for the current view. Called whenever the
+ * transform changes, like the labels.
+ */
+Viewer.prototype._updateDimensions = function () {
+    for (var name in this.dimEls) {
+        this._placeDim(this.dimEls[name], name === this.selectedDim);
+    }
+};
+
+Viewer.prototype._placeDim = function (rec, selected) {
+    var d = rec.dim;
+    var ends = dimLineEnds(d);
+    var a = this.sceneToScreen(ends[0][0], ends[0][1]);
+    var b = this.sceneToScreen(ends[1][0], ends[1][1]);
+    var p1 = this.sceneToScreen(d.p1[0], d.p1[1]);
+    var p2 = this.sceneToScreen(d.p2[0], d.p2[1]);
+    var dx = b[0] - a[0], dy = b[1] - a[1];
+    var len = Math.hypot(dx, dy) || 1;
+    var ux = dx / len, uy = dy / len;
+    var nx = -uy, ny = ux;                     // across the line
+
+    rec.line.setAttribute('x1', a[0]);
+    rec.line.setAttribute('y1', a[1]);
+    rec.line.setAttribute('x2', b[0]);
+    rec.line.setAttribute('y2', b[1]);
+    setTick(rec.t1, a, nx, ny);
+    setTick(rec.t2, b, nx, ny);
+
+    // An extension line runs from just clear of the point being
+    // measured to just past the dimension line. With no offset there is
+    // nothing to carry and the pair would be a smudge on the ticks, so
+    // they go away and what is left is a line drawn straight between
+    // the two points.
+    setExt(rec.e1, p1, a);
+    setExt(rec.e2, p2, b);
+
+    // The numbers go at the middle, turned to lie along the line and
+    // kept the right way up: a dimension running right to left would
+    // otherwise be written upside down.
+    var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    var deg = Math.atan2(dy, dx) * 180 / Math.PI;
+    if (deg > 90 || deg < -90) { deg += 180; }
+    var rot = 'rotate(' + deg + ',' + mx + ',' + my + ')';
+    place(rec.label, mx, my, rot, -DIM_TEXT_GAP);
+    place(rec.optical, mx, my, rot, DIM_TEXT_GAP + this.fontSize * 0.8);
+
+    rec.group.classList.toggle('gt-selected', !!selected);
+
+    function setTick(el, p, tnx, tny) {
+        el.setAttribute('x1', p[0] + tnx * DIM_TICK);
+        el.setAttribute('y1', p[1] + tny * DIM_TICK);
+        el.setAttribute('x2', p[0] - tnx * DIM_TICK);
+        el.setAttribute('y2', p[1] - tny * DIM_TICK);
+    }
+    function setExt(el, from, to) {
+        var vx = to[0] - from[0], vy = to[1] - from[1];
+        var d0 = Math.hypot(vx, vy);
+        if (d0 <= DIM_EXT_GAP + DIM_EXT_OVERSHOOT) {
+            el.style.display = 'none';
+            return;
+        }
+        el.style.display = '';
+        var ex = vx / d0, ey = vy / d0;
+        el.setAttribute('x1', from[0] + ex * DIM_EXT_GAP);
+        el.setAttribute('y1', from[1] + ey * DIM_EXT_GAP);
+        el.setAttribute('x2', to[0] + ex * DIM_EXT_OVERSHOOT);
+        el.setAttribute('y2', to[1] + ey * DIM_EXT_OVERSHOOT);
+    }
+    function place(el, tx, ty, trot, ody) {
+        el.setAttribute('x', tx);
+        el.setAttribute('y', ty + ody);
+        el.setAttribute('transform', trot);
+    }
 };
 
 Viewer.prototype._addLayerToggle = function (name, color, count) {
@@ -1392,6 +2148,7 @@ Viewer.prototype._applyTransform = function () {
         }
     }
 
+    this._updateDimensions();
     this._updateOverlay();
     this._updateStatus();
 };
@@ -1449,6 +2206,15 @@ Viewer.prototype.bbox = function () {
     });
     (this.scene.beams || []).forEach(function (b) {
         add(b.pos[0], b.pos[1]); add(b.end[0], b.end[1]);
+    });
+    // Dimensions are framed with everything else: a measurement taken to
+    // a point off the end of the bench is still part of what there is to
+    // look at, and Fit leaving it off the screen would read as its
+    // having been lost.
+    (this.scene.dimensions || []).forEach(function (d) {
+        add(d.p1[0], d.p1[1]); add(d.p2[0], d.p2[1]);
+        var ends = dimLineEnds(d);
+        add(ends[0][0], ends[0][1]); add(ends[1][0], ends[1][1]);
     });
     if (!isFinite(minx)) { return {minx: -1, miny: -1, maxx: 1, maxy: 1}; }
     return {minx: minx, miny: miny, maxx: maxx, maxy: maxy};
@@ -1541,7 +2307,16 @@ Viewer.prototype._bindEvents = function () {
         var pt = self.screenToScene(ev.clientX - r.left, ev.clientY - r.top);
 
         // Grabbing an optics starts an edit; grabbing anywhere else pans.
-        var o = self.onEdit ? self._pickOptic(pt[0], pt[1]) : null;
+        //
+        // Not while measuring: a click then means "measure here", and
+        // dragging an element out from under the cursor mid-measurement
+        // would move the very thing being measured. Nor on a dimension,
+        // which is picked ahead of the element under it - a press that
+        // grabbed the element would never let the release get as far as
+        // selecting the dimension.
+        var o = (self.onEdit && !self.measuring
+                 && !self._pickDimension(pt[0], pt[1]))
+            ? self._pickOptic(pt[0], pt[1]) : null;
         if (o) {
             self._beginOpticDrag(o, pt, ev.shiftKey);
             ev.preventDefault();
@@ -1605,16 +2380,32 @@ Viewer.prototype._bindEvents = function () {
         if (ev.target && ev.target.classList
             && ev.target.classList.contains('gt-input')) { return; }
         if (ev.key === 'f' || ev.key === 'F') { self.fit(); }
-        // Ctrl+Z, but only with the pointer over this viewer: the page
-        // around a notebook cell has its own undo, and taking the key
-        // from everywhere would undo edits the user meant for that.
+        // Ctrl+Z and Ctrl+Shift+Z / Ctrl+Y, but only with the pointer
+        // over this viewer: the page around a notebook cell has its own
+        // undo, and taking the keys from everywhere would undo edits
+        // the user meant for that. Both spellings of redo are bound
+        // because which one is the habit depends on the platform.
         if ((ev.key === 'z' || ev.key === 'Z') && (ev.ctrlKey || ev.metaKey)
                 && self.pointerInside) {
-            if (self.undo()) { ev.preventDefault(); }
+            if (ev.shiftKey) {
+                if (self.redo()) { ev.preventDefault(); }
+            } else if (self.undo()) { ev.preventDefault(); }
+        }
+        if ((ev.key === 'y' || ev.key === 'Y') && (ev.ctrlKey || ev.metaKey)
+                && !ev.shiftKey && self.pointerInside) {
+            if (self.redo()) { ev.preventDefault(); }
+        }
+        // Measuring: 'm' arms the tool, Escape puts it away. Escape
+        // clears the selection too, as it always has - a measurement
+        // half placed is one more thing it is letting go of.
+        if ((ev.key === 'm' || ev.key === 'M') && !ev.ctrlKey && !ev.metaKey) {
+            self.toggleMeasure();
         }
         if (ev.key === 'Escape') {
+            if (self.measuring) { self.toggleMeasure(false); }
             self.pinned = null;
             self.selectedOptic = null;
+            self.selectedDim = null;
             self._setReadout(null);
             self._showPanel('beam');
             self._updateOverlay();
@@ -1839,6 +2630,26 @@ Viewer.prototype._onHover = function (px, py) {
     var pt = this.screenToScene(px, py);
     this.cursor = pt;
 
+    // While measuring, nothing under the cursor is being pointed at: the
+    // question is only where the next click lands. For the first two
+    // that is the nearest marked point if there is one; for the third it
+    // is how far aside the dimension line goes, which snaps to nothing.
+    if (this.measuring) {
+        if (this.measureTo) {
+            this.measureOffset = this._offsetAt(pt[0], pt[1]);
+            this.snapped = null;
+            this.measurePreview = null;
+        } else {
+            this.measurePreview = this._measurePoint(pt[0], pt[1]);
+        }
+        this.hoverOptic = null;
+        this.hover = null;
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
+    this.measurePreview = null;
+
     // An optics under the cursor takes precedence: it is what the next
     // mousedown would act on, so say so before the user presses.
     this.hoverOptic = this._pickOptic(pt[0], pt[1]);
@@ -1876,11 +2687,36 @@ Viewer.prototype._updateOpticOutline = function (o, center, angle) {
 Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     var pt = this.screenToScene(px, py);
 
+    if (this.measuring) {
+        this._onMeasureClick(pt[0], pt[1]);
+        return;
+    }
+
+    // A dimension is picked before the optics and the beams under it.
+    // It has to be: the measurement this whole tool exists for - the
+    // optical thickness of a substrate - lies wholly inside an element,
+    // and an element that took precedence would leave it unreachable.
+    // It costs little the other way, since a dimension is a line a few
+    // pixels wide and an element is an area: the element is still there
+    // to be clicked anywhere off the line.
+    var dim = this._pickDimension(pt[0], pt[1]);
+    if (dim) {
+        this.pinned = null;
+        this.selectedOptic = null;
+        this._selectDim(dim);
+        return;
+    }
+    if (this.panelKind === 'dimension') {
+        this.selectedDim = null;
+        this._showPanel('beam');
+    }
+
     // Clicking an optics selects it and shows its properties. This works
     // whether or not the viewer is editable: reading is always allowed.
     var optic = this._pickOptic(pt[0], pt[1]);
     if (optic) {
         this.pinned = null;
+        this.selectedDim = null;
         this._selectOptic(optic);
         return;
     }
@@ -1964,6 +2800,55 @@ Viewer.prototype._arrowPath = function (px, py, dirVect) {
 };
 
 Viewer.prototype._updateOverlay = function () {
+    // The measurement being placed. Drawn here rather than through the
+    // scene because Python has not been told about it yet - there is
+    // nothing to tell until the last click - so this is the one piece of
+    // a dimension the viewer works out for itself.
+    //
+    // Between the first two clicks it is a bare line to the cursor;
+    // after them it is the dimension itself, drawn by the same code that
+    // draws the finished ones, so that what is previewed is what will
+    // appear.
+    var pending = this._pendingDim();
+    if (pending) {
+        this.rubber.style.display = 'none';
+        if (!this.pendingEls) {
+            this.pendingEls = this._buildDimEls(pending, this.overlayGroup,
+                                                'gt-dim-pending');
+        }
+        this.pendingEls.dim = pending;
+        this._setDimText(this.pendingEls, pending);
+        this.pendingEls.group.style.display = '';
+        this._placeDim(this.pendingEls, false);
+    } else {
+        if (this.pendingEls) { this.pendingEls.group.style.display = 'none'; }
+        if (this.measureFrom && this.cursor) {
+            var to = this.measurePreview || this.cursor;
+            var m0 = this.sceneToScreen(this.measureFrom[0],
+                                        this.measureFrom[1]);
+            var m1 = this.sceneToScreen(to[0], to[1]);
+            this.rubber.setAttribute('x1', m0[0]);
+            this.rubber.setAttribute('y1', m0[1]);
+            this.rubber.setAttribute('x2', m1[0]);
+            this.rubber.setAttribute('y2', m1[1]);
+            this.rubber.style.display = '';
+        } else {
+            this.rubber.style.display = 'none';
+        }
+    }
+    // Where the next click would land, when that is a marked point
+    // rather than the cursor. Without it the tool is guesswork: the
+    // snap is invisible until the measurement is already made.
+    if (this.measuring && this.snapped) {
+        var s = this.sceneToScreen(this.snapped.point[0],
+                                   this.snapped.point[1]);
+        this.snapMark.setAttribute('cx', s[0]);
+        this.snapMark.setAttribute('cy', s[1]);
+        this.snapMark.style.display = '';
+    } else {
+        this.snapMark.style.display = 'none';
+    }
+
     if (this.dragOptic) {
         this._updateOpticOutline(this.dragOptic.optic, this.dragOptic.center,
                                  this.dragOptic.angle);
@@ -2029,6 +2914,33 @@ Viewer.prototype._updateStatus = function () {
                   '   (was ' + fmtDeg(normAngle(d.angle0)) + ')'
                 : d.optic.name + ':  ' + fmtLen(d.center[0]) + ',  ' +
                   fmtLen(d.center[1]);
+        }
+        return;
+    }
+    if (this.measuring) {
+        var where = this.snapped ? this.snapped.label
+            : (this.cursor ? fmtLen(this.cursor[0]) + ',  '
+                             + fmtLen(this.cursor[1]) : '');
+        var tail = '     (Esc to cancel)';
+        if (this.measureTo) {
+            // The last click places the line rather than measuring
+            // anything, so the distance is settled and shown as such.
+            this.statusBar.textContent =
+                'Measure:  ' + fmtLen(Math.hypot(
+                    this.measureTo[0] - this.measureFrom[0],
+                    this.measureTo[1] - this.measureFrom[1])) +
+                '     place the line:  offset ' +
+                fmtLen(this.measureOffset || 0) + tail;
+        } else if (this.measureFrom) {
+            var to = this.measurePreview || this.cursor || this.measureFrom;
+            this.statusBar.textContent =
+                'Measure:  ' + fmtLen(Math.hypot(to[0] - this.measureFrom[0],
+                                                 to[1] - this.measureFrom[1])) +
+                '     to  ' + where + tail;
+        } else {
+            this.statusBar.textContent =
+                'Measure:  click the first point' +
+                (where ? '     at  ' + where : '') + tail;
         }
         return;
     }
@@ -2116,6 +3028,7 @@ Viewer.prototype.setScene = function (scene) {
     this.layerGroups = {};
     this.sceneGroup.textContent = '';
     this.labelGroup.textContent = '';
+    this.dimGroup.textContent = '';
     this.overlayGroup.textContent = '';
     this.layerBody.textContent = '';
     this.opts.hiddenLayers = Object.keys(visible).filter(function (k) {
@@ -2130,11 +3043,19 @@ Viewer.prototype.setScene = function (scene) {
     // the selection and show the values Python came back with. Getting
     // one means the edit went through, so any optimistic rename stands.
     this.selectionFallback = null;
-    if (this._selectedOptic()) {
+    this.dimFallback = null;
+    if (this._selectedDim()) {
+        this._refreshDimPanel();
+        this._showPanel('dimension');
+    } else if (this._selectedOptic()) {
         this._refreshOpticPanel();
         this._showPanel('optic');
     } else if (this.panelKind === 'optic') {
         this.selectedOptic = null;
+        this._showPanel('beam');
+    } else if (this.panelKind === 'dimension') {
+        // The dimension it was showing is gone - removed, or undone.
+        this.selectedDim = null;
         this._showPanel('beam');
     }
 

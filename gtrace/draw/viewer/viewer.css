@@ -182,6 +182,92 @@
     stroke-dasharray: none;
 }
 
+/* ------------------------------------------------------------- dimensions */
+
+/* Drawn in screen coordinates, so no non-scaling-stroke is needed and
+   the ticks and numbers keep their size at any zoom. Green, which
+   nothing else in the viewer uses: a dimension is a note on the drawing
+   and should not be mistaken for a beam or an element. */
+.gt-dims { pointer-events: none; }
+
+.gt-dim-line {
+    stroke: #1d7a4c;
+    stroke-width: 1.2;
+    fill: none;
+}
+
+.gt-dim-tick {
+    stroke: #1d7a4c;
+    stroke-width: 1.2;
+    fill: none;
+}
+
+/* The extension lines carrying the measured points out to wherever the
+   dimension line was placed. Lighter than the line itself: they say
+   where the measurement was taken, not what it came to. */
+.gt-dim-ext {
+    stroke: #1d7a4c;
+    stroke-width: 1;
+    stroke-opacity: 0.75;
+    fill: none;
+}
+
+.gt-dim-label {
+    fill: #14603a;
+    stroke: #ffffff;
+    stroke-width: 3;
+    paint-order: stroke;
+    text-anchor: middle;
+    dominant-baseline: alphabetic;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The optical distance, under the line where the physical one is over
+   it. Lighter, because it is the derived number of the two. */
+.gt-dim-optical { fill: #3f8a68; }
+
+.gt-dim.gt-selected .gt-dim-line,
+.gt-dim.gt-selected .gt-dim-tick {
+    stroke: #0f5c38;
+    stroke-width: 2.2;
+}
+
+/* The dimension being placed, drawn by the same code as a finished one
+   so that the preview is what will appear - dashed, because it is not
+   there yet. */
+.gt-dim-pending { pointer-events: none; }
+.gt-dim-pending .gt-dim-line { stroke-dasharray: 6 4; }
+.gt-dim-pending .gt-dim-ext { stroke-dasharray: 3 3; }
+
+/* The measurement being placed, from the end already fixed to wherever
+   the next click would land. */
+.gt-rubber {
+    stroke: #1d7a4c;
+    stroke-width: 1.4;
+    stroke-dasharray: 6 4;
+    fill: none;
+    pointer-events: none;
+}
+
+/* The marked point the next click would take. */
+.gt-snap {
+    fill: rgba(29, 122, 76, 0.25);
+    stroke: #1d7a4c;
+    stroke-width: 1.6;
+    pointer-events: none;
+}
+
+.gt-svg.gt-measuring { cursor: crosshair; }
+
+/* A button that is a mode rather than an action, while it is on. */
+.gt-btn-on {
+    color: #ffffff;
+    background: #1d7a4c;
+    border-color: #17603c;
+}
+
+.gt-btn-on:hover { background: #17603c; }
+
 /* Which way the selected beam travels. */
 .gt-arrow {
     fill: #1f2328;
@@ -223,19 +309,13 @@
     background: #f6f7f9;
 }
 
+/* Two stacked rows: the buttons that add to the layout, and the ones
+   that act on it or on the view. */
 .gt-head {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.gt-title {
-    font-weight: 600;
-    font-size: 15px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
 }
 
 .gt-btn {
@@ -254,9 +334,8 @@
 .gt-btn-danger { color: #8a1c1c; border-color: #e3c4c4; }
 .gt-btn-danger:hover { background: #fdeaea; border-color: #d59a9a; }
 
-.gt-buttons {
+.gt-btnrow {
     display: flex;
-    flex: 0 1 auto;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 6px;

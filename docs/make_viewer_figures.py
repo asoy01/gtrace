@@ -208,6 +208,51 @@ FIGURES = [
     ('viewer_properties.png', '''
     clickOptic('M1');
 '''),
+    ('viewer_measure.png', '''
+    /* A measurement taken across the substrate of M1, from the apex of
+       its HR face to the apex of its AR face - the span that runs
+       inside the glass, and so the one that carries an optical distance
+       as well as a physical one. The dimension line is carried clear of
+       the element, with extension lines back to the two points, which
+       is the whole point of the third click: drawn straight between
+       them it would lie in the glass, on top of the beams going
+       through it.
+
+       Pushed in as a scene, since that is how it would arrive from
+       Python once the last click had been made, and then selected so
+       that the panel is showing.
+
+       Zoomed onto the element, because a 10 cm substrate on a metre of
+       bench is otherwise a few pixels of green. */
+    var m1 = v.scene.optics.filter(function (o) {
+        return o.name === 'M1';
+    })[0];
+    var mid = [(m1.HRcenter[0] + m1.ARcenter[0]) / 2,
+               (m1.HRcenter[1] + m1.ARcenter[1]) / 2];
+    var withDim = JSON.parse(JSON.stringify(v.scene));
+    var n = m1.n;
+    var vx = m1.ARcenter[0] - m1.HRcenter[0];
+    var vy = m1.ARcenter[1] - m1.HRcenter[1];
+    var len = Math.hypot(vx, vy);
+    var off = 0.17;                       /* clear of the 25 cm aperture */
+    var nx = -vy / len * off, ny = vx / len * off;
+    withDim.dimensions = [{type: 'Dimension', name: 'D1',
+                           p1: m1.HRcenter, p2: m1.ARcenter, offset: off,
+                           line: [[m1.HRcenter[0] + nx, m1.HRcenter[1] + ny],
+                                  [m1.ARcenter[0] + nx, m1.ARcenter[1] + ny]],
+                           length: len, optical: n * len,
+                           inside: 'M1', n: n}];
+    model.set('scene', withDim);
+    v.scale *= 3; v.cx = mid[0] + nx / 2; v.cy = mid[1] + ny / 2;
+    v._applyTransform();
+    var r = v.svg.getBoundingClientRect();
+    var p = v.sceneToScreen(mid[0] + nx, mid[1] + ny);
+    ['mousemove', 'mousedown', 'mouseup'].forEach(function (t) {
+        (t === 'mousedown' ? v.svg : window).dispatchEvent(
+            new MouseEvent(t, {clientX: p[0] + r.left, clientY: p[1] + r.top,
+                               button: 0, bubbles: true, cancelable: true}));
+    });
+'''),
 ]
 
 

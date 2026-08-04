@@ -130,6 +130,128 @@ class TraceRules(object):
 
 #}}}
 
+#{{{ Dimension
+
+class Dimension(object):
+    '''
+    A distance measured between two points of a layout.
+
+    A dimension is a note about the system rather than a part of it: it
+    takes part in no trace and changes no beam. It is registered in the
+    layout all the same, because a measurement worth taking is worth
+    keeping - it is saved with the layout, comes back with it, and can
+    be taken back with undo, like anything else the layout holds.
+
+    The two points are plain coordinates. A dimension does not hold on
+    to the element a point was taken from: an element that then moves
+    leaves the measurement where it was made, which is what a note
+    should do. Measuring the same thing again after a change is a matter
+    of drawing it again.
+
+    Attributes
+    ----------
+    name : str
+        Name of the dimension, unique within the layout.
+    p1, p2 : numpy.ndarray
+        The two ends, of shape (2,), in global coordinates.
+    offset : float
+        How far to one side of the two ends the dimension line is
+        drawn, in metres, positive to the left of the direction from
+        p1 to p2. Zero puts the line straight between them.
+
+        This is where a drawing puts the line, not what is being
+        measured: what a bench wants measured usually runs along a beam
+        or through an element, which is exactly where a line drawn on
+        top of it cannot be read. Extension lines carry the ends out to
+        wherever there is room, as they do on any engineering drawing.
+    '''
+
+    def __init__(self, p1, p2, name='D', offset=0.0):
+        self.name = name
+        self.p1 = np.array(p1, dtype='float64')
+        self.p2 = np.array(p2, dtype='float64')
+        self.offset = float(offset)
+
+    @property
+    def length(self):
+        '''
+        The distance between the two ends.
+
+        The offset does not come into it: the dimension line is moved
+        aside to be read, not to measure something else.
+        '''
+        return float(np.linalg.norm(self.p2 - self.p1))
+
+    @property
+    def normal(self):
+        '''
+        The unit vector the offset is measured along: to the left of the
+        direction from p1 to p2. Zero for a dimension of no length.
+        '''
+        seg = self.p2 - self.p1
+        L = np.linalg.norm(seg)
+        if L == 0.0:
+            return np.zeros(2)
+        return np.array([-seg[1], seg[0]], dtype='float64') / L
+
+    def line_ends(self):
+        '''
+        The two ends of the dimension line itself - the ends carried out
+        by the offset. Equal to p1 and p2 when the offset is zero.
+
+        Returns
+        -------
+        (numpy.ndarray, numpy.ndarray)
+        '''
+        n = self.normal * self.offset
+        return self.p1 + n, self.p2 + n
+
+    def measure(self, optics=()):
+        '''
+        What this dimension comes to, against a list of optics.
+
+        The optical distance is reported only when the whole span runs
+        inside one substrate, where it is the physical distance times
+        the refractive index. A span that crosses in and out of glass
+        has an optical length too, but it is not a dimension of anything
+        - it depends on where the ends happen to fall - so it is left
+        out rather than written next to a number it would be mistaken
+        for.
+
+        Parameters
+        ----------
+        optics : sequence, optional
+            The optics to test the span against.
+
+        Returns
+        -------
+        dict
+            ``{'length': float, 'optical': float or None,
+            'inside': str or None, 'n': float or None}``
+        '''
+        d = {'length': self.length, 'optical': None,
+             'inside': None, 'n': None}
+        if d['length'] == 0.0:
+            return d
+        for o in optics:
+            if not hasattr(o, 'contains_segment'):
+                continue
+            if o.contains_segment(self.p1, self.p2):
+                d['inside'] = str(o.name)
+                d['n'] = float(o.n)
+                d['optical'] = d['n'] * d['length']
+                break
+        return d
+
+    def copy(self):
+        '''
+        A new Dimension with the same ends, offset and name.
+        '''
+        return Dimension(self.p1, self.p2, name=self.name,
+                         offset=self.offset)
+
+#}}}
+
 #{{{ Edit protocol
 
 #: Attributes of an optics that a front end is allowed to change.
@@ -224,15 +346,33 @@ DEFAULT_LENS_F = 0.5
 CREATABLE_OPTIC_TYPES = {'Mirror': 'Mirror', 'CyMirror': 'CyMirror',
                          'Lens': 'Lens'}
 
+#: Attributes of a dimension a front end may change. A dimension is two
+#: points, where its line is drawn, and a name; the name has its own
+#: operation, so this is the whole of it.
+EDITABLE_DIMENSION_ATTRS = frozenset(['p1', 'p2', 'offset'])
+
+#: The ones that are points rather than numbers.
+_DIMENSION_POINTS = frozenset(['p1', 'p2'])
+
+#: The type an 'add' message names to create a dimension. It is kept out
+#: of CREATABLE_OPTIC_TYPES because a dimension is not an optics: it is
+#: not traced, it is not drawn among the elements, and it takes ends
+#: rather than construction parameters.
+DIMENSION_TYPE = 'Dimension'
+
 #: How many edits back undo can go. A snapshot is the serialized
 #: layout, so the cost is a few tens of kilobytes each for a system of
 #: any size, and a bound is what keeps a long session from growing
-#: without limit.
+#: without limit. It bounds the redo side as well, which is only ever
+#: filled by undoing and so cannot outgrow it.
 UNDO_DEPTH = 50
 
 #: Operations that leave the layout as it was, and so are not worth a
-#: snapshot: one writes a file, and the other is the undo itself.
-_NOT_UNDOABLE = frozenset(['save', 'undo'])
+#: snapshot: one writes a file, and the others walk the history rather
+#: than adding to it. Being on this list also means the operation does
+#: not discard the redo stack - saving in the middle of stepping back
+#: and forth is not a change of mind.
+_NOT_UNDOABLE = frozenset(['save', 'undo', 'redo'])
 
 class EditError(ValueError):
     '''
@@ -278,6 +418,38 @@ def _check_choice(key, value):
     if choices is not None and value not in choices:
         raise EditError('%r must be one of %s, not %r.'
                         % (key, ', '.join(repr(c) for c in choices), value))
+
+def _as_point(value, key):
+    '''
+    A pair of finite coordinates from an edit message, or an EditError.
+
+    Points arrive from a browser as JSON arrays, where a missing number
+    is null and a runaway one is a string; neither is a place on a
+    bench, and both would otherwise settle quietly into a numpy array as
+    nan.
+    '''
+    try:
+        p = np.array([float(value[0]), float(value[1])], dtype='float64')
+    except (TypeError, ValueError, IndexError, KeyError):
+        raise EditError('%r must be a pair of coordinates, not %r.'
+                        % (key, value))
+    if not np.all(np.isfinite(p)):
+        raise EditError('%r must be a pair of finite coordinates, not %r.'
+                        % (key, value))
+    return p
+
+def _as_distance(value, key):
+    '''
+    A finite distance in metres from an edit message, or an EditError.
+    '''
+    try:
+        d = float(value)
+    except (TypeError, ValueError):
+        raise EditError('%r must be a distance in metres, not %r.'
+                        % (key, value))
+    if not np.isfinite(d):
+        raise EditError('%r must be a finite distance, not %r.' % (key, value))
+    return d
 
 def _set_optic_attr(optics, key, value):
     '''
@@ -416,6 +588,79 @@ def source_to_dict(b):
             'qx': [complex(b.qx).real, complex(b.qx).imag],
             'qy': [complex(b.qy).real, complex(b.qy).imag]}
 
+def dimension_to_dict(d):
+    '''
+    Convert a Dimension to a JSON-compatible dict.
+
+    Only the ends are written. What the dimension comes to - the
+    distance, and whether it runs inside a substrate - is derived from
+    them and from the optics around it, and is recomputed on the way
+    into a scene rather than stored, so that it cannot go stale.
+    '''
+    return {'type': 'Dimension',
+            'name': str(d.name),
+            'p1': [float(x) for x in np.asarray(d.p1)],
+            'p2': [float(x) for x in np.asarray(d.p2)],
+            'offset': float(d.offset)}
+
+def dimension_from_dict(d):
+    '''
+    Construct a Dimension from a dict produced by dimension_to_dict().
+    '''
+    #Absent from a file written before the dimension line could be
+    #carried aside, which is a line drawn straight between the ends.
+    return Dimension(d['p1'], d['p2'], name=d['name'],
+                     offset=d.get('offset', 0.0))
+
+def _update_dimension(dim, d):
+    '''
+    Apply a serialized dimension to an existing one, in place.
+    '''
+    for key in ['p1', 'p2']:
+        if key in d:
+            setattr(dim, key, np.array(d[key], dtype='float64'))
+    if 'offset' in d:
+        dim.offset = float(d['offset'])
+
+#: What a snap point on an optics is called, and where it is. The corner
+#: entries are filled in from get_corners(), which is where the wedge and
+#: the sagitta of a curved face are accounted for.
+_SNAP_FACE_POINTS = [('HRcenter', 'HR'), ('ARcenter', 'AR'),
+                     ('center', 'centre')]
+
+def optic_snap_points(o):
+    '''
+    The points of an optics worth snapping a measurement to: the four
+    corners of the substrate, the apex of each face, and the middle.
+
+    These come from Python rather than being worked out by a front end
+    because they are geometry: a corner is where the wedge and the
+    sagitta of a curved face put it, and there is no reason for a second
+    description of that to exist in a browser. Beam ends are a different
+    matter - they are already carried literally in the scene - so they
+    are not here.
+
+    Returns
+    -------
+    list of dict
+        ``{'point': [x, y], 'optic': name, 'kind': str, 'label': str}``
+    '''
+    points = []
+    corners = o.get_corners() if hasattr(o, 'get_corners') else []
+    for i, c in enumerate(corners):
+        points.append({'point': [float(c[0]), float(c[1])],
+                       'optic': str(o.name), 'kind': 'corner',
+                       'label': '%s corner %d' % (o.name, i + 1)})
+    for attr, what in _SNAP_FACE_POINTS:
+        if not hasattr(o, attr):
+            continue
+        p = np.asarray(getattr(o, attr), dtype='float64')
+        points.append({'point': [float(p[0]), float(p[1])],
+                       'optic': str(o.name),
+                       'kind': 'centre' if attr == 'center' else 'face',
+                       'label': '%s %s' % (o.name, what)})
+    return points
+
 def _merge_by_name(registered, specs, build, update):
     '''
     Rebuild a list of registered objects from their serialized form,
@@ -510,10 +755,14 @@ class OpticalLayout(object):
         from that source, from the last trace().
     '''
 
-    def __init__(self, optics=None, sources=None, rules=None, name='Layout'):
+    def __init__(self, optics=None, sources=None, rules=None, name='Layout',
+                 dimensions=None):
         self.name = name
         self.optics = []
         self.sources = []
+        #: Registered Dimensions - measurements noted on the layout.
+        #: They take no part in the trace; see the Dimension class.
+        self.dimensions = []
         self.rules = rules if rules is not None else TraceRules()
         #: Overrides for DRAW_OPTIONS, as chosen by a front end. Display
         #: settings, so changing one redraws but does not re-trace.
@@ -525,6 +774,11 @@ class OpticalLayout(object):
         #: means the same thing however the edit arrived - through a
         #: browser, or from a cell calling apply_edit directly.
         self._history = []
+        #: States undone but not yet given up on, newest last. Filled
+        #: only by undo() and emptied by the next edit that goes
+        #: through: once the layout takes a different turn, the branch
+        #: that was stepped out of is no longer somewhere to return to.
+        self._future = []
 
         if optics is not None:
             for m in optics:
@@ -532,6 +786,9 @@ class OpticalLayout(object):
         if sources is not None:
             for b in sources:
                 self.add_source(b)
+        if dimensions is not None:
+            for d in dimensions:
+                self.add_dimension(d)
 
 #{{{ Registration
 
@@ -540,9 +797,7 @@ class OpticalLayout(object):
         Register an optics. The optics is held by reference.
         Its name must be unique within the layout.
         '''
-        if m.name in [o.name for o in self.optics]:
-            raise ValueError("An optics named '%s' is already registered."
-                             % m.name)
+        self._check_name_free(m.name)
         self.optics.append(m)
 
     def add_source(self, b):
@@ -555,6 +810,30 @@ class OpticalLayout(object):
                              % b.name)
         self.sources.append(b)
 
+    def add_dimension(self, d):
+        '''
+        Register a Dimension. It is held by reference, and its name must
+        be unique within the layout.
+        '''
+        self._check_name_free(d.name)
+        self.dimensions.append(d)
+
+    def _check_name_free(self, name):
+        '''
+        Refuse a name already taken by an optics or a dimension.
+
+        The two share a namespace because a front end points at both the
+        same way - an edit message names its target and nothing else -
+        and a name that meant one thing in one message and another in
+        the next would be a trap.
+        '''
+        if name in [o.name for o in self.optics]:
+            raise ValueError("An optics named '%s' is already registered."
+                             % name)
+        if name in [d.name for d in self.dimensions]:
+            raise ValueError("A dimension named '%s' is already registered."
+                             % name)
+
     def remove_optics(self, name):
         '''
         Remove the optics with the given name from the layout.
@@ -566,6 +845,12 @@ class OpticalLayout(object):
         Remove the source with the given name from the layout.
         '''
         self.sources.remove(self.get_source(name))
+
+    def remove_dimension(self, name):
+        '''
+        Remove the dimension with the given name from the layout.
+        '''
+        self.dimensions.remove(self.get_dimension(name))
 
     def get_optics(self, name):
         '''
@@ -585,17 +870,35 @@ class OpticalLayout(object):
                 return b
         raise KeyError("No source named '%s' in the layout." % name)
 
+    def get_dimension(self, name):
+        '''
+        Return the registered dimension with the given name.
+        '''
+        for d in self.dimensions:
+            if d.name == name:
+                return d
+        raise KeyError("No dimension named '%s' in the layout." % name)
+
     def unique_optics_name(self, prefix='M'):
         '''
         Return a name of the form prefix + number that no registered
-        optics uses. Front ends need a name before they can talk about
-        the element they are asking for.
+        optics or dimension uses. Front ends need a name before they can
+        talk about the element they are asking for.
         '''
         taken = set(o.name for o in self.optics)
+        taken.update(d.name for d in self.dimensions)
         i = 1
         while '%s%d' % (prefix, i) in taken:
             i += 1
         return '%s%d' % (prefix, i)
+
+    def unique_dimension_name(self, prefix='D'):
+        '''
+        Return a name of the form prefix + number that nothing in the
+        layout uses. The same namespace as unique_optics_name, since
+        edit messages resolve a target across both.
+        '''
+        return self.unique_optics_name(prefix)
 
 #}}}
 
@@ -653,7 +956,17 @@ class OpticalLayout(object):
             {'op': 'slide',  'target': 'L1', 'beam': 'b0',
                              'beam_index': 0, 'distance': 0.05}
             {'op': 'rules',  'rules': {'power_threshold': 1e-6}}
+            {'op': 'add',    'type': 'Dimension', 'name': 'D1',
+                             'params': {'p1': [0.0, 0.0],
+                                        'p2': [0.5, 0.0],
+                                        'offset': 0.05}}
+            {'op': 'set',    'target': 'D1', 'attrs': {'p2': [0.6, 0.0]}}
             {'op': 'undo'}
+            {'op': 'redo'}
+
+        A dimension is named and addressed exactly as an optics is:
+        'remove', 'rename' and 'set' resolve their target across both,
+        which share one namespace.
 
         The edit is applied to the registered object itself, which is
         the same object the user holds in their own code. The trace
@@ -662,7 +975,9 @@ class OpticalLayout(object):
 
         The state before the edit is kept, so that undo() can put it
         back; see there for what that costs and what it restores. An
-        edit that is refused changes nothing and is not recorded.
+        edit that is refused changes nothing and is not recorded. An
+        edit that goes through discards whatever undo() had put aside
+        for redo(): the layout has taken a different turn.
 
         Parameters
         ----------
@@ -684,25 +999,68 @@ class OpticalLayout(object):
 
         if msg.get('op') == 'undo':
             return self.undo()
+        if msg.get('op') == 'redo':
+            return self.redo()
 
         # Taken before the edit and kept only if the edit goes through:
         # a refused message leaves the layout alone, and an undo step
         # that restores what is already there is one press wasted.
-        #
-        # The objects are kept alongside their serialized form. Putting
-        # a state back is then a matter of restoring the values onto the
-        # very objects that held them, rather than matching them up by
-        # name the way loading a file has to - so a rename comes back
-        # without swapping the object it named, and an element that was
-        # removed comes back as itself rather than as a copy.
         snapshot = (None if msg.get('op') in _NOT_UNDOABLE
-                    else (self.to_dict(), list(self.optics),
-                          list(self.sources)))
+                    else self._snapshot())
         result = self._apply_edit(msg)
         if snapshot is not None:
             self._history.append(snapshot)
             del self._history[:-UNDO_DEPTH]
+            # An edit made after stepping back is a new branch, and the
+            # one that was stepped out of has no way back to it: the
+            # states in there describe elements this edit may have just
+            # renamed, removed or moved on from.
+            del self._future[:]
         return result
+
+    def _snapshot(self):
+        '''
+        Capture the current state, for undo() or redo() to put back.
+
+        The objects are kept alongside their serialized form. Restoring
+        is then a matter of putting the values back onto the very
+        objects that held them, rather than matching them up by name the
+        way loading a file has to - so a rename comes back without
+        swapping the object it named, and an element that was removed
+        comes back as itself rather than as a copy.
+        '''
+        return (self.to_dict(), list(self.optics), list(self.sources),
+                list(self.dimensions))
+
+    def _restore(self, snapshot):
+        '''
+        Put back a state captured by _snapshot().
+        '''
+        d, optics, sources, dimensions = snapshot
+
+        # The object lists and the serialized ones were made from the
+        # same lists at the same moment, so they line up entry for
+        # entry. The name is set apart from the rest: it is not an
+        # editable attribute, so _update_optic does not carry it.
+        self.optics = list(optics)
+        self.sources = list(sources)
+        self.dimensions = list(dimensions)
+        for m, spec in zip(self.optics, d.get('optics', [])):
+            m.name = spec['name']
+            _update_optic(m, spec)
+        for b, spec in zip(self.sources, d.get('sources', [])):
+            b.name = spec['name']
+            _update_source(b, spec)
+        for dim, spec in zip(self.dimensions, d.get('dimensions', [])):
+            dim.name = spec['name']
+            _update_dimension(dim, spec)
+
+        self.rules = TraceRules.from_dict(d.get('rules', {}))
+        self.draw_options = dict(d.get('draw_options', {}))
+        self.name = d.get('name', self.name)
+        self.beams = None
+        self.beams_by_source = None
+        return self
 
     def undo(self):
         '''
@@ -716,6 +1074,9 @@ class OpticalLayout(object):
         layout is put back as itself rather than as a copy. This is
         stronger than what loading a file can offer, which has only
         names to match objects up by.
+
+        The state being left is put aside for redo(), and stays there
+        until an edit goes through.
 
         Only edits applied through apply_edit are recorded. Assigning to
         an optics directly in Python is not an edit the layout ever sees,
@@ -734,27 +1095,38 @@ class OpticalLayout(object):
         '''
         if not self._history:
             raise EditError('There is nothing to undo.')
-        d, optics, sources = self._history.pop()
+        # Taken before the restore, so that redo() puts back the state
+        # this undo is stepping out of.
+        self._future.append(self._snapshot())
+        del self._future[:-UNDO_DEPTH]
+        return self._restore(self._history.pop())
 
-        # The object lists and the serialized ones were made from the
-        # same lists at the same moment, so they line up entry for
-        # entry. The name is set apart from the rest: it is not an
-        # editable attribute, so _update_optic does not carry it.
-        self.optics = list(optics)
-        self.sources = list(sources)
-        for m, spec in zip(self.optics, d.get('optics', [])):
-            m.name = spec['name']
-            _update_optic(m, spec)
-        for b, spec in zip(self.sources, d.get('sources', [])):
-            b.name = spec['name']
-            _update_source(b, spec)
+    def redo(self):
+        '''
+        Put back the state that the last undo() stepped out of.
 
-        self.rules = TraceRules.from_dict(d.get('rules', {}))
-        self.draw_options = dict(d.get('draw_options', {}))
-        self.name = d.get('name', self.name)
-        self.beams = None
-        self.beams_by_source = None
-        return self
+        Redo undoes an undo, and restores as exactly as undo() does: the
+        same elements, so an element that undoing a removal brought back
+        goes away again as itself rather than as a copy.
+
+        Only undoing fills the redo stack, and the next edit that goes
+        through empties it - once the layout has taken a different turn
+        there is no branch left to return to.
+
+        Returns
+        -------
+        self : OpticalLayout
+
+        Raises
+        ------
+        EditError
+            If there is nothing left to redo.
+        '''
+        if not self._future:
+            raise EditError('There is nothing to redo.')
+        self._history.append(self._snapshot())
+        del self._history[:-UNDO_DEPTH]
+        return self._restore(self._future.pop())
 
     @property
     def can_undo(self):
@@ -762,6 +1134,13 @@ class OpticalLayout(object):
         Whether there is an edit left to undo.
         '''
         return len(self._history) > 0
+
+    @property
+    def can_redo(self):
+        '''
+        Whether there is an undo left to take back.
+        '''
+        return len(self._future) > 0
 
     def _apply_edit(self, msg):
         '''
@@ -772,11 +1151,25 @@ class OpticalLayout(object):
         # 'name' is deliberately not in EDITABLE_OPTIC_ATTRS: renaming
         # changes the identity the layout resolves edits by, so it has
         # its own operation with a uniqueness check.
-        if op in ('move', 'rotate', 'set'):
+        if op == 'set' and self._is_dimension(msg.get('target')):
+            self._set_dimension_attrs(self.get_dimension(msg['target']),
+                                      msg.get('attrs') or {})
+            # Moving an end of a measurement changes the measurement and
+            # nothing else. No beam has moved, so the trace still stands.
+            return self
+
+        elif op in ('move', 'rotate', 'set'):
             name = msg.get('target')
             try:
                 optics = self.get_optics(name)
             except KeyError:
+                if self._is_dimension(name):
+                    # A dimension is two points, not a body: there is
+                    # nothing to turn, and either end moves on its own.
+                    raise EditError("%r is a dimension, which has no %s. "
+                                    "Set 'p1' or 'p2' instead."
+                                    % (name, 'orientation'
+                                       if op == 'rotate' else 'position'))
                 raise EditError("No optics named %r in the layout." % (name,))
 
             if op == 'set':
@@ -801,19 +1194,20 @@ class OpticalLayout(object):
         elif op == 'rename':
             old = msg.get('target')
             new = msg.get('name')
-            try:
-                optics = self.get_optics(old)
-            except KeyError:
-                raise EditError("No optics named %r in the layout." % (old,))
+            target = self._resolve_target(old)
             if not isinstance(new, str) or not new.strip():
-                raise EditError('An optics name must be a non-empty string, '
+                raise EditError('A name must be a non-empty string, '
                                 'not %r.' % (new,))
-            if new != old and any(o.name == new for o in self.optics):
-                raise EditError("An optics named '%s' is already registered."
-                                % new)
+            if new != old:
+                try:
+                    self._check_name_free(new)
+                except ValueError as e:
+                    raise EditError(str(e))
             # Nothing else is keyed by the name: the per-optics tracing
             # settings live on the optics itself, so they travel with it.
-            optics.name = new
+            target.name = new
+            if isinstance(target, Dimension):
+                return self
 
         elif op in ('align', 'slide'):
             name = msg.get('target')
@@ -827,6 +1221,15 @@ class OpticalLayout(object):
                 self._slide_along_beam(optics, msg)
 
         elif op == 'add':
+            if msg.get('type') == DIMENSION_TYPE:
+                dim = self._dimension_from_message(msg)
+                try:
+                    self.add_dimension(dim)
+                except ValueError as e:
+                    raise EditError(str(e))
+                # A dimension is a note on the layout, not a part of it:
+                # nothing about the trace has changed.
+                return self
             optics = self._optics_from_message(msg)
             try:
                 self.add_optics(optics)
@@ -835,6 +1238,9 @@ class OpticalLayout(object):
 
         elif op == 'remove':
             name = msg.get('target')
+            if self._is_dimension(name):
+                self.remove_dimension(name)
+                return self
             try:
                 self.remove_optics(name)
             except KeyError:
@@ -888,6 +1294,82 @@ class OpticalLayout(object):
         self.beams = None
         self.beams_by_source = None
         return self
+
+    def _is_dimension(self, name):
+        '''
+        Whether a target name belongs to a registered dimension.
+        '''
+        return any(d.name == name for d in self.dimensions)
+
+    def _resolve_target(self, name):
+        '''
+        The optics or dimension a message names.
+
+        The two share a namespace, so a message can say 'remove D1' or
+        'remove M1' without also having to say which kind of thing it
+        is: a front end has a name under the cursor, not a class.
+        '''
+        for m in self.optics:
+            if m.name == name:
+                return m
+        for d in self.dimensions:
+            if d.name == name:
+                return d
+        raise EditError('Nothing named %r in the layout.' % (name,))
+
+    def _set_dimension_attrs(self, dim, attrs):
+        '''
+        Move the ends of a dimension, or the line drawn between them.
+        '''
+        for key, value in attrs.items():
+            if key not in EDITABLE_DIMENSION_ATTRS:
+                raise EditError('%r is not an editable attribute of a '
+                                'dimension.' % (key,))
+        ends = {'p1': np.asarray(dim.p1, dtype='float64'),
+                'p2': np.asarray(dim.p2, dtype='float64')}
+        for key, value in attrs.items():
+            if key in _DIMENSION_POINTS:
+                ends[key] = _as_point(value, key)
+        if np.array_equal(ends['p1'], ends['p2']):
+            raise EditError('A dimension needs two different ends; both '
+                            'would be at %s.'
+                            % ([float(x) for x in ends['p1']],))
+        offset = (_as_distance(attrs['offset'], 'offset')
+                  if 'offset' in attrs else dim.offset)
+        dim.p1 = ends['p1']
+        dim.p2 = ends['p2']
+        dim.offset = offset
+
+    def _dimension_from_message(self, msg):
+        '''
+        Build a Dimension from an 'add' message.
+        '''
+        params = msg.get('params') or {}
+        for key in params:
+            if key not in EDITABLE_DIMENSION_ATTRS:
+                raise EditError('%r is not a parameter of a dimension.'
+                                % (key,))
+        for key in ('p1', 'p2'):
+            if key not in params:
+                raise EditError("Adding a dimension needs both ends; %r is "
+                                "missing." % (key,))
+        p1 = _as_point(params['p1'], 'p1')
+        p2 = _as_point(params['p2'], 'p2')
+        if np.array_equal(p1, p2):
+            raise EditError('A dimension needs two different ends; both '
+                            'would be at %s.' % ([float(x) for x in p1],))
+        #Where the line goes is a drawing choice, and a line straight
+        #between the ends is a sound default for a caller with no view
+        #to place it against.
+        offset = _as_distance(params.get('offset', 0.0), 'offset')
+
+        name = msg.get('name')
+        if name is None:
+            name = self.unique_dimension_name()
+        if not isinstance(name, str) or not name.strip():
+            raise EditError('A dimension name must be a non-empty string, '
+                            'not %r.' % (name,))
+        return Dimension(p1, p2, name=name, offset=offset)
 
     def _beam_from_message(self, msg):
         '''
@@ -1190,12 +1672,56 @@ class OpticalLayout(object):
         scene = scene_to_dict(canvas, self.beams, self.optics,
                               display=self.resolve_draw_options(**kwargs))
         # Not part of the drawing, and not a property of any element:
-        # whether the front end's Undo has anything to work with. It
-        # travels with the scene because the scene is what a front end
-        # is handed after every edit, which is exactly when the answer
-        # can have changed.
+        # whether the front end's Undo and Redo have anything to work
+        # with. They travel with the scene because the scene is what a
+        # front end is handed after every edit, which is exactly when
+        # the answers can have changed.
         scene['can_undo'] = self.can_undo
+        scene['can_redo'] = self.can_redo
+        scene['dimensions'] = self.dimensions_dict()
+        scene['snap'] = self.snap_points()
         return scene
+
+    def dimensions_dict(self):
+        '''
+        The registered dimensions, each with what it comes to.
+
+        The measurement is worked out here rather than stored on the
+        dimension, so that moving the optics a span runs through cannot
+        leave a stale number behind: the answer is recomputed every time
+        the scene is built, which is after every edit.
+
+        Returns
+        -------
+        list of dict
+            The keys of dimension_to_dict, plus ``line`` - the two ends
+            of the dimension line itself, carried aside by the offset -
+            and ``length``, ``optical``, ``inside`` and ``n``. See
+            Dimension.measure.
+        '''
+        out = []
+        for dim in self.dimensions:
+            d = dimension_to_dict(dim)
+            a, b = dim.line_ends()
+            d['line'] = [[float(a[0]), float(a[1])],
+                         [float(b[0]), float(b[1])]]
+            d.update(dim.measure(self.optics))
+            out.append(d)
+        return out
+
+    def snap_points(self):
+        '''
+        The points of the optics a front end may snap a measurement to.
+
+        Beam ends are not here: the scene already carries the ends of
+        every beam literally, so a front end can offer those without
+        anything being worked out twice. See optic_snap_points for what
+        each optics contributes.
+        '''
+        points = []
+        for o in self.optics:
+            points.extend(optic_snap_points(o))
+        return points
 
 #}}}
 
@@ -1230,7 +1756,7 @@ class OpticalLayout(object):
                           title=title if title is not None else self.name,
                           scene=self.scene_dict(**kwargs))
 
-    def widget(self, title=None, height=520, editable=True,
+    def widget(self, height=520, editable=True,
                path='layout.json', **kwargs):
         '''
         Return a Jupyter widget showing this layout.
@@ -1254,8 +1780,6 @@ class OpticalLayout(object):
 
         Parameters
         ----------
-        title : str or None, optional
-            Title shown in the side bar. Defaults to the layout name.
         height : int, optional
             Height of the viewer in pixels. Defaults to 520.
         editable : bool, optional
@@ -1275,7 +1799,6 @@ class OpticalLayout(object):
         from gtrace.draw.viewer.widget import LayoutViewer
         return LayoutViewer(scene=self.scene_dict(**kwargs), layout=self,
                             draw_kwargs=kwargs,
-                            title=title if title is not None else self.name,
                             height=height, editable=editable,
                             layout_path=path)
 
@@ -1299,7 +1822,8 @@ class OpticalLayout(object):
             Whether to open the file in the default browser.
             Defaults to True. Ignored by the widget backend.
         title : str or None, optional
-            Title shown in the browser tab and in the viewer.
+            Title of the page, shown in the browser tab. Ignored by the
+            widget backend, which has no tab to name.
         backend : {'widget', 'html'} or None, optional
             Which front end to use. Defaults to None, which picks the
             widget inside a Jupyter kernel with anywidget installed and
@@ -1319,7 +1843,7 @@ class OpticalLayout(object):
                        else 'html')
 
         if backend == 'widget':
-            return self.widget(title=title, **kwargs)
+            return self.widget(**kwargs)
         if backend != 'html':
             raise ValueError("backend must be 'widget', 'html' or None, "
                              'not %r' % (backend,))
@@ -1342,13 +1866,14 @@ class OpticalLayout(object):
 
     def to_dict(self):
         '''
-        Convert the layout (optics, sources, rules and drawing options)
-        to a JSON-compatible dict. The trace result is not included;
-        it can be regenerated with trace().
+        Convert the layout (optics, sources, dimensions, rules and
+        drawing options) to a JSON-compatible dict. The trace result is
+        not included; it can be regenerated with trace().
         '''
         return {'name': str(self.name),
                 'optics': [optic_to_dict(m) for m in self.optics],
                 'sources': [source_to_dict(b) for b in self.sources],
+                'dimensions': [dimension_to_dict(d) for d in self.dimensions],
                 'rules': self.rules.to_dict(),
                 'draw_options': dict(self.draw_options)}
 
@@ -1365,6 +1890,10 @@ class OpticalLayout(object):
     def _from_dict_parts(cls, d):
         return cls(optics=[optic_from_dict(x) for x in d.get('optics', [])],
                    sources=[source_from_dict(x) for x in d.get('sources', [])],
+                   #Absent from a file written before dimensions existed,
+                   #which is a layout with no measurements noted on it.
+                   dimensions=[dimension_from_dict(x)
+                               for x in d.get('dimensions', [])],
                    rules=TraceRules.from_dict(d.get('rules', {})),
                    name=d.get('name', 'Layout'))
 
@@ -1407,6 +1936,10 @@ class OpticalLayout(object):
                                      optic_from_dict, _update_optic)
         self.sources = _merge_by_name(self.sources, d.get('sources', []),
                                       source_from_dict, _update_source)
+        self.dimensions = _merge_by_name(self.dimensions,
+                                         d.get('dimensions', []),
+                                         dimension_from_dict,
+                                         _update_dimension)
         self.rules = TraceRules.from_dict(d.get('rules', {}))
         self.draw_options = dict(d.get('draw_options', {}))
         self.name = d.get('name', self.name)

@@ -179,12 +179,14 @@ emb = embedded_scene(html_file)
 check('the embedded scene parses', emb is not None)
 check('it has all the channels',
       set(emb.keys()) == {'canvas', 'beams', 'optics', 'display',
-                          'can_undo'},
+                          'can_undo', 'can_redo', 'dimensions', 'snap'},
       str(list(emb.keys())))
 # A written page has no Python behind it, so there is nothing it could
 # undo and no button offering to.
 check('a static page reports no history', emb['can_undo'] is False,
       str(emb['can_undo']))
+check('nor anything to redo', emb['can_redo'] is False,
+      str(emb['can_redo']))
 check('and says how it was drawn',
       emb['display'].get('width_mode') == 'x'
       and emb['display'].get('sigma_main') == 2.7,

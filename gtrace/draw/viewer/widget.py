@@ -136,8 +136,6 @@ def _build_class():
         ----------
         scene : dict
             A scene dict as returned by serialize.scene_to_dict().
-        title : str
-            Title shown in the side bar.
         height : int
             Height of the viewer in pixels.
         '''
@@ -146,7 +144,6 @@ def _build_class():
         _css = viewer_css()
 
         scene = traitlets.Dict().tag(sync=True)
-        title = traitlets.Unicode('gtrace').tag(sync=True)
         height = traitlets.Int(520).tag(sync=True)
         #: Whether the front end may send edit messages back.
         editable = traitlets.Bool(True).tag(sync=True)

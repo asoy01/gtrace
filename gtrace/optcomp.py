@@ -60,6 +60,25 @@ __status__ = "Beta"
 
 #}}}
 
+#{{{ Probe ray
+
+class _ProbeRay(object):
+    '''
+    A bare ray to ask an optics where its surfaces are.
+
+    isHit() reads nothing but the origin and the direction of what it is
+    given, so asking it a question about geometry does not need a beam
+    with a q parameter, a power and a wavelength. Handing it a
+    GaussianBeam would mean inventing those, and they would be a
+    fiction: none of them takes part in the answer. verify_surfaces.py
+    holds isHit() to that, by asking it the same question both ways.
+    '''
+    def __init__(self, pos, dirVect):
+        self.pos = np.array(pos, dtype='float64')
+        self.dirVect = np.array(dirVect, dtype='float64')
+
+#}}}
+
 #{{{ Generic Optics Class
 
 class Optics(HasTraits):
@@ -173,6 +192,160 @@ class Optics(HasTraits):
         '''
         #This is an abstract function
         return {False, {}, "side"}  # Is this a bug? Shouldn't it be a tuple?
+
+#}}}
+
+#{{{ get_corners(), contains_segment()
+
+    def get_corners(self):
+        '''
+        The corners of the substrate, going around it.
+
+        Where get_side_info() describes the two sides as centre, normal
+        and length - which is what hit testing needs - this gives the
+        points themselves, which is what anything pointing at the
+        element needs: a front end snapping a measurement to a corner,
+        or a drawing that wants the outline.
+
+        The corners sit on the chord planes of the two faces, not on the
+        faces themselves: a curved face leaves its apex a sagitta away
+        from the line joining its two corners.
+
+        Returns
+        -------
+        list of numpy.ndarray
+            Four points of shape (2,), starting at one end of the front
+            face and going round the substrate.
+        '''
+        #This is an abstract function
+        return []
+
+    def contains_segment(self, p1, p2, rtol=1e-9):
+        '''
+        Whether the straight segment from p1 to p2 lies wholly inside
+        this substrate.
+
+        A point is measured against the same surfaces the tracer hits,
+        so the answer agrees with what a beam would do. isHit() reports
+        a surface only when it is approached from outside - it rejects
+        any face the ray is leaving through - and that is what makes
+        this simple: from inside the substrate, isHit() finds nothing at
+        all, and an entry found partway along the segment means the
+        segment starts outside.
+
+        Endpoints exactly on a face count as inside, since that is where
+        a measurement is usually taken from: the optical thickness of a
+        substrate is measured between the apexes of its two faces.
+
+        Parameters
+        ----------
+        p1, p2 : array_like
+            The ends of the segment, in global coordinates.
+        rtol : float, optional
+            How close to an end an entry may be found and still be read
+            as that end sitting on the face, relative to the length of
+            the segment. Defaults 1e-9.
+
+        Returns
+        -------
+        bool
+        '''
+        p1 = np.array(p1, dtype='float64')
+        p2 = np.array(p2, dtype='float64')
+        seg = p2 - p1
+        L = np.linalg.norm(seg)
+        if L == 0.0:
+            return False
+        dirVect = seg / L
+        tol = rtol * L
+
+        #An entry found between the ends means the segment crosses into
+        #the substrate rather than running inside it. Both ends are
+        #asked, because isHit() only ever looks forward, and an entry
+        #right at an end is the end sitting on the face.
+        for pos, d in ((p1, dirVect), (p2, -dirVect)):
+            ans = self.isHit(_ProbeRay(pos, d))
+            if ans['isHit'] and tol < ans['distance'] < L - tol:
+                return False
+
+        #No crossing in between leaves two cases apart: the segment runs
+        #inside the substrate, or it misses it entirely. One interior
+        #point settles it, and the midpoint is as good as any: a segment
+        #that wandered out of the substrate and back would have to come
+        #back in through a face, and the entry would have been found
+        #above.
+        #
+        #The point is not asked along the segment: a segment drawn
+        #corner to corner runs along the chord of a face, where the line
+        #meets the sides exactly at their ends and the answer turns on
+        #which way a tangent rounds. Asking along the front face normal
+        #instead puts the question where the faces are square to it.
+        return self.contains_point(p1 + seg / 2, rtol=rtol)
+
+    def contains_point(self, point, dirVect=None, rtol=1e-9):
+        '''
+        Whether a point lies inside this substrate.
+
+        Three questions, all put to isHit(), which reports a surface
+        only when it is approached from outside:
+
+        - looking one way from the point, is a surface entered?
+        - looking the other way, is one entered?
+        - coming from well outside, does the substrate begin before the
+          point is reached?
+
+        From inside the substrate the first two find nothing: every face
+        is one the ray is leaving through. Either of them finding
+        something places the point outside - including the awkward case
+        of a point in the hollow of a concave face, which is enclosed by
+        the substrate on three sides and would fool any test that only
+        asked how far the material reaches. The third question is what
+        separates a point inside from one out in the open, where nothing
+        is entered either.
+
+        A point on a face counts as inside, to within rtol of the reach
+        of the probes.
+
+        Parameters
+        ----------
+        point : array_like
+            The point, in global coordinates.
+        dirVect : array_like, optional
+            The line to look along. Defaults to the front face normal.
+        rtol : float, optional
+            Tolerance, relative to the reach of the probes. Defaults
+            1e-9.
+
+        Returns
+        -------
+        bool
+        '''
+        point = np.array(point, dtype='float64')
+        if dirVect is None:
+            dirVect = np.array(self.normVectHR, dtype='float64')
+        else:
+            dirVect = np.array(dirVect, dtype='float64')
+            dirVect = dirVect / np.linalg.norm(dirVect)
+
+        reach = self._probe_reach(point)
+        tol = rtol * reach
+        for e in (dirVect, -dirVect):
+            ans = self.isHit(_ProbeRay(point, e))
+            if ans['isHit'] and ans['distance'] > tol:
+                return False
+        ahead = self.isHit(_ProbeRay(point - dirVect * reach, dirVect))
+        return bool(ahead['isHit']) and ahead['distance'] <= reach + tol
+
+    def _probe_reach(self, point):
+        '''
+        A distance that starts a probe ray outside this substrate,
+        whatever direction it comes from.
+        '''
+        centre = np.array(self.center, dtype='float64')
+        radius = np.hypot(getattr(self, 'diameter', 0.0) / 2,
+                          getattr(self, 'thickness', 0.0) / 2)
+        return 2 * radius + np.linalg.norm(np.array(point,
+                                                    dtype='float64') - centre)
 
 #}}}
 
@@ -488,6 +661,34 @@ class Mirror(Optics):
         length2 = np.linalg.norm(v2h - v2a)
 
         return [(center1, normVect1, length1), (center2, normVect2, length2)]
+
+#}}}
+
+#{{{ get_corners
+
+    def get_corners(self):
+        '''
+        The four corners of the substrate: the two ends of the HR chord
+        first, then the two ends of the AR chord, going round.
+
+        The wedge is in here - it is what makes the two sides different
+        lengths - and so is the fact that a curved face meets the sides
+        at its chord rather than at its apex.
+
+        Returns
+        -------
+        list of numpy.ndarray
+            Four points of shape (2,): HR left, HR right, AR right,
+            AR left, where left and right are across the front face.
+        '''
+        plVect = optics.geometric.vector_rotation_2D(self.normVectHR, pi/2)
+        p1 = self.HRcenterC + plVect * self.diameter/2
+        p2 = p1 - plVect * self.diameter
+        p3 = p2 - self.normVectHR * (self.thickness
+                                     - np.tan(self.wedgeAngle)*self.diameter/2)
+        p4 = p1 - self.normVectHR * (self.thickness
+                                     + np.tan(self.wedgeAngle)*self.diameter/2)
+        return [p1, p2, p3, p4]
 
 
 
@@ -1786,6 +1987,35 @@ class CyMirror(Mirror):
 
 
         return [(center1, normVect1, length1), (center2, normVect2, length2)]
+
+#}}}
+
+#{{{ get_corners
+
+    def get_corners(self):
+        '''
+        The four corners of the substrate. See Mirror.get_corners.
+
+        A cylinder curved across the plane of the drawing has no
+        curvature in it, so its faces meet the sides at their apexes and
+        the substrate is that much thicker in section. That is the same
+        distinction get_side_info() makes, and for the same reason.
+        '''
+        if self.curve_direction == 'v':
+            center_of_HR = self.HRcenter
+            thickness = self.thickness + self.sagHR + self.sagAR
+        else:
+            center_of_HR = self.HRcenterC
+            thickness = self.thickness
+
+        plVect = optics.geometric.vector_rotation_2D(self.normVectHR, pi/2)
+        p1 = center_of_HR + plVect * self.diameter/2
+        p2 = p1 - plVect * self.diameter
+        p3 = p2 - self.normVectHR * (thickness
+                                     - np.tan(self.wedgeAngle)*self.diameter/2)
+        p4 = p1 - self.normVectHR * (thickness
+                                     + np.tan(self.wedgeAngle)*self.diameter/2)
+        return [p1, p2, p3, p4]
 
 
 

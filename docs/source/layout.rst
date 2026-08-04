@@ -141,7 +141,7 @@ The viewer changes a layout by sending it messages, which you can also send your
     layout.apply_edit({'op': 'set', 'target': 'PRM',
                        'attrs': {'diameter': 0.15}})
 
-The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load`` and ``undo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
+The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load``, ``undo`` and ``redo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
 
 A ``set`` may carry several attributes at once, and they are not applied in the order the message happens to list them: the anchor goes on before the curvatures it governs, and the orientation before the position that is measured from it. A message is a JSON object, whose key order is not something to rest on.
 
@@ -166,19 +166,67 @@ An attribute on the whitelist may still be one the target does not have, or one 
 
 Renaming has its own operation rather than being an editable attribute, because the name is the identity that edits are resolved by; changing it needs a uniqueness check.
 
-Two operations deliberately do *not* invalidate the trace result: ``draw`` changes display settings and ``save`` writes a file. Neither changes the physics, so neither causes a re-trace.
+Two operations deliberately do *not* invalidate the trace result: ``draw`` changes display settings and ``save`` writes a file. Neither changes the physics, so neither causes a re-trace. Nor does anything done to a dimension, for the same reason.
 
-Undo
------
+.. _dimensions:
 
-Every edit that goes through ``apply_edit`` keeps the state before it, so it can be taken back:
+Dimensions
+-----------
+
+A :py:class:`Dimension<gtrace.layout.Dimension>` is a distance measured between two points of the layout, kept as a note on it:
+
+.. code-block:: python
+
+    layout.apply_edit({'op': 'add', 'type': 'Dimension', 'name': 'D1',
+                       'params': {'p1': list(M1.HRcenter),
+                                  'p2': list(M1.ARcenter),
+                                  'offset': 0.17}})
+    layout.get_dimension('D1').length          # in metres
+
+Dimensions are registered on the layout beside the optics, saved with it, and taken back by undo like anything else. They share one namespace with the optics, so ``remove``, ``rename`` and ``set`` resolve their target across both — a front end has a name under the cursor, not a class. ``move`` and ``rotate`` do not apply: a dimension is two points rather than a body, and either end moves on its own::
+
+    layout.apply_edit({'op': 'set', 'target': 'D1',
+                       'attrs': {'p2': [0.6, 0.0]}})
+
+``offset`` is where the dimension *line* is drawn, in metres, positive to the left of the direction from ``p1`` to ``p2``; :py:meth:`line_ends<gtrace.layout.Dimension.line_ends>` gives the two ends it lands on. It is a choice about the drawing rather than about the measurement: what a bench wants measured usually runs along a beam or through an element, which is exactly where a line drawn on top of it cannot be read. **It changes nothing about what is measured** — the span is still between ``p1`` and ``p2``, and so is the length and the test below.
+
+**A dimension does not hold on to the element a point was taken from.** An element that then moves leaves the measurement where it was made, which is what a note should do; measuring the same thing again after a change means drawing it again.
+
+What a dimension comes to is worked out afresh every time the scene is built, never stored, so it cannot go stale:
+
+.. code-block:: python
+
+    layout.get_dimension('D1').measure(layout.optics)
+    # {'length': 0.0935, 'optical': 0.1355, 'inside': 'M1', 'n': 1.45}
+
+``optical`` is reported **only when the whole span runs inside one substrate**, where it is the physical distance times the refractive index — the optical thickness of a substrate is the measurement this answers. A span that crosses in and out of glass has an optical length too, but it is not a dimension of anything: it depends on where the ends happen to fall, so it is left out rather than written next to a number it would be mistaken for.
+
+The question behind that is :py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>`, which asks the optics itself rather than describing its faces a second time. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when it is approached from outside, so from inside a substrate it finds nothing at all — and that is the whole of the test. Ends lying exactly on a face count as inside, since that is where such a measurement is usually taken from.
+
+Scene channels for a front end
+-------------------------------
+
+:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds four entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, and ``snap`` — the points of the optics a front end may snap a measurement to.
+
+Each dimension carries a ``line``, the two ends its line lands on once the offset is applied, so that only one place has an opinion about which side the offset goes.
+
+``snap`` carries the four corners of each substrate, the apex of each face and the middle. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
+
+Undo and redo
+--------------
+
+Every edit that goes through ``apply_edit`` keeps the state before it, so it can be taken back — and the state an undo steps out of is kept in turn, so it can be put back:
 
 .. code-block:: python
 
     layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
     layout.can_undo             # True
     layout.undo()               # or apply_edit({'op': 'undo'})
+    layout.can_redo             # True
+    layout.redo()               # or apply_edit({'op': 'redo'})
 
-The history lives on the layout rather than in a front end, so undo means the same thing however the edit arrived. It goes back ``UNDO_DEPTH`` edits; there is no redo. A refused edit changes nothing and costs no step, and neither does ``save``, which only writes a file.
+The history lives on the layout rather than in a front end, so undo means the same thing however the edit arrived. It goes back ``UNDO_DEPTH`` edits, and the redo side is bounded by the same number since only undoing fills it. A refused edit changes nothing and costs no step, and neither does ``save``, which only writes a file.
+
+**An edit that goes through discards whatever is waiting to be redone.** Once the layout has taken a different turn, the branch that was stepped out of is no longer somewhere to return to: the states put aside describe elements the new edit may have renamed, removed or moved on from.
 
 A step holds the registered elements themselves alongside their serialized values, and restoring one puts those values back onto those same objects — through a rename, and through a removal, since an element taken out of the layout is held in the history and put back as itself. See :py:meth:`undo<gtrace.layout.OpticalLayout.undo>` for what that does *not* cover.

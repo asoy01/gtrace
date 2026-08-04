@@ -27,6 +27,8 @@ SUITES = [
      'where the two faces of a substrate are, against an independent arc'),
     ('verify_lens.py',
      'Lens: the focal length ordered, measured by tracing a ray through it'),
+    ('verify_dimensions.py',
+     'substrate corners, what a span runs inside, and the dimension model'),
     ('verify_stage1.py',
      'renderHTML: self-containment, the embedded scene, every entry point'),
     ('verify_stage1.js',
@@ -45,6 +47,8 @@ SUITES = [
      'headless browser: dragging an optics, and what Python makes of it'),
     ('verify_props_browser.py',
      'headless browser: the properties panel, the controls, add and remove'),
+    ('verify_measure_browser.py',
+     'headless browser: the measuring tool, snapping and the dimension panel'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in

@@ -948,6 +948,143 @@ for i in range(UNDO_DEPTH):
     layout.apply_edit({'op': 'undo'})
 check('and undoes exactly that many times', not layout.can_undo)
 
+print('--- redo ---')
+layout, (M1, M2, M3) = make_layout()
+check('a fresh layout has nothing to redo', not layout.can_redo)
+check('and the scene says so', layout.scene_dict()['can_redo'] is False)
+refused({'op': 'redo'}, 'a redo with nothing ahead of it')
+
+# Editing fills the undo side only. Redo is fed by undoing, never by
+# doing: there is nothing ahead of an edit just made.
+layout.apply_edit({'op': 'set', 'target': 'M1', 'attrs': {'diameter': 0.2}})
+check('an edit gives it nothing to redo', not layout.can_redo)
+refused({'op': 'redo'}, 'a redo straight after an edit')
+
+layout.apply_edit({'op': 'undo'})
+check('undoing does', layout.can_redo)
+check('which the scene reports', layout.scene_dict()['can_redo'] is True)
+check('and it stepped back', abs(float(M1.diameter) - 0.1) < 1e-15,
+      str(float(M1.diameter)))
+layout.trace()
+layout.apply_edit({'op': 'redo'})
+check('redoing puts the edit back exactly',
+      abs(float(M1.diameter) - 0.2) < 1e-15, str(float(M1.diameter)))
+check('on the same object', layout.get_optics('M1') is M1)
+check('the trace was invalidated', layout.beams is None)
+check('with nothing left ahead of it', not layout.can_redo)
+check('and the edit back within reach of undo', layout.can_undo)
+
+# Several steps, walked back and then forward again one at a time.
+layout, (M1, M2, M3) = make_layout()
+for d in (0.2, 0.3, 0.4):
+    layout.apply_edit({'op': 'set', 'target': 'M1', 'attrs': {'diameter': d}})
+for i in range(3):
+    layout.apply_edit({'op': 'undo'})
+check('three undos reach the start', abs(float(M1.diameter) - 0.1) < 1e-15,
+      str(float(M1.diameter)))
+layout.apply_edit({'op': 'redo'})
+check('redo walks forward one edit at a time',
+      abs(float(M1.diameter) - 0.2) < 1e-15, str(float(M1.diameter)))
+layout.apply_edit({'op': 'redo'})
+layout.apply_edit({'op': 'redo'})
+check('all the way to where it left off',
+      abs(float(M1.diameter) - 0.4) < 1e-15, str(float(M1.diameter)))
+refused({'op': 'redo'}, 'a redo past the last edit')
+
+# The turn that was not taken is not somewhere to return to: the states
+# put aside describe elements the new edit may have moved on from.
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'undo'})
+check('there is a branch to come back to', layout.can_redo)
+layout.apply_edit({'op': 'set', 'target': 'M1', 'attrs': {'diameter': 0.7}})
+check('a new edit discards it', not layout.can_redo)
+check('and the scene reports that too',
+      layout.scene_dict()['can_redo'] is False)
+refused({'op': 'redo'}, 'a redo after the layout took another turn')
+
+# A refused edit is not a turn taken, and saving is not a change of
+# mind: neither may cost the branch.
+layout.apply_edit({'op': 'undo'})
+refused({'op': 'set', 'target': 'M1', 'attrs': {'nonsense': 1}},
+        'an unknown attribute')
+check('a refused edit leaves the redo side alone', layout.can_redo)
+layout.apply_edit({'op': 'save',
+                   'path': os.path.join(OUT, 'redo_save.json')})
+check('nor does saving', layout.can_redo)
+check('so redo still reaches it',
+      layout.apply_edit({'op': 'redo'}) is layout
+      and abs(float(M1.diameter) - 0.7) < 1e-15, str(float(M1.diameter)))
+
+# What is registered, rather than a number on it. Redo restores as
+# exactly as undo does, holding the elements themselves.
+layout, (M1, M2, M3) = make_layout()
+n0 = len(layout.optics)
+layout.apply_edit({'op': 'add', 'type': 'Lens', 'name': 'L1',
+                   'params': {'HRcenter': [0.2, 0.2]}})
+added = layout.get_optics('L1')
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'redo'})
+check('redoing an add puts the optics back',
+      len(layout.optics) == n0 + 1 and 'L1' in [o.name for o in layout.optics],
+      str([o.name for o in layout.optics]))
+check('as the very object that was added',
+      layout.get_optics('L1') is added)
+
+layout.apply_edit({'op': 'remove', 'target': 'M2'})
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'redo'})
+check('redoing a remove takes it away again',
+      'M2' not in [o.name for o in layout.optics],
+      str([o.name for o in layout.optics]))
+
+layout.apply_edit({'op': 'rename', 'target': 'M1', 'name': 'PRM'})
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'redo'})
+check('redoing a rename gives the name back to the same object',
+      M1.name == 'PRM' and layout.get_optics('PRM') is M1, str(M1.name))
+
+layout.apply_edit({'op': 'rules', 'rules': {'order': 9}})
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'redo'})
+check('the tracing rules are redone too', layout.rules.order == 9,
+      str(layout.rules.order))
+layout.apply_edit({'op': 'draw', 'params': {'width_mode': 'y'}})
+layout.apply_edit({'op': 'undo'})
+layout.apply_edit({'op': 'redo'})
+check('and so are the drawing options',
+      layout.draw_options.get('width_mode') == 'y', str(layout.draw_options))
+
+# Stepping back and forth over the same edit repeatedly must settle, not
+# accumulate: each move consumes one side and feeds the other.
+layout, (M1, M2, M3) = make_layout()
+layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
+for i in range(5):
+    layout.apply_edit({'op': 'undo'})
+    layout.apply_edit({'op': 'redo'})
+check('stepping back and forth does not pile up',
+      len(layout._history) == 1 and len(layout._future) == 0,
+      '(%d, %d)' % (len(layout._history), len(layout._future)))
+check('and leaves the edit applied',
+      np.allclose(np.asarray(M1.HRcenter, dtype=float), [0.8, 0.3]),
+      str(list(np.asarray(M1.HRcenter, dtype=float))))
+
+# The redo side is filled by undoing, so the same bound holds it.
+layout, (M1, M2, M3) = make_layout()
+for i in range(UNDO_DEPTH + 20):
+    layout.apply_edit({'op': 'set', 'target': 'M1',
+                       'attrs': {'diameter': 0.1 + i*0.001}})
+for i in range(UNDO_DEPTH):
+    layout.apply_edit({'op': 'undo'})
+check('the redo side is bounded as well',
+      len(layout._future) == UNDO_DEPTH,
+      '(%d, bound is %d)' % (len(layout._future), UNDO_DEPTH))
+for i in range(UNDO_DEPTH):
+    layout.apply_edit({'op': 'redo'})
+check('and redoes exactly that many times', not layout.can_redo)
+check('ending where the edits had left it',
+      abs(float(M1.diameter) - (0.1 + (UNDO_DEPTH + 19)*0.001)) < 1e-15,
+      str(float(M1.diameter)))
+
 layout, M1, M2, M3 = _borrowed
 
 print('--- apply_edit: what is refused ---')
@@ -1156,7 +1293,7 @@ check('an edit is refused',
       ro.apply_edit({'op': 'move', 'target': 'M1', 'center': [1, 1]}) is False)
 check('and reported', 'read-only' in ro.error, ro.error)
 
-detached = wmod.LayoutViewer(scene=layout.scene_dict(), title='detached')
+detached = wmod.LayoutViewer(scene=layout.scene_dict())
 check('a layout-less widget is not editable', not detached.editable)
 
 print('--- data for the browser check ---')

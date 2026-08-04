@@ -287,6 +287,13 @@ def scene_to_dict(canvas, beamList=None, opticsList=None, display=None):
     the canvas was drawn - the envelope width and which transverse
     direction it shows - so that its controls can show the choice in
     force rather than guessing.
+
+    OpticalLayout.scene_dict adds channels of its own on top of these -
+    the dimensions noted on the layout, the points a measurement may
+    snap to, and whether undo and redo have anything to work with. They
+    are added there rather than here because they belong to the layout
+    rather than to a drawing: a canvas and a list of beams, which is all
+    this function is given, know nothing of them.
     '''
     return {'canvas': canvas_to_dict(canvas),
             'beams': beams_to_dict(beamList) if beamList is not None else [],

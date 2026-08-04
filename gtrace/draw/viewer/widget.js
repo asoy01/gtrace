@@ -26,7 +26,6 @@ function render({ model, el }) {
         : null;
 
     const viewer = globalThis.GTraceViewer.mount(host, model.get('scene'), {
-        title: model.get('title'),
         layoutPath: model.get('layout_path'),
         onEdit: onEdit
     });
@@ -35,10 +34,6 @@ function render({ model, el }) {
     // the current zoom, pan and layer visibility so that a re-trace does
     // not throw away where the user was looking.
     const onScene = () => viewer.setScene(model.get('scene'));
-    const onTitle = () => {
-        const t = el.querySelector('.gt-title');
-        if (t) { t.textContent = model.get('title'); }
-    };
     const onHeight = () => {
         host.style.height = (model.get('height') || 520) + 'px';
         viewer.fit();
@@ -72,7 +67,6 @@ function render({ model, el }) {
     };
 
     model.on('change:scene', onScene);
-    model.on('change:title', onTitle);
     model.on('change:height', onHeight);
     model.on('change:error', onError);
     model.on('change:notice', onNotice);
@@ -84,7 +78,6 @@ function render({ model, el }) {
 
     return () => {
         model.off('change:scene', onScene);
-        model.off('change:title', onTitle);
         model.off('change:height', onHeight);
         model.off('change:error', onError);
         model.off('change:notice', onNotice);

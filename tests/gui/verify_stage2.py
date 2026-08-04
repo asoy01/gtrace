@@ -75,7 +75,9 @@ with open(os.path.join(OUT, 'stage2_widget.mjs'), 'w', encoding='utf-8') as f:
 print('--- widget construction ---')
 w = layout.widget()
 check('widget created', w is not None, type(w).__name__)
-check('title defaults to the layout name', w.title == 'Stage 2 layout', w.title)
+# The side bar has no heading, so the widget carries no title: a
+# traitlet that changed nothing on screen would be a trap.
+check('the widget has no title to set', not hasattr(w, 'title'))
 check('height default', w.height == 520, str(w.height))
 check('_esm set on the class', len(w._esm) > 1000, '(%d chars)' % len(w._esm))
 check('_css set on the class', len(w._css) > 500, '(%d chars)' % len(w._css))
@@ -83,7 +85,7 @@ check('_css set on the class', len(w._css) > 500, '(%d chars)' % len(w._css))
 scene = w.scene
 check('scene has the expected keys',
       set(scene.keys()) == {'canvas', 'beams', 'optics', 'display',
-                            'can_undo'},
+                            'can_undo', 'can_redo', 'dimensions', 'snap'},
       str(list(scene.keys())))
 check('scene carries the beams', len(scene['beams']) == len(layout.beams),
       '(%d)' % len(scene['beams']))
@@ -128,7 +130,7 @@ check('update() forwards draw kwargs',
 w.update()
 
 print('--- widget without a layout ---')
-detached = wmod.LayoutViewer(scene=layout.scene_dict(), title='detached')
+detached = wmod.LayoutViewer(scene=layout.scene_dict())
 try:
     detached.update()
     raised = False

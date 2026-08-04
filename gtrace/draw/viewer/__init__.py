@@ -145,8 +145,8 @@ def renderHTML(canvas, beams=None, filename='gtrace.html', title=None,
     filename : str, optional
         Name of the HTML file to write. Defaults to 'gtrace.html'.
     title : str or None, optional
-        Title shown in the browser tab and in the viewer side bar.
-        Defaults to the base name of filename.
+        Title of the page, shown in the browser tab. Defaults to the
+        base name of filename.
     optics : list of Optics or None, optional
         The optics of the system. Without them the viewer draws the
         elements but cannot say which is which, so clicking one shows
@@ -171,7 +171,6 @@ def renderHTML(canvas, beams=None, filename='gtrace.html', title=None,
     # The scene is substituted last: it is the only payload whose content
     # is arbitrary user data, so no placeholder can survive inside it.
     html = viewer_template()
-    html = html.replace('__GTRACE_TITLE_JSON__', _js_literal(title))
     html = html.replace('<!--__GTRACE_TITLE_HTML__-->', _escape_html(title))
     html = html.replace('/*__GTRACE_CSS__*/', viewer_css())
     html = html.replace('/*__GTRACE_VIEWER_JS__*/', viewer_js())

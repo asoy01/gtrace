@@ -65,6 +65,21 @@ Either way the rest of the substrate follows: the far face, the sides and the ce
 
 Changing ``diameter`` goes through the same machinery, since the sagitta depends on the aperture as well as on the radius. Changing ``inv_ROC_AR`` never moves the substrate at all: the back face has no spot to keep still, so its chord plane stays and only its apex moves.
 
+Asking where the substrate is
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Two methods answer questions about the body itself rather than about a beam meeting it.
+
+:py:meth:`get_corners<gtrace.optcomp.Mirror.get_corners>` gives the four corners, going round: the two ends of the HR chord, then the two ends of the AR chord. The wedge is in them — it is what makes the two sides different lengths — and so is the fact that a curved face meets the sides at its chord rather than at its apex. Where :py:meth:`get_side_info<gtrace.optcomp.Mirror.get_side_info>` describes the sides as centre, normal and length, which is what hit testing needs, this gives the points, which is what anything pointing at the element needs.
+
+:py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` says whether a straight span lies wholly inside the substrate::
+
+    M.contains_segment(M.HRcenter, M.ARcenter)      # True: the optical thickness
+
+It asks the optics rather than describing its faces a second time. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when it is approached from *outside* — it refuses any face the ray is leaving through — so from inside a substrate it finds nothing at all, in any direction, and that is the whole of the test. A face found partway along the span means the span starts outside; ends lying exactly on a face count as inside, since that is where such a measurement is usually taken from.
+
+The hollow of a concave face is the case to keep in mind. It is enclosed by the substrate on three sides, and a test that only asked how far the material reaches along a line would call it inside. It is not: it is air, and a span across the front of a concave mirror is a span through air. That is why :py:meth:`contains_point<gtrace.optcomp.Optics.contains_point>` looks *both* ways from the point before deciding.
+
 Lens
 -----------
 

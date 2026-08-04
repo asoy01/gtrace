@@ -30,11 +30,6 @@ The viewer has two front ends, and they do not cost the same:
 | self-contained HTML — `render_html()`, `show(backend='html')` | nothing beyond gtrace and a web browser |
 | Jupyter widget — `widget()`, or `show()` inside a notebook | `anywidget` (≥ 0.9), which brings `ipywidgets` with it, and a Jupyter front end |
 
-Neither route involves Node.js, a build step, a CDN or any network
-access: the viewer's JavaScript and CSS ship inside the package and are
-inlined into the page it writes. No CAD software either — not needing it
-is rather the point.
-
 `show()` picks the widget when it finds itself in a Jupyter kernel with
 anywidget installed, and writes the HTML file otherwise, so the same code
 works both ways. Without anywidget the widget raises `WidgetNotAvailable`
@@ -112,13 +107,19 @@ in x and y.
 
 In a Jupyter notebook it renders in the cell output and can be edited:
 drag an element to move it, shift-drag to rotate it, click it to edit its
-properties. The layout holds your objects by reference, so a mirror you
-move in the browser is the object your own code named, and the trace and
-the drawing follow.
+properties, and take back what you did not mean. The layout holds your
+objects by reference, so a mirror you move in the browser is the object
+your own code named, and the trace and the drawing follow.
+
+`Measure` takes a dimension off the drawing: click the two points, then
+place the line. The ends snap to the corners and faces of the elements
+and to the ends of the beams, and where the whole span runs inside a
+substrate the optical distance is written alongside the physical one.
+Dimensions are kept with the layout and saved with it.
 
 Outside a notebook it writes one self-contained HTML file — no server,
-no CDN, nothing to install — which you can send to a collaborator as it
-stands:
+nothing to install — which you can send to a collaborator, who can read
+the beam parameters off it and take dimensions on it:
 
 ```python
 layout.render_html('trace.html')

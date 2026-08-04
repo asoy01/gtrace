@@ -173,15 +173,40 @@ var LENS = __LENS__;
                 });
             return found;
         }
+        // Which row each button is on. The two kinds are kept apart on
+        // purpose, so that which row a button lands on does not depend
+        // on how wide the panel happens to be.
+        out.headRows = Array.prototype.map.call(
+            el.querySelectorAll('.gt-head .gt-btnrow'),
+            function (r) {
+                return Array.prototype.map.call(
+                    r.querySelectorAll('button'),
+                    function (b) { return b.textContent; });
+            });
+        // The head is buttons and nothing else: the layout is labelled
+        // by the cell that made it, or by the browser tab.
+        out.headHasTitle = !!el.querySelector('.gt-title');
+        out.headChildren = Array.prototype.map.call(
+            el.querySelector('.gt-head').children,
+            function (c) { return c.className; });
+
         out.addButton = !!button('+ Mirror');
         out.addCyButton = !!button('+ CyMirror');
         out.addLensButton = !!button('+ Lens');
-        out.removeButton = !!button('Remove');
+        // Scoped to the optics panel. The dimension panel builds one of
+        // its own whether or not there is anywhere to send edits, since
+        // a viewer with no Python behind it can still take back a
+        // measurement it drew itself.
+        out.removeButton = !!v.opticBody.querySelector('.gt-btn-danger');
         out.undoButton = button('Undo') ? {
             // The scene handed over has no history behind it, so the
             // button has to start out of reach.
             disabled: button('Undo').disabled,
             sceneSays: v.scene.can_undo
+        } : null;
+        out.redoButton = button('Redo') ? {
+            disabled: button('Redo').disabled,
+            sceneSays: v.scene.can_redo
         } : null;
         out.saveButton = !!button('Save');
         out.loadButton = !!button('Load');
@@ -205,8 +230,10 @@ var LENS = __LENS__;
             v.outline.classList.contains('gt-selected')
             || v.outline.style.display !== 'none';
         out.m1 = m1;
+        // Scoped to the optics panel: the dimension panel is styled the
+        // same way and has a heading of its own.
         out.groupHeadings = Array.prototype.map.call(
-            el.querySelectorAll('.gt-props .gt-group'),
+            v.opticBody.querySelectorAll('.gt-group'),
             function (g) { return g.textContent; });
         out.curveRowShown = rowShown('curve_direction');
         // Recorded before any edit, so that the starting state of the
@@ -662,6 +689,41 @@ var LENS = __LENS__;
             noHistory.can_undo = false;
             model.set('scene', noHistory);
             out.undo.disabledAgain = button('Undo').disabled;
+
+            // --- redo ---
+            // The same shape as undo, driven by its own flag: the two
+            // are independent, and a scene can offer either, both or
+            // neither.
+            var nRedo = sent.length;
+            button('Redo').click();
+            out.redo = {sentWhileEmpty: sent.length - nRedo};
+            var withFuture = JSON.parse(JSON.stringify(v.scene));
+            withFuture.can_redo = true;
+            model.set('scene', withFuture);
+            out.redo.enabled = !button('Redo').disabled;
+            out.redo.undoStillDisabled = button('Undo').disabled;
+            button('Redo').click();
+            out.redo.msg = sent[sent.length - 1];
+            out.redo.sent = sent.length - nRedo;
+            // Ctrl+Shift+Z and Ctrl+Y both mean redo; Ctrl+Z alone must
+            // not, or the shifted spelling would step the wrong way.
+            v.pointerInside = true;
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Z', ctrlKey: true, shiftKey: true, bubbles: true}));
+            out.redo.byShiftKey = sent[sent.length - 1];
+            out.redo.afterShiftKey = sent.length - nRedo;
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'y', ctrlKey: true, bubbles: true}));
+            out.redo.byCtrlY = sent[sent.length - 1];
+            out.redo.afterCtrlY = sent.length - nRedo;
+            v.pointerInside = false;
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'y', ctrlKey: true, bubbles: true}));
+            out.redo.byKeyOutside = sent.length - nRedo;
+            var noFuture = JSON.parse(JSON.stringify(v.scene));
+            noFuture.can_redo = false;
+            model.set('scene', noFuture);
+            out.redo.disabledAgain = button('Redo').disabled;
         }
 
         // --- clicking a beam goes back to the readout ---
@@ -767,6 +829,25 @@ if res is None:
     print('  FAIL  no output')
     sys.exit(1)
 check('ran without exception', res['error'] is None, str(res['error'])[:400])
+
+print('--- the head ---')
+check('the buttons are on two rows', len(res['headRows']) == 2,
+      str(res['headRows']))
+check('what adds to the layout on the first',
+      res['headRows'][0] == ['+ Mirror', '+ CyMirror', '+ Lens'],
+      str(res['headRows'][0]))
+check('what acts on it or on the view on the second',
+      res['headRows'][1] == ['Undo', 'Redo', 'Measure', 'Fit'],
+      str(res['headRows'][1]))
+# No heading. In a notebook the layout is already labelled by the cell
+# that made it, and a written page carries its name in the browser tab;
+# a line of the side bar spent repeating it is a line not spent on the
+# readout.
+check('and there is no heading above them', not res['headHasTitle'],
+      str(res['headChildren']))
+check('nothing but the rows is in the head',
+      res['headChildren'] == ['gt-btnrow', 'gt-btnrow'],
+      str(res['headChildren']))
 
 print('--- panel switching ---')
 check('starts on the beam readout',
@@ -1274,6 +1355,33 @@ check('but not with the pointer elsewhere', un['byKeyOutside'] == 2,
 check('a scene with nothing behind it puts it out of reach again',
       un['disabledAgain'])
 
+print('--- redo ---')
+rb = res['redoButton']
+check('there is a Redo button', rb is not None)
+check('out of reach until there is something to come back to',
+      rb['disabled'] and rb['sceneSays'] is False, str(rb))
+rd = res['redo']
+check('and pressing it then sends nothing',
+      rd['sentWhileEmpty'] == 0, str(rd['sentWhileEmpty']))
+check('a scene with an undo behind it enables it', rd['enabled'])
+# The two flags are independent: one is filled by editing, the other by
+# undoing, so a scene can offer either without the other.
+check('without enabling Undo along with it', rd['undoStillDisabled'])
+check('pressing it sends one redo',
+      rd['sent'] == 1 and rd['msg'] == {'op': 'redo'}, str(rd['msg']))
+check('carrying nothing else', list(rd['msg'].keys()) == ['op'],
+      str(list(rd['msg'].keys())))
+check('Ctrl+Shift+Z over the viewer does the same',
+      rd['afterShiftKey'] == 2 and rd['byShiftKey'] == {'op': 'redo'},
+      str(rd['byShiftKey']))
+check('and so does Ctrl+Y',
+      rd['afterCtrlY'] == 3 and rd['byCtrlY'] == {'op': 'redo'},
+      str(rd['byCtrlY']))
+check('but not with the pointer elsewhere', rd['byKeyOutside'] == 3,
+      str(rd['byKeyOutside']))
+check('a scene with nothing ahead of it puts it out of reach again',
+      rd['disabledAgain'])
+
 print('--- removing an optics ---')
 rem = res['remove']
 check("it is a 'remove'", rem['msg']['op'] == 'remove', str(rem['msg']))
@@ -1380,16 +1488,19 @@ check('center x lands exactly where it was typed',
 
 hr_before = np.asarray(o.HRcenter).copy()
 center_before = np.asarray(o.center).copy()
-# Four kinds of message are left out. The renames deliberately include
+# Five kinds of message are left out. The renames deliberately include
 # one Python refuses, so the sequence is not a coherent script; 'Cy' and
 # 'L1' exist only in the synthetic scene the browser was handed, so this
 # layout has never heard of them; save/load would write files into the
-# repository, which a check has no business doing; and the slide moves
-# M1 off the place the checks below expect it, so it is applied on its
-# own further down instead.
+# repository, which a check has no business doing; the slide moves M1
+# off the place the checks below expect it, so it is applied on its own
+# further down instead; and the redos outnumber the undos, because the
+# browser was driven with hand-made scenes saying there was more to come
+# back to than this layout ever stepped out of. Redo is applied on its
+# own at the end of this section.
 SYNTHETIC = ('Cy', 'L1')
 for msg in sent[1:]:
-    if (msg['op'] not in ('rename', 'save', 'load', 'slide')
+    if (msg['op'] not in ('rename', 'save', 'load', 'slide', 'redo')
             and msg.get('target') not in SYNTHETIC):
         lay.apply_edit(msg)
 check('angle', abs(float(o.normAngleHR) - math.radians(120)) < 1e-12,
@@ -1447,6 +1558,21 @@ check('the angle reads back in degrees as it was typed',
       abs(math.degrees(back['normAngleHR']) - 120) < 1e-12,
       str(math.degrees(back['normAngleHR'])))
 
+# The redo the browser sent, on a step this layout really did take: an
+# undo of its own to step out of, then the message as the button spelt
+# it. Undo and redo together must leave the layout where it was, or the
+# read-back above would no longer describe it.
+redo_msg = [m for m in sent if m['op'] == 'redo'][0]
+lay.apply_edit({'op': 'set', 'target': o.name, 'attrs': {'diameter': 0.3}})
+lay.apply_edit({'op': 'undo'})
+lay.apply_edit(redo_msg)
+check('the redo the panel sent is accepted', abs(float(o.diameter) - 0.3) < 1e-15,
+      str(float(o.diameter)))
+lay.apply_edit({'op': 'undo'})
+check('and a round trip leaves the layout as it was',
+      abs(float(o.diameter) - 0.2) < 1e-15
+      and lay.scene_dict()['optics'][0] == back, str(float(o.diameter)))
+
 print('--- read-only viewer ---')
 errs, res = run(False)
 check('no console error', errs == [], '\n        '.join(errs[:3]))
@@ -1461,7 +1587,13 @@ check('but nothing is editable', res['editableFields'] == [],
 check('there are no add buttons',
       not res['addButton'] and not res['addCyButton']
       and not res['addLensButton'])
-check('there is no remove button', not res['removeButton'])
+# Nothing to add and nothing to undo, so the head is down to one row.
+# Measure stays: it needs no Python, and a written page you can measure
+# on is most of the reason to have one.
+check('and the head is down to a single row',
+      res['headRows'] == [['Measure', 'Fit']], str(res['headRows']))
+check('there is no remove button on the optics panel',
+      not res['removeButton'])
 check('and no beam width controls, since redrawing needs Python',
       not res['display']['present'])
 check('and no layout file panel, since writing files needs Python',

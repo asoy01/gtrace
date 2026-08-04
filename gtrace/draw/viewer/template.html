@@ -19,14 +19,13 @@ html, body {
 <div id="gtrace-viewer"></div>
 <script>
 var GTRACE_SCENE = __GTRACE_SCENE__;
-var GTRACE_TITLE = __GTRACE_TITLE_JSON__;
 </script>
 <script>
 /*__GTRACE_VIEWER_JS__*/
 </script>
 <script>
 window.gtraceViewer = GTraceViewer.mount(
-    document.getElementById('gtrace-viewer'), GTRACE_SCENE, {title: GTRACE_TITLE});
+    document.getElementById('gtrace-viewer'), GTRACE_SCENE);
 </script>
 </body>
 </html>

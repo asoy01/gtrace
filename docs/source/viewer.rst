@@ -22,7 +22,7 @@ The viewer is one piece of dependency-free JavaScript with three front ends over
     layout.render_html('trace.html')    # a file you can send to someone
     layout.widget()                     # a notebook cell output
 
-**Self-contained HTML** — :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>` writes one file with the scene, the viewer code and the styling all inlined. There is no server, no CDN and no install. You can mail the file to a collaborator, and it will still open in ten years.
+**Self-contained HTML** — :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>` writes one file with the scene, the viewer code and the styling all inlined. There is no server and nothing to install. You can mail the file to a collaborator, who can read the beam parameters off it and take dimensions on it, and it will still open in ten years.
 
 **Notebook widget** — :py:meth:`widget<gtrace.layout.OpticalLayout.widget>` embeds the viewer as a cell output. Because the Python kernel is still alive behind it, this is the one that can edit and re-trace. It needs ``anywidget``; without it, use the HTML backend.
 
@@ -78,7 +78,7 @@ Changing either redraws but does not re-trace: the display changed, the physics 
 Editing
 --------
 
-In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements can be added (``+ Mirror``, ``+ CyMirror``, ``+ Lens``), removed and renamed.
+In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements can be added (``+ Mirror``, ``+ CyMirror``, ``+ Lens``), removed and renamed, and distances can be measured off the drawing (``Measure``).
 
 Each edit is applied to the registered object, the layout is re-traced, and the new scene is pushed back into the view — keeping your current zoom, pan and layer visibility, so the picture does not jump underneath you.
 
@@ -154,27 +154,88 @@ A focal length the blank cannot be ground to is refused, with the reason shown i
 
 The **ROC anchor** row says what stays put when a curvature changes — the apex of the front face, or the middle of the substrate. A mirror pins its HR face, so that sweeping a telescope's radii does not walk the beam spot off it; a lens pins its middle, since the beam goes through. See :ref:`changing-a-curvature` for what this moves.
 
-Undo
-^^^^^
+Measuring
+^^^^^^^^^^
 
-**Undo** in the side bar, or Ctrl + Z with the pointer over the viewer, puts the layout back as it was before the last edit. It is out of reach until there is an edit to take back, and it walks back one edit at a time up to :py:data:`UNDO_DEPTH<gtrace.layout.UNDO_DEPTH>` of them. There is no redo.
+**Measure** arms the measuring tool. It takes three clicks: two to say what is being measured, and one to say where the line goes.
+
+.. figure:: tutorial/figures/viewer_measure.png
+   :width: 100%
+
+   A measurement across the substrate of ``M1``, from the apex of its HR face to the apex of its AR face. The span runs inside the glass, so the optical distance is written under the line as well — and the line itself has been carried clear of the element, with extension lines back to the two points.
+
+The third click exists because the two points worth measuring between are usually the two the drawing is busiest around: along a beam, or through an element. A line drawn straight between them lands on top of the very thing it measures, where it can be neither read nor taken hold of. Carrying it aside is a choice about the drawing, so it is made by eye, like the rest of the drawing. Extension lines then run back to the points, as on any engineering drawing.
+
+Between the first two clicks a line follows the cursor and the status bar reports the distance as it stands. After the second, the dimension itself is previewed — dashed, drawn by the same code that draws the finished ones — and the cursor sets how far aside it goes. Near the span itself the offset is zero, so a line drawn straight between the two points can still be had without aiming at it exactly.
+
+**Esc** puts the tool away at any stage and drops whatever was half placed; **m** arms it from the keyboard. The tool disarms itself after the last click — a mode that stays on until it is switched off is a mode that gets left on — and the new dimension is selected, so its numbers are in the panel straight away.
+
+While the tool is up, nothing else answers the mouse: no element is grabbed and no beam is pinned. A click means "measure here" and nothing else, which is what keeps a drag from moving the very element being measured.
+
+Snapping
+"""""""""
+
+The first two clicks take the nearest marked point if there is one within reach, and the cursor position if not. The marked point is shown as a ring before you commit to it. The third snaps to nothing: the points being measured are exact and the marked points are there for them, whereas where the line is drawn is a matter of where there is room, and nothing in the model has an opinion about that. What is on offer:
+
+* the four **corners** of each substrate, where the wedge and the sagitta of a curved face put them;
+* the **apex of each face** and the **middle** of each substrate — the same points :ref:`changing-a-curvature` calls the anchors;
+* both **ends of every beam** in the trace.
+
+The reach is in screen pixels, so it is the same to the eye however far the view is zoomed. Points on a hidden layer are not offered: a layer switched off is one you have said you are not looking at, and snapping to an invisible point would put an end of the measurement somewhere nothing appears to be. Where a beam ends on the face it hit, the element's point wins, since it is the exact value the model holds and ``M2 HR`` says more than ``b0 end``.
+
+The dimension panel
+""""""""""""""""""""
+
+Clicking a dimension line shows it in the panel: its name, both ends — which are editable, so a measurement placed by eye can be given exact coordinates afterwards — **Line offset**, which is where the line was carried to, and under **Measurement** the distance and its direction. **Remove** takes it off the layout, as it does for an element.
+
+**Line offset** is in millimetres, like the other rows that are an adjustment rather than a place: it is nudged until the line clears whatever it was covering. Positive is to the left of the way the two points run, and zero puts the line straight between them. It changes nothing about what was measured.
+
+Three more rows appear when the whole span runs inside one substrate: which element it is inside, that element's refractive index, and the **optical distance**, which is the physical one times the index. They are absent otherwise; see :ref:`dimensions` for why an optical distance is reported for that case and no other.
+
+A dimension is picked by its **line**, not by the span between the measured points. That span usually runs along a beam or through an element, and taking hold of it there is exactly what carrying the line aside was for. The line is picked ahead of whatever lies under it, which costs little: it is a few pixels wide, and it was put where there was room.
+
+Dimensions are part of the layout, not a scratch overlay. They are saved with it, come back with it, and are taken back by undo.
+
+.. _measuring-without-python:
+
+Measuring without Python
+"""""""""""""""""""""""""
+
+**The static HTML file can be measured on too.** Everything the tool needs to place a measurement is already in the page: the points to snap to travel with the scene, and the distance between two of them is arithmetic. Being able to send a colleague a file they can take dimensions off is most of the reason to have one.
+
+Two things such a page cannot do, both because Python is what would have done them:
+
+* **no optical distance.** Whether a span runs inside a substrate is a question about the surfaces, and those live in the model rather than in the drawing. Dimensions the layout carried keep theirs — Python worked it out before the file was written — but one drawn by the reader gets only its physical length.
+* **the measurement is not saved.** It lasts as long as the page. It is also the reader's own: **Remove** offers to take back what they drew and nothing else, so a read-only viewer cannot appear to change the layout it was handed.
+
+The same applies to a widget made read-only with ``editable=False``, which has nowhere to send edits for the same reason. There, a scene pushed by ``update()`` replaces the reader's measurements along with everything else.
+
+Undo and redo
+^^^^^^^^^^^^^^
+
+**Undo** in the side bar, or Ctrl + Z with the pointer over the viewer, puts the layout back as it was before the last edit. It is out of reach until there is an edit to take back, and it walks back one edit at a time up to :py:data:`UNDO_DEPTH<gtrace.layout.UNDO_DEPTH>` of them.
+
+**Redo**, or Ctrl + Shift + Z or Ctrl + Y, walks forward again through the edits that Undo took back. It is out of reach until an undo has put something aside for it, and **the next edit you make discards what is waiting**: once the layout has taken a different turn there is no branch left to return to.
 
 The history belongs to the layout rather than to the viewer, so it covers edits sent from a cell as well as edits made in the browser::
 
     layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
     layout.undo()               # or apply_edit({'op': 'undo'})
     layout.can_undo             # False again
+    layout.redo()               # or apply_edit({'op': 'redo'})
 
 A step of the history holds the elements themselves alongside their values, so undoing restores those values onto those same objects. The ``M1`` of your own code and the selection in the panel go on naming the right thing — through a rename, and through a removal, since an element taken out of the layout is put back as itself rather than as a copy. That is stronger than :py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>` can offer, which has only names to match objects up by.
 
 What it does not cover is an assignment made directly in Python: ``M1.HRcenter = ...`` is not an edit the layout ever sees. It is captured by the snapshot taken before the *next* edit that does go through, so undoing that one restores it.
 
-A refused edit changes nothing and costs no step, so Undo after one takes back the edit before it rather than doing nothing.
+A refused edit changes nothing and costs no step, so Undo after one takes back the edit before it rather than doing nothing — and it leaves anything waiting to be redone where it was, since nothing was decided.
 
 Read-only viewers
 ^^^^^^^^^^^^^^^^^^
 
 A widget constructed without a layout, or with ``editable=False``, shows the readout but no editing controls. The static HTML is always read-only: there is no Python behind it to re-trace, so an edit could not mean anything.
+
+Measuring is the exception, since it asks nothing of the model: the tool is there in a read-only viewer, and what it draws stays in the page. See :ref:`measuring-without-python` for the two things it cannot do there.
 
 A rejected edit — an unknown attribute, a value outside the permitted set, a duplicate name — leaves the layout untouched and reports itself in the viewer rather than raising somewhere nothing would see it.
 

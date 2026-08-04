@@ -70,7 +70,7 @@ var SCENES = __SCENES__;
                                       '.gt-scene rect').length,
             layerRows: el.querySelectorAll('.gt-layerrow').length,
             readoutRows: el.querySelectorAll('.gt-readout tr').length,
-            title: (el.querySelector('.gt-title') || {}).textContent,
+            heading: el.querySelectorAll('.gt-title').length,
             beams: v ? v.scene.beams.length : null,
             scale: v ? v.scale : null,
             cx: v ? v.cx : null,
@@ -87,7 +87,7 @@ var SCENES = __SCENES__;
         out.hasRender = mod.default && typeof mod.default.render === 'function';
 
         // Stand-in for the anywidget model.
-        var state = {scene: SCENES.a, title: 'Widget check', height: 600};
+        var state = {scene: SCENES.a, height: 600};
         var handlers = {};
         var model = {
             get: function (k) { return state[k]; },
@@ -122,9 +122,6 @@ var SCENES = __SCENES__;
         out.beforePush = moved;
         out.afterPush = snapshot(el);
 
-        // Title updates too.
-        model.set('title', 'Renamed');
-        out.titleAfterRename = (el.querySelector('.gt-title') || {}).textContent;
 
         // Tear down.
         cleanup();
@@ -142,7 +139,7 @@ var SCENES = __SCENES__;
         var det = document.createElement('div');
         det.style.width = '900px';
         det.style.height = '600px';
-        var st2 = {scene: SCENES.a, title: 'Detached', height: 600};
+        var st2 = {scene: SCENES.a, height: 600};
         var h2 = {};
         var model2 = {
             get: function (k) { return st2[k]; },
@@ -224,8 +221,11 @@ check('layer list built', (a.get('layerRows') or 0) >= 5,
       '(%s)' % a.get('layerRows'))
 check('readout table built', (a.get('readoutRows') or 0) >= 15,
       '(%s)' % a.get('readoutRows'))
-check('title taken from the model', a.get('title') == 'Widget check',
-      str(a.get('title')))
+# The side bar has no heading: in a notebook the layout is labelled by
+# the cell that made it, so a line repeating its name is a line not
+# spent on the readout.
+check('no heading in the side bar', a.get('heading') == 0,
+      str(a.get('heading')))
 check('height taken from the model', res.get('hostHeight') == '600px',
       str(res.get('hostHeight')))
 check('scene loaded', a.get('beams') == len(scenes['a']['beams']),
@@ -250,10 +250,6 @@ check('the layer list was rebuilt, not duplicated',
 check('listeners were not re-registered',
       after.get('listeners') == before.get('listeners'),
       '(%s -> %s)' % (before.get('listeners'), after.get('listeners')))
-
-print('--- title change ---')
-check('title follows the model', res.get('titleAfterRename') == 'Renamed',
-      str(res.get('titleAfterRename')))
 
 print('--- cleanup ---')
 c = res.get('afterCleanup') or {}
