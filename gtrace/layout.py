@@ -1896,7 +1896,7 @@ class OpticalLayout(object):
                           scene=self.scene_dict(**kwargs))
 
     def widget(self, height=520, editable=True,
-               path='layout.json', **kwargs):
+               path='layout.json', dxf_path=None, **kwargs):
         '''
         Return a Jupyter widget showing this layout.
 
@@ -1927,6 +1927,11 @@ class OpticalLayout(object):
         path : str, optional
             File the Save and Load buttons start on, relative to where
             the kernel is running. Defaults to 'layout.json'.
+        dxf_path : str or None, optional
+            File the Export button starts on. Defaults to None, which
+            names it after path with a .dxf extension - the two are
+            usually wanted together, and it is still the user's to
+            change in the panel.
         **kwargs
             Passed to draw(), and remembered for the redraws that
             follow an edit.
@@ -1939,7 +1944,8 @@ class OpticalLayout(object):
         return LayoutViewer(scene=self.scene_dict(**kwargs), layout=self,
                             draw_kwargs=kwargs,
                             height=height, editable=editable,
-                            layout_path=path)
+                            layout_path=path,
+                            dxf_path=dxf_path if dxf_path is not None else '')
 
     def show(self, filename=None, browser=True, title=None, backend=None,
              **kwargs):

@@ -38,6 +38,7 @@ function render({ model, el }) {
     // Python see what it was dragged to.
     const viewer = globalThis.GTraceViewer.mount(host, model.get('scene'), {
         layoutPath: model.get('layout_path'),
+        dxfPath: model.get('dxf_path'),
         onEdit: onEdit,
         resizable: true,
         onResize: (h) => {

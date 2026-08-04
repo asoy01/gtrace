@@ -154,6 +154,9 @@ def _build_class():
         notice = traitlets.Unicode('').tag(sync=True)
         #: File the Save and Load buttons start on.
         layout_path = traitlets.Unicode('layout.json').tag(sync=True)
+        #: File the Export button starts on. Empty means "name it
+        #: after the layout file", which the front end does.
+        dxf_path = traitlets.Unicode('').tag(sync=True)
 
         def __init__(self, scene=None, layout=None, draw_kwargs=None,
                      **kwargs):

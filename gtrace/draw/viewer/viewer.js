@@ -423,41 +423,63 @@ Viewer.prototype._build = function () {
     this._buildDimPanel();
     this._showPanel('beam');
 
-    // File panel. Editing in the browser is only worth anything if the
-    // result can be taken out again, and the file has to be written by
-    // Python: the page has no business touching the disk.
+    // Two file panels, kept apart because they deal in two different
+    // things. The layout is the model - saving it and loading it back
+    // is the same system either way. The DXF is a drawing of it, going
+    // out to something that will never send it back. Sharing a panel,
+    // or worse a file name, invites Load to be pressed on a drawing.
+    //
+    // Both are written by Python: the page has no business touching the
+    // disk.
     if (this.onEdit) {
+        var layoutPath = this.opts.layoutPath || 'layout.json';
+
         var fpanel = htmlEl('div', 'gt-panel');
-        fpanel.appendChild(htmlEl('div', 'gt-panel-title', 'File'));
+        fpanel.appendChild(htmlEl('div', 'gt-panel-title',
+                                  'Optical layout (JSON)'));
         var fbody = htmlEl('div', 'gt-file');
         this.pathInput = htmlEl('input', 'gt-input gt-input-text');
         this.pathInput.type = 'text';
         this.pathInput.spellcheck = false;
-        this.pathInput.value = this.opts.layoutPath || 'layout.json';
+        this.pathInput.value = layoutPath;
         this.pathInput.title = 'Relative to where the kernel is running';
         fbody.appendChild(this.pathInput);
         var frow = htmlEl('div', 'gt-filebuttons');
         var saveBtn = htmlEl('button', 'gt-btn', 'Save');
-        saveBtn.title = 'Write the layout to this file';
+        saveBtn.title = 'Write the optical layout to this file';
         saveBtn.addEventListener('click', function () { self.saveLayout(); });
         var loadBtn = htmlEl('button', 'gt-btn', 'Load');
-        loadBtn.title = 'Replace the layout with the one in this file';
+        loadBtn.title = 'Replace the optical layout with the one in this file';
         loadBtn.addEventListener('click', function () { self.loadLayout(); });
-        // A drawing for the rest of an engineering workflow. It goes
-        // beside Save and Load because it answers the same question -
-        // how do I get this out of here - and it takes the same field,
-        // with the extension swapped: a layout and its drawing belong
-        // together and are usually wanted under one name.
-        var dxfBtn = htmlEl('button', 'gt-btn', 'DXF');
-        dxfBtn.title = 'Write the drawing to a DXF file, named after '
-            + 'this one';
-        dxfBtn.addEventListener('click', function () { self.exportDXF(); });
         frow.appendChild(saveBtn);
         frow.appendChild(loadBtn);
-        frow.appendChild(dxfBtn);
         fbody.appendChild(frow);
         fpanel.appendChild(fbody);
         side.appendChild(fpanel);
+
+        // The drawing, for whatever comes after gtrace in an
+        // engineering workflow. Its name starts from the layout's, so
+        // the two match without being typed twice, and is then the
+        // user's own: they are not the same file and need not share a
+        // stem.
+        var xpanel = htmlEl('div', 'gt-panel');
+        xpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Drawing (DXF)'));
+        var xbody = htmlEl('div', 'gt-file');
+        this.dxfInput = htmlEl('input', 'gt-input gt-input-text');
+        this.dxfInput.type = 'text';
+        this.dxfInput.spellcheck = false;
+        this.dxfInput.value = this.opts.dxfPath
+            || withExtension(layoutPath, '.dxf');
+        this.dxfInput.title = 'Relative to where the kernel is running';
+        xbody.appendChild(this.dxfInput);
+        var xrow = htmlEl('div', 'gt-filebuttons');
+        var dxfBtn = htmlEl('button', 'gt-btn', 'Export');
+        dxfBtn.title = 'Write the drawing to this DXF file';
+        dxfBtn.addEventListener('click', function () { self.exportDXF(); });
+        xrow.appendChild(dxfBtn);
+        xbody.appendChild(xrow);
+        xpanel.appendChild(xbody);
+        side.appendChild(xpanel);
     }
 
     // Display panel. These change how Python draws the scene, so they
@@ -1026,33 +1048,56 @@ Viewer.prototype.saveLayout = function (path) {
 };
 
 /*
- * Write the drawing to a DXF file, for whatever comes after gtrace in
- * an engineering workflow.
+ * Write the drawing to the DXF file named in its own panel, for
+ * whatever comes after gtrace in an engineering workflow.
  *
- * The name is the one in the panel with its extension swapped, so that
- * a layout and its drawing come out under one name without the user
- * having to type it twice. Python does the drawing and the writing; the
- * page only says where.
+ * Python does the drawing and the writing; the page only says where.
  */
 Viewer.prototype.exportDXF = function (path) {
     if (!this.onEdit) { return null; }
-    path = (path || (this.pathInput && this.pathInput.value) || '').trim();
+    path = (path || (this.dxfInput && this.dxfInput.value) || '').trim();
     if (!path) { return null; }
-    var msg = {op: 'export', format: 'dxf', path: withExtension(path, '.dxf')};
+    // The field is the user's, so an extension they typed is left
+    // alone; one they did not type is filled in, since the panel this
+    // field sits in has already said what kind of file it is.
+    var msg = {op: 'export', format: 'dxf',
+               path: withDefaultExtension(path, '.dxf')};
     this.onEdit(msg);
     return msg;
 };
 
 /*
- * A path with its extension replaced. One that ends in a separator, or
- * whose last segment has no extension, gets the new one appended.
+ * Split a path into the part before the last separator and the part
+ * after it, with the index of the extension's dot in that last part, or
+ * -1 when it has none. A leading dot is a hidden file, not an
+ * extension.
  */
-function withExtension(path, ext) {
+function splitExtension(path) {
     var cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
     var name = path.slice(cut + 1);
     var dot = name.lastIndexOf('.');
-    if (dot <= 0) { return path + ext; }
-    return path.slice(0, cut + 1) + name.slice(0, dot) + ext;
+    return {head: path.slice(0, cut + 1), name: name,
+            dot: dot > 0 ? dot : -1};
+}
+
+/*
+ * A path with its extension replaced, or given one if it had none.
+ * Used to suggest a drawing's name from the layout's.
+ */
+function withExtension(path, ext) {
+    var p = splitExtension(path);
+    if (p.dot < 0) { return path + ext; }
+    return p.head + p.name.slice(0, p.dot) + ext;
+}
+
+/*
+ * A path with an extension added only if it has none. Used where the
+ * user typed the name themselves: replacing what they wrote would be
+ * presumptuous, and leaving a name with no extension at all would not
+ * be a DXF file to anything that opens one.
+ */
+function withDefaultExtension(path, ext) {
+    return splitExtension(path).dot < 0 ? path + ext : path;
 }
 
 /*

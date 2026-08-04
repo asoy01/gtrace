@@ -38,8 +38,11 @@ Slated for 0.4.0. Not yet on PyPI.
   draws the dimensions on a layer of their own, which CAD can switch
   off; `dimensions=False` leaves them out. `draw_dimensions()` does the
   drawing and is callable on its own.
-- A `DXF` button in the viewer's file panel, and an `export` operation
-  in the edit protocol.
+- A **Drawing (DXF)** panel in the viewer, with a file name of its own
+  beside the **Optical layout (JSON)** one, and an `export` operation
+  in the edit protocol. The two are kept apart because the layout is
+  the model and the DXF is a picture of it: pressing Load on a
+  drawing could only be a mistake.
 
 ### Added — viewer
 

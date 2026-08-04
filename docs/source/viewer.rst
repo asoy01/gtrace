@@ -253,13 +253,15 @@ A rejected edit — an unknown attribute, a value outside the permitted set, a d
 Files
 ------
 
-The side bar has a ``File`` panel with a file name and three buttons. All the reading and writing is done by Python, and the path is relative to where the kernel is running; the page is never given access to your disk.
+The side bar has two file panels. All the reading and writing is done by Python, and the paths are relative to where the kernel is running; the page is never given access to your disk. Neither changes anything on screen, so the viewer says what it did in the status line; otherwise there would be no way to tell whether the button had done anything.
 
-**Save** and **Load** write and read the layout as JSON. Loading updates the layout in place, so the names bound in the cells above keep pointing at the right objects. See :doc:`layout` for what that means and why it matters.
+**Optical layout (JSON)** — **Save** and **Load** write and read the layout itself. Loading updates it in place, so the names bound in the cells above keep pointing at the right objects. See :doc:`layout` for what that means and why it matters.
 
-**DXF** writes the drawing out for the rest of an engineering workflow. It takes the same file name with the extension swapped — a layout and its drawing are usually wanted under one name, and typing it twice is how the two drift apart.
+**Drawing (DXF)** — **Export** writes a drawing of the layout for the rest of an engineering workflow.
 
-None of these changes anything on screen, so the viewer says what it did in the status line; otherwise there would be no way to tell whether the button had done anything.
+They are kept apart, with a file name each, because they deal in two different things. The layout is the model, and saving it and loading it back gives you the same system either way. The DXF is a *picture* of the model, going out to something that will never send it back — pressing Load on one could only be a mistake, and sharing a panel or a file name is how that mistake gets made.
+
+The drawing's name starts from the layout's with the extension swapped, so the two match without being typed twice; from then on it is yours. An extension you type there is left alone, and one you leave out is filled in — the panel has already said what kind of file it is. ``layout.widget(dxf_path=...)`` sets the starting name from Python.
 
 .. _dxf-export:
 

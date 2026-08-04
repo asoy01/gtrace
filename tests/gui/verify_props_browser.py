@@ -267,7 +267,10 @@ var LENS = __LENS__;
         } : null;
         out.saveButton = !!button('Save');
         out.loadButton = !!button('Load');
-        out.dxfButton = !!button('DXF');
+        out.dxfButton = !!button('Export');
+        out.panelTitles = Array.prototype.map.call(
+            el.querySelectorAll('.gt-panel-title'),
+            function (t) { return t.textContent; });
         out.pathShown = v.pathInput ? v.pathInput.value : null;
 
         // --- click M1 ---
@@ -817,28 +820,39 @@ var LENS = __LENS__;
             out.load.fitPendingAfter = v.fitOnNextScene;
             out.load.refitted = v.scale !== scaleBefore * 4;
 
-            // DXF takes the same field with its extension swapped: a
-            // layout and its drawing are usually wanted under one name,
-            // and typing it twice is how they drift apart.
+            // The drawing has a panel and a file name of its own: it
+            // is not the layout, and Load must never be pressed on it.
+            out.dxfStart = v.dxfInput.value;
             var nDxf = sent.length;
-            button('DXF').click();
+            v.dxfInput.value = 'drawing.dxf';
+            button('Export').click();
             out.dxf = {msg: sent[sent.length - 1], sent: sent.length - nDxf};
-            out.dxfNames = ['a/b/layout.json', 'layout', 'a.b/c',
-                            'x.dxf', 'dir/'].map(function (p) {
-                v.pathInput.value = p;
-                button('DXF').click();
-                return sent[sent.length - 1].path;
-            });
+            // Changing the layout's name does not touch the drawing's.
+            v.pathInput.value = 'other.json';
+            button('Export').click();
+            out.dxfIndependent = sent[sent.length - 1].path;
             v.pathInput.value = 'chosen.json';
 
-            // A blank file name asks for nothing.
+            // An extension the user typed is left alone; one they did
+            // not type is filled in.
+            out.dxfNames = ['plan', 'plan.dxf', 'plan.DXF', 'a.b/c',
+                            'dir/'].map(function (p) {
+                v.dxfInput.value = p;
+                button('Export').click();
+                return sent[sent.length - 1].path;
+            });
+            v.dxfInput.value = 'drawing.dxf';
+
+            // A blank file name asks for nothing, in either panel.
             v.pathInput.value = '   ';
+            v.dxfInput.value = '   ';
             var nBlank = sent.length;
             button('Save').click();
             button('Load').click();
-            button('DXF').click();
+            button('Export').click();
             out.blankPath = sent.length - nBlank;
             v.pathInput.value = 'chosen.json';
+            v.dxfInput.value = 'drawing.dxf';
         }
 
         // --- the beam width controls, last so as not to shift the
@@ -1107,21 +1121,32 @@ check('the selection is dropped before the answer arrives',
 check('and the next scene is refitted, not left where the old one was',
       ld['fitPending'] and not ld['fitPendingAfter'] and ld['refitted'],
       str(ld))
+check('a blank file name sends nothing', res['blankPath'] == 0,
+      str(res['blankPath']))
+
+print('--- the drawing panel ---')
+# The layout is the model, saved and loaded as the same system. The DXF
+# is a drawing of it, going out to something that will never send it
+# back. They get separate panels and separate names so that Load is
+# never pressed on a drawing.
+check('the two panels are named for what they hold',
+      'Optical layout (JSON)' in res['panelTitles']
+      and 'Drawing (DXF)' in res['panelTitles'], str(res['panelTitles']))
+check('the drawing has a file name of its own',
+      res['dxfStart'] == 'layout.dxf', str(res['dxfStart']))
 dx = res['dxf']
-check('DXF sends one message', dx['sent'] == 1, str(dx['sent']))
+check('Export sends one message', dx['sent'] == 1, str(dx['sent']))
 check("it is an 'export' of a dxf",
       dx['msg']['op'] == 'export' and dx['msg']['format'] == 'dxf',
       str(dx['msg']))
-# The same field with the extension swapped, so a layout and its drawing
-# come out under one name without it being typed twice.
-check('naming the file after the layout file',
-      dx['msg']['path'] == 'chosen.dxf', str(dx['msg']['path']))
-check('the extension is swapped, not appended',
-      res['dxfNames'] == ['a/b/layout.dxf', 'layout.dxf', 'a.b/c.dxf',
-                          'x.dxf', 'dir/.dxf'],
+check('naming the file typed in its own panel',
+      dx['msg']['path'] == 'drawing.dxf', str(dx['msg']['path']))
+check('which the layout file name does not touch',
+      res['dxfIndependent'] == 'drawing.dxf', str(res['dxfIndependent']))
+check('an extension the user typed is left alone, one they omitted is added',
+      res['dxfNames'] == ['plan.dxf', 'plan.dxf', 'plan.DXF', 'a.b/c.dxf',
+                          'dir/.dxf'],
       str(res['dxfNames']))
-check('a blank file name sends nothing', res['blankPath'] == 0,
-      str(res['blankPath']))
 
 print('--- the beam width controls ---')
 d = res['display']
