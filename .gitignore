@@ -51,3 +51,12 @@ HANDOFF.md
 /docs/source/tutorial/tutorial_viewer.html
 /docs/source/tutorial/tutorial_layout.json
 /docs/source/tutorial/tutorial_layout.dxf
+
+# Left behind by pressing Save or Export in the viewer while trying
+# something out. These are the buttons' default names, so they land
+# wherever the notebook happened to be running.
+/layout.json
+/layout.dxf
+/chosen.dxf
+/tests/layout.json
+/tests/layout.dxf
