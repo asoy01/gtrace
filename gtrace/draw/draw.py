@@ -115,10 +115,17 @@ class Line(Shape):
 
 #{{{ PolyLine
 
-class NumberOfElementError(BaseException):
-    def __initi__(self, message):
-        self.message = message
-        
+class NumberOfElementError(Exception):
+    '''
+    Raised when a polyline is given x and y of different lengths.
+
+    Derived from Exception, not BaseException: see UnknownShapeError in
+    renderer.py for why that matters. The constructor was likewise spelt
+    __initi__, so the message was dropped.
+    '''
+    pass
+
+
 class PolyLine(Shape):
     '''
     A light weight poly-line

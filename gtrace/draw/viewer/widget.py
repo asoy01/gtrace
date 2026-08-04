@@ -227,20 +227,38 @@ def _build_class():
             try:
                 self._layout.apply_edit(msg)
             except Exception as e:
-                self.error = '%s: %s' % (type(e).__name__, e)
+                self._say('error', '%s: %s' % (type(e).__name__, e))
                 return False
             self._edit_log.append(msg)
             self.error = ''
 
-            # A save leaves the drawing exactly as it was, so without a
-            # word from us the user cannot tell it happened.
+            # Writing a file leaves the drawing exactly as it was, so
+            # without a word from us the user cannot tell it happened.
             if msg.get('op') == 'save':
-                self.notice = 'Saved to %s' % (msg.get('path'),)
+                self._say('notice', 'Saved to %s' % (msg.get('path'),))
                 return True
-            self.notice = ('Loaded %s' % (msg.get('path'),)
-                           if msg.get('op') == 'load' else '')
+            if msg.get('op') == 'export':
+                self._say('notice', 'Wrote %s' % (msg.get('path'),))
+                return True
+            self._say('notice', 'Loaded %s' % (msg.get('path'),)
+                      if msg.get('op') == 'load' else '')
             self.scene = self._layout.scene_dict(**self._draw_kwargs)
             return True
+
+        def _say(self, which, text):
+            '''
+            Put a message in front of the user, even when it is the one
+            already there.
+
+            A traitlet notifies on a change of value, so saying the same
+            thing twice says it once: saving to the same path a second
+            time confirmed nothing, and the same refusal twice running
+            left the front end unaware of the second. Clearing first
+            makes the second one a change.
+            '''
+            if text and getattr(self, which) == text:
+                setattr(self, which, '')
+            setattr(self, which, text)
 
         def _on_edit_msg(self, widget, content, buffers):
             '''

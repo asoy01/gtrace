@@ -34,6 +34,12 @@ Slated for 0.4.0. Not yet on PyPI.
   Where the whole span runs inside one substrate the optical distance is
   reported too. See `OpticalLayout.dimensions` and `Dimension`.
 - `inch` in `gtrace.unit`.
+- `OpticalLayout.export_dxf()`, the companion of `render_html()`. It
+  draws the dimensions on a layer of their own, which CAD can switch
+  off; `dimensions=False` leaves them out. `draw_dimensions()` does the
+  drawing and is callable on its own.
+- A `DXF` button in the viewer's file panel, and an `export` operation
+  in the edit protocol.
 
 ### Added — viewer
 
@@ -69,6 +75,16 @@ Slated for 0.4.0. Not yet on PyPI.
   mm.
 - The `meniscus` example in the `Lens` docstring raised rather than
   building a lens.
+- `renderer.UnknownShapeError` and `draw.NumberOfElementError` derived
+  from `BaseException`, so they walked straight through every
+  `except Exception` between the renderer and the top — including the
+  one the notebook widget uses to turn a failure into a message the
+  user can see. Both also spelt their constructor `__initi__`, so the
+  message never reached the exception.
+- The widget said nothing the second time it was told to say the same
+  thing: a traitlet notifies on a *change* of value, so saving to the
+  same path twice confirmed it once, and the same refusal twice was
+  reported once.
 
 ## 0.3.1 — 2026-08-03
 

@@ -32,6 +32,8 @@ import json
 import numpy as np
 
 import gtrace.beam as beam
+import gtrace.draw as draw
+import gtrace.draw.renderer as renderer
 import gtrace.optcomp as opt
 import gtrace.optics.gaussian as gauss
 from gtrace.optcomp import _ProbeRay
@@ -542,6 +544,74 @@ lay.apply_edit({'op': 'set', 'target': 'D1',
                 'attrs': {'p1': hr, 'p2': ar}})
 check('and moving it back brings it again',
       lay.scene_dict()['dimensions'][0]['optical'] is not None)
+
+print('--- drawing them into a DXF ---')
+
+# A dimension is a note about the system rather than part of it, so it
+# goes on a layer of its own: a layer is exactly the mechanism CAD
+# offers for something you want to be able to switch off.
+lay, M1, L1 = make_layout()
+lay.apply_edit({'op': 'add', 'type': 'Dimension', 'name': 'D1',
+                'params': {'p1': hr, 'p2': ar, 'offset': 0.05}})
+lay.apply_edit({'op': 'add', 'type': 'Dimension', 'name': 'D2',
+                'params': {'p1': [0.0, 0.0], 'p2': [0.2, 0.0]}})
+
+plain = lay.draw()
+check('draw() leaves the dimensions out',
+      'dimensions' not in plain.layers, str(sorted(plain.layers)))
+# It has to: the viewer draws them itself from the scene, so a draw()
+# that included them would draw them twice there.
+canvas = lay.draw_dimensions(lay.draw())
+check('draw_dimensions puts them on their own layer',
+      'dimensions' in canvas.layers, str(sorted(canvas.layers)))
+shapes = canvas.layers['dimensions'].shapes
+texts = [s for s in shapes if isinstance(s, draw.Text)]
+check('one label per dimension', len(texts) == 2, str(len(texts)))
+check('the label carries the distance',
+      any('6.359 mm' in t.text for t in texts),
+      str([t.text for t in texts]))
+# Only the span inside the lens has one.
+check('and the optical distance where there is one',
+      len([t for t in texts if 'optical' in t.text]) == 1,
+      str([t.text for t in texts]))
+lines = [s for s in shapes if isinstance(s, draw.Line)]
+# Per dimension: the line, two ticks, and an extension line at each end
+# where the line was carried aside. D1 has an offset, D2 does not.
+check('the line and its ticks are drawn', len(lines) == 3 + 5,
+      str(len(lines)))
+
+check('an empty layout adds no layer',
+      'dimensions' not in make_layout()[0].draw_dimensions(
+          make_layout()[0].draw()).layers)
+
+dxf_path = os.path.join(WORK, 'dimensions.dxf')
+lay.export_dxf(dxf_path)
+with open(dxf_path, encoding='utf-8', errors='replace') as f:
+    text = f.read()
+check('export_dxf writes a file', os.path.getsize(dxf_path) > 1000,
+      '(%d bytes)' % os.path.getsize(dxf_path))
+check('with the dimensions layer in it', 'dimensions' in text)
+check('and the measurement written on it', '6.359 mm' in text)
+
+nodim = os.path.join(WORK, 'dimensions_off.dxf')
+lay.export_dxf(nodim, dimensions=False)
+with open(nodim, encoding='utf-8', errors='replace') as f:
+    text2 = f.read()
+check('dimensions=False leaves them out',
+      'dimensions' not in text2 and 'main_beam' in text2)
+
+# The renderer's own error must be catchable. It derived from
+# BaseException, which walks through every 'except Exception' between
+# here and the top - including the one the widget uses to turn a
+# failure into something the user can see.
+check('an unsupported shape raises a catchable error',
+      issubclass(renderer.UnknownShapeError, Exception)
+      and not issubclass(renderer.UnknownShapeError, KeyboardInterrupt))
+try:
+    renderer.UnknownShapeError('why')
+    check('and it takes a message', True)
+except Exception as e:
+    check('and it takes a message', False, str(e))
 
 print('--- serialization helpers ---')
 

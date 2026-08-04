@@ -267,6 +267,7 @@ var LENS = __LENS__;
         } : null;
         out.saveButton = !!button('Save');
         out.loadButton = !!button('Load');
+        out.dxfButton = !!button('DXF');
         out.pathShown = v.pathInput ? v.pathInput.value : null;
 
         // --- click M1 ---
@@ -816,11 +817,26 @@ var LENS = __LENS__;
             out.load.fitPendingAfter = v.fitOnNextScene;
             out.load.refitted = v.scale !== scaleBefore * 4;
 
+            // DXF takes the same field with its extension swapped: a
+            // layout and its drawing are usually wanted under one name,
+            // and typing it twice is how they drift apart.
+            var nDxf = sent.length;
+            button('DXF').click();
+            out.dxf = {msg: sent[sent.length - 1], sent: sent.length - nDxf};
+            out.dxfNames = ['a/b/layout.json', 'layout', 'a.b/c',
+                            'x.dxf', 'dir/'].map(function (p) {
+                v.pathInput.value = p;
+                button('DXF').click();
+                return sent[sent.length - 1].path;
+            });
+            v.pathInput.value = 'chosen.json';
+
             // A blank file name asks for nothing.
             v.pathInput.value = '   ';
             var nBlank = sent.length;
             button('Save').click();
             button('Load').click();
+            button('DXF').click();
             out.blankPath = sent.length - nBlank;
             v.pathInput.value = 'chosen.json';
         }
@@ -1072,7 +1088,8 @@ check('and shows the value Python came back with',
       res['afterPush']['cx'])
 
 print('--- the layout file panel ---')
-check('the buttons are there', res['saveButton'] and res['loadButton'])
+check('the buttons are there',
+      res['saveButton'] and res['loadButton'] and res['dxfButton'])
 check('the file name starts on the default',
       res['pathShown'] == 'layout.json', str(res['pathShown']))
 sv = res['save']
@@ -1090,6 +1107,19 @@ check('the selection is dropped before the answer arrives',
 check('and the next scene is refitted, not left where the old one was',
       ld['fitPending'] and not ld['fitPendingAfter'] and ld['refitted'],
       str(ld))
+dx = res['dxf']
+check('DXF sends one message', dx['sent'] == 1, str(dx['sent']))
+check("it is an 'export' of a dxf",
+      dx['msg']['op'] == 'export' and dx['msg']['format'] == 'dxf',
+      str(dx['msg']))
+# The same field with the extension swapped, so a layout and its drawing
+# come out under one name without it being typed twice.
+check('naming the file after the layout file',
+      dx['msg']['path'] == 'chosen.dxf', str(dx['msg']['path']))
+check('the extension is swapped, not appended',
+      res['dxfNames'] == ['a/b/layout.dxf', 'layout.dxf', 'a.b/c.dxf',
+                          'x.dxf', 'dir/.dxf'],
+      str(res['dxfNames']))
 check('a blank file name sends nothing', res['blankPath'] == 0,
       str(res['blankPath']))
 
@@ -1597,7 +1627,12 @@ center_before = np.asarray(o.center).copy()
 # own at the end of this section.
 SYNTHETIC = ('Cy', 'L1')
 for msg in sent[1:]:
-    if (msg['op'] not in ('rename', 'save', 'load', 'slide', 'redo')
+    # 'export' joins save/load for the same reason and one more: the
+    # paths in those messages are probes of how the extension is
+    # swapped, not places to write - 'a/b/layout.dxf' names no
+    # directory, and the ones that do would land in the repository.
+    if (msg['op'] not in ('rename', 'save', 'load', 'slide', 'redo',
+                          'export')
             and msg.get('target') not in SYNTHETIC):
         lay.apply_edit(msg)
 check('angle', abs(float(o.normAngleHR) - math.radians(120)) < 1e-12,
@@ -1665,6 +1700,15 @@ lay.apply_edit({'op': 'undo'})
 lay.apply_edit(redo_msg)
 check('the redo the panel sent is accepted', abs(float(o.diameter) - 0.3) < 1e-15,
       str(float(o.diameter)))
+
+# The export the page sent, on a path of this suite's choosing rather
+# than the name-mangling probes above.
+export_msg = [m for m in sent if m['op'] == 'export'][0]
+export_msg = dict(export_msg, path=os.path.join(SP, 'props_export.dxf'))
+check('the export the panel sent is accepted',
+      lay.apply_edit(export_msg) is lay
+      and os.path.getsize(export_msg['path']) > 1000,
+      '(%d bytes)' % os.path.getsize(export_msg['path']))
 lay.apply_edit({'op': 'undo'})
 check('and a round trip leaves the layout as it was',
       abs(float(o.diameter) - 0.2) < 1e-15

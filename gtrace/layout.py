@@ -39,6 +39,7 @@ from gtrace.draw.tools import drawAllOptics
 from gtrace.draw.serialize import scene_to_dict
 from gtrace.draw.viewer import renderHTML
 import gtrace.draw as draw
+import gtrace.draw.renderer as renderer
 
 #}}}
 
@@ -354,6 +355,19 @@ EDITABLE_DIMENSION_ATTRS = frozenset(['p1', 'p2', 'offset'])
 #: The ones that are points rather than numbers.
 _DIMENSION_POINTS = frozenset(['p1', 'p2'])
 
+#: How a dimension is drawn into a DXF, as fractions of its own length.
+#: A drawing has no fixed scale, so a tick and a label sized in
+#: millimetres would be invisible across a bench and enormous across a
+#: substrate; sized against the measurement they are legible at both.
+_DXF_TICK = 0.02
+_DXF_TEXT = 0.08
+
+#: Formats to write on a dimension line in an exported drawing. The
+#: viewer picks an SI prefix to suit; a drawing wants one unit
+#: throughout, and millimetres is what an optical bench drawing uses.
+def _fmt_mm(metres):
+    return '%.3f mm' % (metres * 1000.0)
+
 #: The type an 'add' message names to create a dimension. It is kept out
 #: of CREATABLE_OPTIC_TYPES because a dimension is not an optics: it is
 #: not traced, it is not drawn among the elements, and it takes ends
@@ -368,11 +382,14 @@ DIMENSION_TYPE = 'Dimension'
 UNDO_DEPTH = 50
 
 #: Operations that leave the layout as it was, and so are not worth a
-#: snapshot: one writes a file, and the others walk the history rather
+#: snapshot: two write a file, and the others walk the history rather
 #: than adding to it. Being on this list also means the operation does
-#: not discard the redo stack - saving in the middle of stepping back
-#: and forth is not a change of mind.
-_NOT_UNDOABLE = frozenset(['save', 'undo', 'redo'])
+#: not discard the redo stack - writing a file in the middle of stepping
+#: back and forth is not a change of mind.
+_NOT_UNDOABLE = frozenset(['save', 'export', 'undo', 'redo'])
+
+#: Formats 'export' can write.
+EXPORT_FORMATS = frozenset(['dxf'])
 
 class EditError(ValueError):
     '''
@@ -945,6 +962,7 @@ class OpticalLayout(object):
                                         'width_mode': 'y'}}
             {'op': 'save',   'path': 'layout.json'}
             {'op': 'load',   'path': 'layout.json'}
+            {'op': 'export', 'format': 'dxf', 'path': 'layout.dxf'}
             {'op': 'rename', 'target': 'M1', 'name': 'PRM'}
             {'op': 'add',    'type': 'Mirror', 'name': 'M4',
                              'params': {'HRcenter': [0.3, 0.2]}}
@@ -1274,6 +1292,33 @@ class OpticalLayout(object):
             except (ValueError, KeyError, TypeError) as e:
                 raise EditError('%s is not a layout file gtrace can read '
                                 '(%s: %s).' % (path, type(e).__name__, e))
+            return self
+
+        elif op == 'export':
+            # Its own branch rather than joining save/load: sharing
+            # their catch-all would report a bad drawing option as
+            # 'not a layout file gtrace can read'.
+            path = msg.get('path')
+            if not isinstance(path, str) or not path.strip():
+                raise EditError('A file name is needed, not %r.' % (path,))
+            fmt = msg.get('format', 'dxf')
+            if fmt not in EXPORT_FORMATS:
+                raise EditError('%r is not a format gtrace can write. It '
+                                'writes %s.'
+                                % (fmt, ', '.join(sorted(EXPORT_FORMATS))))
+            dims = msg.get('dimensions', True)
+            if not isinstance(dims, bool):
+                raise EditError("'dimensions' is yes or no, not %r." % (dims,))
+            try:
+                self.export_dxf(path, dimensions=dims)
+            except EditError:
+                raise
+            except OSError as e:
+                raise EditError('%s: %s' % (type(e).__name__, e))
+            except Exception as e:
+                raise EditError('Could not write %s (%s: %s).'
+                                % (path, type(e).__name__, e))
+            # Writing a file changes nothing about the layout.
             return self
 
         elif op == 'draw':
@@ -1722,6 +1767,100 @@ class OpticalLayout(object):
         for o in self.optics:
             points.extend(optic_snap_points(o))
         return points
+
+#}}}
+
+#{{{ DXF export
+
+    def draw_dimensions(self, canvas, layername='dimensions'):
+        '''
+        Draw the registered dimensions into a canvas, on a layer of
+        their own.
+
+        A layer, because a dimension is a note about the system rather
+        than part of it: a layer is exactly the mechanism CAD offers for
+        something you want to be able to switch off, so an exported
+        drawing carries the measurements without imposing them.
+
+        This is deliberately not part of draw(). That method means "the
+        physical picture", and the viewer draws dimensions itself from
+        the scene, so putting them in draw() would draw them twice
+        there.
+
+        Parameters
+        ----------
+        canvas : draw.Canvas
+            The canvas to draw into.
+        layername : str, optional
+            Layer the dimensions go on. Defaults to 'dimensions'.
+
+        Returns
+        -------
+        canvas : draw.Canvas
+        '''
+        if not self.dimensions:
+            return canvas
+        canvas.add_layer(layername, color=(0, 128, 64))
+        for dim in self.dimensions:
+            a, b = dim.line_ends()
+            canvas.add_shape(draw.Line(a, b), layername=layername)
+            # Extension lines back to the points actually measured, and
+            # a tick across each end of the dimension line. Drawn in
+            # scene units here rather than in screen pixels as the
+            # viewer does: a DXF has no screen to be read at.
+            span = np.linalg.norm(b - a)
+            tick = dim.normal * (span * _DXF_TICK)
+            for end, foot in ((a, dim.p1), (b, dim.p2)):
+                canvas.add_shape(draw.Line(end - tick, end + tick),
+                                 layername=layername)
+                if not np.allclose(end, foot):
+                    canvas.add_shape(draw.Line(foot, end),
+                                     layername=layername)
+
+            m = dim.measure(self.optics)
+            text = _fmt_mm(m['length'])
+            if m['optical'] is not None:
+                text += '  (%s optical)' % _fmt_mm(m['optical'])
+            mid = (a + b) / 2
+            height = span * _DXF_TEXT
+            # Above the line and along it, kept the right way up, as in
+            # the viewer.
+            angle = np.arctan2(b[1] - a[1], b[0] - a[0])
+            if angle > np.pi/2 or angle < -np.pi/2:
+                angle += np.pi
+            up = np.array([-np.sin(angle), np.cos(angle)])
+            along = np.array([np.cos(angle), np.sin(angle)])
+            point = mid + up * (height * 0.4) - along * (height * len(text) * 0.3)
+            canvas.add_shape(draw.Text(text, point, height=height,
+                                       rotation=angle),
+                             layername=layername)
+        return canvas
+
+    def export_dxf(self, filename, dimensions=True, **kwargs):
+        '''
+        Write the layout to a DXF file. The companion of render_html.
+
+        If trace() has not been run yet, it is run automatically.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the DXF file to write.
+        dimensions : bool, optional
+            Whether the dimensions noted on the layout are drawn, on a
+            layer of their own. Defaults to True; see draw_dimensions.
+        **kwargs
+            Passed to draw(), e.g. sigma_main or drawMainWidth.
+
+        Returns
+        -------
+        filename : str
+        '''
+        canvas = self.draw(**kwargs)
+        if dimensions:
+            self.draw_dimensions(canvas)
+        renderer.renderDXF(canvas, filename)
+        return filename
 
 #}}}
 

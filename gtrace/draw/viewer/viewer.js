@@ -423,12 +423,12 @@ Viewer.prototype._build = function () {
     this._buildDimPanel();
     this._showPanel('beam');
 
-    // Layout file panel. Editing in the browser is only worth anything
-    // if the result can be taken out again, and the file has to be
-    // written by Python: the page has no business touching the disk.
+    // File panel. Editing in the browser is only worth anything if the
+    // result can be taken out again, and the file has to be written by
+    // Python: the page has no business touching the disk.
     if (this.onEdit) {
         var fpanel = htmlEl('div', 'gt-panel');
-        fpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Layout file'));
+        fpanel.appendChild(htmlEl('div', 'gt-panel-title', 'File'));
         var fbody = htmlEl('div', 'gt-file');
         this.pathInput = htmlEl('input', 'gt-input gt-input-text');
         this.pathInput.type = 'text';
@@ -443,8 +443,18 @@ Viewer.prototype._build = function () {
         var loadBtn = htmlEl('button', 'gt-btn', 'Load');
         loadBtn.title = 'Replace the layout with the one in this file';
         loadBtn.addEventListener('click', function () { self.loadLayout(); });
+        // A drawing for the rest of an engineering workflow. It goes
+        // beside Save and Load because it answers the same question -
+        // how do I get this out of here - and it takes the same field,
+        // with the extension swapped: a layout and its drawing belong
+        // together and are usually wanted under one name.
+        var dxfBtn = htmlEl('button', 'gt-btn', 'DXF');
+        dxfBtn.title = 'Write the drawing to a DXF file, named after '
+            + 'this one';
+        dxfBtn.addEventListener('click', function () { self.exportDXF(); });
         frow.appendChild(saveBtn);
         frow.appendChild(loadBtn);
+        frow.appendChild(dxfBtn);
         fbody.appendChild(frow);
         fpanel.appendChild(fbody);
         side.appendChild(fpanel);
@@ -510,6 +520,7 @@ Viewer.prototype._build = function () {
                   ['+ Mirror / + CyMirror / + Lens',
                    'add one at the centre of the view'],
                   ['Remove', 'delete the selection'],
+                  ['DXF', 'write the drawing out for CAD'],
                   ['Undo, or Ctrl + Z', 'put the last edit back'],
                   ['Redo, or Ctrl + Shift + Z', 'take the undo back']);
     }
@@ -1013,6 +1024,36 @@ Viewer.prototype.saveLayout = function (path) {
     this.onEdit(msg);
     return msg;
 };
+
+/*
+ * Write the drawing to a DXF file, for whatever comes after gtrace in
+ * an engineering workflow.
+ *
+ * The name is the one in the panel with its extension swapped, so that
+ * a layout and its drawing come out under one name without the user
+ * having to type it twice. Python does the drawing and the writing; the
+ * page only says where.
+ */
+Viewer.prototype.exportDXF = function (path) {
+    if (!this.onEdit) { return null; }
+    path = (path || (this.pathInput && this.pathInput.value) || '').trim();
+    if (!path) { return null; }
+    var msg = {op: 'export', format: 'dxf', path: withExtension(path, '.dxf')};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * A path with its extension replaced. One that ends in a separator, or
+ * whose last segment has no extension, gets the new one appended.
+ */
+function withExtension(path, ext) {
+    var cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+    var name = path.slice(cut + 1);
+    var dot = name.lastIndexOf('.');
+    if (dot <= 0) { return path + ext; }
+    return path.slice(0, cut + 1) + name.slice(0, dot) + ext;
+}
 
 /*
  * Replace the layout with the one in that file.

@@ -141,7 +141,7 @@ The viewer changes a layout by sending it messages, which you can also send your
     layout.apply_edit({'op': 'set', 'target': 'PRM',
                        'attrs': {'diameter': 0.15}})
 
-The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load``, ``undo`` and ``redo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
+The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load``, ``export``, ``undo`` and ``redo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
 
 A ``set`` may carry several attributes at once, and they are not applied in the order the message happens to list them: the anchor goes on before the curvatures it governs, and the orientation before the position that is measured from it. A message is a JSON object, whose key order is not something to rest on.
 
@@ -166,7 +166,9 @@ An attribute on the whitelist may still be one the target does not have, or one 
 
 Renaming has its own operation rather than being an editable attribute, because the name is the identity that edits are resolved by; changing it needs a uniqueness check.
 
-Two operations deliberately do *not* invalidate the trace result: ``draw`` changes display settings and ``save`` writes a file. Neither changes the physics, so neither causes a re-trace. Nor does anything done to a dimension, for the same reason.
+Three operations deliberately do *not* invalidate the trace result: ``draw`` changes display settings, and ``save`` and ``export`` write a file. None of them changes the physics, so none causes a re-trace. Nor does anything done to a dimension, for the same reason.
+
+``export`` writes the drawing rather than the model — today only ``{'op': 'export', 'format': 'dxf', 'path': ...}``, which is :py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`. See :ref:`dxf-export`.
 
 .. _dimensions:
 

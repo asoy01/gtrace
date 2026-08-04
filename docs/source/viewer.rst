@@ -250,19 +250,35 @@ Measuring is the exception, since it asks nothing of the model: the tool is ther
 
 A rejected edit — an unknown attribute, a value outside the permitted set, a duplicate name — leaves the layout untouched and reports itself in the viewer rather than raising somewhere nothing would see it.
 
-Saving and loading
--------------------
+Files
+------
 
-The side bar has a ``Layout file`` panel with a file name and Save / Load buttons. The reading and writing are done by Python, and the path is relative to where the kernel is running; the page is never given access to your disk.
+The side bar has a ``File`` panel with a file name and three buttons. All the reading and writing is done by Python, and the path is relative to where the kernel is running; the page is never given access to your disk.
 
-Loading updates the layout in place, so the names bound in the cells above keep pointing at the right objects. See :doc:`layout` for what that means and why it matters.
+**Save** and **Load** write and read the layout as JSON. Loading updates the layout in place, so the names bound in the cells above keep pointing at the right objects. See :doc:`layout` for what that means and why it matters.
 
-Saving changes nothing on screen, so the viewer says so in the status line — otherwise there would be no way to tell whether the button did anything.
+**DXF** writes the drawing out for the rest of an engineering workflow. It takes the same file name with the extension swapped — a layout and its drawing are usually wanted under one name, and typing it twice is how the two drift apart.
 
-DXF is still there
--------------------
+None of these changes anything on screen, so the viewer says what it did in the status line; otherwise there would be no way to tell whether the button had done anything.
 
-None of this replaces the DXF output. ``renderDXF`` is unchanged, and a layout drawn to a canvas can be rendered to DXF exactly as before:
+.. _dxf-export:
+
+DXF export
+-----------
+
+The button is sugar on :py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`, the companion of :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>`:
+
+.. code-block:: python
+
+    layout.export_dxf('layout.dxf')
+    layout.export_dxf('layout.dxf', dimensions=False)
+    layout.export_dxf('layout.dxf', width_mode='y')   # as draw() takes
+
+**Dimensions are drawn, on a layer of their own.** A dimension is a note about the system rather than part of it, and a layer is exactly the mechanism CAD offers for something you want to be able to switch off — so the drawing carries your measurements without imposing them on whoever opens it. Pass ``dimensions=False`` to leave them out entirely.
+
+The ticks and the lettering are sized as fractions of the measurement rather than in millimetres. A drawing has no fixed scale, and a label sized for a bench would be invisible across a substrate.
+
+The underlying renderer is unchanged and still callable directly, which is what to use if you are not holding an :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`:
 
 .. code-block:: python
 
@@ -270,4 +286,4 @@ None of this replaces the DXF output. ``renderDXF`` is unchanged, and a layout d
 
     renderer.renderDXF(layout.draw(), 'layout.dxf')
 
-The viewer is for looking and adjusting; DXF remains the way to hand a layout to the rest of an engineering workflow.
+Note that this route draws no dimensions: they belong to the layout, and ``draw()`` deliberately leaves them out — the viewer draws them itself from the scene, so a ``draw()`` that included them would draw them twice there.

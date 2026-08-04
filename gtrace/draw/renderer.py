@@ -53,9 +53,18 @@ __status__ = "Beta"
 
 #{{{ DXF renderer
 
-class UnknownShapeError(BaseException):
-    def __initi__(self, message):
-        self.message = message
+class UnknownShapeError(Exception):
+    '''
+    Raised when a canvas holds a shape the renderer cannot write.
+
+    Derived from Exception, not BaseException. A BaseException walks
+    straight through every `except Exception` between here and the top -
+    including the one the notebook widget uses to turn a failure into a
+    message the user can see - so rendering from a GUI would have failed
+    with nothing said anywhere. The constructor was also spelt
+    __initi__, so the message never reached the exception at all.
+    '''
+    pass
 
 def renderDXF(canvas, filename):
     '''
@@ -91,7 +100,8 @@ def renderDXF(canvas, filename):
             elif isinstance(s, draw.Text):
                 d.add_entity(dxf.Text(s.text, np.array(s.point)*scale_factor, s.height*scale_factor, rad2deg(s.rotation)), ly.name)
             else:
-                raise UnknownShapeError('Shape not supported')
+                raise UnknownShapeError(
+                    'A %s cannot be written to DXF.' % type(s).__name__)
 
     d.save_to_file()
                 

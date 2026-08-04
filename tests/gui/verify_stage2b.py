@@ -1190,6 +1190,67 @@ check('and the one it does name is built',
       layout.get_optics('ZZ') is not M1)
 layout.apply_edit({'op': 'load', 'path': path})
 
+print('--- the widget says what happened, even twice running ---')
+
+# A traitlet notifies on a change of value, so saying the same thing
+# twice said it once: saving to the same path a second time confirmed
+# nothing, and the same refusal twice left the front end unaware of the
+# second. Both are counted here through the traitlet's own observer,
+# which is what the front end listens to.
+w = layout.widget()
+seen = []
+w.observe(lambda ch: seen.append(('notice', ch['new'])), names='notice')
+w.observe(lambda ch: seen.append(('error', ch['new'])), names='error')
+twice = os.path.join(OUT, 'stage2b_twice.json')
+w.apply_edit({'op': 'save', 'path': twice})
+w.apply_edit({'op': 'save', 'path': twice})
+saved_notices = [t for k, t in seen if k == 'notice' and t]
+check('saving the same file twice confirms it twice',
+      len(saved_notices) == 2 and saved_notices[0] == saved_notices[1],
+      str(saved_notices))
+
+del seen[:]
+w.apply_edit({'op': 'explode'})
+w.apply_edit({'op': 'explode'})
+errs = [t for k, t in seen if k == 'error' and t]
+check('and the same refusal is reported twice', len(errs) == 2,
+      str(errs))
+
+print('--- export ---')
+
+# The way out to the rest of an engineering workflow. It shares save's
+# shape - a path, an effect outside the model, no snapshot - so it is
+# checked against the same invariants.
+dxf_path = os.path.join(OUT, 'stage2b_export.dxf')
+layout.trace()
+h_before, f_before = len(layout._history), len(layout._future)
+layout.apply_edit({'op': 'export', 'format': 'dxf', 'path': dxf_path})
+check('the file was written', os.path.exists(dxf_path),
+      '(%d bytes)' % os.path.getsize(dxf_path))
+check('exporting does not invalidate the trace', layout.beams is not None)
+# An op that took a snapshot would cost one of UNDO_DEPTH and, worse,
+# throw away the redo stack - for writing a file that changed nothing.
+check('nor does it touch the history',
+      len(layout._history) == h_before and len(layout._future) == f_before,
+      '(%d/%d)' % (len(layout._history), len(layout._future)))
+check("the format defaults to dxf",
+      layout.apply_edit({'op': 'export', 'path': dxf_path}) is layout)
+
+with open(dxf_path, encoding='utf-8', errors='replace') as f:
+    dxf_text = f.read()
+check('the drawing is in it',
+      'main_beam' in dxf_text and 'Mirrors' in dxf_text)
+
+refused({'op': 'export'}, 'an export with no path')
+refused({'op': 'export', 'path': '   '}, 'an export with a blank path')
+refused({'op': 'export', 'format': 'svg', 'path': dxf_path},
+        'a format gtrace cannot write')
+refused({'op': 'export', 'path': dxf_path, 'dimensions': 'yes'},
+        'a non-boolean dimensions flag')
+refused({'op': 'export',
+         'path': os.path.join(OUT, 'no_such_dir', 'x.dxf')},
+        'an export to a directory that is not there')
+
 print('--- save and load: what is refused ---')
 refused({'op': 'save'}, 'a save with no path')
 refused({'op': 'load', 'path': ''}, 'a load with a blank path')
