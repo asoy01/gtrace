@@ -76,6 +76,24 @@ Slated for 0.4.0. Not yet on PyPI.
   sagitta. On the KAGRA layout this moves the beams inside the substrate
   of `MMT1` by up to 14.68 µm; the main beams move by less than 1e-10
   mm.
+- **Changed results.** `CyMirror` was cylindrical in shape only. Its two
+  hit methods kept the cross-section the trace sees and the optical
+  power of the surface in a single variable, and with the curvature out
+  of the plane of the trace that variable has to be zero — the section
+  really is a straight line — so the power went with it. What came out
+  was a mirror that focused in *both* planes when `curve_direction` was
+  `'h'`, and in *neither* when it was `'v'`. The one function that knew
+  the difference, `cyl_refl_defl_angle`, was never called by anything.
+  A `CyMirror` now focuses in the plane it is curved in and leaves the
+  other alone, per Siegman Table 15.1. Nothing else in gtrace uses
+  `CyMirror`, so no other result moves; the KAGRA layout is unaffected.
+- **Changed results.** The transmission matrices in
+  `cyl_refl_defl_angle` were a copy of the spherical ones and had never
+  been told which plane was which, so both planes were given the
+  curvature. Only in *reflection* is the uncurved plane the identity: a
+  tilted flat interface still scales the beam in the plane of incidence
+  and still carries the index change, and it now keeps both while losing
+  the power. This was dead code before the previous entry.
 - The `meniscus` example in the `Lens` docstring raised rather than
   building a lens.
 - `renderer.UnknownShapeError` and `draw.NumberOfElementError` derived

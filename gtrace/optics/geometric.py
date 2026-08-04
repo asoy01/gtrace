@@ -328,6 +328,74 @@ def normSpheric(normAngle, invROC, dist_from_center):
 
 #{{{ reflection and deflection angle
 
+def _surface_angles(beamAngle, normAngle):
+    '''
+    The reflection and deflection geometry of a surface: the incident
+    angle, and the angle of the reflected ray.
+
+    Split out so that the spherical and cylindrical entry points below
+    cannot drift apart. They differ only in which plane gets the
+    curvature, and everything else - these angles and the matrices in
+    _surface_matrices - is common to both.
+    '''
+    beamAngle = np.mod(beamAngle, 2*pi)
+    normAngle = np.mod(normAngle, 2*pi)
+    incidentAngle = np.mod(beamAngle - normAngle, 2*pi) - pi
+    reflAngle = np.mod(normAngle - incidentAngle, 2*pi)
+    return incidentAngle, reflAngle
+
+def _surface_matrices(theta1, n1, n2, invROC_x, invROC_y):
+    '''
+    The ABCD matrices of a surface at incidence theta1, given the
+    curvature each transverse plane sees.
+
+    Two curvatures rather than one, because that is the only difference
+    between a spherical surface and a cylindrical one: a sphere presents
+    the same curvature to both planes, a cylinder presents it to one and
+    nothing to the other. Writing it once this way is deliberate - the
+    cylindrical transmission matrices were previously a copy of the
+    spherical ones and had never been given the distinction at all.
+
+    x is the plane of incidence (tangential), y is perpendicular to it
+    (sagittal). The forms are Siegman, Lasers, Table 15.1 (d) for
+    reflection and (f), (g) for refraction, in the reduced-slope
+    convention where every determinant is 1.
+
+    Parameters
+    ----------
+    theta1 : float
+        Angle of incidence, from the normal, unsigned.
+    n1, n2 : float
+        Index on the incident side and on the far side.
+    invROC_x, invROC_y : float
+        The inverse radius of curvature each plane sees. Zero leaves
+        that plane without power - which for reflection is the identity,
+        and for refraction is still not: a tilted flat interface changes
+        the width of the beam in the plane of incidence, and any
+        interface carries the index change.
+
+    Returns
+    -------
+    (Mrx, Mry, Mtx, Mty)
+    '''
+    #For reflection. R_e = R*cos(theta) in the plane of incidence and
+    #R/cos(theta) perpendicular to it, so the same curvature focuses
+    #more strongly in the plane of incidence.
+    Mrx = np.array([[1., 0.], [-2*n1*invROC_x/np.cos(theta1), 1.]])
+    Mry = np.array([[1., 0.], [-2*n1*invROC_y*np.cos(theta1), 1.]])
+
+    #For transmission
+    theta2 = np.arcsin(n1*np.sin(theta1)/n2)
+
+    nex = (n2*np.cos(theta2)-n1*np.cos(theta1))/(np.cos(theta1)*np.cos(theta2))
+    Mtx = np.array([[np.cos(theta2)/np.cos(theta1), 0.],
+                    [nex*invROC_x, np.cos(theta1)/np.cos(theta2)]])
+
+    ney = n2*np.cos(theta2)-n1*np.cos(theta1)
+    Mty = np.array([[1., 0.], [ney*invROC_y, 1.]])
+
+    return Mrx, Mry, Mtx, Mty
+
 def refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None):
     '''
     Returns a tuples of reflection and deflection angles.
@@ -353,36 +421,15 @@ def refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None):
     (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) or (reflAngle, deflAngle)
     '''
 
-    beamAngle = np.mod(beamAngle, 2*pi)
-    normAngle = np.mod(normAngle, 2*pi)
-
-    incidentAngle = np.mod(beamAngle - normAngle, 2*pi) - pi
-
-    reflAngle = np.mod(normAngle - incidentAngle, 2*pi)
+    incidentAngle, reflAngle = _surface_angles(beamAngle, normAngle)
 
     deflAngle = np.arcsin(n1*np.sin(incidentAngle)/n2)
-    deflAngle = np.mod(deflAngle + pi + normAngle, 2*pi)
+    deflAngle = np.mod(deflAngle + pi + np.mod(normAngle, 2*pi), 2*pi)
 
     if not invROC == None:
-        #Calculate ABCD matrices
-
-        #Absolute value of the incident angle
+        #A sphere presents the same curvature to both planes.
         theta1 = np.abs(incidentAngle)
-
-        #For reflection
-        Mrx = np.array([[1., 0.], [-2*n1*invROC/np.cos(theta1), 1.]])
-        Mry = np.array([[1., 0.], [-2*n1*invROC*np.cos(theta1), 1.]])
-
-        #For transmission
-        theta2 = np.arcsin(n1*np.sin(theta1)/n2)
-
-        nex = (n2*np.cos(theta2)-n1*np.cos(theta1))/(np.cos(theta1)*np.cos(theta2))
-        Mtx = np.array([[np.cos(theta2)/np.cos(theta1), 0.],
-                        [nex*invROC, np.cos(theta1)/np.cos(theta2)]])
-
-        ney = n2*np.cos(theta2)-n1*np.cos(theta1)
-        Mty = np.array([[1., 0.],[ney*invROC, 1.]])
-
+        Mrx, Mry, Mtx, Mty = _surface_matrices(theta1, n1, n2, invROC, invROC)
         return (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty)
 
     else:
@@ -410,45 +457,40 @@ def cyl_refl_defl_angle(beamAngle, normAngle, n1, n2, invROC=None, curve_directi
     n2 : float
         Index of refraction of the transmission side medium.
     invROC : float or None, optional
-        Inverse of the radius of curvature.
+        Inverse of the radius of curvature of the curved plane. The
+        other plane is flat, whatever this says.
     curve_direction : str, optional
-        Direction of curvature. Either 'h' or 'v'.
+        Which plane carries the curvature. 'h' is the plane of the
+        trace, 'v' is perpendicular to it.
+
+    Returns
+    -------
+    6-tuple or 2-tuple
+    (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) or (reflAngle, deflAngle)
+
+    Notes
+    -----
+    A cylinder gives its curvature to one plane and nothing to the
+    other, so the matrices are those of a surface that is curved in the
+    one and flat in the other. This is *not* the same as a zero matrix
+    in the flat plane, which is why it is expressed as a curvature of
+    zero rather than as a special case: reflection off a flat surface
+    is the identity, but refraction through one is not - a tilted flat
+    interface still changes the width of the beam in the plane of
+    incidence, and any interface carries the index change.
     '''
 
-    beamAngle = np.mod(beamAngle, 2*pi)
-    normAngle = np.mod(normAngle, 2*pi)
-
-    incidentAngle = np.mod(beamAngle - normAngle, 2*pi) - pi
-
-    reflAngle = np.mod(normAngle - incidentAngle, 2*pi)
+    incidentAngle, reflAngle = _surface_angles(beamAngle, normAngle)
 
     deflAngle = np.arcsin(n1*np.sin(incidentAngle)/n2)
-    deflAngle = np.mod(deflAngle + pi + normAngle, 2*pi)
+    deflAngle = np.mod(deflAngle + pi + np.mod(normAngle, 2*pi), 2*pi)
 
     if not invROC == None:
-        #Calculate ABCD matrices
-
-        #Absolute value of the incident angle
         theta1 = np.abs(incidentAngle)
-
-        #For reflection
-        if curve_direction == 'h':
-            Mrx = np.array([[1., 0.], [-2*n1*invROC/np.cos(theta1), 1.]])
-            Mry = np.array([[1., 0.], [0., 1.]])
-        else:
-            Mrx = np.array([[1., 0.], [0., 1.]])
-            Mry = np.array([[1., 0.], [-2*n1*invROC*np.cos(theta1), 1.]])
-
-        #For transmission
-        theta2 = np.arcsin(n1*np.sin(theta1)/n2)
-
-        nex = (n2*np.cos(theta2)-n1*np.cos(theta1))/(np.cos(theta1)*np.cos(theta2))
-        Mtx = np.array([[np.cos(theta2)/np.cos(theta1), 0.],
-                        [nex*invROC, np.cos(theta1)/np.cos(theta2)]])
-
-        ney = n2*np.cos(theta2)-n1*np.cos(theta1)
-        Mty = np.array([[1., 0.],[ney*invROC, 1.]])
-
+        invROC_x = invROC if curve_direction == 'h' else 0.0
+        invROC_y = invROC if curve_direction == 'v' else 0.0
+        Mrx, Mry, Mtx, Mty = _surface_matrices(theta1, n1, n2,
+                                               invROC_x, invROC_y)
         return (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty)
 
     else:

@@ -31,7 +31,7 @@ Mirror
 .. image:: imgs/Mirror.png
    :height: 10cm
 
-Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a lens, a light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use :py:class:`CyMirror<gtrace.optcomp.CyMirror>` instead; its ``curve_direction`` attribute selects whether the cylinder curves horizontally (``'h'``) or vertically (``'v'``). For a lens, :py:class:`Lens<gtrace.optcomp.Lens>` is the same substrate ordered by its focal length rather than by the radii of its two faces.
+Mirror is a basic optical component in gtrace. Even though the name is \"Mirror\", it can represent a transparent optical window, a prism, a lens, a light absorbing plate (like black glass) and so on. A mirror object has two surfaces, called HR and AR. These surfaces can be flat or curved. Curved surfaces are spherical. If you need a cylindrical surface, use :py:class:`CyMirror<gtrace.optcomp.CyMirror>` instead, described under :ref:`cylindrical-surfaces` below. For a lens, :py:class:`Lens<gtrace.optcomp.Lens>` is the same substrate ordered by its focal length rather than by the radii of its two faces.
 
 The parameters of a Mirror object are shown in the figure above.
 
@@ -79,6 +79,19 @@ Two methods answer questions about the body itself rather than about a beam meet
 It asks the optics rather than describing its faces a second time. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when it is approached from *outside* — it refuses any face the ray is leaving through — so from inside a substrate it finds nothing at all, in any direction, and that is the whole of the test. A face found partway along the span means the span starts outside; ends lying exactly on a face count as inside, since that is where such a measurement is usually taken from.
 
 The hollow of a concave face is the case to keep in mind. It is enclosed by the substrate on three sides, and a test that only asked how far the material reaches along a line would call it inside. It is not: it is air, and a span across the front of a concave mirror is a span through air. That is why :py:meth:`contains_point<gtrace.optcomp.Optics.contains_point>` looks *both* ways from the point before deciding.
+
+.. _cylindrical-surfaces:
+
+Cylindrical surfaces
+~~~~~~~~~~~~~~~~~~~~
+
+:py:class:`CyMirror<gtrace.optcomp.CyMirror>` is the same substrate with cylindrical faces instead of spherical ones. ``curve_direction`` says which plane the cylinder curves in: ``'h'`` in the plane of the trace, ``'v'`` out of it. The other plane is flat, and a beam passing through it comes out with the divergence it went in with.
+
+Two things follow from working in 2D. First, only ``'h'`` is visible in the drawing — a ``'v'`` mirror is drawn with straight faces, because a straight line really is what the plane of the trace cuts out of it, and its focusing happens entirely out of the page. Second, the two directions are not a relabelling of each other. At an angle of incidence :math:`\theta` a curved surface presents an effective radius :math:`R\cos\theta` in the plane of incidence and :math:`R/\cos\theta` perpendicular to it, so an ``'h'`` mirror has a focal length of :math:`R\cos\theta/2` and a ``'v'`` mirror of the same radius :math:`R/2\cos\theta`. At 45 degrees they differ by a factor of two. Only at normal incidence do the two agree.
+
+Transmission through a cylindrical face is the case worth stating, because it is easy to assume more than is true. The uncurved plane loses the *power* of the surface and nothing else: a tilted face still changes the width of the beam in the plane of incidence, and still carries the change of refractive index. It is only in *reflection* that the uncurved plane is left with the identity.
+
+The ray matrices are those of Siegman, *Lasers*, Table 15.1, with the curvature given to one plane and zero to the other. ``tests/cymirror_verification.ipynb`` works through the comparison, and ``tests/gui/verify_cylindrical.py`` runs it as counted assertions.
 
 Lens
 -----------

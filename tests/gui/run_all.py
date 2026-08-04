@@ -27,6 +27,8 @@ SUITES = [
      'where the two faces of a substrate are, against an independent arc'),
     ('verify_lens.py',
      'Lens: the focal length ordered, measured by tracing a ray through it'),
+    ('verify_cylindrical.py',
+     'CyMirror: one plane focused, the other left alone, against Siegman'),
     ('verify_dimensions.py',
      'substrate corners, what a span runs inside, and the dimension model'),
     ('verify_stage1.py',

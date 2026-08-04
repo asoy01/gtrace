@@ -1778,6 +1778,24 @@ class CyMirror(Mirror):
     '''
     Representing a partial reflective cylindrical mirror. Note that both HR and AR surfaces are treated as cylindrical if you specify non-zero ROC for them. The curve  directions of the two surfaces must be the same.
 
+    A cylinder focuses in one plane and does nothing in the other, so a
+    beam leaving one of these is astigmatic even at normal incidence.
+    Away from normal incidence the two directions are not a relabelling
+    of each other: a surface of radius R at incidence theta presents an
+    effective radius R*cos(theta) in the plane of incidence and
+    R/cos(theta) perpendicular to it, so 'h' gives a focal length of
+    R*cos(theta)/2 and 'v', of the same radius, gives R/(2*cos(theta)).
+
+    Only 'h' is visible in the drawing. What the plane of the trace cuts
+    out of a 'v' cylinder is a straight line, so the faces are drawn
+    straight and the focusing happens entirely out of the page.
+
+    The ray matrices are Siegman, Lasers, Table 15.1, with the curvature
+    given to one plane and zero to the other; see cyl_refl_defl_angle.
+    Note that only in reflection does the uncurved plane come out as the
+    identity. In transmission it keeps the tilt scaling and the index
+    change, and loses the power alone.
+
     Attributes
     ----------
     curve_direction : str
@@ -2240,22 +2258,31 @@ class CyMirror(Mirror):
         #A dictionary to hold beams
         beams={}
 
+        #The shape of the surface in the plane of the trace and the
+        #power of the surface are two different things here, and they
+        #agree only when the curvature lies in that plane. Curved out of
+        #the plane, the cross-section the trace sees is a straight line,
+        #so the geometry is flat - but the surface still focuses, out of
+        #the plane. The *_geom values answer the geometric question,
+        #which is where the beam lands and how its envelope is drawn;
+        #self.inv_ROC_* carries the power, and cyl_refl_defl_angle
+        #decides which plane receives it.
         if self.curve_direction == 'h':
             chord_center_HR = self.HRcenterC
             chord_center_AR = self.ARcenterC
-            inv_ROC_HR = self.inv_ROC_HR
-            inv_ROC_AR = self.inv_ROC_AR
+            inv_ROC_HR_geom = self.inv_ROC_HR
+            inv_ROC_AR_geom = self.inv_ROC_AR
         else:
             chord_center_HR = self.HRcenter
             chord_center_AR = self.ARcenter
-            inv_ROC_HR = 0.0
-            inv_ROC_AR = 0.0
+            inv_ROC_HR_geom = 0.0
+            inv_ROC_AR_geom = 0.0
 
         #Get the intersection point
         ans = optics.geometric.line_arc_intersection(pos=beam.pos, dirVect=beam.dirVect,
                                                      chord_center=chord_center_HR,
                                                      chordNormVect=self.normVectHR,
-                                                     invROC=inv_ROC_HR,
+                                                     invROC=inv_ROC_HR_geom,
                                                      diameter=self.diameter)
         if not ans['isHit']:
             #The input beam does not hit the mirror.
@@ -2269,7 +2296,7 @@ class CyMirror(Mirror):
         beam_in = beam.copy() #Make a copy
         beam_in.length = ans['distance']
         beam_in.incSurfAngle = localNormAngle
-        beam_in.incSurfInvROC = inv_ROC_HR
+        beam_in.incSurfInvROC = inv_ROC_HR_geom
         beams['input']= beam_in
 
 
@@ -2280,9 +2307,10 @@ class CyMirror(Mirror):
         #Calculate reflection and deflection angles along with the ABCD matrices
         #for reflection and deflection.
         (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                    optics.geometric.refl_defl_angle(beam_on_HR.dirAngle,
-                                               localNormAngle,
-                                               1.0, self.n, invROC=inv_ROC_HR)
+                    optics.geometric.cyl_refl_defl_angle(
+                        beam_on_HR.dirAngle, localNormAngle, 1.0, self.n,
+                        invROC=self.inv_ROC_HR,
+                        curve_direction=self.curve_direction)
         #Reflected beam
         beam_r1 = beam_on_HR.copy()
         beam_r1.P = beam_r1.P * self.Refl_HR
@@ -2290,7 +2318,7 @@ class CyMirror(Mirror):
             beam_r1.dirAngle = reflAngle
             beam_r1.ABCDTrans(Mrx, Mry)
             beam_r1.departSurfAngle = localNormAngle
-            beam_r1.departSurfInvROC = inv_ROC_HR
+            beam_r1.departSurfInvROC = inv_ROC_HR_geom
             beam_r1.incSurfAngle = None
             beam_r1.incSurfInvROC = None
             beam_r1.name = self.name+':r1'
@@ -2307,13 +2335,13 @@ class CyMirror(Mirror):
         beam_s1.n = self.n
         beam_s1.ABCDTrans(Mtx, Mty)
         beam_s1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-        beam_s1.departSurfInvROC = -inv_ROC_HR
+        beam_s1.departSurfInvROC = -inv_ROC_HR_geom
 
         #Hit AR from back
         ans = optics.geometric.line_arc_intersection(pos=beam_s1.pos, dirVect=beam_s1.dirVect,
                                                      chord_center=chord_center_AR,
                                                      chordNormVect=-self.normVectAR,
-                                                     invROC=-inv_ROC_AR,
+                                                     invROC=-inv_ROC_AR_geom,
                                                      diameter=self.ARdiameter)
 
         if not ans['isHit']:
@@ -2346,7 +2374,7 @@ class CyMirror(Mirror):
 
         beam_s1.length = ans['distance']
         beam_s1.incSurfAngle = localNormAngle
-        beam_s1.incSurfInvROC = -inv_ROC_AR
+        beam_s1.incSurfInvROC = -inv_ROC_AR_geom
         beam_s1.name = self.name+':s1'
         beams['s1'] = beam_s1
 
@@ -2356,9 +2384,10 @@ class CyMirror(Mirror):
         beam_on_AR.propagate(ans['distance'])
 
         (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                    optics.geometric.refl_defl_angle(beam_on_AR.dirAngle,
-                                               localNormAngle,
-                                               self.n, 1.0, invROC=-inv_ROC_AR)
+                    optics.geometric.cyl_refl_defl_angle(
+                        beam_on_AR.dirAngle, localNormAngle, self.n, 1.0,
+                        invROC=-self.inv_ROC_AR,
+                        curve_direction=self.curve_direction)
 
         #Transmitted beam
         beam_t1 = beam_on_AR.copy()
@@ -2368,7 +2397,7 @@ class CyMirror(Mirror):
             beam_t1.n = 1.0
             beam_t1.ABCDTrans(Mtx, Mty)
             beam_t1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-            beam_t1.departSurfInvROC = inv_ROC_AR
+            beam_t1.departSurfInvROC = inv_ROC_AR_geom
             beam_t1.incSurfAngle = None
             beam_t1.incSurfInvROC = None
             beam_t1.name = self.name+':t%d'%(1)
@@ -2384,7 +2413,7 @@ class CyMirror(Mirror):
         beam_sr.dirAngle = reflAngle
         beam_sr.ABCDTrans(Mrx, Mry)
         beam_sr.departSurfAngle = localNormAngle
-        beam_sr.departSurfInvROC = -inv_ROC_AR
+        beam_sr.departSurfInvROC = -inv_ROC_AR_geom
 
 
         #Calculate higher order reflections
@@ -2398,7 +2427,7 @@ class CyMirror(Mirror):
             ans = optics.geometric.line_arc_intersection(pos=beam_sr.pos, dirVect=beam_sr.dirVect,
                                                          chord_center=chord_center_HR,
                                                          chordNormVect=-self.normVectHR,
-                                                         invROC=-inv_ROC_HR,
+                                                         invROC=-inv_ROC_HR_geom,
                                                          diameter=self.diameter)
 
 
@@ -2433,7 +2462,7 @@ class CyMirror(Mirror):
             beam_sr.length = ans['distance']
             beam_sr.layer = 'aux_beam'
             beam_sr.incSurfAngle = localNormAngle
-            beam_sr.incSurfInvROC = -inv_ROC_HR
+            beam_sr.incSurfInvROC = -inv_ROC_HR_geom
             beam_sr.name = self.name+':s%d'%(2*ii)
             beams['s'+str(2*ii)]= beam_sr
 
@@ -2444,9 +2473,10 @@ class CyMirror(Mirror):
             #Calculate reflection and deflection angles along with the ABCD matrices
             #for reflection and deflection.
             (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                        optics.geometric.refl_defl_angle(beam_on_HR.dirAngle,
-                                                         localNormAngle,
-                                                         self.n, 1.0, invROC=-inv_ROC_HR)
+                        optics.geometric.cyl_refl_defl_angle(
+                            beam_on_HR.dirAngle, localNormAngle, self.n, 1.0,
+                            invROC=-self.inv_ROC_HR,
+                            curve_direction=self.curve_direction)
 
             #Transmitted through HR
             beam_r1 = beam_on_HR.copy()
@@ -2457,7 +2487,7 @@ class CyMirror(Mirror):
                 beam_r1.n = 1.0
                 beam_r1.ABCDTrans(Mtx, Mty)
                 beam_r1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-                beam_r1.departSurfInvROC = inv_ROC_HR
+                beam_r1.departSurfInvROC = inv_ROC_HR_geom
                 beam_r1.incSurfAngle = None
                 beam_r1.incSurfInvROC = None
                 beam_r1.name = self.name+':r%d'%(ii+1)
@@ -2472,13 +2502,13 @@ class CyMirror(Mirror):
             beam_s1.P = beam_s1.P * self.Refl_HR
             beam_s1.ABCDTrans(Mrx, Mry)
             beam_s1.departSurfAngle = localNormAngle
-            beam_s1.departSurfInvROC = -inv_ROC_HR
+            beam_s1.departSurfInvROC = -inv_ROC_HR_geom
 
             #Hit AR from back
             ans = optics.geometric.line_arc_intersection(pos=beam_s1.pos, dirVect=beam_s1.dirVect,
                                                          chord_center=chord_center_AR,
                                                          chordNormVect=-self.normVectAR,
-                                                         invROC=-inv_ROC_AR,
+                                                         invROC=-inv_ROC_AR_geom,
                                                          diameter=self.ARdiameter)
 
             if not ans['isHit']:
@@ -2511,7 +2541,7 @@ class CyMirror(Mirror):
             localNormAngle = ans['localNormAngle']
 
             beam_s1.incSurfAngle = localNormAngle
-            beam_s1.incSurfInvROC = -inv_ROC_AR
+            beam_s1.incSurfInvROC = -inv_ROC_AR_geom
             beam_s1.length = ans['distance']
             beam_s1.name = self.name+':s%d'%(2*ii+1)
             beams['s'+str(2*ii+1)] = beam_s1
@@ -2521,9 +2551,10 @@ class CyMirror(Mirror):
             beam_on_AR.propagate(ans['distance'])
 
             (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                        optics.geometric.refl_defl_angle(beam_on_AR.dirAngle,
-                                                         localNormAngle,
-                                                         self.n, 1.0, invROC=-inv_ROC_AR)
+                        optics.geometric.cyl_refl_defl_angle(
+                            beam_on_AR.dirAngle, localNormAngle, self.n, 1.0,
+                            invROC=-self.inv_ROC_AR,
+                            curve_direction=self.curve_direction)
             #Transmitted beam
             beam_t1 = beam_on_AR.copy()
             beam_t1.P = beam_on_AR.P * self.Trans_AR
@@ -2532,7 +2563,7 @@ class CyMirror(Mirror):
                 beam_t1.n = 1.0
                 beam_t1.ABCDTrans(Mtx, Mty)
                 beam_t1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-                beam_t1.departSurfInvROC = inv_ROC_AR
+                beam_t1.departSurfInvROC = inv_ROC_AR_geom
                 beam_t1.incSurfAngle = None
                 beam_t1.incSurfInvROC = None
                 beam_t1.name = self.name+':t%d'%(ii+1)
@@ -2547,7 +2578,7 @@ class CyMirror(Mirror):
             beam_sr.dirAngle = reflAngle
             beam_sr.ABCDTrans(Mrx, Mry)
             beam_sr.departSurfAngle = localNormAngle
-            beam_sr.departSurfInvROC = -inv_ROC_AR
+            beam_sr.departSurfInvROC = -inv_ROC_AR_geom
 
             ii=ii+1
 
@@ -2590,22 +2621,31 @@ class CyMirror(Mirror):
         #A dictionary to hold beams
         beams={}
 
+        #The shape of the surface in the plane of the trace and the
+        #power of the surface are two different things here, and they
+        #agree only when the curvature lies in that plane. Curved out of
+        #the plane, the cross-section the trace sees is a straight line,
+        #so the geometry is flat - but the surface still focuses, out of
+        #the plane. The *_geom values answer the geometric question,
+        #which is where the beam lands and how its envelope is drawn;
+        #self.inv_ROC_* carries the power, and cyl_refl_defl_angle
+        #decides which plane receives it.
         if self.curve_direction == 'h':
             chord_center_HR = self.HRcenterC
             chord_center_AR = self.ARcenterC
-            inv_ROC_HR = self.inv_ROC_HR
-            inv_ROC_AR = self.inv_ROC_AR
+            inv_ROC_HR_geom = self.inv_ROC_HR
+            inv_ROC_AR_geom = self.inv_ROC_AR
         else:
             chord_center_HR = self.HRcenter
             chord_center_AR = self.ARcenter
-            inv_ROC_HR = 0.0
-            inv_ROC_AR = 0.0
+            inv_ROC_HR_geom = 0.0
+            inv_ROC_AR_geom = 0.0
 
         #Get the intersection point
         ans = optics.geometric.line_arc_intersection(pos=beam.pos, dirVect=beam.dirVect,
                                                      chord_center=chord_center_AR,
                                                      chordNormVect=self.normVectAR,
-                                                     invROC=inv_ROC_AR,
+                                                     invROC=inv_ROC_AR_geom,
                                                      diameter=self.ARdiameter)
 
         if not ans['isHit']:
@@ -2619,7 +2659,7 @@ class CyMirror(Mirror):
 
         beam_in = beam.copy() #Make a copy
         beam_in.incSurfAngle = localNormAngle
-        beam_in.incSurfInvROC = inv_ROC_AR
+        beam_in.incSurfInvROC = inv_ROC_AR_geom
         beam_in.length = ans['distance']
         beams['input']= beam_in
 
@@ -2630,9 +2670,10 @@ class CyMirror(Mirror):
         #Calculate reflection and deflection angles along with the ABCD matrices
         #for reflection and deflection.
         (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                    optics.geometric.refl_defl_angle(beam_on_AR.dirAngle,
-                                               localNormAngle,
-                                               1.0, self.n, invROC=inv_ROC_AR)
+                    optics.geometric.cyl_refl_defl_angle(
+                        beam_on_AR.dirAngle, localNormAngle, 1.0, self.n,
+                        invROC=self.inv_ROC_AR,
+                        curve_direction=self.curve_direction)
         #Reflected beam
         beam_r1 = beam_on_AR.copy()
         beam_r1.P = beam_r1.P * self.Refl_AR
@@ -2641,7 +2682,7 @@ class CyMirror(Mirror):
             beam_r1.dirAngle = reflAngle
             beam_r1.ABCDTrans(Mrx, Mry)
             beam_r1.departSurfAngle = localNormAngle
-            beam_r1.departSurfInvROC = inv_ROC_AR
+            beam_r1.departSurfInvROC = inv_ROC_AR_geom
             beam_r1.incSurfAngle = None
             beam_r1.incSurfInvROC = None
             beam_r1.name = self.name+':r1'
@@ -2656,13 +2697,13 @@ class CyMirror(Mirror):
         beam_s1.n = self.n
         beam_s1.ABCDTrans(Mtx, Mty)
         beam_s1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-        beam_s1.departSurfInvROC = -inv_ROC_AR
+        beam_s1.departSurfInvROC = -inv_ROC_AR_geom
 
         #Hit HR from back
         ans = optics.geometric.line_arc_intersection(pos=beam_s1.pos, dirVect=beam_s1.dirVect,
                                                      chord_center=chord_center_HR,
                                                      chordNormVect=-self.normVectHR,
-                                                     invROC=-inv_ROC_HR,
+                                                     invROC=-inv_ROC_HR_geom,
                                                      diameter=self.diameter)
 
         if not ans['isHit']:
@@ -2694,7 +2735,7 @@ class CyMirror(Mirror):
         localNormAngle = ans['localNormAngle']
         beam_s1.length = ans['distance']
         beam_s1.incSurfAngle = localNormAngle
-        beam_s1.incSurfInvROC = -inv_ROC_HR
+        beam_s1.incSurfInvROC = -inv_ROC_HR_geom
         beam_s1.name = self.name+':s1'
         beams['s1'] = beam_s1
 
@@ -2704,9 +2745,10 @@ class CyMirror(Mirror):
         beam_on_HR.propagate(ans['distance'])
 
         (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                    optics.geometric.refl_defl_angle(beam_on_HR.dirAngle,
-                                               localNormAngle,
-                                               self.n, 1.0, invROC=-inv_ROC_HR)
+                    optics.geometric.cyl_refl_defl_angle(
+                        beam_on_HR.dirAngle, localNormAngle, self.n, 1.0,
+                        invROC=-self.inv_ROC_HR,
+                        curve_direction=self.curve_direction)
 
         #Transmitted beam
         beam_t1 = beam_on_HR.copy()
@@ -2718,7 +2760,7 @@ class CyMirror(Mirror):
             beam_t1.n = 1.0
             beam_t1.ABCDTrans(Mtx, Mty)
             beam_t1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-            beam_t1.departSurfInvROC = inv_ROC_HR
+            beam_t1.departSurfInvROC = inv_ROC_HR_geom
             beam_t1.incSurfAngle = None
             beam_t1.incSurfInvROC = None
             beam_t1.name = self.name+':t1'
@@ -2732,7 +2774,7 @@ class CyMirror(Mirror):
         beam_sr.dirAngle = reflAngle
         beam_sr.ABCDTrans(Mrx, Mry)
         beam_sr.departSurfAngle = localNormAngle
-        beam_sr.departSurfInvROC = -inv_ROC_HR
+        beam_sr.departSurfInvROC = -inv_ROC_HR_geom
 
         #Calculate higher order reflections
 
@@ -2745,7 +2787,7 @@ class CyMirror(Mirror):
             ans = optics.geometric.line_arc_intersection(pos=beam_sr.pos, dirVect=beam_sr.dirVect,
                                                          chord_center=chord_center_AR,
                                                          chordNormVect=-self.normVectAR,
-                                                         invROC=-inv_ROC_AR,
+                                                         invROC=-inv_ROC_AR_geom,
                                                          diameter=self.ARdiameter)
 
             if not ans['isHit']:
@@ -2778,7 +2820,7 @@ class CyMirror(Mirror):
             beam_sr.length = ans['distance']
             beam_sr.layer = 'aux_beam'
             beam_sr.incSurfAngle = localNormAngle
-            beam_sr.incSurfInvROC = -inv_ROC_AR
+            beam_sr.incSurfInvROC = -inv_ROC_AR_geom
             beam_sr.name = self.name+':s%d'%(2*ii)
             beams['s'+str(2*ii)]= beam_sr
 
@@ -2790,9 +2832,10 @@ class CyMirror(Mirror):
             #Calculate reflection and deflection angles along with the ABCD matrices
             #for reflection and deflection.
             (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                        optics.geometric.refl_defl_angle(beam_on_AR.dirAngle,
-                                                         localNormAngle,
-                                                         self.n, 1.0, invROC=-inv_ROC_AR)
+                        optics.geometric.cyl_refl_defl_angle(
+                            beam_on_AR.dirAngle, localNormAngle, self.n, 1.0,
+                            invROC=-self.inv_ROC_AR,
+                            curve_direction=self.curve_direction)
 
             #Transmitted through AR
             beam_r1 = beam_on_AR.copy()
@@ -2802,7 +2845,7 @@ class CyMirror(Mirror):
                 beam_r1.n = 1.0
                 beam_r1.ABCDTrans(Mtx, Mty)
                 beam_r1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-                beam_r1.departSurfInvROC = inv_ROC_AR
+                beam_r1.departSurfInvROC = inv_ROC_AR_geom
                 beam_r1.incSurfAngle = None
                 beam_r1.incSurfInvROC = None
                 beam_r1.name = self.name+':r%d'%(ii+1)
@@ -2817,13 +2860,13 @@ class CyMirror(Mirror):
             beam_s1.dirAngle = reflAngle
             beam_s1.ABCDTrans(Mrx, Mry)
             beam_s1.departSurfAngle = localNormAngle
-            beam_s1.departSurfInvROC = -inv_ROC_AR
+            beam_s1.departSurfInvROC = -inv_ROC_AR_geom
 
             #Hit HR from back
             ans = optics.geometric.line_arc_intersection(pos=beam_s1.pos, dirVect=beam_s1.dirVect,
                                                          chord_center=chord_center_HR,
                                                          chordNormVect=-self.normVectHR,
-                                                         invROC=-inv_ROC_HR,
+                                                         invROC=-inv_ROC_HR_geom,
                                                          diameter=self.diameter)
 
             if not ans['isHit']:
@@ -2854,7 +2897,7 @@ class CyMirror(Mirror):
            #Local normal angle
             localNormAngle = ans['localNormAngle']
             beam_s1.incSurfAngle = localNormAngle
-            beam_s1.incSurfInvROC = -inv_ROC_HR
+            beam_s1.incSurfInvROC = -inv_ROC_HR_geom
             beam_s1.length = ans['distance']
             beam_s1.name = self.name+':s%d'%(2*ii+1)
             beams['s'+str(2*ii+1)] = beam_s1
@@ -2865,9 +2908,10 @@ class CyMirror(Mirror):
             beam_on_HR.propagate(ans['distance'])
 
             (reflAngle, deflAngle, Mrx, Mry, Mtx, Mty) = \
-                        optics.geometric.refl_defl_angle(beam_on_HR.dirAngle,
-                                                         localNormAngle,
-                                                         self.n, 1.0, invROC=-inv_ROC_HR)
+                        optics.geometric.cyl_refl_defl_angle(
+                            beam_on_HR.dirAngle, localNormAngle, self.n, 1.0,
+                            invROC=-self.inv_ROC_HR,
+                            curve_direction=self.curve_direction)
 
             #Transmitted beam
             beam_t1 = beam_on_HR.copy()
@@ -2878,7 +2922,7 @@ class CyMirror(Mirror):
                 beam_t1.n = 1.0
                 beam_t1.ABCDTrans(Mtx, Mty)
                 beam_t1.departSurfAngle = np.mod(localNormAngle+pi, 2*pi)
-                beam_t1.departSurfInvROC = inv_ROC_HR
+                beam_t1.departSurfInvROC = inv_ROC_HR_geom
                 beam_t1.incSurfAngle = None
                 beam_t1.incSurfInvROC = None
                 beam_t1.name = self.name+':t%d'%(ii+1)
@@ -2892,7 +2936,7 @@ class CyMirror(Mirror):
             beam_sr.dirAngle = reflAngle
             beam_sr.ABCDTrans(Mrx, Mry)
             beam_sr.departSurfAngle = localNormAngle
-            beam_sr.departSurfInvROC = -inv_ROC_HR
+            beam_sr.departSurfInvROC = -inv_ROC_HR_geom
 
             ii=ii+1
 
