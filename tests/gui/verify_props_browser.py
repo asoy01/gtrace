@@ -122,7 +122,10 @@ var LENS = __LENS__;
                     return g !== f;
                 });
             },
-            send: function (m) { sent.push(m); }
+            send: function (m) { sent.push(m); },
+            // The real model has one; a stand-in that lacks it
+            // would let a missing call pass unnoticed.
+            save_changes: function () {}
         };
 
         var el = document.getElementById('host');
@@ -173,6 +176,60 @@ var LENS = __LENS__;
                 });
             return found;
         }
+        // --- making room ---
+        // A notebook cell is a letterbox and a bench drawing is not, so
+        // the two controls that give the drawing more of it: fold the
+        // side panel away, and drag the bottom edge down.
+        var stageW = function () {
+            return Math.round(v.svg.getBoundingClientRect().width);
+        };
+        out.room = {wideBefore: stageW()};
+        el.querySelector('.gt-sidetoggle').click();
+        out.room.folded = {
+            sideShown: v.side.style.display !== 'none',
+            wide: stageW(),
+            // The drawing has to notice: the viewport is what the
+            // scene is mapped onto, and a stale one distorts it.
+            viewBox: v.svg.getAttribute('viewBox'),
+            label: el.querySelector('.gt-sidetoggle').textContent
+        };
+        el.querySelector('.gt-sidetoggle').click();
+        out.room.unfolded = {
+            sideShown: v.side.style.display !== 'none',
+            wide: stageW(),
+            label: el.querySelector('.gt-sidetoggle').textContent
+        };
+
+        var grip = el.querySelector('.gt-resize');
+        out.room.hasGrip = !!grip;
+        if (grip) {
+            // The element the viewer was mounted into, which is the one
+            // whose height the grip changes - not the div this page
+            // pinned at a fixed size around it.
+            var box = v.container;
+            var h0 = Math.round(box.getBoundingClientRect().height);
+            var scale0 = v.scale;
+            mouse(grip, 'mousedown', 0, 300);
+            mouse(window, 'mousemove', 0, 500);
+            mouse(window, 'mouseup', 0, 500);
+            out.room.resized = {
+                from: h0,
+                to: Math.round(box.getBoundingClientRect().height),
+                height: state.height,
+                svgHeight: Math.round(v.svg.getBoundingClientRect().height),
+                // Dragging taller must not reframe: the view is already
+                // where the user put it.
+                scaleKept: v.scale === scale0
+            };
+            // And it will not be dragged away to nothing.
+            mouse(grip, 'mousedown', 0, 500);
+            mouse(window, 'mousemove', 0, -4000);
+            mouse(window, 'mouseup', 0, -4000);
+            out.room.floor = Math.round(box.getBoundingClientRect().height);
+            box.style.height = h0 + 'px';
+            v._resize();
+        }
+
         // Which row each button is on. The two kinds are kept apart on
         // purpose, so that which row a button lands on does not depend
         // on how wide the panel happens to be.
@@ -829,6 +886,46 @@ if res is None:
     print('  FAIL  no output')
     sys.exit(1)
 check('ran without exception', res['error'] is None, str(res['error'])[:400])
+
+print('--- making room ---')
+rm = res['room']
+check('folding the side panel away hides it',
+      not rm['folded']['sideShown'])
+check('and the drawing takes the width it gave up',
+      rm['folded']['wide'] > rm['wideBefore'] + 300,
+      '%d -> %d' % (rm['wideBefore'], rm['folded']['wide']))
+# The viewport is what the scene is mapped onto; a stale one would
+# stretch the drawing across the new width.
+check('the viewport follows',
+      rm['folded']['viewBox'].split()[2] == str(rm['folded']['wide'])
+      or abs(float(rm['folded']['viewBox'].split()[2])
+             - rm['folded']['wide']) < 1.5,
+      rm['folded']['viewBox'])
+check('the button turns round to bring it back',
+      rm['folded']['label'] != rm['unfolded']['label'],
+      '%s / %s' % (rm['folded']['label'], rm['unfolded']['label']))
+check('and it comes back to the width it had',
+      rm['unfolded']['sideShown']
+      and abs(rm['unfolded']['wide'] - rm['wideBefore']) < 1.5,
+      '%d vs %d' % (rm['unfolded']['wide'], rm['wideBefore']))
+
+check('there is a grip to drag it taller by', rm['hasGrip'])
+rz = rm['resized']
+check('dragging it down makes it taller',
+      abs(rz['to'] - rz['from'] - 200) < 2,
+      '%d -> %d' % (rz['from'], rz['to']))
+# The height belongs to whatever mounted the viewer, so the new one is
+# written back to the traitlet that set it: that is what makes it
+# survive a re-render and lets Python read what it was dragged to.
+check('and tells the model what it became',
+      abs(rz['height'] - rz['to']) < 2,
+      '%s vs %d' % (rz['height'], rz['to']))
+check('the drawing gets the height, less the grip',
+      0 < rz['to'] - rz['svgHeight'] < 40,
+      '%d vs %d' % (rz['svgHeight'], rz['to']))
+check('and the view is left where the user put it', rz['scaleKept'])
+check('it cannot be dragged away to nothing', rm['floor'] >= 240,
+      str(rm['floor']))
 
 print('--- the head ---')
 check('the buttons are on two rows', len(res['headRows']) == 2,

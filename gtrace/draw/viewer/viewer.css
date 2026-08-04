@@ -22,8 +22,20 @@
 .gt-root *, .gt-root *::before, .gt-root *::after { box-sizing: inherit; }
 
 /* Host element the notebook widget mounts into. Its height is set from
-   the widget's height traitlet; .gt-root then fills it. */
-.gt-widget { width: 100%; }
+   the widget's height traitlet; .gt-root then fills what is left of it
+   once the resize grip has had its few pixels. The floor on .gt-root is
+   lifted here: in a cell the height is the user's to drag, and the grip
+   is what they drag it with. */
+.gt-widget {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.gt-widget > .gt-root {
+    flex: 1 1 auto;
+    min-height: 0;
+}
 
 /* Shown when Python refuses an edit. */
 .gt-error {
@@ -86,6 +98,51 @@
     min-width: 0;
     overflow: hidden;
 }
+
+/* Folds the side panel away, giving the drawing the whole width. It
+   rides on the drawing rather than in the panel, since a button inside
+   the thing it hides could not bring it back. */
+.gt-sidetoggle {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    color: #6b7280;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #d8dce3;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.45;
+}
+
+.gt-stage:hover .gt-sidetoggle { opacity: 1; }
+.gt-sidetoggle:hover { color: #1f2328; background: #eceff3; }
+.gt-sidetoggle-folded { opacity: 1; }
+
+/* Grip along the bottom edge of the viewer, for dragging it taller. A
+   notebook cell is a letterbox and a bench drawing is not. */
+.gt-resize {
+    height: 7px;
+    cursor: ns-resize;
+    background: #f6f7f9;
+    border: 1px solid #d8dce3;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    background-image: linear-gradient(to right,
+        transparent calc(50% - 14px), #c9cfd8 calc(50% - 14px),
+        #c9cfd8 calc(50% + 14px), transparent calc(50% + 14px));
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.gt-resize:hover, .gt-resize.gt-resizing { background-color: #eceff3; }
 
 .gt-svg {
     display: block;

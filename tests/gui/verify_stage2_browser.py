@@ -102,7 +102,10 @@ var SCENES = __SCENES__;
                 handlers[ev] = (handlers[ev] || []).filter(function (f) {
                     return f !== fn;
                 });
-            }
+            },
+            // The real model has one; a stand-in that lacks it
+            // would let a missing call pass unnoticed.
+            save_changes: function () {}
         };
 
         var el = document.getElementById('host');
@@ -148,7 +151,8 @@ var SCENES = __SCENES__;
                 (h2['change:' + k] || []).forEach(function (f) { f(); });
             },
             on: function (ev, fn) { (h2[ev] = h2[ev] || []).push(fn); },
-            off: function () {}
+            off: function () {},
+            save_changes: function () {}
         };
         mod.default.render({model: model2, el: det});
         var v2 = det.gtraceViewer;

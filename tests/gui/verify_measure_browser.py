@@ -132,7 +132,10 @@ var EDITABLE = __EDITABLE__;
             },
             on: function (e, f) { (handlers[e] = handlers[e] || []).push(f); },
             off: function () {},
-            send: function (m) { sent.push(m); }
+            send: function (m) { sent.push(m); },
+            // The real model has one; a stand-in that lacks it
+            // would let a missing call pass unnoticed.
+            save_changes: function () {}
         };
 
         var el = document.getElementById('host');

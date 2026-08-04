@@ -25,9 +25,26 @@ function render({ model, el }) {
         ? (msg) => model.send(msg)
         : null;
 
+    // Set from Python, a new height reframes the drawing to suit it.
+    // Set by a drag of the bottom edge, it must not: the view is already
+    // where the user put it, and refitting would throw away the zoom
+    // they were working at.
+    let dragged = false;
+
+    // A cell output is a letterbox and a bench drawing is not, so the
+    // viewer can be dragged taller by its bottom edge. The height is
+    // this element's, so it is written back to the traitlet that set it:
+    // that is what makes the new height survive a re-render, and lets
+    // Python see what it was dragged to.
     const viewer = globalThis.GTraceViewer.mount(host, model.get('scene'), {
         layoutPath: model.get('layout_path'),
-        onEdit: onEdit
+        onEdit: onEdit,
+        resizable: true,
+        onResize: (h) => {
+            dragged = true;
+            model.set('height', h);
+            model.save_changes();
+        }
     });
 
     // Python pushes a new scene whenever the layout is re-traced. Keep
@@ -36,6 +53,7 @@ function render({ model, el }) {
     const onScene = () => viewer.setScene(model.get('scene'));
     const onHeight = () => {
         host.style.height = (model.get('height') || 520) + 'px';
+        if (dragged) { dragged = false; return; }
         viewer.fit();
     };
 

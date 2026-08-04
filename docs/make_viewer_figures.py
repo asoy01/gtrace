@@ -119,7 +119,8 @@ var SCENE = __SCENE__;
                 return g !== f;
             });
         },
-        send: function () {}
+        send: function () {},
+        save_changes: function () {}
     };
 
     var el = document.getElementById('host');

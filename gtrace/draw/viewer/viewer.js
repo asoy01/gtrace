@@ -329,6 +329,17 @@ Viewer.prototype._build = function () {
 
     this.statusBar = htmlEl('div', 'gt-status');
     stage.appendChild(this.statusBar);
+
+    // Folding the side bar away gives the drawing the whole width, which
+    // in a notebook cell is most of what there is. The button rides on
+    // the drawing rather than in the panel, since a button inside the
+    // thing it hides cannot bring it back.
+    this.sideToggle = htmlEl('button', 'gt-sidetoggle', '»');
+    this.sideToggle.title = 'Hide the side panel';
+    this.sideToggle.addEventListener('click', function () {
+        self.toggleSide();
+    });
+    stage.appendChild(this.sideToggle);
     root.appendChild(stage);
 
     // --- side bar ---
@@ -512,8 +523,36 @@ Viewer.prototype._build = function () {
     side.appendChild(hpanel);
 
     root.appendChild(side);
+    this.side = side;
     this.container.appendChild(root);
     this.root = root;
+
+    // A grip along the bottom edge, for dragging the viewer taller. Only
+    // where the embedder said how tall it may be in the first place: a
+    // written page fills the window, and a grip there would only fight
+    // it. See _bindEvents for the drag, and opts.onResize for what
+    // becomes of the height afterwards.
+    if (this.opts.resizable) {
+        this.resizeGrip = htmlEl('div', 'gt-resize');
+        this.resizeGrip.title = 'Drag to change the height';
+        this.container.appendChild(this.resizeGrip);
+    }
+};
+
+/*
+ * Fold the side panel away, or bring it back.
+ */
+Viewer.prototype.toggleSide = function (on) {
+    var show = on === undefined ? this.side.style.display === 'none' : !!on;
+    this.side.style.display = show ? '' : 'none';
+    this.sideToggle.textContent = show ? '»' : '«';
+    this.sideToggle.title = show ? 'Hide the side panel'
+                                 : 'Show the side panel';
+    this.sideToggle.classList.toggle('gt-sidetoggle-folded', !show);
+    // The drawing area just changed width. Without a ResizeObserver
+    // nothing would notice, and the view would keep the shape it had.
+    this._resize();
+    return show;
 };
 
 /*
@@ -1430,6 +1469,12 @@ var DIM_PICK = 8;
 var SNAP_TIE = 1e-9;
 
 /*
+ * How short the viewer may be dragged, in screen pixels. Below this the
+ * side panel is taller than the drawing and neither is usable.
+ */
+var MIN_HEIGHT = 240;
+
+/*
  * The points a measurement may be taken from.
  *
  * The optics contribute theirs through the scene: corners, the apex of
@@ -2282,6 +2327,42 @@ Viewer.prototype._bindEvents = function () {
         on(global, 'resize', function () { self._resize(); });
     }
 
+    // Dragging the bottom edge changes the height of the viewer. A
+    // notebook cell is a letterbox and a bench drawing is not, so this
+    // is the control that matters most for actually working in one.
+    //
+    // The height is the embedder's - it owns the element the viewer was
+    // mounted into - so the drag sets it directly and reports it on
+    // release. The widget writes it back to its traitlet, which is what
+    // makes the new height survive a re-render and readable from Python.
+    if (this.resizeGrip) {
+        var resizing = false, startY = 0, startH = 0;
+        on(this.resizeGrip, 'mousedown', function (ev) {
+            if (ev.button !== 0) { return; }
+            resizing = true;
+            startY = ev.clientY;
+            startH = self.container.getBoundingClientRect().height;
+            self.resizeGrip.classList.add('gt-resizing');
+            ev.preventDefault();
+        });
+        on(global, 'mousemove', function (ev) {
+            if (!resizing) { return; }
+            var h = Math.max(MIN_HEIGHT, startH + ev.clientY - startY);
+            self.container.style.height = h + 'px';
+            self._resize();
+            ev.preventDefault();
+        });
+        on(global, 'mouseup', function () {
+            if (!resizing) { return; }
+            resizing = false;
+            self.resizeGrip.classList.remove('gt-resizing');
+            if (self.opts.onResize) {
+                self.opts.onResize(
+                    Math.round(self.container.getBoundingClientRect().height));
+            }
+        });
+    }
+
     // Keyboard shortcuts act on the viewer the pointer is over, so that
     // several viewers in one notebook do not all answer the same key.
     this.pointerInside = false;
@@ -2567,6 +2648,11 @@ Viewer.prototype.destroy = function () {
     if (i >= 0) { VIEWERS.splice(i, 1); }
     if (this.root && this.root.parentNode) {
         this.root.parentNode.removeChild(this.root);
+    }
+    // A sibling of the root rather than a child of it, so it has to be
+    // taken out on its own.
+    if (this.resizeGrip && this.resizeGrip.parentNode) {
+        this.resizeGrip.parentNode.removeChild(this.resizeGrip);
     }
 };
 

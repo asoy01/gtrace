@@ -68,6 +68,17 @@ Controls
 
 Zoom with the wheel, centred on the cursor. Pan by dragging the background. Layers can be toggled individually, so the stray beams can be taken out of the way without re-running anything.
 
+Making room
+^^^^^^^^^^^^
+
+A notebook cell is a letterbox and a bench drawing is not, so there are two ways to give the drawing more of it.
+
+**Drag the bottom edge.** A grip runs along the bottom of the widget; dragging it down makes the viewer taller. The new height is written back to the ``height`` traitlet, so it survives a re-render and ``w.height`` reports what you dragged to. Dragging does not reframe the view — you are already looking where you meant to. Setting ``w.height`` from Python still does, since a height chosen there is usually a request to see the whole thing at that size.
+
+**Fold the side panel away** with the small button at the top right of the drawing, which gives it the whole width. The button stays where it was, turned round, to bring the panel back; a button inside the panel could not.
+
+The grip belongs to the widget. The written HTML file fills its window already, so there is nothing there for it to do.
+
 Beam widths
 ^^^^^^^^^^^^
 
