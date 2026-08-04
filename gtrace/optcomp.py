@@ -3760,3 +3760,125 @@ class Lens(Mirror):
 #}}}
 
 #}}}
+
+class CyLens(Lens, CyMirror):
+    '''
+    A cylindrical lens: a substrate that refracts at both faces and
+    focuses in one plane only.
+
+    It is ordered exactly like a Lens - by its focal length, solved as a
+    thick lens - and shaped exactly like a CyMirror: both faces are
+    cylinders sharing one curve_direction, so the focal length lives in
+    that plane and the other plane sees nothing but a window. The two
+    parents each contribute what they already know. Lens brings the
+    ordering - the f property, set_focal_length(), shape, and the anchor
+    on the middle of the substrate - and CyMirror brings the geometry
+    and the ray matrices that put the power in one plane only.
+
+    The solver needs no change for a cylinder. In the curved plane a
+    cylindrical lens is the lensmaker's thick lens, and the distance
+    between the apexes is ``thickness + sagHR + sagAR`` for either
+    curve_direction: the axis of a cylinder curved out of the drawing
+    lies in it, so the section the trace sees runs through the apexes.
+
+    As with CyMirror, only 'h' is visible in the drawing. A 'v' lens is
+    drawn as a plain rectangle - what the plane of the trace cuts out of
+    it - and its focusing happens entirely out of the page, carried by
+    the beam's qy.
+
+    The focal length f is quoted at normal incidence. Tilted, the two
+    planes scale differently - see CyMirror and cyl_refl_defl_angle for
+    what a tilt does to each plane.
+
+    Examples
+    --------
+    A 500 mm cylindrical lens focusing in the plane of the drawing::
+
+        L = CyLens(f=500*mm)
+
+    The same power focusing out of the plane, which is drawn straight::
+
+        L = CyLens(f=500*mm, curve_direction='v')
+
+    The shapes a Lens can take, a CyLens can too::
+
+        L = CyLens(f=-100*mm, thickness=3*mm, shape='plano-concave')
+    '''
+
+#{{{ __init__
+
+    def __init__(self, f=None, shape=None,
+                 center=None, HRcenter=None, normAngleHR=0.0,
+                 normVectHR=None, diameter=1*inch, thickness=6*mm,
+                 n=1.45, ROC_HR=None, inv_ROC_HR=None, inv_ROC_AR=None,
+                 wedgeAngle=0.0, Refl_HR=0.0, Trans_HR=1.0,
+                 Refl_AR=0.0, Trans_AR=1.0, name="CyLens",
+                 HRtransmissive=True, term_on_HR=False,
+                 max_stray_order=None, curve_direction='h'):
+        '''
+        Create a cylindrical lens.
+
+        Takes everything Lens.__init__ takes, with the same meanings
+        and the same defaults, plus:
+
+        Parameters
+        ----------
+        curve_direction : str, optional
+            Which plane the faces curve in, and so which plane the
+            focal length lives in. 'h' is the plane of the drawing,
+            'v' is perpendicular to it. Defaults 'h'.
+
+        Raises
+        ------
+        LensGeometryError
+            If the lens cannot be made out of the blank given, if the
+            arguments over- or under-determine it, or if
+            curve_direction is neither 'h' nor 'v'.
+        '''
+        #CyMirror stores whatever it is given and branches on it face
+        #by face, so a typo would be half one direction and half the
+        #other. A lens ordered from a catalogue can afford to check.
+        if curve_direction not in ('h', 'v'):
+            raise LensGeometryError(
+                "curve_direction must be 'h' or 'v', not %r."
+                % (curve_direction,))
+
+        Lens.__init__(self, f=f, shape=shape, center=center,
+                      HRcenter=HRcenter, normAngleHR=normAngleHR,
+                      normVectHR=normVectHR, diameter=diameter,
+                      thickness=thickness, n=n, ROC_HR=ROC_HR,
+                      inv_ROC_HR=inv_ROC_HR, inv_ROC_AR=inv_ROC_AR,
+                      wedgeAngle=wedgeAngle, Refl_HR=Refl_HR,
+                      Trans_HR=Trans_HR, Refl_AR=Refl_AR,
+                      Trans_AR=Trans_AR, name=name,
+                      HRtransmissive=HRtransmissive,
+                      term_on_HR=term_on_HR,
+                      max_stray_order=max_stray_order)
+
+        #After Lens.__init__, like CyMirror sets it after the Mirror
+        #skeleton is up: nothing the constructor runs reads it, and the
+        #methods that branch on it are not called until the lens is
+        #whole.
+        self.curve_direction = curve_direction
+
+#}}}
+
+#{{{ copy
+
+    def copy(self):
+        #From the curvatures, not from f, for the same reason as
+        #Lens.copy().
+        m = CyLens(inv_ROC_HR=self.inv_ROC_HR, inv_ROC_AR=self.inv_ROC_AR,
+                   HRcenter=self.HRcenter, normAngleHR=self.normAngleHR,
+                   diameter=self.diameter, thickness=self.thickness,
+                   wedgeAngle=self.wedgeAngle, Refl_HR=self.Refl_HR,
+                   Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR,
+                   Trans_AR=self.Trans_AR, n=self.n, name=self.name,
+                   HRtransmissive=self.HRtransmissive,
+                   term_on_HR=self.term_on_HR,
+                   max_stray_order=self.max_stray_order,
+                   curve_direction=self.curve_direction)
+        m.ROC_anchor = self.ROC_anchor
+        return m
+
+#}}}

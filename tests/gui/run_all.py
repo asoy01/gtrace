@@ -29,6 +29,8 @@ SUITES = [
      'Lens: the focal length ordered, measured by tracing a ray through it'),
     ('verify_cylindrical.py',
      'CyMirror: one plane focused, the other left alone, against Siegman'),
+    ('verify_cylens.py',
+     'CyLens: the focal length ordered lands in one plane, the other is a window'),
     ('verify_dimensions.py',
      'substrate corners, what a span runs inside, and the dimension model'),
     ('verify_stage1.py',

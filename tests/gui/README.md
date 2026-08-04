@@ -29,6 +29,9 @@ counts it as skipped rather than passed.
 |---|---|
 | `verify_surfaces.py` | Where the two faces of a substrate are, against an arc derived independently of the class: both curvature signs, both faces, at four heights across the aperture, plus `isHit` agreeing with what `hitFrom*` then traces, and the drawn arc meeting the drawn sides. Not a GUI check, but it wants counted assertions and this is where those live |
 | `verify_lens.py` | `Lens`: for seventeen lenses, the focal length **measured by tracing a ray through them** and reading the angle it leaves at, which owes nothing to the formula the constructor solved. Also what the constructor refuses and why, the defaults a lens needs, copy and save/load, and that a lens does not turn the beam through it into a ghost |
+| `verify_cylindrical.py` | `CyMirror`: the reflection and transmission matrices **against Siegman Table 15.1 written down from the book**, for both curve directions across angles and curvatures, with the spherical results pinned bit-for-bit to the pre-fix implementation |
+| `verify_cylens.py` | `CyLens`: the focal length ordered lands **in the plane `curve_direction` names and nowhere else** - the in-plane value traced like a Lens, the out-of-plane one read off the ABCD matrix extracted from how `qy` transforms, and the flat plane held to being a window (no power, no magnification, the right length of glass). Plus what is new over Lens: the direction through copy, save/load and the edit protocol |
+| `verify_dimensions.py` | Substrate corners against `get_side_info`, what a span runs inside (`contains_segment`, including the hollow of a concave face), the snap points, and the `Dimension` model through the edit protocol |
 | `verify_stage1.py` | `renderHTML`: self-containment (no fetched URL, no surviving placeholder), the embedded scene's channels, every entry point, the optics channel the properties panel needs |
 | `verify_stage1.js` | **`viewer.js` physics against gtrace**: `beamParamsAt` and `projectOnBeam` over every beam of a traced system at five points each, plus the waist relations. Runs in Node against the real file |
 | `verify_browser.py` | Headless browser: the DOM the viewer builds, empty-layer marking, and **the HTML file `renderHTML` actually writes** |
@@ -38,6 +41,7 @@ counts it as skipped rather than passed.
 | `verify_stage2b.py` | The edit protocol end to end, what it refuses, save/load, and the model invariants underneath (sagitta, substrate centre, `max_stray_order`). Also lenses through the protocol: what a lens inherits and what it must not, setting `f`, the anchor, and that a scene carrying one is still strict JSON |
 | `verify_stage2b_browser.py` | Headless browser: dragging an optics, and feeding the resulting messages back through `apply_edit` |
 | `verify_props_browser.py` | Headless browser: the properties panel, its unit conversions, add and remove, rename, the display controls, the layout file buttons, and the rows only some classes have (curve direction, focal length, ROC anchor) |
+| `verify_measure_browser.py` | Headless browser: the measuring tool - snapping to the points Python put in the scene, the three clicks, the offset, the dimension panel, and that a static page can still measure |
 
 `tests/test_gtrace.py` (the DXF renderer) and
 `tests/test_beam_propagation.py` (the propagation convention) are run

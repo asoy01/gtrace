@@ -345,7 +345,11 @@ DEFAULT_LENS_F = 0.5
 
 #: Types that can be created from an edit message.
 CREATABLE_OPTIC_TYPES = {'Mirror': 'Mirror', 'CyMirror': 'CyMirror',
-                         'Lens': 'Lens'}
+                         'Lens': 'Lens', 'CyLens': 'CyLens'}
+
+#: The lens types among them: the ones ordered by focal length and
+#: built by _lens_from_params rather than from the mirror around them.
+_LENS_TYPES = frozenset(['Lens', 'CyLens'])
 
 #: Attributes of a dimension a front end may change. A dimension is two
 #: points, where its line is drawn, and a name; the name has its own
@@ -515,8 +519,8 @@ def _in_notebook():
 
 def optic_to_dict(m):
     '''
-    Convert a Mirror, CyMirror or Lens to a JSON-compatible dict of its
-    construction parameters.
+    Convert a Mirror, CyMirror, Lens or CyLens to a JSON-compatible
+    dict of its construction parameters.
 
     A Lens is written out by its curvatures, like any other optics, and
     not by its focal length: the focal length is derived from them, and
@@ -550,8 +554,8 @@ def optic_to_dict(m):
 
 def optic_from_dict(d):
     '''
-    Construct a Mirror, CyMirror or Lens from a dict produced by
-    optic_to_dict().
+    Construct a Mirror, CyMirror, Lens or CyLens from a dict produced
+    by optic_to_dict().
     '''
     kwargs = {'HRcenter': d['HRcenter'],
               'normAngleHR': d['normAngleHR'],
@@ -577,6 +581,12 @@ def optic_from_dict(d):
         #than re-solving, which would reshape a lens whose radii had
         #been edited since.
         m = optcomp.Lens(f=None, **kwargs)
+    elif d['type'] == 'CyLens':
+        #From the curvatures, like a Lens, and with the direction,
+        #like a CyMirror.
+        m = optcomp.CyLens(f=None,
+                           curve_direction=d.get('curve_direction', 'h'),
+                           **kwargs)
     elif d['type'] == 'Mirror':
         m = optcomp.Mirror(**kwargs)
     else:
@@ -1554,7 +1564,7 @@ class OpticalLayout(object):
                             % (kind, ', '.join(sorted(CREATABLE_OPTIC_TYPES))))
 
         allowed = CREATABLE_OPTIC_PARAMS
-        if kind == 'Lens':
+        if kind in _LENS_TYPES:
             allowed = allowed | CREATABLE_LENS_PARAMS
         params = msg.get('params') or {}
         for key, value in params.items():
@@ -1572,8 +1582,8 @@ class OpticalLayout(object):
             raise EditError('An optics name must be a non-empty string, '
                             'not %r.' % (name,))
 
-        if kind == 'Lens':
-            return self._lens_from_params(params, name)
+        if kind in _LENS_TYPES:
+            return self._lens_from_params(params, name, kind)
 
         kwargs = {'inv_ROC_HR': 0.0, 'inv_ROC_AR': 0.0}
         if self.optics:
@@ -1589,7 +1599,7 @@ class OpticalLayout(object):
         kwargs.pop('curve_direction', None)   # CyMirror only
         return optcomp.Mirror(**kwargs)
 
-    def _lens_from_params(self, params, name):
+    def _lens_from_params(self, params, name, kind='Lens'):
         '''
         Build the lens described by an 'add' message.
 
@@ -1601,7 +1611,11 @@ class OpticalLayout(object):
             sign of f - and that reason is what the front end shows.
         '''
         kwargs = dict(params)
-        kwargs.pop('curve_direction', None)   # CyMirror only
+        if kind == 'CyLens':
+            cls = optcomp.CyLens
+        else:
+            cls = optcomp.Lens
+            kwargs.pop('curve_direction', None)   # cylindrical types only
         # Curvatures given outright describe the lens completely, and
         # Lens refuses a focal length on top of them rather than
         # silently preferring one. Only fill in the default when there
@@ -1611,7 +1625,7 @@ class OpticalLayout(object):
             kwargs['f'] = DEFAULT_LENS_F
         kwargs['name'] = name
         try:
-            return optcomp.Lens(**kwargs)
+            return cls(**kwargs)
         except ValueError as e:
             raise EditError('Cannot make that lens - %s: %s'
                             % (type(e).__name__, e))

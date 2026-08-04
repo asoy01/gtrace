@@ -21,6 +21,11 @@ Slated for 0.4.0. Not yet on PyPI.
   re-solves both of them, keeping the shape and leaving the lens where
   it is. `LensGeometryError` distinguishes seventeen ways a blank cannot
   be ground to what was asked for, and says what would be needed.
+- `CyLens`, a cylindrical lens: ordered by focal length exactly like a
+  `Lens` — same shapes, same thick-lens solve, same refusals — and
+  shaped like a `CyMirror`, so the focal length lands in the plane
+  `curve_direction` names and the other plane is a plain window. A
+  `+ CyLens` button in the viewer goes with it.
 - `Optics.ROC_anchor` chooses what stays put when a curvature changes:
   the apex of the front face, or the middle of the substrate. `Mirror`
   and `CyMirror` default to the apex, so that sweeping a telescope's

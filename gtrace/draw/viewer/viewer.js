@@ -245,7 +245,12 @@ var ADDABLE_TYPES = [
     // anything the view can say. Its focal length is edited afterwards
     // in the panel, like any other property.
     {type: 'Lens', label: 'Lens', prefix: 'L',
-     title: 'Add a lens'}
+     title: 'Add a lens'},
+    // A cylindrical lens carries its direction the way a CyMirror
+    // does; everything else it takes from the catalogue, like a Lens.
+    {type: 'CyLens', label: 'CyLens', prefix: 'CL',
+     title: 'Add a cylindrical lens',
+     params: {curve_direction: 'h'}}
 ];
 
 function Viewer(container, scene, options) {

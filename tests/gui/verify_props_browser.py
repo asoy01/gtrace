@@ -250,6 +250,7 @@ var LENS = __LENS__;
         out.addButton = !!button('+ Mirror');
         out.addCyButton = !!button('+ CyMirror');
         out.addLensButton = !!button('+ Lens');
+        out.addCyLensButton = !!button('+ CyLens');
         // Scoped to the optics panel. The dimension panel builds one of
         // its own whether or not there is anywhere to send edits, since
         // a viewer with no Python behind it can still take back a
@@ -716,6 +717,14 @@ var LENS = __LENS__;
                            sent: sent.length - nLensBtn,
                            selected: v.selectedOptic};
 
+            // The cylindrical lens: catalogue defaults like a Lens,
+            // plus the curve direction like a CyMirror.
+            var nCyLensBtn = sent.length;
+            button('+ CyLens').click();
+            out.addCyLens = {msg: sent[sent.length - 1],
+                             sent: sent.length - nCyLensBtn,
+                             selected: v.selectedOptic};
+
             // Put the first one back in the panel, then remove it.
             v._selectOptic(added);
             button('Remove').click();
@@ -961,7 +970,7 @@ print('--- the head ---')
 check('the buttons are on two rows', len(res['headRows']) == 2,
       str(res['headRows']))
 check('what adds to the layout on the first',
-      res['headRows'][0] == ['+ Mirror', '+ CyMirror', '+ Lens'],
+      res['headRows'][0] == ['+ Mirror', '+ CyMirror', '+ Lens', '+ CyLens'],
       str(res['headRows'][0]))
 check('what acts on it or on the view on the second',
       res['headRows'][1] == ['Undo', 'Redo', 'Measure', 'Fit'],
@@ -1483,6 +1492,31 @@ check('placed at the centre of the view like the others',
 check('and selected right away', ln2['selected'] == ln2['msg']['name'],
       str(ln2['selected']))
 
+print('--- adding a cylindrical lens ---')
+check('it has its own button', res['addCyLensButton'])
+cl = res['addCyLens']
+check('one message per click', cl['sent'] == 1, str(cl['sent']))
+check('of the cylindrical lens type', cl['msg']['type'] == 'CyLens',
+      str(cl['msg'].get('type')))
+# Catalogue defaults like a Lens, plus the direction like a CyMirror.
+check('carrying where to put it and which way it curves',
+      set(cl['msg']['params']) == {'HRcenter', 'normAngleHR',
+                                   'curve_direction'},
+      str(sorted(cl['msg']['params'])))
+check('with a curve direction to start from',
+      cl['msg']['params'].get('curve_direction') == 'h',
+      str(cl['msg']['params']))
+check('named apart from the lenses and the mirrors',
+      cl['msg']['name'].startswith('CL')
+      and cl['msg']['name'] not in (add['msg']['name'], cy['msg']['name'],
+                                    ln2['msg']['name']),
+      str(cl['msg']['name']))
+check('placed at the centre of the view like the others',
+      cl['msg']['params']['HRcenter'] == add['msg']['params']['HRcenter'],
+      str(cl['msg']['params']['HRcenter']))
+check('and selected right away', cl['selected'] == cl['msg']['name'],
+      str(cl['selected']))
+
 print('--- undo ---')
 ub = res['undoButton']
 check('there is an Undo button', ub is not None)
@@ -1752,7 +1786,7 @@ check('but nothing is editable', res['editableFields'] == [],
       str(res['editableFields']))
 check('there are no add buttons',
       not res['addButton'] and not res['addCyButton']
-      and not res['addLensButton'])
+      and not res['addLensButton'] and not res['addCyLensButton'])
 # Nothing to add and nothing to undo, so the head is down to one row.
 # Measure stays: it needs no Python, and a written page you can measure
 # on is most of the reason to have one.

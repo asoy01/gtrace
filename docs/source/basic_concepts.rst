@@ -93,6 +93,8 @@ Transmission through a cylindrical face is the case worth stating, because it is
 
 The ray matrices are those of Siegman, *Lasers*, Table 15.1, with the curvature given to one plane and zero to the other. ``tests/cymirror_verification.ipynb`` works through the comparison, and ``tests/gui/verify_cylindrical.py`` runs it as counted assertions.
 
+A lens with cylindrical faces is :py:class:`CyLens<gtrace.optcomp.CyLens>`, ordered by focal length like any other lens; see :ref:`below <cylindrical-lens>`.
+
 Lens
 -----------
 
@@ -126,6 +128,32 @@ The focal length is not stored. Reading ``f`` computes it from the curvatures, t
         L.f = f
         layout.trace()
         ...
+
+.. _cylindrical-lens:
+
+Cylindrical lens
+~~~~~~~~~~~~~~~~
+
+:py:class:`CyLens<gtrace.optcomp.CyLens>` is ordered exactly like a
+:py:class:`Lens<gtrace.optcomp.Lens>` — same ``f``, same shapes, same
+solver, same refusals — and shaped like a
+:py:class:`CyMirror<gtrace.optcomp.CyMirror>`: both faces are cylinders
+sharing one ``curve_direction``, so the focal length lives in that
+plane and the other plane sees a plain window::
+
+    from gtrace.optcomp import CyLens
+
+    L = CyLens(f=500*mm)                       # focuses in the plane of the drawing
+    L = CyLens(f=500*mm, curve_direction='v')  # focuses out of it
+
+Everything said about :ref:`cylindrical surfaces
+<cylindrical-surfaces>` applies. A ``'v'`` lens is drawn as the
+rectangle the plane of the trace cuts out of it, and its focusing
+happens entirely out of the page, carried by the beam's ``qy``; the
+quoted ``f`` is the normal-incidence value, and at a tilt the two
+planes scale differently. In the flat plane the lens is a window, not
+nothing: a tilted flat face still rescales the beam width in its plane
+of incidence, and the substrate is still a length of glass.
 
 Optical systems
 ----------------
