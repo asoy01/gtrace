@@ -1,2 +1,3 @@
+include CHANGELOG.md
 recursive-include docs *
 recursive-include gtrace/draw/viewer *.js *.css *.html

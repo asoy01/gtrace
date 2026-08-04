@@ -17,6 +17,15 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/asoy01/gtrace",
+    # PyPI has no changelog field of its own - the project page shows the
+    # long description and nothing else - so the way to point at one is a
+    # project URL, which PyPI renders as a link in the sidebar.
+    project_urls={
+        "Documentation": "https://gtrace.readthedocs.io/",
+        "Source": "https://github.com/asoy01/gtrace",
+        "Changelog": "https://github.com/asoy01/gtrace/blob/master/CHANGELOG.md",
+        "Releases": "https://github.com/asoy01/gtrace/releases",
+    },
     packages=setuptools.find_packages(),
     package_data={'gtrace.draw.viewer': ['*.js', '*.css', '*.html']},
     # LICENSE grants the two BSD conditions with no non-endorsement
