@@ -48,9 +48,18 @@ mirrors.
 Running the notebooks
 ---------------------
 
-To run them rather than read them, take the source tree::
+Both notebooks are self-contained: they need gtrace and nothing else
+from the repository. Install it with the viewer as a Jupyter widget::
 
-    git clone https://github.com/asoy01/gtrace.git
+    pip install "gtrace[notebook]"
 
-and open ``docs/source/tutorial/gtrace-tutorial.ipynb`` or
-``docs/source/tutorial/modematching.ipynb``.
+then download the notebook itself from GitHub —
+`gtrace-tutorial.ipynb
+<https://github.com/asoy01/gtrace/blob/master/docs/source/tutorial/gtrace-tutorial.ipynb>`__
+or `modematching.ipynb
+<https://github.com/asoy01/gtrace/blob/master/docs/source/tutorial/modematching.ipynb>`__,
+using the download button at the top right of the GitHub page — and
+open it in Jupyter or in VS Code's notebook editor.
+
+Cloning the repository works too, and is the way to go when you mean
+to change gtrace itself; see :doc:`intro`.

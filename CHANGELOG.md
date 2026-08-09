@@ -16,6 +16,10 @@ across them.
 - The tutorial page introduces each of its two notebooks in a
   subsection of its own — what it covers and where its reference
   pages are — instead of listing the second one without a word.
+- Running the tutorial no longer means cloning the repository: both
+  notebooks are self-contained, so the tutorial page now links
+  straight to the files on GitHub, and `pip install
+  "gtrace[notebook]"` plus the download is the whole setup.
 
 ## 0.4.0 — 2026-08-09
 

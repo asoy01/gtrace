@@ -57,7 +57,7 @@ Neither route involves Node.js, a build step, a CDN or any network access: the v
 From a clone
 ^^^^^^^^^^^^^
 
-To work from the source tree instead, which is also what running the :doc:`tutorial` needs::
+To work from the source tree instead::
 
     git clone https://github.com/asoy01/gtrace.git
     cd gtrace
@@ -68,10 +68,10 @@ Use ``pip install -e ".[notebook]"`` if you intend to change gtrace itself. The 
 Running the tutorial
 ^^^^^^^^^^^^^^^^^^^^^
 
-The :doc:`tutorial` is a Jupyter notebook in that source tree, so it needs a Jupyter front end::
+The :doc:`tutorial` is a pair of Jupyter notebooks. Both are self-contained — they need gtrace and nothing else from the repository — so downloading the ``.ipynb`` files is enough, and the :doc:`tutorial` page links to them on GitHub. A Jupyter front end runs them::
 
     pip install jupyterlab
-    jupyter lab docs/source/tutorial/gtrace-tutorial.ipynb
+    jupyter lab gtrace-tutorial.ipynb
 
 VS Code's notebook editor works just as well: open the file and select the interpreter you installed gtrace into. Run the cells from the top; the last chapter opens the viewer in the cell output, which is the part that wants anywidget, and everything before it works without.
 
