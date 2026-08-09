@@ -9,6 +9,14 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
+## Unreleased
+
+### Changed
+
+- The tutorial page introduces each of its two notebooks in a
+  subsection of its own — what it covers and where its reference
+  pages are — instead of listing the second one without a word.
+
 ## 0.4.0 — 2026-08-09
 
 ### Added
