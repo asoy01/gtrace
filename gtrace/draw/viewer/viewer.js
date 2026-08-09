@@ -2527,14 +2527,23 @@ Viewer.prototype._bindEvents = function () {
         if (self.dragOptic) {
             dragging = false;
             self.svg.classList.remove('gt-dragging');
+            var ru = self.svg.getBoundingClientRect();
+            if (moved < 4) {
+                // A grab that went nowhere is a click. Hand it to the
+                // click pipeline, whose repeated-click cycle can step
+                // from the element to the beams under it.
+                self.dragOptic = null;
+                self._onClick(ev.clientX - ru.left, ev.clientY - ru.top,
+                              ev.ctrlKey);
+                return;
+            }
             // Re-read the pose at the moment of release: Ctrl may have
             // been pressed or let go since the last movement, and it is
             // the state on release that the user is answering for.
-            var ru = self.svg.getBoundingClientRect();
             self._updateOpticDrag(
                 self.screenToScene(ev.clientX - ru.left, ev.clientY - ru.top),
                 ev.ctrlKey);
-            self._endOpticDrag(moved >= 4);
+            self._endOpticDrag();
             return;
         }
         if (!dragging) { return; }
@@ -2683,16 +2692,10 @@ Viewer.prototype._updateOpticDrag = function (scenePt, snap) {
     this._updateStatus();
 };
 
-Viewer.prototype._endOpticDrag = function (moved) {
+Viewer.prototype._endOpticDrag = function () {
     var d = this.dragOptic;
     this.dragOptic = null;
     if (!d) { return; }
-    if (!moved) {
-        // A grab that went nowhere is a click: select it instead.
-        this.pinned = null;
-        this._selectOptic(d.optic);
-        return;
-    }
     // Show the properties of whatever was just moved.
     this._selectOptic(d.optic);
     if (!this.onEdit) { return; }
@@ -2885,11 +2888,30 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
 
     // Clicking an optics selects it and shows its properties. This works
     // whether or not the viewer is editable: reading is always allowed.
+    // Near a surface the element and the beams that end on it overlap,
+    // and the element, being an area, would shadow them for good - so
+    // clicking the same spot again steps from the element into the
+    // bundle of beams under it and back around, exactly as repeated
+    // clicks already walk a bundle of overlapping beams.
     var optic = this._pickOptic(pt[0], pt[1]);
     if (optic) {
-        this.pinned = null;
-        this.selectedDim = null;
-        this._selectOptic(optic);
+        var under = this._pickAll(pt[0], pt[1], 12 / this.scale);
+        var again = !pickBeamFor && this.lastClick &&
+            Math.abs(px - this.lastClick[0]) < 5 &&
+            Math.abs(py - this.lastClick[1]) < 5;
+        this.cycle = again ? (this.cycle + 1) % (1 + under.length) : 0;
+        this.lastClick = [px, py];
+        if (this.cycle === 0) {
+            this.pinned = null;
+            this.selectedDim = null;
+            this._selectOptic(optic);
+            return;
+        }
+        this.selectedOptic = null;
+        this._showPanel('beam');
+        this.pinned = under[this.cycle - 1];
+        this._setReadout(this.pinned);
+        this._updateOverlay();
         return;
     }
 

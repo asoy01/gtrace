@@ -806,6 +806,55 @@ var LENS = __LENS__;
         out.afterBeamClick = {panel: panel(), selected: v.selectedOptic,
                               beam: v.pinned ? v.pinned.beam.name : null};
 
+        // --- repeated clicks cycle: the element, then the beams under
+        // it, then the element again. Tried where a beam ends on an
+        // element, since that is exactly the spot the element's grab
+        // circle used to shadow for good.
+        var cbeam = null, copt = null;
+        for (var ci = 0; ci < v.scene.beams.length && !cbeam; ci++) {
+            var cb = v.scene.beams[ci];
+            var cg = v.layerGroups[cb.layer];
+            var co = v._pickOptic(cb.end[0], cb.end[1]);
+            if (co && (!cg || cg.visible)) { cbeam = cb; copt = co; }
+        }
+        out.cycleClicks = null;
+        if (cbeam) {
+            var pc = screenOf(cbeam.end);
+            var clickAt = function () {
+                mouse(window, 'mousemove', pc[0], pc[1]);
+                mouse(v.svg, 'mousedown', pc[0], pc[1]);
+                mouse(window, 'mouseup', pc[0], pc[1]);
+            };
+            // The cycle belongs to the place clicked; make sure the
+            // clicks before this section do not count as that place.
+            v.lastClick = null;
+            var under = v._pickAll(cbeam.end[0], cbeam.end[1],
+                                   12 / v.scale).length;
+            clickAt();
+            out.cycleClicks = {
+                optic: copt.name, under: under,
+                first: {panel: panel(), selected: v.selectedOptic}
+            };
+            clickAt();
+            out.cycleClicks.second = {panel: panel(),
+                                      selected: v.selectedOptic,
+                                      beam: v.pinned ? v.pinned.beam.name
+                                                     : null};
+            // Keep clicking until the cycle comes back to the element.
+            // The exact bundle size under the clicked pixel need not
+            // match the probe above (the click coordinate is rounded),
+            // so the count is bounded rather than assumed.
+            var more = 0;
+            while (more < under + 3 && v.selectedOptic === null) {
+                clickAt();
+                more += 1;
+            }
+            out.cycleClicks.wrapped = {panel: panel(),
+                                       selected: v.selectedOptic,
+                                       pinned: !!v.pinned,
+                                       steps: more};
+        }
+
         // --- the layout file buttons ---
         if (v.pathInput) {
             var nFile = sent.length;
@@ -1024,7 +1073,8 @@ check('everything but the type is editable',
                                      'thickness', 'wedgeAngle', 'rocHR',
                                      'rocAR', 'n', 'Refl_HR', 'Trans_HR',
                                      'Refl_AR', 'Trans_AR', 'max_stray_order',
-                                     'HRtransmissive', 'term_on_HR',
+                                     'HRtransmissive', 'HRreflective',
+                                     'term_on_HR',
                                      'term_on_HR_order', 'curve_direction',
                                      # Built for every optics; the rows hide
                                      # themselves where they do not apply -
@@ -1658,6 +1708,23 @@ check('the optics is deselected',
 check('and a beam got pinned',
       res['afterBeamClick']['beam'] is not None,
       str(res['afterBeamClick']['beam']))
+
+print('--- repeated clicks cycle through the element and its beams ---')
+cyc = res['cycleClicks']
+check('a beam ending on an element exists to try', cyc is not None)
+if cyc is not None:
+    check('the first click selects the element',
+          cyc['first']['panel']['propsShown']
+          and cyc['first']['selected'] == cyc['optic'], str(cyc['first']))
+    check('the next click reaches a beam under it',
+          cyc['second']['panel']['beamShown']
+          and cyc['second']['selected'] is None
+          and cyc['second']['beam'] is not None, str(cyc['second']))
+    check('and the cycle comes back around to the element',
+          cyc['wrapped']['panel']['propsShown']
+          and cyc['wrapped']['selected'] == cyc['optic']
+          and not cyc['wrapped']['pinned'],
+          '%s under=%s' % (cyc['wrapped'], cyc['under']))
 
 print('--- Python applies what the panel sent ---')
 lay, optics = make_layout()

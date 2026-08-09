@@ -74,6 +74,13 @@ Slated for 0.4.0. Not yet on PyPI.
 
 ### Added — viewer
 
+- **Clicking through an element to the beams under it.** A beam ends
+  on the surface of the element it hits, inside the element's grab
+  circle, and the element always won the click — so the beam
+  parameters at a surface could not be read at all. Clicking the same
+  spot again now steps from the element into the bundle of beams under
+  the click and back around: the same gesture that already walks a
+  bundle of overlapping beams.
 - **Measure.** Two clicks say what is being measured and a third says
   where the dimension line is drawn; extension lines carry the ends out
   to it. Ends snap to the corners and faces of the elements, to the
