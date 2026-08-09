@@ -9,6 +9,7 @@ KAGRA input mode cleaner, and the interactive viewer.
    :maxdepth: 1
 
    tutorial/gtrace-tutorial
+   tutorial/modematching
 
 To run it rather than read it, take the source tree::
 

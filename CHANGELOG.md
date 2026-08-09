@@ -45,6 +45,10 @@ Slated for 0.4.0. Not yet on PyPI.
   Where the whole span runs inside one substrate the optical distance is
   reported too. See `OpticalLayout.dimensions` and `Dimension`.
 - `inch` in `gtrace.unit`.
+- A worked mode-matching exercise in the tutorial
+  (`docs/source/tutorial/modematching.ipynb`): coupling a laser into a
+  Fabry-Perot cavity with two catalogue lenses, searched as thin
+  lenses and then verified and refined on the traced bench.
 - The tracing docs now say how the stray order is counted — what
   raises it, that the counter resets when a beam crosses to the next
   element, and the four attributes that govern it (`HRtransmissive`,
