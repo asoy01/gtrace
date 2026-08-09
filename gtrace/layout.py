@@ -352,6 +352,68 @@ CREATABLE_OPTIC_TYPES = {'Mirror': 'Mirror', 'CyMirror': 'CyMirror',
 #: built by _lens_from_params rather than from the mirror around them.
 _LENS_TYPES = frozenset(['Lens', 'CyLens'])
 
+#: Attributes of a source beam a front end may change.
+#:
+#: The waist is not among them in the model's own terms - a GaussianBeam
+#: holds q-parameters - but it is what a laser is ordered and specified
+#: by, so it is offered here under the four derived names below and
+#: converted in _set_source_attr. The conversion is on this side because
+#: what a waist means is the model's to say: beam.waist() is already the
+#: statement of it, and a second one in a browser is the sort of double
+#: description that put the AR surface a sagitta out of place.
+EDITABLE_SOURCE_ATTRS = frozenset([
+    'pos', 'dirAngle', 'dirVect', 'length', 'wl', 'P', 'n',
+    'qx', 'qy',
+    'waist_size_x', 'waist_size_y', 'waist_pos_x', 'waist_pos_y',
+])
+
+#: The derived ones among them, and which axis and part of q each names.
+#: A waist size is the 1/e^2 radius there, and a waist position is the
+#: distance from the origin of the beam forward to the waist - positive
+#: downstream, exactly as GaussianBeam.waist() reports it.
+_SOURCE_WAIST_ATTRS = {'waist_size_x': ('x', 'size'),
+                       'waist_size_y': ('y', 'size'),
+                       'waist_pos_x': ('x', 'pos'),
+                       'waist_pos_y': ('y', 'pos')}
+
+#: The order in which a batch of attributes is applied to a source.
+#: Applying them is not commutative: the index of refraction scales the
+#: distance to the waist, so a message that sets both it and a waist
+#: position has to set the index first, or the distance that arrives is
+#: measured in the old medium. A raw q-parameter comes after the light
+#: it is to be read against, and before the waist rows, which are the
+#: more specific way of saying the same thing. Anything not named here
+#: sorts last, by name.
+_SOURCE_ATTR_ORDER = ['wl', 'n', 'P',
+                      'qx', 'qy',
+                      'waist_size_x', 'waist_size_y',
+                      'waist_pos_x', 'waist_pos_y',
+                      'dirAngle', 'dirVect', 'pos', 'length']
+
+_SOURCE_ATTR_RANK = dict((k, i) for i, k in enumerate(_SOURCE_ATTR_ORDER))
+
+#: Constructor parameters a new source may be given. 'waist_size' and
+#: 'waist_pos' are the pair a laser is described by, and stand for both
+#: axes at once: a source added from a button is round until it is told
+#: otherwise.
+CREATABLE_SOURCE_PARAMS = frozenset([
+    'pos', 'dirAngle', 'dirVect', 'length', 'wl', 'P', 'n',
+    'waist_size', 'waist_pos',
+])
+
+#: The type an 'add' message names to create a source beam. Kept out of
+#: CREATABLE_OPTIC_TYPES for the same reason a dimension is: a source is
+#: not an optics. Nothing is traced through it - it is where the trace
+#: starts - and it is registered in a list of its own.
+SOURCE_TYPE = 'Source'
+
+#: What a source added without a beam being described looks like: a
+#: 1064 nm beam of 1 W whose waist is 0.2 mm and lies at the laser
+#: itself. A front end offering an "add a source" button has to put
+#: something in the layout, and this is an unremarkable bench laser.
+DEFAULT_SOURCE_WL = 1064e-9
+DEFAULT_SOURCE_WAIST = 0.2e-3
+
 #: Attributes of a dimension a front end may change. A dimension is two
 #: points, where its line is drawn, and a name; the name has its own
 #: operation, so this is the whole of it.
@@ -472,6 +534,41 @@ def _as_distance(value, key):
     if not np.isfinite(d):
         raise EditError('%r must be a finite distance, not %r.' % (key, value))
     return d
+
+#: The largest trace depth a front end may ask for. Each order is
+#: another round of internal reflections at every element, so the work
+#: grows quickly; a typed digit too many should come back as a refusal
+#: rather than as a kernel that stops answering.
+MAX_RULE_ORDER = 200
+
+def _as_rule_value(key, value):
+    '''
+    A tracing rule value from an edit message, or an EditError.
+    '''
+    if key == 'order':
+        try:
+            n = int(value)
+        except (TypeError, ValueError):
+            raise EditError("'order' must be a whole number of internal "
+                            'reflections, not %r.' % (value,))
+        if isinstance(value, float) and n != value:
+            raise EditError("'order' must be a whole number of internal "
+                            'reflections, not %r.' % (value,))
+        if n < 0:
+            raise EditError("'order' must not be negative, and %r is."
+                            % (value,))
+        if n > MAX_RULE_ORDER:
+            raise EditError("'order' is limited to %d; each order is another "
+                            'round of reflections at every element. Got %r.'
+                            % (MAX_RULE_ORDER, value))
+        return n
+    if key == 'power_threshold':
+        p = _as_distance(value, key)
+        if p < 0:
+            raise EditError("'power_threshold' must not be negative, and "
+                            '%r is.' % (value,))
+        return p
+    return _as_positive(value, key, 'a length in metres')
 
 def _set_optic_attr(optics, key, value):
     '''
@@ -759,6 +856,234 @@ def source_from_dict(d):
     b.qy = complex(d['qy'][0], d['qy'][1])
     return b
 
+def rayleigh_range(w0, wl, n=1.0):
+    '''
+    The Rayleigh range of a beam of waist size w0.
+
+    Parameters
+    ----------
+    w0 : float
+        Waist size: the radius at which the power falls to 1/e^2 there,
+        which is the convention GaussianBeam.width uses throughout.
+    wl : float
+        Vacuum wavelength.
+    n : float, optional
+        Index of refraction of the medium. It is folded into the
+        q-parameter the same way GaussianBeam does it, so that the two
+        agree. Defaults 1.0.
+
+    Returns
+    -------
+    float
+    '''
+    return np.pi * n * w0 * w0 / wl
+
+def q_from_waist(w0, d, wl, n=1.0):
+    '''
+    The q-parameter, at the origin of a beam, of light whose waist is of
+    size w0 and lies a distance d further along.
+
+    This is the inverse of what GaussianBeam.waist() reports, and exists
+    so that a front end can offer the pair a laser is actually specified
+    by without having to hold a second description of what a waist is.
+    The distance runs the same way waist() reports it: positive means
+    the waist is downstream of the origin.
+
+    Returns
+    -------
+    complex
+    '''
+    return complex(-d, rayleigh_range(w0, wl, n))
+
+def source_waist(b):
+    '''
+    The waist of a source beam, as the pair a front end shows: sizes and
+    distances, each in x and y.
+
+    Returns
+    -------
+    dict
+        ``{'waist_size': (wx, wy), 'waist_pos': (dx, dy)}``
+    '''
+    w = b.waist()
+    return {'waist_size': tuple(float(x) for x in w['Waist Size']),
+            'waist_pos': tuple(float(x) for x in w['Waist Position'])}
+
+def source_scene_dict(b):
+    '''
+    Convert a source beam into the dict a viewer draws and addresses it
+    by: where the laser stands, which way it points, and what light it
+    puts out.
+
+    This is not beam_to_dict. That describes a beam of the trace - a
+    segment with two ends, whose q is a result - and every beam in the
+    scene is one of those, including the copy of this source that the
+    trace began from. What is missing there is the source itself: which
+    of the beams the user put in the layout, and which are consequences.
+    A front end that cannot tell them apart cannot offer to edit the one
+    and not the others, and cannot draw the laser at all.
+
+    The waist travels alongside the q-parameters rather than instead of
+    them. The q is what the model holds and what a saved layout carries;
+    the waist is what the panel shows, and working it out here keeps the
+    formula on the side that owns the beam.
+    '''
+    pos = np.asarray(b.pos, dtype='float64')
+    dirVect = np.asarray(b.dirVect, dtype='float64')
+    w = source_waist(b)
+    # The width where the light leaves, asked of the beam rather than
+    # worked out again from q. A front end drawing something at that
+    # point has to know how wide the beam already is there: the aperture
+    # a laser is drawn with cannot be narrower than the beam coming out
+    # of it, however far the view is zoomed in.
+    width = b.width(0.0)
+    return {'name': str(b.name),
+            'layer': str(b.layer),
+            'pos': [float(pos[0]), float(pos[1])],
+            'dirVect': [float(dirVect[0]), float(dirVect[1])],
+            'dirAngle': float(b.dirAngle),
+            'length': float(b.length),
+            'wl': float(b.wl),
+            'P': float(b.P),
+            'n': float(b.n),
+            'qx': [complex(b.qx).real, complex(b.qx).imag],
+            'qy': [complex(b.qy).real, complex(b.qy).imag],
+            'width': [float(width[0]), float(width[1])],
+            'waist_size': [w['waist_size'][0], w['waist_size'][1]],
+            'waist_pos': [w['waist_pos'][0], w['waist_pos'][1]]}
+
+def _ordered_source(attrs):
+    '''
+    The items of a source attribute dict, in the order they must be
+    applied. See _SOURCE_ATTR_ORDER for why the order matters.
+    '''
+    return sorted(attrs.items(),
+                  key=lambda kv: (_SOURCE_ATTR_RANK.get(kv[0],
+                                                        len(_SOURCE_ATTR_ORDER)),
+                                  kv[0]))
+
+def _as_positive(value, key, what='a positive number'):
+    '''
+    A finite positive number from an edit message, or an EditError.
+    '''
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        raise EditError('%r must be %s, not %r.' % (key, what, value))
+    if not np.isfinite(v) or v <= 0:
+        raise EditError('%r must be %s, not %r.' % (key, what, value))
+    return v
+
+def _as_complex(value, key):
+    '''
+    A q-parameter from an edit message, or an EditError.
+
+    JSON has no complex numbers, so one arrives as a pair. A q whose
+    imaginary part is not positive is not a beam - the Rayleigh range is
+    what gives it a width - so it is refused here rather than left to
+    surface as a nan the first time the width is asked for.
+    '''
+    try:
+        if isinstance(value, complex):
+            q = value
+        elif isinstance(value, (list, tuple)):
+            q = complex(float(value[0]), float(value[1]))
+        else:
+            q = complex(value)
+    except (TypeError, ValueError, IndexError, KeyError):
+        raise EditError('%r must be a q-parameter as [real, imag], '
+                        'not %r.' % (key, value))
+    if not (np.isfinite(q.real) and np.isfinite(q.imag)):
+        raise EditError('%r must be finite, not %r.' % (key, value))
+    if q.imag <= 0:
+        raise EditError('%r must have a positive imaginary part - that is '
+                        'the Rayleigh range, and a beam without one has no '
+                        'width. Got %r.' % (key, value))
+    return q
+
+def _set_source_attr(b, key, value):
+    '''
+    Set one whitelisted attribute of a source beam on behalf of a front
+    end.
+
+    The four waist names are not attributes of the beam at all: each
+    stands for one half of one q-parameter, and is converted here. The
+    other half is left as it was, so that setting a waist size does not
+    also move the waist, and moving it does not resize it.
+    '''
+    if key in _SOURCE_WAIST_ATTRS:
+        axis, part = _SOURCE_WAIST_ATTRS[key]
+        qname = 'qx' if axis == 'x' else 'qy'
+        q = complex(getattr(b, qname))
+        if part == 'size':
+            w0 = _as_positive(value, key, 'a waist size in metres')
+            q = complex(q.real, rayleigh_range(w0, b.wl, b.n))
+        else:
+            d = _as_distance(value, key)
+            q = complex(-d, q.imag)
+        setattr(b, qname, q)
+        return
+
+    if key in ('qx', 'qy'):
+        setattr(b, key, _as_complex(value, key))
+        return
+    if key == 'pos':
+        b.pos = _as_point(value, key)
+        return
+    if key == 'dirVect':
+        v = _as_point(value, key)
+        if not np.any(v):
+            raise EditError("'dirVect' must point somewhere; [0, 0] does not.")
+        b.dirVect = v
+        return
+    if key == 'dirAngle':
+        b.dirAngle = _as_distance(value, key)
+        return
+    if key in ('wl', 'n', 'length'):
+        # A wavelength or an index of zero would divide the width
+        # formula by nothing, and a beam of no length is not drawn.
+        what = {'wl': 'a wavelength in metres',
+                'n': 'an index of refraction',
+                'length': 'a length in metres'}[key]
+        v = _as_positive(value, key, what)
+        if key == 'wl':
+            # A q-parameter says nothing on its own: what width it comes
+            # to depends on the wavelength. So changing the wavelength
+            # has to keep one of the two, and the waist is the one to
+            # keep - it is what the laser is specified by, and the
+            # divergence is what follows from the light. The model
+            # already does exactly this for the index of refraction,
+            # whose handler holds the reduced q fixed and so preserves
+            # the waist size; without this the two would disagree.
+            #
+            # Assigning b.wl directly in Python is untouched, and keeps
+            # the q-parameters instead. This is the edit protocol, which
+            # deals in the waist throughout.
+            w = source_waist(b)
+            b.wl = v
+            b.qx = q_from_waist(w['waist_size'][0], w['waist_pos'][0], v, b.n)
+            b.qy = q_from_waist(w['waist_size'][1], w['waist_pos'][1], v, b.n)
+        else:
+            setattr(b, key, v)
+        if key in ('wl', 'n'):
+            # Neither leaves the cached widths right: there is no
+            # handler for the wavelength at all, and the one for the
+            # index rescales the q-parameters with the notification
+            # turned off. Ask the beam itself rather than repeating the
+            # formula here.
+            b.wx, b.wy = b.width(0.0)
+        return
+    if key == 'P':
+        # Power alone may be zero: a beam is still a beam when it is off,
+        # and the trace keeps its geometry.
+        p = _as_distance(value, key)
+        if p < 0:
+            raise EditError("'P' must not be negative, and %r is." % (value,))
+        b.P = p
+        return
+    # Nothing else reaches here: the whitelist is checked first.
+    raise EditError('%r is not an editable attribute of a source.' % (key,))
+
 #}}}
 
 #{{{ OpticalLayout
@@ -838,9 +1163,7 @@ class OpticalLayout(object):
         Register a source beam. The beam is held by reference.
         Its name must be unique within the layout.
         '''
-        if b.name in [s.name for s in self.sources]:
-            raise ValueError("A source named '%s' is already registered."
-                             % b.name)
+        self._check_name_free(b.name)
         self.sources.append(b)
 
     def add_dimension(self, d):
@@ -853,15 +1176,21 @@ class OpticalLayout(object):
 
     def _check_name_free(self, name):
         '''
-        Refuse a name already taken by an optics or a dimension.
+        Refuse a name already taken by an optics, a source or a
+        dimension.
 
-        The two share a namespace because a front end points at both the
-        same way - an edit message names its target and nothing else -
-        and a name that meant one thing in one message and another in
-        the next would be a trap.
+        The three share a namespace because a front end points at all of
+        them the same way - an edit message names its target and nothing
+        else - and a name that meant one thing in one message and
+        another in the next would be a trap. Sources joined that
+        namespace when they became editable; before that they were only
+        ever addressed as a list.
         '''
         if name in [o.name for o in self.optics]:
             raise ValueError("An optics named '%s' is already registered."
+                             % name)
+        if name in [s.name for s in self.sources]:
+            raise ValueError("A source named '%s' is already registered."
                              % name)
         if name in [d.name for d in self.dimensions]:
             raise ValueError("A dimension named '%s' is already registered."
@@ -914,11 +1243,12 @@ class OpticalLayout(object):
 
     def unique_optics_name(self, prefix='M'):
         '''
-        Return a name of the form prefix + number that no registered
-        optics or dimension uses. Front ends need a name before they can
-        talk about the element they are asking for.
+        Return a name of the form prefix + number that nothing in the
+        layout uses. Front ends need a name before they can talk about
+        the element they are asking for.
         '''
         taken = set(o.name for o in self.optics)
+        taken.update(s.name for s in self.sources)
         taken.update(d.name for d in self.dimensions)
         i = 1
         while '%s%d' % (prefix, i) in taken:
@@ -930,6 +1260,13 @@ class OpticalLayout(object):
         Return a name of the form prefix + number that nothing in the
         layout uses. The same namespace as unique_optics_name, since
         edit messages resolve a target across both.
+        '''
+        return self.unique_optics_name(prefix)
+
+    def unique_source_name(self, prefix='S'):
+        '''
+        Return a name of the form prefix + number that nothing in the
+        layout uses. The same namespace again.
         '''
         return self.unique_optics_name(prefix)
 
@@ -984,6 +1321,14 @@ class OpticalLayout(object):
                              'params': {'HRcenter': [0.3, 0.2]}}
             {'op': 'add',    'type': 'Lens', 'name': 'L1',
                              'params': {'f': 0.3, 'shape': 'plano-convex'}}
+            {'op': 'add',    'type': 'Source', 'name': 'S1',
+                             'params': {'pos': [0.0, 0.0],
+                                        'waist_size': 0.0002}}
+            {'op': 'move',   'target': 'S1', 'pos': [0.1, 0.0]}
+            {'op': 'rotate', 'target': 'S1', 'dirAngle': 0.0}
+            {'op': 'set',    'target': 'S1',
+                             'attrs': {'waist_size_x': 0.0003,
+                                       'waist_pos_x': 0.05}}
             {'op': 'remove', 'target': 'M4'}
             {'op': 'align',  'target': 'L1', 'beam': 'b0',
                              'beam_index': 0, 'point': [0.4, 0.02]}
@@ -998,9 +1343,13 @@ class OpticalLayout(object):
             {'op': 'undo'}
             {'op': 'redo'}
 
-        A dimension is named and addressed exactly as an optics is:
-        'remove', 'rename' and 'set' resolve their target across both,
-        which share one namespace.
+        A source and a dimension are named and addressed exactly as an
+        optics is: 'remove', 'rename' and 'set' resolve their target
+        across all three, which share one namespace. What the operations
+        mean differs where the things differ - 'move' on a source names
+        where the laser stands rather than the middle of a substrate,
+        and a source takes a waist where an optics takes a curvature -
+        so the attribute whitelists are separate.
 
         The edit is applied to the registered object itself, which is
         the same object the user holds in their own code. The trace
@@ -1192,6 +1541,16 @@ class OpticalLayout(object):
             # nothing else. No beam has moved, so the trace still stands.
             return self
 
+        elif op in ('move', 'rotate', 'set') and self._is_source(
+                msg.get('target')):
+            # A source is not an optics and is not addressed like one:
+            # it has no substrate to be held by and no face to be
+            # squared with, so 'move' names where the laser stands and
+            # 'rotate' which way it fires. Its own branch rather than a
+            # widened optics branch, since the two share no attribute
+            # names at all.
+            self._edit_source(self.get_source(msg['target']), op, msg)
+
         elif op in ('move', 'rotate', 'set'):
             name = msg.get('target')
             try:
@@ -1264,28 +1623,49 @@ class OpticalLayout(object):
                 # A dimension is a note on the layout, not a part of it:
                 # nothing about the trace has changed.
                 return self
-            optics = self._optics_from_message(msg)
-            try:
-                self.add_optics(optics)
-            except ValueError as e:
-                raise EditError(str(e))
+            if msg.get('type') == SOURCE_TYPE:
+                src = self._source_from_message(msg)
+                try:
+                    self.add_source(src)
+                except ValueError as e:
+                    raise EditError(str(e))
+            else:
+                optics = self._optics_from_message(msg)
+                try:
+                    self.add_optics(optics)
+                except ValueError as e:
+                    raise EditError(str(e))
 
         elif op == 'remove':
             name = msg.get('target')
             if self._is_dimension(name):
                 self.remove_dimension(name)
                 return self
-            try:
-                self.remove_optics(name)
-            except KeyError:
-                raise EditError("No optics named %r in the layout." % (name,))
+            if self._is_source(name):
+                # Taking the last source out leaves a layout with
+                # nothing to trace, which is a picture of the optics and
+                # no beams. That is a state to be able to reach - it is
+                # where a layout starts - so it is not refused.
+                self.remove_source(name)
+            else:
+                try:
+                    self.remove_optics(name)
+                except KeyError:
+                    raise EditError("No optics named %r in the layout."
+                                    % (name,))
 
         elif op == 'rules':
-            for key, value in (msg.get('rules') or {}).items():
+            rules = msg.get('rules') or {}
+            for key in rules:
                 if key not in EDITABLE_RULE_ATTRS:
                     raise EditError('%r is not an editable tracing rule.'
                                     % (key,))
-                setattr(self.rules, key, value)
+            # Checked before anything is set, and checked at all now
+            # that these have a control of their own: a depth of 'lots'
+            # or a threshold of nothing would be taken quietly and only
+            # show up as a trace that never returns.
+            for key, value in sorted(rules.items()):
+                setattr(self.rules, key, _as_rule_value(key, value))
 
         elif op in ('save', 'load'):
             # The path comes from the front end. In a notebook the page
@@ -1362,21 +1742,105 @@ class OpticalLayout(object):
         '''
         return any(d.name == name for d in self.dimensions)
 
+    def _is_source(self, name):
+        '''
+        Whether a target name belongs to a registered source.
+        '''
+        return any(s.name == name for s in self.sources)
+
     def _resolve_target(self, name):
         '''
-        The optics or dimension a message names.
+        The optics, source or dimension a message names.
 
-        The two share a namespace, so a message can say 'remove D1' or
-        'remove M1' without also having to say which kind of thing it
-        is: a front end has a name under the cursor, not a class.
+        The three share a namespace, so a message can say 'remove D1',
+        'remove S1' or 'remove M1' without also having to say which kind
+        of thing it is: a front end has a name under the cursor, not a
+        class.
         '''
         for m in self.optics:
             if m.name == name:
                 return m
+        for s in self.sources:
+            if s.name == name:
+                return s
         for d in self.dimensions:
             if d.name == name:
                 return d
         raise EditError('Nothing named %r in the layout.' % (name,))
+
+    def _edit_source(self, b, op, msg):
+        '''
+        Apply a 'move', 'rotate' or 'set' to a source beam.
+
+        As with an optics, 'move' and 'rotate' are spellings of a
+        one-attribute 'set'; they exist so that a front end says what it
+        means. What they name is different, because a beam is a ray from
+        a point rather than a body: its position is where it starts and
+        its orientation is where it is aimed.
+        '''
+        if op == 'set':
+            attrs = msg.get('attrs') or {}
+        else:
+            keys = ['pos'] if op == 'move' else ['dirAngle', 'dirVect']
+            attrs = {k: msg[k] for k in keys if k in msg}
+            if not attrs:
+                raise EditError("A '%s' message for a source needs one of %s."
+                                % (op, ' or '.join(keys)))
+        # Every name is checked before any value is set, so that a
+        # message naming one attribute the source does not have leaves
+        # the source exactly as it was rather than half changed.
+        for key in attrs:
+            if key not in EDITABLE_SOURCE_ATTRS:
+                raise EditError('%r is not an editable attribute of a '
+                                'source.' % (key,))
+        for key, value in _ordered_source(attrs):
+            _set_source_attr(b, key, value)
+
+    def _source_from_message(self, msg):
+        '''
+        Build a source beam from an 'add' message.
+
+        Unlike a new optics, a new source copies nothing from the
+        sources already in the layout. A laser is not cut to match the
+        one next to it, and inheriting a q-parameter would be worse than
+        useless: it describes a waist measured from a point the new
+        source does not stand at.
+        '''
+        params = msg.get('params') or {}
+        for key in params:
+            if key not in CREATABLE_SOURCE_PARAMS:
+                raise EditError('%r is not a parameter a new source takes.'
+                                % (key,))
+        name = msg.get('name') or self.unique_source_name()
+        if not isinstance(name, str) or not name.strip():
+            raise EditError('A name must be a non-empty string, not %r.'
+                            % (name,))
+
+        wl = _as_positive(params.get('wl', DEFAULT_SOURCE_WL), 'wl',
+                          'a wavelength in metres')
+        n = _as_positive(params.get('n', 1.0), 'n', 'an index of refraction')
+        length = _as_positive(params.get('length', 1.0), 'length',
+                              'a length in metres')
+        w0 = _as_positive(params.get('waist_size', DEFAULT_SOURCE_WAIST),
+                          'waist_size', 'a waist size in metres')
+        d = _as_distance(params.get('waist_pos', 0.0), 'waist_pos')
+        P = _as_distance(params.get('P', 1.0), 'P')
+        if P < 0:
+            raise EditError("'P' must not be negative, and %r is."
+                            % (params['P'],))
+        pos = _as_point(params.get('pos', [0.0, 0.0]), 'pos')
+
+        b = GaussianBeam(q0=q_from_waist(w0, d, wl, n), pos=pos,
+                         length=length, wl=wl, P=P, n=n, name=name)
+        # After the constructor, which has taken the index into account
+        # already: setting either of these here would only be undone by
+        # the other, and dirVect is the one to win if both are given
+        # since it says the same thing without a wrap.
+        if 'dirVect' in params:
+            _set_source_attr(b, 'dirVect', params['dirVect'])
+        elif 'dirAngle' in params:
+            _set_source_attr(b, 'dirAngle', params['dirAngle'])
+        return b
 
     def _set_dimension_attrs(self, dim, attrs):
         '''
@@ -1745,7 +2209,27 @@ class OpticalLayout(object):
         scene['can_redo'] = self.can_redo
         scene['dimensions'] = self.dimensions_dict()
         scene['snap'] = self.snap_points()
+        # Which of the beams the user put there, as against which the
+        # trace produced. The two are indistinguishable in 'beams' - a
+        # source is traced from a copy of itself, so its own beam is in
+        # there like any other - and a front end that cannot tell them
+        # apart can neither draw the laser nor offer to edit it.
+        scene['sources'] = self.sources_dict()
+        # How deep the trace went, which is not a property of any
+        # element but decides how much of the picture there is.
+        scene['rules'] = self.rules.to_dict()
         return scene
+
+    def sources_dict(self):
+        '''
+        The registered sources, as a front end draws and addresses them.
+
+        See source_scene_dict for what each carries. The waist is worked
+        out here rather than stored, for the same reason a dimension's
+        length is: it is derived from the q-parameters, and a stored
+        copy could only go stale.
+        '''
+        return [source_scene_dict(b) for b in self.sources]
 
     def dimensions_dict(self):
         '''

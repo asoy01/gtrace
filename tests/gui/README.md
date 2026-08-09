@@ -42,6 +42,8 @@ counts it as skipped rather than passed.
 | `verify_stage2b_browser.py` | Headless browser: dragging an optics, and feeding the resulting messages back through `apply_edit` |
 | `verify_props_browser.py` | Headless browser: the properties panel, its unit conversions, add and remove, rename, the display controls, the layout file buttons, and the rows only some classes have (curve direction, focal length, ROC anchor) |
 | `verify_measure_browser.py` | Headless browser: the measuring tool - snapping to the points Python put in the scene, the three clicks, the offset, the dimension panel, and that a static page can still measure |
+| `verify_source.py` | Source beams: the waist a laser is specified by **against the q-parameter it converts to**, in both directions over four decades of size and wavelength; that setting one half of the pair leaves the other and the other axis alone; the `sources` channel that tells a source from a traced beam; the protocol reaching a source at last (move, rotate, set, add, remove, rename) and what it refuses; the one namespace optics, sources and dimensions now share; and the tracing rules |
+| `verify_source_browser.py` | Headless browser: the laser drawn for each source - that it is at the point the light comes from, that it **keeps its size and stays clickable zoomed in forty times**, that it wins the pick against an element on the same spot - the source panel and its units, dragging and Shift-dragging with the preview compared against what Python then does, add and remove, the tracing rules panel, and the read-only page |
 
 `tests/test_gtrace.py` (the DXF renderer) and
 `tests/test_beam_propagation.py` (the propagation convention) are run

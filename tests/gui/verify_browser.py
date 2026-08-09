@@ -125,6 +125,37 @@ driver = '''
                 return v.opticFields[k].editable;
             });
         }
+        // The lasers, on the written page as well. Reading is always
+        // allowed - the page shows what the layout is, and which beams
+        // the user put there is part of that - and this is the output
+        // path that once shipped without the optics channel at all.
+        out.sources = (v.scene.sources || []).map(function (s) {
+            return s.name;
+        });
+        out.lasersDrawn = document.querySelectorAll('.gt-source').length;
+        var s0 = (v.scene.sources || [])[0];
+        if (s0) {
+            var rs = v.svg.getBoundingClientRect();
+            var o = v.sceneToScreen(s0.pos[0], s0.pos[1]);
+            // A few pixels back along the beam: the body runs behind
+            // the point the light leaves from.
+            var q = [o[0] - 14 * s0.dirVect[0] + rs.left,
+                     o[1] + 14 * s0.dirVect[1] + rs.top];
+            mouse(v.svg, 'mousedown', q[0], q[1]);
+            mouse(window, 'mouseup', q[0], q[1]);
+            out.sourceSelected = v.selectedSource;
+            out.sourceTitle =
+                document.querySelector('.gt-panel-title span').textContent;
+            out.sourceShown = v.sourceBody.style.display !== 'none';
+            out.sourceW0 = v.sourceFields.w0x.editable
+                ? v.sourceFields.w0x.el.value
+                : v.sourceFields.w0x.el.textContent;
+            out.sourceEditable = Object.keys(v.sourceFields).some(function (k) {
+                return v.sourceFields[k].editable;
+            });
+            // No tracing rules on a page with nothing to trace with.
+            out.hasRules = !!v.ruleFields;
+        }
     } catch (e) { out.error = String((e && e.stack) || e); }
     document.getElementById('gt-test-out').textContent = JSON.stringify(out);
 })();
@@ -163,6 +194,23 @@ if m:
                for k in ['name', 'type', 'cx', 'rocHR']}))
     check('nothing is editable without a Python behind it',
           res.get('anyEditable') is False)
+    # The sources channel, on the written page. This is the output path
+    # that once shipped without the optics channel because everything
+    # was being checked through the widget's ESM instead.
+    check('the page knows which beams are sources',
+          res.get('sources') == ['b0'], str(res.get('sources')))
+    check('and draws a laser for it', res.get('lasersDrawn') == 1,
+          str(res.get('lasersDrawn')))
+    check('clicking it shows the source',
+          res.get('sourceSelected') == 'b0' and res.get('sourceShown')
+          and res.get('sourceTitle') == 'Source properties',
+          '%s / %s' % (res.get('sourceSelected'), res.get('sourceTitle')))
+    check('with the waist it was given',
+          res.get('sourceW0') not in (None, '', '-'), str(res.get('sourceW0')))
+    check('and none of it editable either',
+          res.get('sourceEditable') is False)
+    check('nor are there tracing rules to change',
+          res.get('hasRules') is False)
 else:
     check('the driver produced output', False)
 

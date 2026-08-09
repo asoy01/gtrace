@@ -63,6 +63,23 @@ This is why the DXF route is a dead end for interactive use, and why the viewer 
 
 Clicking an element instead of a beam opens its properties.
 
+.. _the-lasers:
+
+The lasers
+-----------
+
+Each registered source is drawn as a small box at the point its light comes from, with the beam leaving through the nose of it.
+
+It is there because nothing else in the picture says which of the beams you put there. A source is traced from a *copy* of itself, so its own beam is in the drawing looking exactly like the beams the trace made from it — and without the box there is no way to tell the laser from the first ghost, nor anywhere to click to change it.
+
+The box is drawn in screen pixels and keeps its size as you zoom. A layout runs from a bench to a kilometre, so a body sized in metres would be a dot on one and would cover the other. It is a marker rather than a part: gtrace draws optics at their optical size and nothing at its mechanical size, and a laser given a footprint would be the first exception to that. It is not exported to DXF for the same reason.
+
+**Except once the beam is wider than the aperture it comes out of.** Zoom in far enough and the drawn envelope outgrows a fixed-size nose, which would be a picture of something that cannot happen; past that point the box grows with the view instead, and the aperture goes on matching the beam. The crossing is exactly where the two meet — the envelope as it is drawn, against the width of the nose — so zooming through it changes nothing suddenly.
+
+It sits *behind* the point the light leaves from, so that it does not cover the beam it is pointing at, and it is picked ahead of any element underneath it — a laser usually stands right against the first mirror, and a box of a few dozen pixels that an element could shadow would be unreachable. The element is still there to be clicked anywhere off the box.
+
+Clicking one opens the source properties, on a read-only page as much as in the notebook.
+
 Controls
 ---------
 
@@ -89,11 +106,35 @@ Changing either redraws but does not re-trace: the display changed, the physics 
 Editing
 --------
 
-In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements can be added (``+ Mirror``, ``+ CyMirror``, ``+ Lens``, ``+ CyLens``), removed and renamed, and distances can be measured off the drawing (``Measure``).
+In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements and sources can be added, removed and renamed, and distances can be measured off the drawing (``Measure``).
+
+There is one add button per kind of thing — ``+ Mirror``, ``+ Lens``, ``+ Source`` — and the two that have variants open on the choice between them, spherical or cylindrical. A cylindrical mirror is a mirror; offered as a button of its own it read as an unrelated fifth thing, and five of them wrapped in a side bar this narrow.
 
 Each edit is applied to the registered object, the layout is re-traced, and the new scene is pushed back into the view — keeping your current zoom, pan and layer visibility, so the picture does not jump underneath you.
 
 An element turns about the point it is held by, which is what its **Anchor** names: a mirror swings about the apex of its HR face, so that turning it does not walk the beam spot off it, and a lens about the middle of its substrate. The outline that follows the cursor is drawn about that point too, so what you are shown while dragging is where the element ends up. The model itself turns the same way — assigning ``normAngleHR`` in a cell pivots the anchor point too; see :ref:`changing-a-curvature`.
+
+Editing a source
+^^^^^^^^^^^^^^^^^
+
+Clicking a laser opens the source panel, and it is edited the same way as anything else: drag the box to move the laser, hold Shift to turn it, or type the numbers.
+
+A laser turns about the point its light comes from, which is the only point it could turn about — that point *is* the source — so the nose of the box stays put while it swings.
+
+**The beam is given as its waist, not as a q-parameter.** Four rows carry it: the waist size in each direction, in millimetres, and where that waist sits, in metres from the laser forward along the beam. That is what a laser is specified by, and what mode matching is done in terms of. The two are converted to and from the q-parameter by Python, since what a waist means is the model's to say.
+
+The remaining rows are the wavelength (in nanometres), the power, the refractive index of the medium it fires into, and a **Free length** — how far the beam is drawn while it reaches nothing, which is the state a layout is in while it is being built. Once the beam hits something, the trace cuts it there and the number stops mattering.
+
+Changing the wavelength keeps the waist and changes the divergence, rather than the other way about; see :ref:`editing-a-source`.
+
+``+ Source`` adds a laser at the centre of the view, firing along +x, with a catalogue beam: 1064 nm, 1 W and a 0.2 mm waist at the laser. It copies nothing from the sources already there — a q-parameter carried over would describe a waist measured from a point the new laser does not stand at.
+
+Tracing rules
+^^^^^^^^^^^^^^
+
+The side bar carries the three rules the trace runs under: the **Order**, the **Power threshold** and the **Open beam** length. These are the numbers to reach for when chasing stray light — lowering the threshold finds fainter paths, and takes longer.
+
+Unlike the beam width controls, changing one of these re-traces: the picture that comes back has more or fewer beams in it. See :py:class:`TraceRules<gtrace.layout.TraceRules>`.
 
 Aligning to a beam
 ^^^^^^^^^^^^^^^^^^^

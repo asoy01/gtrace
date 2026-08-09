@@ -176,6 +176,37 @@ var LENS = __LENS__;
                 });
             return found;
         }
+        // The variants of a kind sit in a menu the add button opens.
+        function addGroup(label) {
+            var found = null;
+            Array.prototype.forEach.call(
+                el.querySelectorAll('.gt-add'), function (w) {
+                    var b = w.querySelector('.gt-addbtn');
+                    if (b && b.textContent === label) { found = w; }
+                });
+            return found;
+        }
+        function menuOpen(label) {
+            var w = addGroup(label);
+            return !!w && w.querySelector('.gt-menu').style.display !== 'none';
+        }
+        function menuItems(label) {
+            var w = addGroup(label);
+            return !w ? null : Array.prototype.map.call(
+                w.querySelectorAll('.gt-menuitem'),
+                function (b) { return b.textContent; });
+        }
+        // Open the menu and choose from it, which is what a user does.
+        function addFrom(label, item) {
+            var w = addGroup(label);
+            w.querySelector('.gt-addbtn').click();
+            var target = null;
+            Array.prototype.forEach.call(
+                w.querySelectorAll('.gt-menuitem'), function (b) {
+                    if (b.textContent === item) { target = b; }
+                });
+            target.click();
+        }
         // --- making room ---
         // A notebook cell is a letterbox and a bench drawing is not, so
         // the two controls that give the drawing more of it: fold the
@@ -233,11 +264,13 @@ var LENS = __LENS__;
         // Which row each button is on. The two kinds are kept apart on
         // purpose, so that which row a button lands on does not depend
         // on how wide the panel happens to be.
+        // Only the buttons of the row itself: a variant behind an add
+        // button is in a menu, and is checked as one below.
         out.headRows = Array.prototype.map.call(
             el.querySelectorAll('.gt-head .gt-btnrow'),
             function (r) {
                 return Array.prototype.map.call(
-                    r.querySelectorAll('button'),
+                    r.querySelectorAll('button.gt-btn'),
                     function (b) { return b.textContent; });
             });
         // The head is buttons and nothing else: the layout is labelled
@@ -247,10 +280,49 @@ var LENS = __LENS__;
             el.querySelector('.gt-head').children,
             function (c) { return c.className; });
 
-        out.addButton = !!button('+ Mirror');
-        out.addCyButton = !!button('+ CyMirror');
-        out.addLensButton = !!button('+ Lens');
-        out.addCyLensButton = !!button('+ CyLens');
+        out.addButton = !!addGroup('+ Mirror');
+        out.addLensButton = !!addGroup('+ Lens');
+        // A kind with nothing to choose between is a plain button: a
+        // menu of one would be a question with one answer.
+        out.addSourceButton = !!button('+ Source');
+        out.addSourceGroup = !!addGroup('+ Source');
+        out.mirrorItems = menuItems('+ Mirror');
+        out.lensItems = menuItems('+ Lens');
+
+        // Opening a menu adds nothing by itself, and shuts whatever
+        // else was open. A press anywhere else shuts it too. Only where
+        // there is something to add: a page with no Python behind it
+        // has no add buttons and so no menus.
+        var nMenu = sent.length;
+        out.menu = {closedAtFirst: menuOpen('+ Mirror')};
+        if (addGroup('+ Mirror')) {
+        addGroup('+ Mirror').querySelector('.gt-addbtn').click();
+        out.menu.opened = menuOpen('+ Mirror');
+        out.menu.sentByOpening = sent.length - nMenu;
+        addGroup('+ Lens').querySelector('.gt-addbtn').click();
+        out.menu.otherOpened = menuOpen('+ Lens');
+        out.menu.firstClosed = !menuOpen('+ Mirror');
+        // The same button again puts it away.
+        addGroup('+ Lens').querySelector('.gt-addbtn').click();
+        out.menu.toggledShut = !menuOpen('+ Lens');
+        // Pressing elsewhere - here, the drawing - shuts it.
+        addGroup('+ Mirror').querySelector('.gt-addbtn').click();
+        mouse(v.svg, 'mousedown', 40, 40);
+        mouse(window, 'mouseup', 40, 40);
+        out.menu.closedByPressElsewhere = !menuOpen('+ Mirror');
+        // And so does Escape, which leaves the selection alone while a
+        // menu is open: the menu is the innermost thing it can close.
+        v._selectOptic(v.scene.optics[0]);
+        addGroup('+ Mirror').querySelector('.gt-addbtn').click();
+        window.dispatchEvent(new KeyboardEvent('keydown',
+                                               {key: 'Escape', bubbles: true}));
+        out.menu.closedByEscape = !menuOpen('+ Mirror');
+        out.menu.selectionKept = v.selectedOptic;
+        window.dispatchEvent(new KeyboardEvent('keydown',
+                                               {key: 'Escape', bubbles: true}));
+        out.menu.escapeStillClears = v.selectedOptic;
+        out.menu.sentThroughout = sent.length - nMenu;
+        }
         // Scoped to the optics panel. The dimension panel builds one of
         // its own whether or not there is anywhere to send edits, since
         // a viewer with no Python behind it can still take back a
@@ -675,7 +747,7 @@ var LENS = __LENS__;
         if (EDITABLE) {
             var nSent = sent.length;
             v.cx = 0.31; v.cy = 0.22; v._applyTransform();
-            button('+ Mirror').click();
+            addFrom('+ Mirror', 'Spherical');
             out.add = {msg: sent[sent.length - 1],
                        sent: sent.length - nSent,
                        selected: v.selectedOptic,
@@ -698,12 +770,12 @@ var LENS = __LENS__;
                                 : v.opticFields.name.el.textContent};
 
             // A second one must not reuse the name.
-            button('+ Mirror').click();
+            addFrom('+ Mirror', 'Spherical');
             out.secondName = sent[sent.length - 1].name;
 
             // The cylindrical kind, from its own button.
             var nCy = sent.length;
-            button('+ CyMirror').click();
+            addFrom('+ Mirror', 'Cylindrical');
             out.addCy = {msg: sent[sent.length - 1],
                          sent: sent.length - nCy,
                          selected: v.selectedOptic};
@@ -712,7 +784,7 @@ var LENS = __LENS__;
             // Python builds it from catalogue defaults, since a lens is
             // not cut to match the mirrors around it.
             var nLensBtn = sent.length;
-            button('+ Lens').click();
+            addFrom('+ Lens', 'Spherical');
             out.addLens = {msg: sent[sent.length - 1],
                            sent: sent.length - nLensBtn,
                            selected: v.selectedOptic};
@@ -720,7 +792,7 @@ var LENS = __LENS__;
             // The cylindrical lens: catalogue defaults like a Lens,
             // plus the curve direction like a CyMirror.
             var nCyLensBtn = sent.length;
-            button('+ CyLens').click();
+            addFrom('+ Lens', 'Cylindrical');
             out.addCyLens = {msg: sent[sent.length - 1],
                              sent: sent.length - nCyLensBtn,
                              selected: v.selectedOptic};
@@ -1019,8 +1091,36 @@ print('--- the head ---')
 check('the buttons are on two rows', len(res['headRows']) == 2,
       str(res['headRows']))
 check('what adds to the layout on the first',
-      res['headRows'][0] == ['+ Mirror', '+ CyMirror', '+ Lens', '+ CyLens'],
+      res['headRows'][0] == ['+ Mirror', '+ Lens', '+ Source'],
       str(res['headRows'][0]))
+# One control per kind of thing, with the variants of a kind behind it.
+# Five buttons apiece read as five unrelated things - a cylindrical
+# mirror is a mirror - and wrapped in a side bar this narrow.
+check('a mirror and a lens each offer their two kinds',
+      res['mirrorItems'] == ['Spherical', 'Cylindrical']
+      and res['lensItems'] == ['Spherical', 'Cylindrical'],
+      '%s / %s' % (res['mirrorItems'], res['lensItems']))
+check('a source, having one kind, is a plain button',
+      res['addSourceButton'] and not res['addSourceGroup'])
+
+mn = res['menu']
+check('a menu starts shut', not mn['closedAtFirst'])
+check('the button opens it', mn['opened'])
+check('opening one adds nothing', mn['sentByOpening'] == 0,
+      str(mn['sentByOpening']))
+check('opening another shuts the first',
+      mn['otherOpened'] and mn['firstClosed'])
+check('the same button again puts it away', mn['toggledShut'])
+check('pressing elsewhere shuts it', mn['closedByPressElsewhere'])
+# Escape closes the innermost thing there is to close, which while a
+# menu is open is the menu and not the selection.
+check('Escape shuts it', mn['closedByEscape'])
+check('  and leaves the selection alone', mn['selectionKept'] == 'M1',
+      str(mn['selectionKept']))
+check('  while Escape with no menu open still clears it',
+      mn['escapeStillClears'] is None, str(mn['escapeStillClears']))
+check('and nothing was added by any of it', mn['sentThroughout'] == 0,
+      str(mn['sentThroughout']))
 check('what acts on it or on the view on the second',
       res['headRows'][1] == ['Undo', 'Redo', 'Measure', 'Fit'],
       str(res['headRows'][1]))
@@ -1503,7 +1603,8 @@ check('a second mirror gets a different name',
       '%s vs %s' % (add['msg']['name'], res['secondName']))
 
 print('--- adding a cylindrical mirror ---')
-check('it has its own button', res['addCyButton'])
+check('it is the second item of the mirror menu',
+      res['mirrorItems'][1] == 'Cylindrical', str(res['mirrorItems']))
 cy = res['addCy']
 check('one message per click', cy['sent'] == 1, str(cy['sent']))
 check('of the cylindrical type', cy['msg']['type'] == 'CyMirror',
@@ -1522,7 +1623,7 @@ check('and selected right away', cy['selected'] == cy['msg']['name'],
       str(cy['selected']))
 
 print('--- adding a lens ---')
-check('it has its own button', res['addLensButton'])
+check('it has a menu of its own', res['addLensButton'])
 ln2 = res['addLens']
 check('one message per click', ln2['sent'] == 1, str(ln2['sent']))
 check('of the lens type', ln2['msg']['type'] == 'Lens',
@@ -1543,7 +1644,8 @@ check('and selected right away', ln2['selected'] == ln2['msg']['name'],
       str(ln2['selected']))
 
 print('--- adding a cylindrical lens ---')
-check('it has its own button', res['addCyLensButton'])
+check('it is the second item of that menu',
+      res['lensItems'][1] == 'Cylindrical', str(res['lensItems']))
 cl = res['addCyLens']
 check('one message per click', cl['sent'] == 1, str(cl['sent']))
 check('of the cylindrical lens type', cl['msg']['type'] == 'CyLens',
@@ -1852,8 +1954,8 @@ check('its properties are shown',
 check('but nothing is editable', res['editableFields'] == [],
       str(res['editableFields']))
 check('there are no add buttons',
-      not res['addButton'] and not res['addCyButton']
-      and not res['addLensButton'] and not res['addCyLensButton'])
+      not res['addButton'] and not res['addLensButton']
+      and not res['addSourceButton'])
 # Nothing to add and nothing to undo, so the head is down to one row.
 # Measure stays: it needs no Python, and a written page you can measure
 # on is most of the reason to have one.

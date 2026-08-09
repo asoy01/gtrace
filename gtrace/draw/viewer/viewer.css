@@ -239,6 +239,39 @@
     stroke-dasharray: none;
 }
 
+/* ----------------------------------------------------------------- sources */
+
+/* The laser drawn at the start of a source beam. Filled rather than
+   outlined, because it is the one thing in the picture that stands for a
+   body rather than for light, and the picture is otherwise all lines.
+   Its size is set in script, in screen pixels: see SOURCE_BODY. */
+.gt-source {
+    fill: #d8dde3;
+    stroke: #1f2328;
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+    /* Picked in script, from the same geometry that draws it, so that
+       the press and the click agree on what was pointed at. */
+    pointer-events: none;
+}
+
+.gt-source.gt-hover {
+    fill: #eef1f5;
+    stroke-width: 1.6;
+}
+
+.gt-source.gt-selected {
+    fill: rgba(74, 127, 212, 0.28);
+    stroke: #2f5fa8;
+    stroke-width: 1.8;
+}
+
+.gt-source.gt-dragging {
+    fill: rgba(245, 166, 35, 0.35);
+    stroke: #b45309;
+    stroke-width: 1.8;
+}
+
 /* ------------------------------------------------------------- dimensions */
 
 /* Drawn in screen coordinates, so no non-scaling-stroke is needed and
@@ -397,6 +430,59 @@
     justify-content: flex-end;
     gap: 6px;
 }
+
+/* An add button with variants behind it. The wrapper is what the menu
+   is positioned against, so the menu travels with the button when the
+   side bar scrolls. */
+.gt-add {
+    position: relative;
+    display: inline-flex;
+}
+
+/* The caret is drawn rather than written, so that the button's text is
+   still the plain label - which is what names it to anyone reading the
+   DOM, and keeps the checks free of a character to encode. */
+.gt-addbtn::after {
+    content: '';
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+}
+
+.gt-addbtn.gt-open { background: #eceff3; border-color: #a9b2be; }
+
+.gt-menu {
+    position: absolute;
+    top: calc(100% + 3px);
+    right: 0;
+    z-index: 20;
+    min-width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 3px;
+    border: 1px solid #c9cfd8;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(31, 35, 40, 0.16);
+}
+
+.gt-menuitem {
+    padding: 4px 12px;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+    color: #1f2328;
+    background: none;
+    border: 0;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.gt-menuitem:hover { background: #eceff3; }
 
 .gt-panel {
     border: 1px solid #d8dce3;

@@ -13,6 +13,40 @@ across them.
 
 ### Added
 
+- **Source beams are editable from the viewer.** Each registered source
+  is drawn as a small laser at the point its light comes from; clicking
+  it opens a properties panel, dragging it moves it, and Shift-dragging
+  turns it about that point. `+ Source` adds one. Until now the layout
+  could be edited in every part except the one the light came from.
+  - The box is what makes a source visible at all. A source is traced
+    from a *copy* of itself, so its own beam is in the drawing looking
+    exactly like the beams the trace made from it, and nothing said
+    which was which. It is sized in screen pixels and stays that size
+    as the view is zoomed: a layout runs from a bench to a kilometre,
+    so a body sized in metres would be a dot on one and would cover the
+    other. It is not exported to DXF.
+  - Once the drawn beam is wider than the aperture it comes out of,
+    the box grows with the view instead - a fixed-size nose past that
+    point would be a picture of something that cannot happen. The
+    crossing is exactly where the two meet, so nothing jumps.
+  - The panel edits the beam as a **waist** - its size and where it
+    sits - rather than as a q-parameter, which is what a laser is
+    specified by and what mode matching is done in terms of. The
+    conversion is Python's, next to `GaussianBeam.waist()`.
+- `q_from_waist`, `rayleigh_range` and `source_waist` in
+  `gtrace.layout`, which convert between the two descriptions.
+- Scene channels `sources` and `rules`. The first is what tells a
+  source beam from a traced one; the second carries the tracing rules,
+  which decide how much of the picture there is.
+- Edit operations reaching a source: `move` (`pos`), `rotate`
+  (`dirAngle` / `dirVect`), `set` (`EDITABLE_SOURCE_ATTRS`, including
+  the derived `waist_size_x` / `waist_pos_x` and their y counterparts),
+  `add` with `type: 'Source'`, `remove` and `rename`.
+- A **Tracing rules** panel for `order`, `power_threshold` and
+  `open_beam_length`. These were editable through the protocol from the
+  start and had nothing to reach them.
+- `verify_source.py` (267 checks) and `verify_source_browser.py` (99).
+  The suite is 19 files and 3804 checks.
 - Japanese documentation. The handwritten pages and the prose cells
   of both tutorial notebooks carry gettext translations under
   `docs/source/locale/ja/`, built with `-D language=ja` and meant to
@@ -23,6 +57,11 @@ across them.
 
 ### Changed
 
+- One add button per kind of thing — `+ Mirror`, `+ Lens`, `+ Source` —
+  with the spherical and cylindrical variants behind the first two,
+  instead of a button apiece. A cylindrical mirror is a mirror; five
+  buttons read as five unrelated things, and wrapped in a side bar that
+  narrow.
 - The tutorial page introduces each of its two notebooks in a
   subsection of its own — what it covers and where its reference
   pages are — instead of listing the second one without a word.

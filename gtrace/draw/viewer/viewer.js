@@ -250,8 +250,144 @@ var ADDABLE_TYPES = [
     // does; everything else it takes from the catalogue, like a Lens.
     {type: 'CyLens', label: 'CyLens', prefix: 'CL',
      title: 'Add a cylindrical lens',
-     params: {curve_direction: 'h'}}
+     params: {curve_direction: 'h'}},
+    // A source is not an optics, and does not take an optics' pose: it
+    // starts at a point and is aimed, rather than standing with a face
+    // turned. 'source' says to send the other pair of parameters.
+    {type: 'Source', label: 'Source', prefix: 'S',
+     title: 'Add a laser source', source: true}
 ];
+
+/*
+ * How those are offered: one control per kind of thing, with the
+ * variants of a kind behind it.
+ *
+ * A button apiece put five along a side bar narrow enough that they
+ * wrapped, and read as five unrelated things when a cylindrical mirror
+ * is a mirror. Grouped, the row says what can be added - a mirror, a
+ * lens, a source - and the variant is a second choice made only by
+ * someone who wants it. A kind with nothing to choose between is a
+ * plain button; a menu of one would be a question with one answer.
+ *
+ * The order within a menu puts the ordinary one first.
+ */
+var ADD_GROUPS = [
+    {label: 'Mirror', title: 'Add a mirror',
+     types: ['Mirror', 'CyMirror'],
+     names: ['Spherical', 'Cylindrical']},
+    {label: 'Lens', title: 'Add a lens',
+     types: ['Lens', 'CyLens'],
+     names: ['Spherical', 'Cylindrical']},
+    {label: 'Source', title: 'Add a laser source',
+     types: ['Source']}
+];
+
+function addableType(type) {
+    for (var i = 0; i < ADDABLE_TYPES.length; i++) {
+        if (ADDABLE_TYPES[i].type === type) { return ADDABLE_TYPES[i]; }
+    }
+    return null;
+}
+
+/*
+ * The laser drawn at the start of a source beam, in screen pixels.
+ *
+ * A source is drawn at all because nothing else in the picture says
+ * which beams the user put there and which the trace produced: they are
+ * all lines, and the one the laser emits looks exactly like the one it
+ * became after a mirror. The box is where the light comes from, and it
+ * is the handle the source is edited by.
+ *
+ * In screen pixels rather than metres because a layout is anywhere from
+ * a bench to a kilometre across, and a body sized in millimetres would
+ * be a dot on one and would fill the other. gtrace draws optics at their
+ * optical size and nothing at its mechanical size, and a laser given a
+ * footprint would be the first exception to that; this is a marker, not
+ * a part.
+ *
+ * The shape runs backwards from the origin: the body sits behind the
+ * point the beam leaves from, so the drawing is not covered by the very
+ * thing it is pointing at.
+ */
+var SOURCE_BODY = 30;      // how far back the body reaches
+var SOURCE_HALFW = 11;     // half its width
+var SOURCE_NOSE = 4;       // the length of the aperture stub
+var SOURCE_NOSE_HALFW = 4; // and half of its width
+
+/*
+ * The outline of the laser, in the beam's own frame: u along the
+ * direction it fires, v across it, both in screen pixels.
+ */
+var SOURCE_SHAPE = [
+    [-SOURCE_BODY, -SOURCE_HALFW],
+    [-SOURCE_NOSE, -SOURCE_HALFW],
+    [-SOURCE_NOSE, -SOURCE_NOSE_HALFW],
+    [0, -SOURCE_NOSE_HALFW],
+    [0, SOURCE_NOSE_HALFW],
+    [-SOURCE_NOSE, SOURCE_NOSE_HALFW],
+    [-SOURCE_NOSE, SOURCE_HALFW],
+    [-SOURCE_BODY, SOURCE_HALFW]
+];
+
+/*
+ * Where a point of the laser outline falls on screen, given where the
+ * origin of the beam is, which way it fires, and how far the shape has
+ * been let grow (see sourceGrowth).
+ */
+function sourcePoint(uv, originPx, dirVect, k) {
+    // The screen has y downwards while the scene has it upwards, so the
+    // across-axis is taken from the direction with the sign that gives
+    // the same handedness the drawing already has.
+    var ux = dirVect[0], uy = -dirVect[1];
+    var u = uv[0] * k, v = uv[1] * k;
+    return [originPx[0] + u * ux - v * uy,
+            originPx[1] + u * uy + v * ux];
+}
+
+/*
+ * How much bigger than its nominal size the laser has to be drawn.
+ *
+ * The box is in screen pixels so that it stays legible across a layout
+ * that may be a bench or a kilometre. That holds only while the beam is
+ * a line. Zoom in far enough and the drawn envelope is wider than the
+ * aperture it is supposed to be coming out of, which is a picture of
+ * something that cannot happen - so past that point the box grows with
+ * the view instead, and the aperture goes on matching the beam.
+ *
+ * The threshold is exactly where the two meet: the width of the beam
+ * where it leaves, drawn as the display draws it, against the width of
+ * the nose. Below it the factor is 1 and nothing has changed.
+ */
+function sourceGrowth(s, display, scale) {
+    var d = display || {};
+    if (d.drawMainWidth === false || !s.width) { return 1; }
+    var sigma = d.sigma_main === undefined ? 2.7 : d.sigma_main;
+    var mode = d.width_mode || 'x';
+    var w = mode === 'y' ? s.width[1]
+        : mode === 'avg' ? (s.width[0] + s.width[1]) / 2
+        : s.width[0];
+    // Half the drawn envelope, in screen pixels, against half the nose.
+    return Math.max(1, sigma * w * scale / SOURCE_NOSE_HALFW);
+}
+
+/*
+ * Whether a screen point falls on the laser drawn for a source.
+ *
+ * The same shape the drawing uses, at the same growth factor, so that
+ * what is clickable is what is visible. The test is in screen pixels
+ * for as long as the shape is: an element sized in metres would stop
+ * being clickable as soon as the view was zoomed, which is a mistake
+ * this viewer has already made once with the Ctrl-drag snap.
+ */
+function sourceHit(px, py, originPx, dirVect, k) {
+    var dx = px - originPx[0], dy = py - originPx[1];
+    var ux = dirVect[0], uy = -dirVect[1];
+    var u = (dx * ux + dy * uy) / k;
+    var v = (-dx * uy + dy * ux) / k;
+    if (u > 0 || u < -SOURCE_BODY) { return false; }
+    var half = u < -SOURCE_NOSE ? SOURCE_HALFW : SOURCE_NOSE_HALFW;
+    return Math.abs(v) <= half;
+}
 
 function Viewer(container, scene, options) {
     this.container = container;
@@ -264,6 +400,11 @@ function Viewer(container, scene, options) {
     this.cy = 0;
     this.width = 1;
     this.height = 1;
+    // Set for real by _applyTransform. Here so that anything drawn in
+    // screen coordinates before the first framing gets a number rather
+    // than a NaN, which SVG reports as an error and then ignores.
+    this.tx = 0;
+    this.ty = 0;
 
     this.fitMargin = 0.06;  // fraction of the view left clear around the scene
     this.fitPending = false; // a fit waiting for the view to have a size
@@ -288,6 +429,15 @@ function Viewer(container, scene, options) {
     this.onEdit = this.opts.onEdit || null;
     this.hoverOptic = null;
     this.dragOptic = null;
+
+    // The lasers standing for the registered sources: which one is
+    // selected, which the cursor is over, which is being dragged, and
+    // the SVG drawn for each.
+    this.selectedSource = null;
+    this.hoverSource = null;
+    this.dragSource = null;
+    this.sourceEls = [];
+    this.sourceFallback = null;
 
     // Measuring. The tool is a mode because it takes two clicks, and
     // between them the picture has to answer to the cursor rather than
@@ -325,10 +475,16 @@ Viewer.prototype._build = function () {
     // notes on the picture rather than part of it, but they are standing
     // marks rather than an answer to where the cursor is.
     this.dimGroup = svgEl('g', {'class': 'gt-dims'});
+    // The lasers. Part of the picture rather than a mark on it - a
+    // source is a thing in the layout, not an answer to where the
+    // cursor is - but drawn in screen coordinates like the labels and
+    // the dimensions, and so kept in a group of its own.
+    this.sourceGroup = svgEl('g', {'class': 'gt-sources'});
     this.overlayGroup = svgEl('g', {'class': 'gt-overlay'});
     this.svg.appendChild(this.sceneGroup);
     this.svg.appendChild(this.labelGroup);
     this.svg.appendChild(this.dimGroup);
+    this.svg.appendChild(this.sourceGroup);
     this.svg.appendChild(this.overlayGroup);
     stage.appendChild(this.svg);
 
@@ -364,13 +520,52 @@ Viewer.prototype._build = function () {
 
     if (this.opts.onEdit) {
         var addRow = htmlEl('div', 'gt-btnrow');
-        ADDABLE_TYPES.forEach(function (t) {
-            var btn = htmlEl('button', 'gt-btn', '+ ' + t.label);
-            btn.title = t.title + ' at the centre of the view';
-            btn.addEventListener('click', function () {
-                self.addOptics(t.type);
+        this.addMenus = [];
+        ADD_GROUPS.forEach(function (g) {
+            var only = g.types.length === 1 ? addableType(g.types[0]) : null;
+            var btn = htmlEl('button', 'gt-btn', '+ ' + g.label);
+            if (only) {
+                btn.title = only.title + ' at the centre of the view';
+                btn.addEventListener('click', function () {
+                    self.addOptics(only.type);
+                });
+                addRow.appendChild(btn);
+                return;
+            }
+
+            // The variants sit in a menu the button opens. It is a
+            // child of the button's own wrapper rather than of the
+            // page, so it travels with the button when the side bar
+            // scrolls without anything having to compute where it went.
+            var wrap = htmlEl('div', 'gt-add');
+            btn.className += ' gt-addbtn';
+            btn.title = g.title + ' at the centre of the view';
+            var menu = htmlEl('div', 'gt-menu');
+            menu.style.display = 'none';
+            g.types.forEach(function (type, i) {
+                var t = addableType(type);
+                if (!t) { return; }
+                var item = htmlEl('button', 'gt-menuitem',
+                                  (g.names && g.names[i]) || t.label);
+                item.title = t.title + ' at the centre of the view';
+                item.addEventListener('click', function () {
+                    self.closeAddMenus();
+                    self.addOptics(t.type);
+                });
+                menu.appendChild(item);
             });
-            addRow.appendChild(btn);
+            btn.addEventListener('click', function () {
+                var open = menu.style.display === 'none';
+                self.closeAddMenus();
+                if (open) {
+                    menu.style.display = '';
+                    btn.classList.add('gt-open');
+                }
+            });
+            wrap.appendChild(btn);
+            wrap.appendChild(menu);
+            addRow.appendChild(wrap);
+            self.addMenus.push({button: btn, menu: menu, wrap: wrap});
         });
         head.appendChild(addRow);
     }
@@ -419,13 +614,16 @@ Viewer.prototype._build = function () {
     this.readoutBody = htmlEl('div', 'gt-readout');
     this.opticBody = htmlEl('div', 'gt-props');
     this.dimBody = htmlEl('div', 'gt-props');
+    this.sourceBody = htmlEl('div', 'gt-props');
     rpanel.appendChild(this.readoutBody);
     rpanel.appendChild(this.opticBody);
     rpanel.appendChild(this.dimBody);
+    rpanel.appendChild(this.sourceBody);
     side.appendChild(rpanel);
     this._buildReadout();
     this._buildOpticPanel();
     this._buildDimPanel();
+    this._buildSourcePanel();
     this._showPanel('beam');
 
     // Two file panels, kept apart because they deal in two different
@@ -516,6 +714,20 @@ Viewer.prototype._build = function () {
         });
         dpanel.appendChild(dbody);
         side.appendChild(dpanel);
+
+        // How deep the trace goes. Editable through the protocol since
+        // Stage 2b and until now with nothing to reach it, which is the
+        // one setting anyone chasing stray light wants to hand.
+        var tpanel = htmlEl('div', 'gt-panel');
+        tpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Tracing rules'));
+        var built = buildFieldTable(
+            RULE_FIELDS, true,
+            function (key, el) { self._commitRuleField(key, el); },
+            function () { self._refreshRulesPanel(); });
+        this.ruleFields = built.fields;
+        tpanel.appendChild(built.table);
+        side.appendChild(tpanel);
+        this._refreshRulesPanel();
     }
 
     // layer panel
@@ -535,17 +747,20 @@ Viewer.prototype._build = function () {
                 ['Click', 'pin the readout'],
                 ['Click again', 'cycle overlapping beams'],
                 ['Click an optics', 'show its properties'],
+                ['Click a laser', 'show the source it stands for'],
                 ['f', 'fit to view'],
                 ['Measure, or m', 'measure between two points'],
                 ['Esc', 'clear selection']];
     if (this.opts.onEdit) {
-        rows.push(['Drag an optics', 'move it'],
+        rows.push(['Drag an optics or a laser', 'move it'],
                   ['Ctrl + drag', 'drop it square on a beam'],
                   ['Shift + drag', 'rotate it'],
                   ['Ctrl + click a beam', 'move the selected optics along it'],
                   ['Edit a property', 'apply it to the layout'],
-                  ['+ Mirror / + CyMirror / + Lens',
+                  ['+ Mirror / + Lens / + Source',
                    'add one at the centre of the view'],
+                  ['+ Mirror, + Lens',
+                   'open for the cylindrical variant'],
                   ['Remove', 'delete the selection'],
                   ['DXF', 'write the drawing out for CAD'],
                   ['Undo, or Ctrl + Z', 'put the last edit back'],
@@ -575,6 +790,28 @@ Viewer.prototype._build = function () {
         this.resizeGrip.title = 'Drag to change the height';
         this.container.appendChild(this.resizeGrip);
     }
+};
+
+/*
+ * Shut any open add menu. Called whenever something else is pressed,
+ * and by the item that was chosen.
+ */
+Viewer.prototype.closeAddMenus = function () {
+    (this.addMenus || []).forEach(function (m) {
+        m.menu.style.display = 'none';
+        m.button.classList.remove('gt-open');
+    });
+};
+
+/*
+ * Whether a menu is open, and whether an element is inside one.
+ */
+Viewer.prototype._inAddMenu = function (node) {
+    var found = false;
+    (this.addMenus || []).forEach(function (m) {
+        if (m.wrap.contains(node)) { found = true; }
+    });
+    return found;
 };
 
 /*
@@ -818,6 +1055,97 @@ function parseField(s) {
 }
 
 /*
+ * Properties of a source beam.
+ *
+ * A laser is not specified by a q-parameter. It is specified by how
+ * wide its waist is and where that waist sits, which is exactly the
+ * pair GaussianBeam.waist() reports, so those are the rows - and Python
+ * converts, because what a waist means is the model's to say. The scene
+ * carries both, so nothing here has to work one out from the other.
+ */
+var NM = 1e-9;
+
+var SOURCE_FIELDS = [
+    {key: 'name', label: 'Name', text: true},
+    {key: 'type', label: 'Type', readonly: true},
+    {key: 'px', label: 'Position x', unit: 'm'},
+    {key: 'py', label: 'Position y', unit: 'm'},
+    {key: 'angle', label: 'Direction', unit: '°'},
+    // The beam it puts out. In millimetres and nanometres: a waist is
+    // spoken of in mm and a wavelength in nm, and a panel that made
+    // either of them read 0.0002 would be arithmetic rather than a
+    // specification.
+    {group: 'Beam'},
+    {key: 'w0x', label: 'Waist size x', unit: 'mm'},
+    {key: 'w0y', label: 'Waist size y', unit: 'mm'},
+    // Measured from the laser forward along the beam, the way
+    // GaussianBeam.waist() reports it: positive is downstream, and a
+    // waist behind the output is negative.
+    {key: 'dx', label: 'Waist pos x', unit: 'm'},
+    {key: 'dy', label: 'Waist pos y', unit: 'm'},
+    {key: 'wl', label: 'Wavelength', unit: 'nm'},
+    {key: 'P', label: 'Power', unit: 'W'},
+    {key: 'n', label: 'Index n'},
+    // Only used while the beam reaches nothing: the trace cuts a beam
+    // at whatever it hits, so this is how far a source fires into an
+    // empty bench. It is here because that is precisely the state a
+    // layout is in while it is being built.
+    {key: 'length', label: 'Free length', unit: 'm'}
+];
+
+function sourceFieldValue(s, key) {
+    switch (key) {
+    case 'type': return 'Source';
+    case 'px': return s.pos[0];
+    case 'py': return s.pos[1];
+    case 'angle': return normAngle(s.dirAngle || 0) * DEG;
+    case 'w0x': return s.waist_size[0] / MM;
+    case 'w0y': return s.waist_size[1] / MM;
+    case 'dx': return s.waist_pos[0];
+    case 'dy': return s.waist_pos[1];
+    case 'wl': return s.wl / NM;
+    default: return s[key];
+    }
+}
+
+/*
+ * The edit message that sets one field of a source.
+ */
+function sourceFieldMessage(s, key, value) {
+    var attrs = {};
+    switch (key) {
+    case 'px':
+        return {op: 'move', target: s.name, pos: [value, s.pos[1]]};
+    case 'py':
+        return {op: 'move', target: s.name, pos: [s.pos[0], value]};
+    case 'angle':
+        return {op: 'rotate', target: s.name, dirAngle: value / DEG};
+    case 'w0x': attrs.waist_size_x = value * MM; break;
+    case 'w0y': attrs.waist_size_y = value * MM; break;
+    case 'dx': attrs.waist_pos_x = value; break;
+    case 'dy': attrs.waist_pos_y = value; break;
+    case 'wl': attrs.wl = value * NM; break;
+    default:
+        attrs[key] = value;
+    }
+    return {op: 'set', target: s.name, attrs: attrs};
+}
+
+/*
+ * How deep the trace goes. Not a property of any one element - the cap
+ * an element may put on its own ghosts is in OPTIC_FIELDS - but of the
+ * layout, and the pair anyone chasing stray light reaches for first.
+ */
+var RULE_FIELDS = [
+    {key: 'order', label: 'Order'},
+    {key: 'power_threshold', label: 'Power threshold'},
+    // What a beam that reaches nothing is drawn as. It applies to the
+    // beams the trace makes; a source with nothing in front of it uses
+    // its own Free length instead.
+    {key: 'open_beam_length', label: 'Open beam', unit: 'm'}
+];
+
+/*
  * A dimension in the panel: where its ends are, and what it comes to.
  *
  * The two ends are editable, so that a measurement placed by eye can be
@@ -906,12 +1234,23 @@ Viewer.prototype._buildDimPanel = function () {
     this.dimBody.appendChild(this.dimFoot);
 };
 
-Viewer.prototype._buildOpticPanel = function () {
-    var self = this;
+/*
+ * Build a table of property rows from a field list.
+ *
+ * Shared by the optics panel and the source panel, which differ in what
+ * they show and not at all in how a row works. The two callbacks are
+ * what a row does: commit(key, element) when the value is entered, and
+ * revert() when Escape says to put back what the model holds.
+ *
+ * Returns a map from field key to a record the refresh loop works
+ * through: which row it is, what kind of control, and whether the row
+ * hides itself when the thing on show has no such property.
+ */
+function buildFieldTable(fields, editable, commit, revert) {
     var table = htmlEl('table');
-    this.opticFields = {};
+    var recs = {};
 
-    OPTIC_FIELDS.forEach(function (f) {
+    fields.forEach(function (f) {
         var tr = htmlEl('tr');
 
         if (f.group) {
@@ -927,7 +1266,7 @@ Viewer.prototype._buildOpticPanel = function () {
         var td = htmlEl('td', 'gt-val');
         var rec = {row: tr, optional: !!f.optional};
 
-        if (f.readonly || !self.onEdit) {
+        if (f.readonly || !editable) {
             // Nothing to edit: either the class of the element, or a
             // viewer with no Python behind it.
             var span = htmlEl('span', 'gt-static', '-');
@@ -938,9 +1277,7 @@ Viewer.prototype._buildOpticPanel = function () {
         } else if (f.bool) {
             var box = htmlEl('input', 'gt-check');
             box.type = 'checkbox';
-            box.addEventListener('change', function () {
-                self._commitOpticField(f.key, box);
-            });
+            box.addEventListener('change', function () { commit(f.key, box); });
             td.appendChild(box);
             rec.el = box;
             rec.editable = true;
@@ -952,9 +1289,7 @@ Viewer.prototype._buildOpticPanel = function () {
                 opt.value = c[0];
                 sel.appendChild(opt);
             });
-            sel.addEventListener('change', function () {
-                self._commitOpticField(f.key, sel);
-            });
+            sel.addEventListener('change', function () { commit(f.key, sel); });
             td.appendChild(sel);
             rec.el = sel;
             rec.editable = true;
@@ -965,11 +1300,11 @@ Viewer.prototype._buildOpticPanel = function () {
             if (f.text) { input.className += ' gt-input-text'; }
             input.spellcheck = false;
             input.addEventListener('change', function () {
-                self._commitOpticField(f.key, input);
+                commit(f.key, input);
             });
             input.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Escape') {
-                    self._refreshOpticPanel();
+                    revert();
                     input.blur();
                     ev.stopPropagation();
                 }
@@ -981,10 +1316,54 @@ Viewer.prototype._buildOpticPanel = function () {
         }
         tr.appendChild(td);
         table.appendChild(tr);
-        self.opticFields[f.key] = rec;
+        recs[f.key] = rec;
     });
 
-    this.opticBody.appendChild(table);
+    return {table: table, fields: recs};
+}
+
+/*
+ * Fill a table built by buildFieldTable from whatever it is showing.
+ *
+ * `value(key)` answers for the thing on show, or the caller passes null
+ * for "nothing selected" and every row empties. A row marked optional
+ * disappears entirely when its value is absent, which is how a panel
+ * shared by several classes shows only what the one in front of it has.
+ */
+function refreshFieldTable(recs, fields, value, skip) {
+    for (var key in recs) {
+        if (skip && skip.indexOf(key) >= 0) { continue; }
+        var f = recs[key];
+        var v = value ? value(key) : null;
+
+        if (f.optional) {
+            f.row.style.display = (v === undefined || v === null) ? 'none' : '';
+        }
+
+        // Never overwrite the field the user is working in.
+        if (f.editable && document.activeElement === f.el) { continue; }
+
+        if (f.kind === 'bool') {
+            if (f.editable) { f.el.checked = !!v; }
+            else { f.el.textContent = value ? (v ? 'yes' : 'no') : '-'; }
+        } else if (f.kind === 'choice') {
+            f.el.value = v === undefined || v === null ? '' : String(v);
+        } else if (f.editable) {
+            f.el.value = value ? fmtField(v) : '';
+        } else {
+            f.el.textContent = value ? fmtField(v) : '-';
+        }
+    }
+}
+
+Viewer.prototype._buildOpticPanel = function () {
+    var self = this;
+    var built = buildFieldTable(
+        OPTIC_FIELDS, !!this.onEdit,
+        function (key, el) { self._commitOpticField(key, el); },
+        function () { self._refreshOpticPanel(); });
+    this.opticFields = built.fields;
+    this.opticBody.appendChild(built.table);
 
     if (this.onEdit) {
         var foot = htmlEl('div', 'gt-props-foot');
@@ -993,6 +1372,28 @@ Viewer.prototype._buildOpticPanel = function () {
         delBtn.addEventListener('click', function () { self.removeSelected(); });
         foot.appendChild(delBtn);
         this.opticBody.appendChild(foot);
+    }
+};
+
+/*
+ * The source panel. The same rows as any other, over a different list.
+ */
+Viewer.prototype._buildSourcePanel = function () {
+    var self = this;
+    var built = buildFieldTable(
+        SOURCE_FIELDS, !!this.onEdit,
+        function (key, el) { self._commitSourceField(key, el); },
+        function () { self._refreshSourcePanel(); });
+    this.sourceFields = built.fields;
+    this.sourceBody.appendChild(built.table);
+
+    if (this.onEdit) {
+        var foot = htmlEl('div', 'gt-props-foot');
+        var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
+        delBtn.title = 'Remove this source from the layout';
+        delBtn.addEventListener('click', function () { self.removeSelected(); });
+        foot.appendChild(delBtn);
+        this.sourceBody.appendChild(foot);
     }
 };
 
@@ -1013,14 +1414,25 @@ Viewer.prototype.addOptics = function (type, params) {
     if (!spec) { return null; }
 
     var name = this._freshOpticName(spec.prefix);
+    // A source stands at a point and fires along a direction; an optics
+    // stands with a face turned. The default pose differs to match:
+    // a new mirror faces back down the -x axis, where the beams
+    // already in a layout tend to come from, and a new laser fires
+    // along +x, which is where the rest of a bench is built from.
+    var pose = spec.source
+        ? {pos: [this.cx, this.cy], dirAngle: 0}
+        : {HRcenter: [this.cx, this.cy], normAngleHR: Math.PI};
     var msg = {op: 'add', type: spec.type, name: name,
-               params: Object.assign({
-                   HRcenter: [this.cx, this.cy],
-                   normAngleHR: Math.PI
-               }, spec.params || {}, params || {})};
-    // Optimistic: the scene that comes back will contain it, and
-    // _selectedOptic() resolves the name then.
-    this.selectedOptic = name;
+               params: Object.assign(pose, spec.params || {}, params || {})};
+    // Optimistic: the scene that comes back will contain it, and the
+    // selection resolves the name then.
+    if (spec.source) {
+        this.selectedSource = name;
+        this.selectedOptic = null;
+    } else {
+        this.selectedOptic = name;
+        this.selectedSource = null;
+    }
     this.onEdit(msg);
     return msg;
 };
@@ -1034,8 +1446,15 @@ Viewer.prototype.addMirror = function (params) {
 
 Viewer.prototype._freshOpticName = function (prefix) {
     prefix = prefix || 'M';
+    // Optics, sources and dimensions share one namespace, so a name is
+    // only free if none of the three has it. Python would refuse a
+    // clash anyway; asking for one and having it turned down would
+    // leave the optimistic selection pointing at nothing.
     var taken = {};
-    (this.scene.optics || []).forEach(function (o) { taken[o.name] = true; });
+    [this.scene.optics, this.scene.sources, this.scene.dimensions]
+        .forEach(function (list) {
+            (list || []).forEach(function (o) { taken[o.name] = true; });
+        });
     var i = 1;
     while (taken[prefix + i]) { i++; }
     return prefix + i;
@@ -1163,8 +1582,9 @@ Viewer.prototype._refreshUndo = function () {
  * layout resolves it across optics and dimensions alike.
  */
 Viewer.prototype.removeSelected = function () {
-    var target = this.panelKind === 'dimension'
-        ? this.selectedDim : this.selectedOptic;
+    var target = this.panelKind === 'dimension' ? this.selectedDim
+        : this.panelKind === 'source' ? this.selectedSource
+        : this.selectedOptic;
     if (!target) { return null; }
 
     // A dimension the viewer drew itself is the viewer's to take back.
@@ -1177,6 +1597,7 @@ Viewer.prototype.removeSelected = function () {
     var msg = {op: 'remove', target: target};
     this.selectedOptic = null;
     this.selectedDim = null;
+    this.selectedSource = null;
     this._showPanel('beam');
     if (local && !this.onEdit) {
         this.scene.dimensions = this.scene.dimensions.filter(
@@ -1212,6 +1633,32 @@ Viewer.prototype._commitDisplay = function (key, value) {
 };
 
 /*
+ * The tracing rules, which describe the layout rather than the drawing:
+ * changing one re-traces, so the picture that comes back has more or
+ * fewer beams in it than the one that went out.
+ */
+Viewer.prototype._refreshRulesPanel = function () {
+    if (!this.ruleFields) { return; }
+    var r = this.scene.rules;
+    refreshFieldTable(this.ruleFields, RULE_FIELDS,
+                      r ? function (key) { return r[key]; } : null);
+};
+
+Viewer.prototype._commitRuleField = function (key, input) {
+    var r = this.scene.rules;
+    if (!r || !this.onEdit) { return; }
+    var value = parseField(input.value);
+    if (typeof value !== 'number' || !isFinite(value)) {
+        this._refreshRulesPanel();
+        return;
+    }
+    if (value === r[key]) { return; }
+    var rules = {};
+    rules[key] = value;
+    this.onEdit({op: 'rules', rules: rules});
+};
+
+/*
  * Put the controls where the scene says the drawing actually stands.
  */
 Viewer.prototype._refreshDisplayPanel = function () {
@@ -1229,13 +1676,14 @@ Viewer.prototype._refreshDisplayPanel = function () {
  * Show one of the two panels.
  */
 var PANEL_TITLES = {optic: 'Optics properties', dimension: 'Dimension',
-                    beam: 'Beam readout'};
+                    source: 'Source properties', beam: 'Beam readout'};
 
 Viewer.prototype._showPanel = function (kind) {
     this.panelKind = kind;
     this.readoutBody.style.display = kind === 'beam' ? '' : 'none';
     this.opticBody.style.display = kind === 'optic' ? '' : 'none';
     this.dimBody.style.display = kind === 'dimension' ? '' : 'none';
+    this.sourceBody.style.display = kind === 'source' ? '' : 'none';
     this.panelTitle.textContent = PANEL_TITLES[kind] || PANEL_TITLES.beam;
     if (kind !== 'beam') { this.pinLabel.textContent = ''; }
 };
@@ -1384,31 +1832,78 @@ Viewer.prototype._refreshOpticPanel = function () {
         }
     }
 
-    for (var key in fields) {
-        if (key === 'slide_beam' || key === 'slide_by') { continue; }
-        var f = fields[key];
-        var v = o ? opticFieldValue(o, key) : null;
+    // A row for something this class does not have - the curvature
+    // direction of a plain mirror - is not shown at all.
+    refreshFieldTable(fields, OPTIC_FIELDS,
+                      o ? function (key) { return opticFieldValue(o, key); }
+                        : null,
+                      ['slide_beam', 'slide_by']);
+};
 
-        // A row for something this class does not have - the curvature
-        // direction of a plain mirror - is not shown at all.
-        if (f.optional) {
-            f.row.style.display = (v === undefined || v === null) ? 'none' : '';
-        }
-
-        // Never overwrite the field the user is working in.
-        if (f.editable && document.activeElement === f.el) { continue; }
-
-        if (f.kind === 'bool') {
-            if (f.editable) { f.el.checked = !!v; }
-            else { f.el.textContent = o ? (v ? 'yes' : 'no') : '-'; }
-        } else if (f.kind === 'choice') {
-            f.el.value = v === undefined || v === null ? '' : String(v);
-        } else if (f.editable) {
-            f.el.value = o ? fmtField(v) : '';
-        } else {
-            f.el.textContent = o ? fmtField(v) : '-';
-        }
+Viewer.prototype._selectedSource = function () {
+    if (!this.selectedSource) { return null; }
+    var sources = this.scene.sources || [];
+    for (var i = 0; i < sources.length; i++) {
+        if (sources[i].name === this.selectedSource) { return sources[i]; }
     }
+    return null;
+};
+
+Viewer.prototype._refreshSourcePanel = function () {
+    var s = this._selectedSource();
+    refreshFieldTable(this.sourceFields, SOURCE_FIELDS,
+                      s ? function (key) { return sourceFieldValue(s, key); }
+                        : null);
+};
+
+Viewer.prototype._selectSource = function (source) {
+    this.selectedSource = source ? source.name : null;
+    if (source) {
+        this.selectedOptic = null;
+        this.selectedDim = null;
+        this._refreshSourcePanel();
+        this._showPanel('source');
+    } else {
+        this._showPanel('beam');
+    }
+    this._updateOverlay();
+};
+
+Viewer.prototype._commitSourceField = function (key, input) {
+    var s = this._selectedSource();
+    if (!s || !this.onEdit) { return; }
+
+    if (key === 'name') {
+        this.renameSelected(input.value);
+        return;
+    }
+
+    var field = null;
+    for (var i = 0; i < SOURCE_FIELDS.length; i++) {
+        if (SOURCE_FIELDS[i].key === key) { field = SOURCE_FIELDS[i]; }
+    }
+
+    if (field && field.text) {
+        var text = String(input.value).trim();
+        if (!text || text === sourceFieldValue(s, key)) {
+            this._refreshSourcePanel();
+            return;
+        }
+        this.onEdit(sourceFieldMessage(s, key, text));
+        return;
+    }
+
+    var value = parseField(input.value);
+    // Every number a source takes is finite. An infinite waist or
+    // wavelength would not survive the trip - JSON has no infinity, and
+    // what arrives on the Python side is a null the model cannot use -
+    // and nothing here means "leave it to the layout" either.
+    if (typeof value !== 'number' || !isFinite(value)) {
+        this._refreshSourcePanel();
+        return;
+    }
+    if (value === sourceFieldValue(s, key)) { return; }
+    this.onEdit(sourceFieldMessage(s, key, value));
 };
 
 Viewer.prototype._selectOptic = function (optic) {
@@ -1501,16 +1996,27 @@ Viewer.prototype._commitOpticField = function (key, input) {
  * puts it back if the rename was refused.
  */
 Viewer.prototype.renameSelected = function (name) {
-    var o = this._selectedOptic();
+    // Whichever panel is up names the thing being renamed. The message
+    // is the same either way - the layout resolves a target across
+    // optics, sources and dimensions alike - so only which selection to
+    // carry optimistically differs.
+    var source = this.panelKind === 'source';
+    var o = source ? this._selectedSource() : this._selectedOptic();
     if (!o || !this.onEdit) { return null; }
     name = String(name).trim();
     if (!name || name === o.name) {
-        this._refreshOpticPanel();
+        if (source) { this._refreshSourcePanel(); }
+        else { this._refreshOpticPanel(); }
         return null;
     }
     var msg = {op: 'rename', target: o.name, name: name};
-    this.selectionFallback = o.name;
-    this.selectedOptic = name;
+    if (source) {
+        this.sourceFallback = o.name;
+        this.selectedSource = name;
+    } else {
+        this.selectionFallback = o.name;
+        this.selectedOptic = name;
+    }
     this.onEdit(msg);
     return msg;
 };
@@ -1527,10 +2033,16 @@ Viewer.prototype.revertSelection = function () {
         this.selectedDim = this.dimFallback;
         this._showPanel('dimension');
     }
+    if (this.sourceFallback && !this._selectedSource()) {
+        this.selectedSource = this.sourceFallback;
+        this._showPanel('source');
+    }
     this.selectionFallback = null;
     this.dimFallback = null;
+    this.sourceFallback = null;
     this._refreshOpticPanel();
     this._refreshDimPanel();
+    this._refreshSourcePanel();
     this._updateOverlay();
 };
 
@@ -2022,6 +2534,7 @@ Viewer.prototype._renderScene = function () {
     // size whatever the zoom, or a measurement of a lens would vanish
     // next to one across the bench.
     this._renderDimensions();
+    this._renderSources();
 
     // Overlay elements for the readout marker, the highlighted beam and
     // the arrow telling which way that beam travels.
@@ -2059,6 +2572,86 @@ Viewer.prototype._renderScene = function () {
     this.slideArrow.style.display = 'none';
     this.rubber.style.display = 'none';
     this.snapMark.style.display = 'none';
+};
+
+/*
+ * Build one polygon per source. Where they are drawn is worked out
+ * every frame by _updateSources, since the shape keeps its size on
+ * screen while the origin follows the scene.
+ */
+Viewer.prototype._renderSources = function () {
+    var self = this;
+    this.sourceEls = [];
+    (this.scene.sources || []).forEach(function (s) {
+        var poly = svgEl('polygon', {'class': 'gt-source'});
+        // A source names the beam it emits, and that beam is drawn on a
+        // layer; hiding the layer hides the beam, so the laser goes
+        // with it rather than being left pointing at nothing.
+        self.sourceGroup.appendChild(poly);
+        self.sourceEls.push({el: poly, source: s});
+    });
+    // Deliberately not placed here. Building the scene happens before
+    // the view has been framed, so there is no transform yet to put a
+    // screen-space shape through; _applyTransform places them, and it
+    // runs on the way out of every path that gets here.
+};
+
+/*
+ * Put the lasers where the view now stands.
+ */
+Viewer.prototype._updateSources = function () {
+    var self = this;
+    (this.sourceEls || []).forEach(function (rec) {
+        var s = rec.source;
+        var g = self.layerGroups[s.layer];
+        if (g && !g.visible) { rec.el.style.display = 'none'; return; }
+        rec.el.style.display = '';
+        // While one is being dragged it follows the cursor rather than
+        // the scene: Python has not been told yet, and will not be
+        // until the button comes up.
+        var d = self.dragSource;
+        var pos = (d && d.source.name === s.name) ? d.pos : s.pos;
+        var ang = (d && d.source.name === s.name) ? d.angle : s.dirAngle;
+        var dir = [Math.cos(ang), Math.sin(ang)];
+        var o = self.sceneToScreen(pos[0], pos[1]);
+        var k = self._sourceGrowth(s);
+        rec.el.setAttribute('points', SOURCE_SHAPE.map(function (uv) {
+            var p = sourcePoint(uv, o, dir, k);
+            return p[0] + ',' + p[1];
+        }).join(' '));
+        rec.el.classList.toggle('gt-selected',
+                                s.name === self.selectedSource);
+        rec.el.classList.toggle('gt-hover',
+                                !!self.hoverSource
+                                && self.hoverSource.name === s.name);
+        rec.el.classList.toggle('gt-dragging', !!d
+                                && d.source.name === s.name);
+    });
+};
+
+/*
+ * The source whose laser a screen point falls on, or null. Later
+ * sources win, so the one drawn on top is the one picked.
+ */
+Viewer.prototype._pickSource = function (px, py) {
+    var found = null;
+    (this.sourceEls || []).forEach(function (rec) {
+        if (rec.el.style.display === 'none') { return; }
+        var s = rec.source;
+        var o = this.sceneToScreen(s.pos[0], s.pos[1]);
+        if (sourceHit(px, py, o, s.dirVect, this._sourceGrowth(s))) {
+            found = s;
+        }
+    }, this);
+    return found;
+};
+
+/*
+ * How much the laser for this source is grown by, at the current zoom.
+ * One place, so that the drawing and the pick cannot disagree.
+ */
+Viewer.prototype._sourceGrowth = function (s) {
+    return sourceGrowth(s, this.scene.display, this.scale);
 };
 
 /*
@@ -2252,6 +2845,10 @@ Viewer.prototype.setLayerVisible = function (name, visible) {
     g.geom.style.display = visible ? '' : 'none';
     g.label.style.display = visible ? '' : 'none';
     if (g.checkbox) { g.checkbox.checked = visible; }
+    // The lasers are not on the layer groups - they are drawn in screen
+    // coordinates, like the labels - so they have to be told. A laser
+    // left standing over a hidden beam would be pointing at nothing.
+    this._updateSources();
 };
 
 //}}}
@@ -2286,6 +2883,8 @@ Viewer.prototype._applyTransform = function () {
     }
 
     this._updateDimensions();
+    // The lasers are refreshed by _updateOverlay, which every path that
+    // changes what is highlighted already calls.
     this._updateOverlay();
     this._updateStatus();
 };
@@ -2455,6 +3054,14 @@ Viewer.prototype._bindEvents = function () {
         });
     }
 
+    // An open add menu is shut by pressing anywhere else - including in
+    // another viewer, which is why this is on the window rather than on
+    // the root. Listened for on the way down, so that the press which
+    // shuts the menu still reaches whatever it landed on.
+    on(global, 'mousedown', function (ev) {
+        if (!self._inAddMenu(ev.target)) { self.closeAddMenus(); }
+    }, true);
+
     // Keyboard shortcuts act on the viewer the pointer is over, so that
     // several viewers in one notebook do not all answer the same key.
     this.pointerInside = false;
@@ -2477,9 +3084,11 @@ Viewer.prototype._bindEvents = function () {
     on(this.svg, 'mousedown', function (ev) {
         if (ev.button !== 0) { return; }
         var r = self.svg.getBoundingClientRect();
-        var pt = self.screenToScene(ev.clientX - r.left, ev.clientY - r.top);
+        var px = ev.clientX - r.left, py = ev.clientY - r.top;
+        var pt = self.screenToScene(px, py);
 
-        // Grabbing an optics starts an edit; grabbing anywhere else pans.
+        // Grabbing an optics or a laser starts an edit; grabbing
+        // anywhere else pans.
         //
         // Not while measuring: a click then means "measure here", and
         // dragging an element out from under the cursor mid-measurement
@@ -2487,10 +3096,18 @@ Viewer.prototype._bindEvents = function () {
         // which is picked ahead of the element under it - a press that
         // grabbed the element would never let the release get as far as
         // selecting the dimension.
-        var o = (self.onEdit && !self.measuring
-                 && !self._pickDimension(pt[0], pt[1]))
-            ? self._pickOptic(pt[0], pt[1]) : null;
-        if (o) {
+        //
+        // The laser is tested before the optics, in the same order the
+        // click pipeline uses, so that a press and a click never take
+        // hold of different things.
+        var grabbable = self.onEdit && !self.measuring
+            && !self._pickDimension(pt[0], pt[1]);
+        var s = grabbable ? self._pickSource(px, py) : null;
+        var o = (grabbable && !s) ? self._pickOptic(pt[0], pt[1]) : null;
+        if (s) {
+            self._beginSourceDrag(s, pt, ev.shiftKey);
+            ev.preventDefault();
+        } else if (o) {
             self._beginOpticDrag(o, pt, ev.shiftKey);
             ev.preventDefault();
         }
@@ -2501,6 +3118,13 @@ Viewer.prototype._bindEvents = function () {
 
     on(global, 'mousemove', function (ev) {
         var r = self.svg.getBoundingClientRect();
+        if (self.dragSource) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateSourceDrag(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+            return;
+        }
         if (self.dragOptic) {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
@@ -2524,6 +3148,27 @@ Viewer.prototype._bindEvents = function () {
     });
 
     on(global, 'mouseup', function (ev) {
+        if (self.dragSource) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            var rs = self.svg.getBoundingClientRect();
+            if (moved < 4) {
+                // A grab that went nowhere is a click on the laser,
+                // which selects it. Let the click pipeline do that, so
+                // that press-and-click agree on what was pointed at.
+                self.dragSource = null;
+                self._onClick(ev.clientX - rs.left, ev.clientY - rs.top,
+                              ev.ctrlKey);
+                return;
+            }
+            // Take the pose from where the cursor actually is at the
+            // moment of release, rather than from the last movement
+            // event, which may have been a pixel or two short.
+            self._updateSourceDrag(
+                self.screenToScene(ev.clientX - rs.left, ev.clientY - rs.top));
+            self._endSourceDrag();
+            return;
+        }
         if (self.dragOptic) {
             dragging = false;
             self.svg.classList.remove('gt-dragging');
@@ -2584,10 +3229,18 @@ Viewer.prototype._bindEvents = function () {
             self.toggleMeasure();
         }
         if (ev.key === 'Escape') {
+            // An open menu is the innermost thing Escape can close, so
+            // it goes first and the selection is left alone.
+            var wasOpen = (self.addMenus || []).some(function (m) {
+                return m.menu.style.display !== 'none';
+            });
+            self.closeAddMenus();
+            if (wasOpen) { return; }
             if (self.measuring) { self.toggleMeasure(false); }
             self.pinned = null;
             self.selectedOptic = null;
             self.selectedDim = null;
+            self.selectedSource = null;
             self._setReadout(null);
             self._showPanel('beam');
             self._updateOverlay();
@@ -2690,6 +3343,61 @@ Viewer.prototype._updateOpticDrag = function (scenePt, snap) {
     }
     this._updateOpticOutline(d.optic, d.center, d.angle);
     this._updateStatus();
+};
+
+/*
+ * Dragging a source.
+ *
+ * Kept apart from the optics drag rather than folded into it: the two
+ * share the shape of the gesture and nothing else. An optics is held by
+ * an anchor that is not its middle, is squared onto beams with Ctrl,
+ * and lands as a 'move' of its substrate centre; a laser is held where
+ * its light comes from, has nothing to be squared onto - it is what the
+ * beams are square to - and lands as a 'move' of that point.
+ */
+Viewer.prototype._beginSourceDrag = function (source, scenePt, rotate) {
+    var p = source.pos;
+    this.dragSource = {
+        source: source,
+        rotate: !!rotate,
+        grab: scenePt,
+        pos0: [p[0], p[1]],
+        angle0: source.dirAngle || 0,
+        // Where the grab point stands as seen from the laser, so that
+        // turning follows the cursor instead of jumping to it.
+        grabAngle: Math.atan2(scenePt[1] - p[1], scenePt[0] - p[0]),
+        pos: [p[0], p[1]],
+        angle: source.dirAngle || 0
+    };
+    this._updateOverlay();
+};
+
+Viewer.prototype._updateSourceDrag = function (scenePt) {
+    var d = this.dragSource;
+    if (!d) { return; }
+    if (d.rotate) {
+        // About the point the light leaves from, which is the one the
+        // model keeps fixed when dirAngle is assigned: the beam swings
+        // and the laser stays where it was put.
+        var a = Math.atan2(scenePt[1] - d.pos0[1], scenePt[0] - d.pos0[0]);
+        d.angle = d.angle0 + (a - d.grabAngle);
+    } else {
+        d.pos = [d.pos0[0] + scenePt[0] - d.grab[0],
+                 d.pos0[1] + scenePt[1] - d.grab[1]];
+    }
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endSourceDrag = function () {
+    var d = this.dragSource;
+    this.dragSource = null;
+    if (!d) { return; }
+    this._selectSource(d.source);
+    if (!this.onEdit) { return; }
+    this.onEdit(d.rotate
+        ? {op: 'rotate', target: d.source.name, dirAngle: d.angle}
+        : {op: 'move', target: d.source.name, pos: d.pos});
 };
 
 Viewer.prototype._endOpticDrag = function () {
@@ -2818,6 +3526,7 @@ Viewer.prototype._onHover = function (px, py) {
             this.measurePreview = this._measurePoint(pt[0], pt[1]);
         }
         this.hoverOptic = null;
+        this.hoverSource = null;
         this.hover = null;
         this._updateOverlay();
         this._updateStatus();
@@ -2825,13 +3534,17 @@ Viewer.prototype._onHover = function (px, py) {
     }
     this.measurePreview = null;
 
-    // An optics under the cursor takes precedence: it is what the next
-    // mousedown would act on, so say so before the user presses.
-    this.hoverOptic = this._pickOptic(pt[0], pt[1]);
-    this.svg.classList.toggle('gt-over-optic',
-                              !!this.hoverOptic && !!this.onEdit);
-    this.svg.classList.toggle('gt-over-pickable',
-                              !!this.hoverOptic && !this.onEdit);
+    // An optics or a laser under the cursor takes precedence: it is
+    // what the next mousedown would act on, so say so before the user
+    // presses. The laser comes first for the same reason a dimension
+    // does - it is a small mark that a large element would otherwise
+    // shadow, and a source usually sits at the end of its own beam.
+    this.hoverSource = this._pickSource(px, py);
+    this.hoverOptic = this.hoverSource ? null
+        : this._pickOptic(pt[0], pt[1]);
+    var over = this.hoverOptic || this.hoverSource;
+    this.svg.classList.toggle('gt-over-optic', !!over && !!this.onEdit);
+    this.svg.classList.toggle('gt-over-pickable', !!over && !this.onEdit);
 
     var hit = this._pick(pt[0], pt[1], 12 / this.scale);
     this.hover = hit;
@@ -2883,6 +3596,24 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     }
     if (this.panelKind === 'dimension') {
         this.selectedDim = null;
+        this._showPanel('beam');
+    }
+
+    // Then the lasers, ahead of the optics and the beams for the same
+    // reason: a source sits at the end of its own beam and often right
+    // against the first element, and a box of a few dozen pixels that
+    // an element could shadow would be unreachable. It is small, so
+    // the element is still there to be clicked anywhere off it.
+    var source = this._pickSource(px, py);
+    if (source) {
+        this.pinned = null;
+        this.lastClick = null;
+        this.cycle = 0;
+        this._selectSource(source);
+        return;
+    }
+    if (this.panelKind === 'source') {
+        this.selectedSource = null;
         this._showPanel('beam');
     }
 
@@ -2994,6 +3725,11 @@ Viewer.prototype._arrowPath = function (px, py, dirVect) {
 };
 
 Viewer.prototype._updateOverlay = function () {
+    // The lasers stand where the scene says, or where a drag has them.
+    // Done here rather than in _applyTransform so that every path which
+    // changes what is selected or hovered brings them along.
+    this._updateSources();
+
     // The measurement being placed. Drawn here rather than through the
     // scene because Python has not been told about it yet - there is
     // nothing to tell until the last click - so this is the one piece of
@@ -3096,6 +3832,15 @@ Viewer.prototype._updateOverlay = function () {
 };
 
 Viewer.prototype._updateStatus = function () {
+    var s = this.dragSource;
+    if (s) {
+        this.statusBar.textContent = s.rotate
+            ? s.source.name + ':  ' + fmtDeg(normAngle(s.angle)) +
+              '   (was ' + fmtDeg(normAngle(s.angle0)) + ')'
+            : s.source.name + ':  ' + fmtLen(s.pos[0]) + ',  ' +
+              fmtLen(s.pos[1]);
+        return;
+    }
     var d = this.dragOptic;
     if (d) {
         if (d.snap) {
@@ -3215,7 +3960,9 @@ Viewer.prototype.setScene = function (scene) {
     this.pinned = null;
     this.hover = null;
     this.hoverOptic = null;
+    this.hoverSource = null;
     this.dragOptic = null;
+    this.dragSource = null;
     this.cycle = 0;
     this.lastClick = null;
     this.labels = [];
@@ -3223,6 +3970,7 @@ Viewer.prototype.setScene = function (scene) {
     this.sceneGroup.textContent = '';
     this.labelGroup.textContent = '';
     this.dimGroup.textContent = '';
+    this.sourceGroup.textContent = '';
     this.overlayGroup.textContent = '';
     this.layerBody.textContent = '';
     this.opts.hiddenLayers = Object.keys(visible).filter(function (k) {
@@ -3230,6 +3978,7 @@ Viewer.prototype.setScene = function (scene) {
     });
     this._renderScene();
     this._refreshDisplayPanel();
+    this._refreshRulesPanel();
     this._refreshUndo();
     this._setReadout(null);
 
@@ -3238,14 +3987,22 @@ Viewer.prototype.setScene = function (scene) {
     // one means the edit went through, so any optimistic rename stands.
     this.selectionFallback = null;
     this.dimFallback = null;
+    this.sourceFallback = null;
     if (this._selectedDim()) {
         this._refreshDimPanel();
         this._showPanel('dimension');
+    } else if (this._selectedSource()) {
+        this._refreshSourcePanel();
+        this._showPanel('source');
     } else if (this._selectedOptic()) {
         this._refreshOpticPanel();
         this._showPanel('optic');
     } else if (this.panelKind === 'optic') {
         this.selectedOptic = null;
+        this._showPanel('beam');
+    } else if (this.panelKind === 'source') {
+        // The source it was showing is gone - removed, or undone.
+        this.selectedSource = null;
         this._showPanel('beam');
     } else if (this.panelKind === 'dimension') {
         // The dimension it was showing is gone - removed, or undone.

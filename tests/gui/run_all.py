@@ -53,6 +53,10 @@ SUITES = [
      'headless browser: the properties panel, the controls, add and remove'),
     ('verify_measure_browser.py',
      'headless browser: the measuring tool, snapping and the dimension panel'),
+    ('verify_source.py',
+     'sources: the waist a laser is specified by, and the protocol reaching it'),
+    ('verify_source_browser.py',
+     'headless browser: the laser drawn for a source, and editing it'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in

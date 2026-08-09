@@ -74,6 +74,10 @@ Tracing rules
 
 ``order`` is a property of the trace as a whole. How deep the ghosts of *one particular element* are worth chasing is a property of that element, so it lives there instead, as the ``max_stray_order`` attribute of the optics. What raises a beam's stray order in the first place, and the flags that say which face of an element is meant for what, are described in :ref:`stray-order`.
 
+``open_beam_length`` applies to the beams the trace produces. A *source* that reaches nothing keeps its own ``length`` instead, which is the state a layout is in while it is being built.
+
+All three can be changed from a front end; see :ref:`editing-a-source`.
+
 Drawing options
 ----------------
 
@@ -166,6 +170,41 @@ An attribute on the whitelist may still be one the target does not have, or one 
 
 Renaming has its own operation rather than being an editable attribute, because the name is the identity that edits are resolved by; changing it needs a uniqueness check.
 
+.. _editing-a-source:
+
+Editing a source
+^^^^^^^^^^^^^^^^^
+
+The same operations reach the source beams, and mean for a laser what they mean for an element: ``move`` says where it stands, ``rotate`` which way it fires, ``set`` what light it puts out.
+
+.. code-block:: python
+
+    layout.apply_edit({'op': 'move',   'target': 'b0', 'pos': [0.1, 0.0]})
+    layout.apply_edit({'op': 'rotate', 'target': 'b0', 'dirAngle': 0.0})
+    layout.apply_edit({'op': 'set',    'target': 'b0',
+                       'attrs': {'waist_size_x': 0.35e-3,
+                                 'waist_pos_x': 0.12}})
+    layout.apply_edit({'op': 'add', 'type': 'Source', 'name': 'S1',
+                       'params': {'pos': [0.0, 0.3],
+                                  'waist_size': 0.2e-3}})
+
+A source stands at a point and is aimed, so the attributes are different ones (``EDITABLE_SOURCE_ATTRS``) and ``move`` and ``rotate`` name ``pos`` and ``dirAngle`` rather than an element's centre and face. ``align`` and ``slide`` do not apply at all: there is nothing to square a laser onto — it is what the beams are square to.
+
+**A laser is specified by its waist, not by a q-parameter.** ``waist_size_x``, ``waist_size_y``, ``waist_pos_x`` and ``waist_pos_y`` are not attributes a :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` has; each stands for one half of one q-parameter and is converted here. Setting a size does not move the waist and moving it does not resize it, and the two directions are independent. ``qx`` and ``qy`` may still be set directly, as ``[real, imag]``; :py:func:`q_from_waist<gtrace.layout.q_from_waist>` and :py:meth:`waist<gtrace.beam.GaussianBeam.waist>` convert between the two descriptions.
+
+A waist position is the distance from the laser forward along the beam, positive downstream, which is how :py:meth:`waist<gtrace.beam.GaussianBeam.waist>` reports it.
+
+**Through this protocol, changing the wavelength keeps the waist and changes the divergence.** A q-parameter says nothing on its own — what width it comes to depends on the wavelength — so changing one of the two has to keep the other, and the waist is what the laser is specified by. The model already behaves this way for the refractive index, whose handler holds the reduced q fixed. Assigning ``b.wl`` directly in a cell is untouched and keeps the q-parameter instead.
+
+A new source inherits nothing from the sources already registered, unlike a new mirror. A laser is not cut to match the one beside it, and a q-parameter carried over would describe a waist measured from a point the new source does not stand at; ``DEFAULT_SOURCE_WAIST`` and ``DEFAULT_SOURCE_WL`` are used instead. ``waist_size`` and ``waist_pos`` given to ``add`` stand for both directions at once (``CREATABLE_SOURCE_PARAMS``).
+
+**Optics, sources and dimensions share one namespace.** An edit message names its target and nothing else, so a name that meant one thing in one message and another in the next would be a trap. :py:meth:`add_source<gtrace.layout.OpticalLayout.add_source>` refuses a name an optics or a dimension has taken, as it always did for another source.
+
+The tracing rules have their own operation, and each value is checked: ``order`` is a whole number no greater than ``MAX_RULE_ORDER``, since each order is another round of reflections at every element::
+
+    layout.apply_edit({'op': 'rules', 'rules': {'order': 20,
+                                                'power_threshold': 1e-9}})
+
 Three operations deliberately do *not* invalidate the trace result: ``draw`` changes display settings, and ``save`` and ``export`` write a file. None of them changes the physics, so none causes a re-trace. Nor does anything done to a dimension, for the same reason.
 
 ``export`` writes the drawing rather than the model — today only ``{'op': 'export', 'format': 'dxf', 'path': ...}``, which is :py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`. See :ref:`dxf-export`.
@@ -208,7 +247,9 @@ The question behind that is :py:meth:`contains_segment<gtrace.optcomp.Optics.con
 Scene channels for a front end
 -------------------------------
 
-:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds four entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, and ``snap`` — the points of the optics a front end may snap a measurement to.
+:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds six entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` — the points of the optics a front end may snap a measurement to — and ``sources`` and ``rules``.
+
+``sources`` is what says which of the beams the user put there. Nothing else can: a source is traced from a *copy* of itself, so its own beam sits in ``beams`` looking exactly like the ones the trace made from it. Each entry carries where the laser stands, which way it fires, and the light it emits — including the waist, worked out on this side rather than stored, for the same reason a dimension's length is. ``rules`` carries the tracing rules, which are not a property of any element but decide how much of the picture there is.
 
 Each dimension carries a ``line``, the two ends its line lands on once the offset is applied, so that only one place has an opinion about which side the offset goes.
 
