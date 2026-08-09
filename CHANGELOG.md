@@ -13,12 +13,13 @@ across them.
 
 ### Added
 
-- Japanese documentation. The handwritten pages carry gettext
-  translations under `docs/source/locale/ja/`, built with
-  `-D language=ja` and meant to be served by Read the Docs as a
-  linked translation project; a paragraph without a translation falls
-  back to the English original, so the two languages cannot drift
-  apart silently. The API reference and the notebooks stay English.
+- Japanese documentation. The handwritten pages and the prose cells
+  of both tutorial notebooks carry gettext translations under
+  `docs/source/locale/ja/`, built with `-D language=ja` and meant to
+  be served by Read the Docs as a linked translation project; a
+  paragraph without a translation falls back to the English original,
+  so the two languages cannot drift apart silently. Code cells, their
+  outputs and the API reference stay English.
 
 ### Changed
 

@@ -155,7 +155,7 @@ msgstr "Jupyter ウィジェット — ``widget()``、または notebook 内で�
 msgid ""
 "``anywidget`` (>= 0.9), which brings ``ipywidgets`` with it, and a "
 "Jupyter front end"
-msgstr "``anywidget``（0.9 以上。``ipywidgets`` も一緒に入る）と Jupyter のフロントエンド"
+msgstr "``anywidget``\\ （0.9 以上。``ipywidgets`` も一緒に入る）と Jupyter のフロントエンド"
 
 #: ../../source/intro.rst:53
 msgid ""
