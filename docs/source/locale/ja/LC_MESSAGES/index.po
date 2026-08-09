@@ -1,0 +1,30 @@
+# Japanese translations for the gtrace documentation.
+# Copyright (C) 2019-2026, Yoichi Aso
+# This file is distributed under the same license as the gtrace package.
+#
+msgid ""
+msgstr "Project-Id-Version: gtrace \nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2026-08-09 20:24+0900\nPO-Revision-Date: 2026-08-09 21:00+0900\nLast-Translator: Yoichi Aso\nLanguage: ja\nLanguage-Team: ja\nPlural-Forms: nplurals=1; plural=0;\nMIME-Version: 1.0\nContent-Type: text/plain; charset=utf-8\nContent-Transfer-Encoding: 8bit\nGenerated-By: Babel 2.18.0\n"
+
+#: ../../source/index.rst:9
+msgid "Contents:"
+msgstr "目次:"
+
+#: ../../source/index.rst:7
+msgid "Welcome to gtrace's documentation!"
+msgstr "gtrace のドキュメントへようこそ！"
+
+#: ../../source/index.rst:21
+msgid "Indices and tables"
+msgstr "索引と表"
+
+#: ../../source/index.rst:23
+msgid ":ref:`genindex`"
+msgstr ""
+
+#: ../../source/index.rst:24
+msgid ":ref:`modindex`"
+msgstr ""
+
+#: ../../source/index.rst:25
+msgid ":ref:`search`"
+msgstr ""

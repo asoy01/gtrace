@@ -11,6 +11,15 @@ across them.
 
 ## Unreleased
 
+### Added
+
+- Japanese documentation. The handwritten pages carry gettext
+  translations under `docs/source/locale/ja/`, built with
+  `-D language=ja` and meant to be served by Read the Docs as a
+  linked translation project; a paragraph without a translation falls
+  back to the English original, so the two languages cannot drift
+  apart silently. The API reference and the notebooks stay English.
+
 ### Changed
 
 - The tutorial page introduces each of its two notebooks in a

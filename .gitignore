@@ -7,6 +7,9 @@ gtrace.egg-info/
 gtrace-*/
 /Manuals/references/
 /docs/_build/
+# Compiled by Sphinx from the .po files at build time
+*.mo
+
 # sphinx-autoapi generates its pages next to conf.py and removes them
 # again when the build finishes. If that cleanup fails - on Windows a
 # sync client or a virus scanner can hold the directory open - the tree

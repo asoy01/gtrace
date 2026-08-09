@@ -58,6 +58,19 @@ templates_path = ['_templates']
 exclude_patterns = ['api']
 
 
+# -- Internationalisation ----------------------------------------------------
+
+# The English text is the master. Translations live as gettext .po
+# files under locale/<lang>/LC_MESSAGES/, one per document
+# (gettext_compact = False); a paragraph without a translation falls
+# back to the English original. Read the Docs builds the Japanese
+# project from this same tree with the language overridden to 'ja'.
+# The API reference (autoapi) and the notebooks are not translated.
+locale_dirs = ['locale/']
+gettext_compact = False
+language = 'en'
+
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
