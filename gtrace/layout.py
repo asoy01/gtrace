@@ -265,8 +265,8 @@ EDITABLE_OPTIC_ATTRS = frozenset([
     'diameter', 'thickness', 'wedgeAngle',
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
-    'HRtransmissive', 'term_on_HR', 'term_on_HR_order', 'max_stray_order',
-    'curve_direction', 'anchor_point',
+    'HRtransmissive', 'HRreflective', 'term_on_HR', 'term_on_HR_order',
+    'max_stray_order', 'curve_direction', 'anchor_point',
     # Only a Lens has a focal length, and assigning to it re-solves both
     # curvatures. The check that the target is a lens is in
     # _set_optic_attr: a whitelist can say which names are allowed, not
@@ -325,7 +325,8 @@ CREATABLE_OPTIC_PARAMS = frozenset([
     'diameter', 'thickness', 'wedgeAngle',
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
-    'HRtransmissive', 'term_on_HR', 'max_stray_order', 'curve_direction',
+    'HRtransmissive', 'HRreflective', 'term_on_HR', 'max_stray_order',
+    'curve_direction',
 ])
 
 #: Parameters a new optics copies from the optics already in the layout,
@@ -412,8 +413,8 @@ _ATTR_ORDER = ['anchor_point',
                'diameter', 'thickness', 'wedgeAngle', 'n',
                'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
                'inv_ROC_HR', 'inv_ROC_AR', 'f',
-               'HRtransmissive', 'term_on_HR', 'term_on_HR_order',
-               'max_stray_order', 'curve_direction',
+               'HRtransmissive', 'HRreflective', 'term_on_HR',
+               'term_on_HR_order', 'max_stray_order', 'curve_direction',
                'normAngleHR', 'normVectHR',
                'HRcenter', 'ARcenter', 'center']
 
@@ -542,6 +543,7 @@ def optic_to_dict(m):
          'Trans_AR': float(m.Trans_AR),
          'n': float(m.n),
          'HRtransmissive': bool(m.HRtransmissive),
+         'HRreflective': bool(m.HRreflective),
          'term_on_HR': bool(m.term_on_HR),
          'term_on_HR_order': int(m.term_on_HR_order),
          'max_stray_order': (None if m.max_stray_order is None
@@ -571,6 +573,10 @@ def optic_from_dict(d):
               'n': d['n'],
               'name': d['name'],
               'HRtransmissive': d.get('HRtransmissive', False),
+              #Absent from an older file, the class default stands:
+              #True for a mirror, False for a lens.
+              'HRreflective': d.get('HRreflective',
+                                    d['type'] not in ('Lens', 'CyLens')),
               'term_on_HR': d.get('term_on_HR', False),
               'max_stray_order': d.get('max_stray_order', None)}
     if d['type'] == 'CyMirror':

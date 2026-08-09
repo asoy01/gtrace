@@ -433,6 +433,13 @@ class Mirror(Optics):
         for the first encounter of a beam on the HR surface of this mirror
         will not increase the stray_order. This flag should be set to True for
         beam splitters and input test masses.
+    HRreflective : boolean
+        A boolean value defaults to True. If False, the HR surface of
+        this optics is not supposed to reflect beams. Therefore, every
+        reflection at the HR surface, from outside or from inside the
+        substrate, increases the stray_order: such a reflection is a
+        ghost. The mirror image of HRtransmissive. This flag should be
+        set to False for lenses.
     term_on_HR : boolean
         If this is True, a beam with stray_order <= self.term_on_HR_order will be terminated when
         it hits on HR. This is to avoid the inifinite loop of non-sequencial
@@ -507,7 +514,8 @@ class Mirror(Optics):
                  normVectHR=None, diameter=25.0*cm, thickness=15.0*cm,
                  wedgeAngle=0.25*pi/180., inv_ROC_HR=1.0/7000.0, inv_ROC_AR=0.0,
                  Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45,
-                 name="Mirror", HRtransmissive=False, term_on_HR=False,
+                 name="Mirror", HRtransmissive=False, HRreflective=True,
+                 term_on_HR=False,
                  max_stray_order=None):
         '''
         Create a mirror object.
@@ -563,6 +571,12 @@ class Mirror(Optics):
             will not increase the stray_order. This flag should be set to True for
             beam splitters and input test masses.
             Defaults False
+        HRreflective : boolean, optional
+            If False, every reflection at the HR surface, from either
+            side, increases the stray_order: this optics is not
+            supposed to reflect there, so such a reflection is a ghost.
+            Set to False for lenses.
+            Defaults True
         term_on_HR : boolean, optional
             If this is True, a beam with stray_order <= self.term_on_HR_order
             will be terminated when
@@ -604,6 +618,7 @@ class Mirror(Optics):
         self._normAngleHR_changed(0,0)
         self.name = name
         self.HRtransmissive = HRtransmissive
+        self.HRreflective = HRreflective
         self.term_on_HR = term_on_HR
         self.term_on_HR_order = 0
         self.max_stray_order = max_stray_order
@@ -619,6 +634,7 @@ class Mirror(Optics):
                       inv_ROC_AR=self.inv_ROC_AR, Refl_HR=self.Refl_HR,
                       Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR, Trans_AR=self.Trans_AR,
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
+                      HRreflective=self.HRreflective,
                       term_on_HR=self.term_on_HR,
                       max_stray_order=self.max_stray_order)
         #Not a constructor argument: it says what a later change to the
@@ -1065,7 +1081,9 @@ class Mirror(Optics):
         #Reflected beam
         beam_r1 = beam_on_HR.copy()
         beam_r1.P = beam_r1.P * self.Refl_HR
-        if beam_r1.P > threshold:
+        if not self.HRreflective:
+            beam_r1.stray_order = beam_r1.stray_order+1
+        if beam_r1.P > threshold and beam_r1.stray_order <= order:
             beam_r1.dirAngle = reflAngle
             beam_r1.ABCDTrans(Mrx, Mry)
             beam_r1.departSurfAngle = localNormAngle
@@ -1245,10 +1263,11 @@ class Mirror(Optics):
             #Reflected by HR
             beam_s1 = beam_on_HR.copy()
             beam_s1.P = beam_s1.P * self.Refl_HR
-            if beam_s1.P < threshold:
+            if not self.HRreflective:
+                beam_s1.stray_order = beam_s1.stray_order+1
+            if beam_s1.P < threshold or beam_s1.stray_order > order:
                 break
             beam_s1.dirAngle = reflAngle
-            beam_s1.P = beam_s1.P * self.Refl_HR
             beam_s1.ABCDTrans(Mrx, Mry)
             beam_s1.departSurfAngle = localNormAngle
             beam_s1.departSurfInvROC = -self.inv_ROC_HR
@@ -1495,7 +1514,9 @@ class Mirror(Optics):
         #Reflected beam
         beam_sr = beam_on_HR.copy()
         beam_sr.P = beam_sr.P * self.Refl_HR
-        if beam_sr.P < threshold:
+        if not self.HRreflective:
+            beam_sr.stray_order = beam_sr.stray_order+1
+        if beam_sr.P < threshold or beam_sr.stray_order > order:
             return beams
         beam_sr.dirAngle = reflAngle
         beam_sr.ABCDTrans(Mrx, Mry)
@@ -1655,7 +1676,9 @@ class Mirror(Optics):
             #Reflected beam
             beam_sr = beam_on_HR.copy()
             beam_sr.P = beam_sr.P * self.Refl_HR
-            if beam_sr.P < threshold:
+            if not self.HRreflective:
+                beam_sr.stray_order = beam_sr.stray_order+1
+            if beam_sr.P < threshold or beam_sr.stray_order > order:
                 break
             beam_sr.dirAngle = reflAngle
             beam_sr.ABCDTrans(Mrx, Mry)
@@ -1873,6 +1896,13 @@ class CyMirror(Mirror):
         for the first encounter of a beam on the HR surface of this mirror
         will not increase the stray_order. This flag should be set to True for
         beam splitters and input test masses.
+    HRreflective : boolean
+        A boolean value defaults to True. If False, the HR surface of
+        this optics is not supposed to reflect beams. Therefore, every
+        reflection at the HR surface, from outside or from inside the
+        substrate, increases the stray_order: such a reflection is a
+        ghost. The mirror image of HRtransmissive. This flag should be
+        set to False for lenses.
     term_on_HR : boolean
         If this is True, a beam with stray_order <= self.term_on_HR_order will be terminated when
         it hits on HR. This is to avoid the inifinite loop of non-sequencial
@@ -1888,7 +1918,8 @@ class CyMirror(Mirror):
                  normVectHR=None, diameter=25.0*cm, thickness=15.0*cm,
                  wedgeAngle=0.25*pi/180., inv_ROC_HR=1.0/7000.0, inv_ROC_AR=0.0,
                  Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45,
-                 name="Mirror", HRtransmissive=False, term_on_HR=False,
+                 name="Mirror", HRtransmissive=False, HRreflective=True,
+                 term_on_HR=False,
                  max_stray_order=None, curve_direction='h'):
         '''
         Create a cylindrical mirror object.
@@ -1944,6 +1975,12 @@ class CyMirror(Mirror):
             will not increase the stray_order. This flag should be set to True for
             beam splitters and input test masses.
             Defaults False
+        HRreflective : boolean, optional
+            If False, every reflection at the HR surface, from either
+            side, increases the stray_order: this optics is not
+            supposed to reflect there, so such a reflection is a ghost.
+            Set to False for lenses.
+            Defaults True
         term_on_HR : boolean, optional
             If this is True, a beam with stray_order <= self.term_on_HR_order
             will be terminated when
@@ -1988,6 +2025,7 @@ class CyMirror(Mirror):
         self._normAngleHR_changed(0,0)
         self.name = name
         self.HRtransmissive = HRtransmissive
+        self.HRreflective = HRreflective
         self.term_on_HR = term_on_HR
         self.term_on_HR_order = 0
         self.max_stray_order = max_stray_order
@@ -2004,6 +2042,7 @@ class CyMirror(Mirror):
                       inv_ROC_AR=self.inv_ROC_AR, Refl_HR=self.Refl_HR,
                       Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR, Trans_AR=self.Trans_AR,
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
+                      HRreflective=self.HRreflective,
                       term_on_HR=self.term_on_HR,
                       max_stray_order=self.max_stray_order,
                       curve_direction=self.curve_direction)
@@ -2360,7 +2399,9 @@ class CyMirror(Mirror):
         #Reflected beam
         beam_r1 = beam_on_HR.copy()
         beam_r1.P = beam_r1.P * self.Refl_HR
-        if beam_r1.P > threshold:
+        if not self.HRreflective:
+            beam_r1.stray_order = beam_r1.stray_order+1
+        if beam_r1.P > threshold and beam_r1.stray_order <= order:
             beam_r1.dirAngle = reflAngle
             beam_r1.ABCDTrans(Mrx, Mry)
             beam_r1.departSurfAngle = localNormAngle
@@ -2542,10 +2583,11 @@ class CyMirror(Mirror):
             #Reflected by HR
             beam_s1 = beam_on_HR.copy()
             beam_s1.P = beam_s1.P * self.Refl_HR
-            if beam_s1.P < threshold:
+            if not self.HRreflective:
+                beam_s1.stray_order = beam_s1.stray_order+1
+            if beam_s1.P < threshold or beam_s1.stray_order > order:
                 break
             beam_s1.dirAngle = reflAngle
-            beam_s1.P = beam_s1.P * self.Refl_HR
             beam_s1.ABCDTrans(Mrx, Mry)
             beam_s1.departSurfAngle = localNormAngle
             beam_s1.departSurfInvROC = -inv_ROC_HR_geom
@@ -2815,7 +2857,9 @@ class CyMirror(Mirror):
         #Reflected beam
         beam_sr = beam_on_HR.copy()
         beam_sr.P = beam_sr.P * self.Refl_HR
-        if beam_sr.P < threshold:
+        if not self.HRreflective:
+            beam_sr.stray_order = beam_sr.stray_order+1
+        if beam_sr.P < threshold or beam_sr.stray_order > order:
             return beams
         beam_sr.dirAngle = reflAngle
         beam_sr.ABCDTrans(Mrx, Mry)
@@ -2977,7 +3021,9 @@ class CyMirror(Mirror):
             #Reflected beam
             beam_sr = beam_on_HR.copy()
             beam_sr.P = beam_sr.P * self.Refl_HR
-            if beam_sr.P < threshold:
+            if not self.HRreflective:
+                beam_sr.stray_order = beam_sr.stray_order+1
+            if beam_sr.P < threshold or beam_sr.stray_order > order:
                 break
             beam_sr.dirAngle = reflAngle
             beam_sr.ABCDTrans(Mrx, Mry)
@@ -3468,20 +3514,25 @@ class Lens(Mirror):
     and keeps the lens where it is. set_focal_length() takes a shape as
     well, for changing that too.
 
-    Three defaults differ from Mirror, because they have to:
+    Four defaults differ from Mirror, because they have to:
 
     ================  =========  ====================================
     ..                Mirror     Lens
     ================  =========  ====================================
     wedgeAngle        0.25 deg   0, or the faces are not coaxial
     HRtransmissive    False      True: the front face is meant to pass
+    HRreflective      True       False: its reflections are ghosts
     Refl_HR/Trans_HR  0.99/0.01  0/1: both faces reflect nothing
     ================  =========  ====================================
 
     HRtransmissive matters more than it looks. With it False a beam
     passing through the front face counts as one order of stray, so the
     main beam through a lens would be a ghost, and non_seq_trace would
-    stop following it at a low order.
+    stop following it at a low order. HRreflective is its mirror image:
+    with it False every reflection at the front face counts one order
+    of stray, as reflections at the back face already do, so the ghosts
+    off a lens carry the order a ghost deserves instead of passing for
+    main beams.
 
     Both faces default to reflecting nothing. A real lens does reflect,
     but a system of them makes so many faint ghosts that the picture is
@@ -3543,7 +3594,8 @@ class Lens(Mirror):
                  n=1.45, ROC_HR=None, inv_ROC_HR=None, inv_ROC_AR=None,
                  wedgeAngle=0.0, Refl_HR=0.0, Trans_HR=1.0,
                  Refl_AR=0.0, Trans_AR=1.0, name="Lens",
-                 HRtransmissive=True, term_on_HR=False,
+                 HRtransmissive=True, HRreflective=False,
+                 term_on_HR=False,
                  max_stray_order=None):
         '''
         Create a lens.
@@ -3605,6 +3657,8 @@ class Lens(Mirror):
             Defaults "Lens".
         HRtransmissive : boolean, optional
             Defaults True, unlike Mirror. See the class docstring.
+        HRreflective : boolean, optional
+            Defaults False, unlike Mirror. See the class docstring.
         term_on_HR : boolean, optional
             Defaults False.
         max_stray_order : int or None, optional
@@ -3666,6 +3720,7 @@ class Lens(Mirror):
                         Trans_HR=Trans_HR, Refl_AR=Refl_AR,
                         Trans_AR=Trans_AR, n=n, name=name,
                         HRtransmissive=HRtransmissive,
+                        HRreflective=HRreflective,
                         term_on_HR=term_on_HR,
                         max_stray_order=max_stray_order)
 
@@ -3690,6 +3745,7 @@ class Lens(Mirror):
                     Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR,
                     Trans_AR=self.Trans_AR, n=self.n, name=self.name,
                     HRtransmissive=self.HRtransmissive,
+                    HRreflective=self.HRreflective,
                     term_on_HR=self.term_on_HR,
                     max_stray_order=self.max_stray_order)
         m.anchor_point = self.anchor_point
@@ -3859,7 +3915,8 @@ class CyLens(Lens, CyMirror):
                  n=1.45, ROC_HR=None, inv_ROC_HR=None, inv_ROC_AR=None,
                  wedgeAngle=0.0, Refl_HR=0.0, Trans_HR=1.0,
                  Refl_AR=0.0, Trans_AR=1.0, name="CyLens",
-                 HRtransmissive=True, term_on_HR=False,
+                 HRtransmissive=True, HRreflective=False,
+                 term_on_HR=False,
                  max_stray_order=None, curve_direction='h'):
         '''
         Create a cylindrical lens.
@@ -3898,6 +3955,7 @@ class CyLens(Lens, CyMirror):
                       Trans_HR=Trans_HR, Refl_AR=Refl_AR,
                       Trans_AR=Trans_AR, name=name,
                       HRtransmissive=HRtransmissive,
+                      HRreflective=HRreflective,
                       term_on_HR=term_on_HR,
                       max_stray_order=max_stray_order)
 
@@ -3921,6 +3979,7 @@ class CyLens(Lens, CyMirror):
                    Trans_HR=self.Trans_HR, Refl_AR=self.Refl_AR,
                    Trans_AR=self.Trans_AR, n=self.n, name=self.name,
                    HRtransmissive=self.HRtransmissive,
+                   HRreflective=self.HRreflective,
                    term_on_HR=self.term_on_HR,
                    max_stray_order=self.max_stray_order,
                    curve_direction=self.curve_direction)

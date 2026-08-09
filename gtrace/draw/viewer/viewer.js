@@ -704,6 +704,7 @@ var OPTIC_FIELDS = [
     {group: 'Tracing'},
     {key: 'max_stray_order', label: 'Max stray order', nullable: true},
     {key: 'HRtransmissive', label: 'HR transmissive', bool: true},
+    {key: 'HRreflective', label: 'HR reflective', bool: true},
     {key: 'term_on_HR', label: 'Terminate on HR', bool: true},
     {key: 'term_on_HR_order', label: 'Term. on HR order'},
     // Only a CyMirror has this; the row hides itself otherwise. Two

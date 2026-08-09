@@ -49,6 +49,17 @@ Slated for 0.4.0. Not yet on PyPI.
   draws the dimensions on a layer of their own, which CAD can switch
   off; `dimensions=False` leaves them out. `draw_dimensions()` does the
   drawing and is callable on its own.
+- `Mirror.HRreflective` says whether the HR face is meant to reflect,
+  as `HRtransmissive` says whether it is meant to transmit. With it
+  False every reflection at the HR face — from outside or from inside
+  the substrate — counts one order of stray, as reflections at the AR
+  face always have. `Lens` and `CyLens` default it False: their faces
+  are meant to pass, so what reflects off them is a ghost, and giving
+  a lens a real reflectivity to chase its ghosts now yields ghosts
+  carrying the order they deserve rather than order 0. Mirrors, beam
+  splitters and input test masses keep the default True and trace as
+  before. Shown in the viewer's Tracing group and saved with the
+  layout.
 - A **Drawing (DXF)** panel in the viewer, with a file name of its own
   beside the **Optical layout (JSON)** one, and an `export` operation
   in the edit protocol. The two are kept apart because the layout is
@@ -117,6 +128,15 @@ Slated for 0.4.0. Not yet on PyPI.
   thing: a traitlet notifies on a *change* of value, so saving to the
   same path twice confirmed it once, and the same refusal twice was
   reported once.
+- **Changed results.** A ghost reflecting off the HR from inside the
+  substrate lost `Refl_HR` twice: once before the power was checked
+  against the threshold, and once more after it passed. Every ghost
+  entering through the HR and making more than one round trip came
+  out weak by one factor of `Refl_HR` per internal HR bounce — about
+  1% per bounce on a mirror, a factor of 2 on a 50/50 beam splitter —
+  or was cut by the power threshold and never came out at all. Beams
+  entering through the AR were counted correctly. `Mirror` and
+  `CyMirror` both, whose loop this is.
 
 ## 0.3.1 — 2026-08-03
 

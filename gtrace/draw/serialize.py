@@ -218,7 +218,7 @@ _OPTIC_SCALARS = ['diameter', 'thickness', 'wedgeAngle', 'inv_ROC_HR',
                   'Trans_AR']
 _OPTIC_POINTS = ['HRcenter', 'ARcenter', 'center']
 _OPTIC_ANGLES = ['normAngleHR', 'normAngleAR']
-_OPTIC_FLAGS = ['HRtransmissive', 'term_on_HR']
+_OPTIC_FLAGS = ['HRtransmissive', 'HRreflective', 'term_on_HR']
 _OPTIC_INTS = ['term_on_HR_order']
 
 def optic_to_dict(o):
