@@ -9,9 +9,7 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
-## Unreleased
-
-Slated for 0.4.0. Not yet on PyPI.
+## 0.4.0 — 2026-08-09
 
 ### Added
 
