@@ -45,6 +45,12 @@ Slated for 0.4.0. Not yet on PyPI.
   Where the whole span runs inside one substrate the optical distance is
   reported too. See `OpticalLayout.dimensions` and `Dimension`.
 - `inch` in `gtrace.unit`.
+- The tracing docs now say how the stray order is counted — what
+  raises it, that the counter resets when a beam crosses to the next
+  element, and the four attributes that govern it (`HRtransmissive`,
+  `HRreflective`, `max_stray_order`, `term_on_HR`) — in a subsection
+  of *Non-sequential trace*, referenced from the lens and layout
+  pages.
 - `OpticalLayout.export_dxf()`, the companion of `render_html()`. It
   draws the dimensions on a layer of their own, which CAD can switch
   off; `dimensions=False` leaves them out. `draw_dimensions()` does the

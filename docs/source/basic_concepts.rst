@@ -124,6 +124,8 @@ Both faces reflect nothing by default, so a lens makes no ghost beams. A real le
     L = Lens(f=500*mm, Refl_HR=0.005, Trans_HR=0.995,
              Refl_AR=0.005, Trans_AR=0.995)
 
+The ghosts so ordered are counted as ghosts: a reflection off either face of a lens raises the beam's stray order, where the reflection off a mirror's HR does not. See :ref:`stray-order`.
+
 The focal length is not stored. Reading ``f`` computes it from the curvatures, the thickness and the index as they stand, and assigning to it reshapes the faces to match, keeping the shape of the lens and leaving it where it is. Tuning a lens against a mode matching target is therefore a loop::
 
     for f in np.arange(150, 400, 10)*mm:

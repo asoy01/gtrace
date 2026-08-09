@@ -72,7 +72,7 @@ Tracing rules
 ``open_beam_length``
     How long a beam that hits nothing is drawn. Defaults to 1.0.
 
-``order`` is a property of the trace as a whole. How deep the ghosts of *one particular element* are worth chasing is a property of that element, so it lives there instead, as the ``max_stray_order`` attribute of the optics.
+``order`` is a property of the trace as a whole. How deep the ghosts of *one particular element* are worth chasing is a property of that element, so it lives there instead, as the ``max_stray_order`` attribute of the optics. What raises a beam's stray order in the first place, and the flags that say which face of an element is meant for what, are described in :ref:`stray-order`.
 
 Drawing options
 ----------------
