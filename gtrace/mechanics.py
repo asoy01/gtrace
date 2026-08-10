@@ -724,39 +724,35 @@ def _breadboard_shapes(p):
 #: knobs is not a corner-drag's to decide.
 _RESIZABLE = {'breadboard': _breadboard_shapes}
 
-def mirror_mount(width=0.05, depth=0.012, clearance=0.01, knob_radius=0.004,
-                 knobs=True, **kwargs):
+def mirror_mount(scale=1.0, knobs=True, **kwargs):
     '''
-    A generic mirror mount, seen from above: the plate that stands
-    behind the optic, with the adjuster knobs sticking out of its
-    back.
+    A one-inch kinematic mirror mount seen from above, drawn after a
+    Polaris-style footprint: the front plate the optic sits in, the
+    back plate across the adjustment gap with the two adjuster tips
+    showing in it, and the two adjuster knobs on their stems out of
+    the back.
 
-    The local origin is the point meant to coincide with the host's
-    substrate centre, so that ``attached_to`` with no offset stands
-    the mount right: the plate spans from ``-clearance`` to
-    ``-clearance - depth`` along the local x axis, which the
-    attachment turns into "behind the mirror" whichever way the
-    mirror faces.
+    The local origin is the substrate centre of the mounted optic -
+    the point marked on the drawing this is taken from - which sits
+    3 mm behind the front face of the front plate. ``attached_to``
+    with no offset therefore seats the mount so that a 6 mm thick
+    optic ends flush with that face. The dimensions are the
+    drawing's, in millimetres, times ``scale``:
 
-    This is a generic footprint, not a catalogue part: a drawing of
-    where a mount roughly is and what it roughly occupies. A real
-    model measured off a real bench is a register_model away.
+    - plate 45.7 wide, front plate 7 deep
+    - adjustment gap 3.2, with the two 5 mm adjuster tips showing,
+      6.4 in from either edge
+    - back plate 12.7 deep
+    - knobs 15.2 x 8.6 on 6.4-wide, 7.6-long stems, on the adjuster
+      lines
 
     Parameters
     ----------
-    width : float, optional
-        Width of the plate, across the optic. Defaults to 50 mm,
-        which suits a one-inch optic.
-    depth : float, optional
-        Thickness of the plate along the beam. Defaults to 12 mm.
-    clearance : float, optional
-        Gap between the local origin and the front of the plate -
-        roughly half the substrate it stands behind. Defaults to
-        10 mm.
-    knob_radius : float, optional
-        Radius of the adjuster knobs. Defaults to 4 mm.
+    scale : float, optional
+        Multiplies every dimension. 1 - the default - is the one-inch
+        mount; a two-inch mount is roughly half as large again.
     knobs : bool, optional
-        Whether to draw them.
+        Whether to draw the adjuster knobs and their stems.
     **kwargs
         Passed to Mechanics.
 
@@ -764,14 +760,34 @@ def mirror_mount(width=0.05, depth=0.012, clearance=0.01, knob_radius=0.004,
     -------
     Mechanics
     '''
-    back = -clearance - depth
+    u = 0.001 * float(scale)
+    half_w = 22.85 * u            # half the plate width
+    front_hi = 3.0 * u            # front face, ahead of the origin
+    front_lo = front_hi - 7.0 * u
+    back_hi = front_lo - 3.2 * u  # across the adjustment gap
+    back_lo = back_hi - 12.7 * u
+    tip_y = half_w - 6.4 * u      # the two adjuster lines
+    tip_r = 2.5 * u
+
     shapes = []
-    shapes.append(draw.Rectangle([back, -width / 2.0], depth, width))
+    shapes.append(draw.Rectangle([front_lo, -half_w],
+                                 front_hi - front_lo, 2 * half_w))
+    shapes.append(draw.Rectangle([back_lo, -half_w],
+                                 back_hi - back_lo, 2 * half_w))
+    for s in (-1.0, 1.0):
+        # The adjuster tips, bulging out of the back plate into the
+        # gap: half circles on the +x side of their centres.
+        shapes.append(draw.Arc([back_hi, s * tip_y], tip_r,
+                               -np.pi / 2, np.pi / 2))
     if knobs:
+        stem_lo = back_lo - 7.6 * u
+        knob_lo = stem_lo - 8.6 * u
         for s in (-1.0, 1.0):
-            shapes.append(draw.Circle(
-                [back - knob_radius, s * (width / 2.0 - knob_radius)],
-                knob_radius))
+            cy = s * tip_y
+            shapes.append(draw.Rectangle([stem_lo, cy - 3.2 * u],
+                                         7.6 * u, 6.4 * u))
+            shapes.append(draw.Rectangle([knob_lo, cy - 7.6 * u],
+                                         8.6 * u, 15.2 * u))
     return Mechanics(shapes=shapes, **kwargs)
 
 #}}}
@@ -912,9 +928,9 @@ register_model('BB4530', breadboard(0.45, 0.30),
                '450 x 300 mm breadboard, 25 mm grid')
 register_model('BB6045', breadboard(0.60, 0.45),
                '600 x 450 mm breadboard, 25 mm grid')
-register_model('MOUNT-25', mirror_mount(width=0.05),
-               'generic mount for a 1 inch optic')
-register_model('MOUNT-50', mirror_mount(width=0.075, depth=0.015),
-               'generic mount for a 2 inch optic')
+register_model('MOUNT-25', mirror_mount(),
+               'kinematic mount for a 1 inch optic')
+register_model('MOUNT-50', mirror_mount(scale=1.5),
+               'kinematic mount for a 2 inch optic (scaled)')
 
 #}}}

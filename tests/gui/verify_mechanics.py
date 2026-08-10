@@ -819,19 +819,31 @@ check('a wider margin thins the grid',
 check('the pose kwargs pass through',
       close(breadboard(0.1, 0.1, center=[1, 2], name='X').center, [1, 2]))
 
+# The mount follows the drawing in local/Polaris.png: origin at the
+# substrate centre of the mounted optic, 3 mm behind the front face.
 mm_ = mirror_mount()
 lo, hi = mm_.local_bbox()
-check('the mount stands wholly behind the origin', hi[0] < 0)
-check('  a clearance in front of its plate',
-      abs(max(float(s.point[0]) + s.width
-              for s in mm_.shapes if isinstance(s, draw.Rectangle))
-          + 0.01) < 1e-12)
-check('  as wide as asked', abs((hi[1] - lo[1]) - 0.05) < 1e-12)
-check('knobs=False is just the plate',
-      len(mirror_mount(knobs=False).shapes) == 1)
-knobs = [s for s in mirror_mount().shapes if isinstance(s, draw.Circle)]
-check('the knobs stick out of the back',
-      len(knobs) == 2 and all(float(s.center[0]) < -0.022 for s in knobs))
+check('the front face stands 3 mm ahead of the origin',
+      abs(hi[0] - 0.003) < 1e-12, str(hi[0]))
+check('the knobs reach 36.1 mm behind it',
+      abs(lo[0] + 0.0361) < 1e-12, str(lo[0]))
+check('the knobs stick 1.2 mm out past the 45.7 mm plate',
+      abs(hi[1] - 0.02405) < 1e-12 and abs(lo[1] + 0.02405) < 1e-12,
+      '(%s..%s)' % (lo[1], hi[1]))
+tips = [s for s in mm_.shapes if isinstance(s, draw.Arc)]
+check('the two adjuster tips show in the gap',
+      len(tips) == 2
+      and all(abs(float(s.center[0]) + 0.0072) < 1e-12 for s in tips)
+      and sorted(round(float(s.center[1]), 9) for s in tips)
+          == [-0.016450, 0.016450]
+      and all(abs(s.radius - 0.0025) < 1e-15 for s in tips))
+check('the whole drawing is eight shapes', len(mm_.shapes) == 8)
+nk = mirror_mount(knobs=False)
+check('knobs=False leaves the plates and the tips',
+      len(nk.shapes) == 4 and abs(nk.local_bbox()[0][0] + 0.0199) < 1e-12)
+lo2, hi2 = mirror_mount(scale=2.0).local_bbox()
+check('scale scales every dimension',
+      close(lo2, 2 * lo, tol=1e-15) and close(hi2, 2 * hi, tol=1e-15))
 
 
 print('--- the model library ---')
@@ -993,7 +1005,7 @@ L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'H1',
               'params': {'model': 'MOUNT-25', 'attached_to': 'M1'}})
 h1 = L.get_mechanics('H1')
 check('an add naming a model takes its shapes off the shelf',
-      h1.model == 'MOUNT-25' and len(h1.shapes) == 3
+      h1.model == 'MOUNT-25' and len(h1.shapes) == 8
       and h1.attached_to is L.get_optics('M1'))
 L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'H2',
               'params': {'model': 'BB3030', 'center': [1.0, 1.0]}})

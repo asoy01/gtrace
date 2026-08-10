@@ -102,16 +102,20 @@ across them.
   the library does not know are left alone).
 - Two parametric builders behind it: `breadboard(width, height, ...)`
   - a plate with the standard symmetric 25 mm hole grid - and
-  `mirror_mount(...)`, a generic top-view footprint whose local
-  origin is the point `attached_to` stands at the host's substrate
-  centre. The library is seeded with generic stock built from them
-  (`BB3030`, `BB4530`, `BB6045`, `MOUNT-25`, `MOUNT-50`); vendor
-  models are yours to register from measured footprints rather than
-  shipped with guessed dimensions.
+  `mirror_mount(scale=1, knobs=True)`, a one-inch kinematic mount
+  drawn from a measured Polaris-style top view: front plate, the
+  adjustment gap with the two adjuster tips showing, back plate, and
+  the knobs on their stems. Its local origin is the substrate centre
+  of the mounted optic, 3 mm behind the front face, so `attached_to`
+  with no offset seats it with a 6 mm optic flush with that face.
+  The library is seeded with stock built from them (`BB3030`,
+  `BB4530`, `BB6045`, `MOUNT-25`, and `MOUNT-50` as the same mount
+  scaled); further vendor models are yours to register from measured
+  footprints.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (250 checks) and `verify_mech_browser.py` (68).
-  The suite is 21 files and 4156 checks.
+- `verify_mechanics.py` (252 checks) and `verify_mech_browser.py` (68).
+  The suite is 21 files and 4158 checks.
 
 ### Fixed
 
