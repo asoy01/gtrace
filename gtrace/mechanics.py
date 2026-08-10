@@ -27,7 +27,8 @@ disagree.
 import numpy as np
 
 import gtrace.draw as draw
-from gtrace.draw.serialize import UnknownShapeError
+from gtrace.draw.serialize import (shape_to_dict, shape_from_dict,
+                                   UnknownShapeError)
 
 #}}}
 
@@ -570,5 +571,232 @@ class Mechanics(object):
         return m
 
 #}}}
+
+#}}}
+
+#{{{ Builders
+
+def breadboard(width, height, pitch=0.025, hole_diameter=0.006,
+               margin=None, holes=True, **kwargs):
+    '''
+    A breadboard: a rectangular plate with a grid of mounting holes,
+    its local origin at the centre of the plate.
+
+    The hole grid is laid out the way real boards drill it: symmetric
+    about the centre, the outermost rows a margin in from the edges,
+    everything else on the pitch. The defaults are the metric standard
+    - M6 clearance holes on a 25 mm grid, half a pitch in from the
+    edge.
+
+    Parameters
+    ----------
+    width, height : float
+        Size of the plate, in metres.
+    pitch : float, optional
+        Hole spacing. Defaults to 25 mm.
+    hole_diameter : float, optional
+        Diameter of a hole. Defaults to 6 mm.
+    margin : float or None, optional
+        Distance from an edge to the first hole row. None - the
+        default - is half a pitch, which is where the standard grid
+        falls.
+    holes : bool, optional
+        Whether to draw the grid at all. A board across a whole bench
+        is sometimes wanted as just its outline.
+    **kwargs
+        Passed to Mechanics: name, center, rotationAngle, layer,
+        attached_to and the rest.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    shapes = []
+    shapes.append(draw.Rectangle([-width / 2.0, -height / 2.0],
+                                 width, height))
+    m = pitch / 2.0 if margin is None else float(margin)
+    if holes and width >= 2 * m and height >= 2 * m:
+        r = hole_diameter / 2.0
+        # The +1e-9 keeps a span that is an exact number of pitches
+        # from losing its last row to floating point.
+        nx = int(np.floor((width - 2 * m) / pitch + 1e-9)) + 1
+        ny = int(np.floor((height - 2 * m) / pitch + 1e-9)) + 1
+        x0 = -(nx - 1) * pitch / 2.0
+        y0 = -(ny - 1) * pitch / 2.0
+        for i in range(nx):
+            for j in range(ny):
+                shapes.append(draw.Circle([x0 + i * pitch,
+                                           y0 + j * pitch], r))
+    return Mechanics(shapes=shapes, **kwargs)
+
+def mirror_mount(width=0.05, depth=0.012, clearance=0.01, knob_radius=0.004,
+                 knobs=True, **kwargs):
+    '''
+    A generic mirror mount, seen from above: the plate that stands
+    behind the optic, with the adjuster knobs sticking out of its
+    back.
+
+    The local origin is the point meant to coincide with the host's
+    substrate centre, so that ``attached_to`` with no offset stands
+    the mount right: the plate spans from ``-clearance`` to
+    ``-clearance - depth`` along the local x axis, which the
+    attachment turns into "behind the mirror" whichever way the
+    mirror faces.
+
+    This is a generic footprint, not a catalogue part: a drawing of
+    where a mount roughly is and what it roughly occupies. A real
+    model measured off a real bench is a register_model away.
+
+    Parameters
+    ----------
+    width : float, optional
+        Width of the plate, across the optic. Defaults to 50 mm,
+        which suits a one-inch optic.
+    depth : float, optional
+        Thickness of the plate along the beam. Defaults to 12 mm.
+    clearance : float, optional
+        Gap between the local origin and the front of the plate -
+        roughly half the substrate it stands behind. Defaults to
+        10 mm.
+    knob_radius : float, optional
+        Radius of the adjuster knobs. Defaults to 4 mm.
+    knobs : bool, optional
+        Whether to draw them.
+    **kwargs
+        Passed to Mechanics.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    back = -clearance - depth
+    shapes = []
+    shapes.append(draw.Rectangle([back, -width / 2.0], depth, width))
+    if knobs:
+        for s in (-1.0, 1.0):
+            shapes.append(draw.Circle(
+                [back - knob_radius, s * (width / 2.0 - knob_radius)],
+                knob_radius))
+    return Mechanics(shapes=shapes, **kwargs)
+
+#}}}
+
+#{{{ Model library
+
+#: The model definitions: name -> {'shapes': [shape dicts], 'layer',
+#: 'description'}. Data, not code - a definition is exactly what a
+#: saved layout carries, so registering, saving and relinking all
+#: speak the same format. Seeded below with a few generic parts;
+#: vendor models are the user's to register from measured footprints,
+#: rather than shipped here with dimensions gtrace would be guessing
+#: at.
+_MODEL_REGISTRY = {}
+
+def register_model(name, source, description=''):
+    '''
+    Put a model into the library, by value.
+
+    This is the whole of "save it to the library": build a shape in a
+    cell - by hand, or starting from breadboard() or mirror_mount() -
+    look at it in the viewer, and register what you settled on. The
+    shapes are copied out as data at this moment, so editing the
+    original afterwards does not quietly edit the library.
+
+    A name already registered is overwritten: that is how a definition
+    is updated, and relink_mechanics() is how a layout then chooses to
+    follow it.
+
+    Parameters
+    ----------
+    name : str
+        The model name, e.g. 'POLARIS-K1'.
+    source : Mechanics or sequence of gtrace.draw.Shape
+        Where the shapes come from. A Mechanics contributes its layer
+        as well; its pose is ignored - a model is a shape, not a
+        place.
+    description : str, optional
+        One line for models() to show.
+
+    Returns
+    -------
+    name : str
+    '''
+    if isinstance(source, Mechanics):
+        shapes = source.shapes
+        layer = source.layer
+    else:
+        shapes = list(source)
+        layer = DEFAULT_LAYER
+    _MODEL_REGISTRY[str(name)] = {
+        'shapes': [shape_to_dict(s) for s in shapes],
+        'layer': str(layer),
+        'description': str(description)}
+    return str(name)
+
+def models():
+    '''
+    The library: model name -> description, sorted by name.
+    '''
+    return dict((k, v['description'])
+                for k, v in sorted(_MODEL_REGISTRY.items()))
+
+def model_shapes(name):
+    '''
+    Fresh shape objects for a registered model.
+
+    Raises
+    ------
+    KeyError
+        If the library has no such model.
+    '''
+    d = _MODEL_REGISTRY.get(str(name))
+    if d is None:
+        raise KeyError('No model named %r in the library. '
+                       'mechanics.models() lists what there is.' % (name,))
+    return [shape_from_dict(s) for s in d['shapes']]
+
+def from_model(model, **kwargs):
+    '''
+    A Mechanics built from a library model, carrying the model name as
+    its label.
+
+    The label is a label: the layout saves the shapes by value, and a
+    library that changes afterwards changes nothing until
+    relink_mechanics() is asked to.
+
+    Parameters
+    ----------
+    model : str
+        The model name.
+    **kwargs
+        Passed to Mechanics: name, center, rotationAngle, layer,
+        attached_to and the rest. The layer defaults to the model's
+        own.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    d = _MODEL_REGISTRY.get(str(model))
+    if d is None:
+        raise KeyError('No model named %r in the library. '
+                       'mechanics.models() lists what there is.' % (model,))
+    kwargs.setdefault('layer', d['layer'])
+    return Mechanics(shapes=[shape_from_dict(s) for s in d['shapes']],
+                     model=str(model), **kwargs)
+
+# The generic stock: a few breadboards and mounts under names that say
+# what they are and no more. Registered through the same door a user's
+# models come through, so the built-ins prove the door works.
+register_model('BB3030', breadboard(0.30, 0.30),
+               '300 x 300 mm breadboard, 25 mm grid')
+register_model('BB4530', breadboard(0.45, 0.30),
+               '450 x 300 mm breadboard, 25 mm grid')
+register_model('BB6045', breadboard(0.60, 0.45),
+               '600 x 450 mm breadboard, 25 mm grid')
+register_model('MOUNT-25', mirror_mount(width=0.05),
+               'generic mount for a 1 inch optic')
+register_model('MOUNT-50', mirror_mount(width=0.075, depth=0.015),
+               'generic mount for a 2 inch optic')
 
 #}}}

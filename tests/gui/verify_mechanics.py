@@ -43,7 +43,9 @@ from gtrace.layout import (OpticalLayout, TraceRules, EditError,
                            mechanics_from_dict, mechanics_scene_dict,
                            mechanics_snap_points)
 from gtrace.mechanics import (Mechanics, point_in_polygon, DEFAULT_LAYER,
-                              LAYER_COLOR)
+                              LAYER_COLOR, breadboard, mirror_mount,
+                              register_model, models, model_shapes,
+                              from_model)
 from gtrace.unit import *
 
 npass = 0
@@ -767,6 +769,127 @@ check('a fresh load rebuilds the body',
 old = {'name': 'old', 'optics': [], 'sources': [], 'rules': {}}
 check('a file from before mechanics existed still loads',
       OpticalLayout.from_dict(old).mechanics == [])
+
+
+print('--- the builders ---')
+
+bb = breadboard(0.30, 0.30, name='BB')
+plate = [s for s in bb.shapes if isinstance(s, draw.Rectangle)]
+holes = [s for s in bb.shapes if isinstance(s, draw.Circle)]
+check('a 300 mm board on a 25 mm grid drills 12 x 12',
+      len(plate) == 1 and len(holes) == 144, str(len(holes)))
+xs = sorted(set(round(float(s.center[0]), 9) for s in holes))
+check('the grid is symmetric about the centre',
+      xs[0] == -xs[-1] and abs(xs[0] + 0.1375) < 1e-9,
+      '(%s .. %s)' % (xs[0], xs[-1]))
+check('rows land on the pitch',
+      all(abs((xs[i + 1] - xs[i]) - 0.025) < 1e-9
+          for i in range(len(xs) - 1)))
+lo, hi = bb.local_bbox()
+check('the plate bounds the body, holes inside it',
+      close(lo, [-0.15, -0.15]) and close(hi, [0.15, 0.15]))
+check('holes=False is just the outline',
+      len(breadboard(0.3, 0.3, holes=False).shapes) == 1)
+check('a board too small for its margin drills nothing',
+      len(breadboard(0.02, 0.02).shapes) == 1)
+check('a wider margin thins the grid',
+      len([s for s in breadboard(0.30, 0.30, margin=0.05).shapes
+           if isinstance(s, draw.Circle)]) == 81)
+check('the pose kwargs pass through',
+      close(breadboard(0.1, 0.1, center=[1, 2], name='X').center, [1, 2]))
+
+mm_ = mirror_mount()
+lo, hi = mm_.local_bbox()
+check('the mount stands wholly behind the origin', hi[0] < 0)
+check('  a clearance in front of its plate',
+      abs(max(float(s.point[0]) + s.width
+              for s in mm_.shapes if isinstance(s, draw.Rectangle))
+          + 0.01) < 1e-12)
+check('  as wide as asked', abs((hi[1] - lo[1]) - 0.05) < 1e-12)
+check('knobs=False is just the plate',
+      len(mirror_mount(knobs=False).shapes) == 1)
+knobs = [s for s in mirror_mount().shapes if isinstance(s, draw.Circle)]
+check('the knobs stick out of the back',
+      len(knobs) == 2 and all(float(s.center[0]) < -0.022 for s in knobs))
+
+
+print('--- the model library ---')
+
+stock = models()
+check('the generic stock is registered',
+      all(k in stock for k in ['BB3030', 'BB4530', 'BB6045',
+                               'MOUNT-25', 'MOUNT-50']),
+      str(list(stock)))
+
+b = from_model('BB3030', name='Bench', center=[0.4, 0.0])
+check('from_model builds the shapes and carries the label',
+      b.model == 'BB3030' and len(b.shapes) == 145
+      and close(b.center, [0.4, 0.0]))
+b2 = from_model('BB3030', name='Bench2')
+b2.shapes.pop()
+check('two bodies from one model do not share shapes',
+      len(b.shapes) == 145 and len(b2.shapes) == 144)
+try:
+    from_model('NO-SUCH-MODEL')
+    check('an unknown model is refused', False)
+except KeyError as e:
+    check('an unknown model is refused', True, '(%s)' % str(e)[:40])
+
+src = Mechanics(shapes=[draw.Rectangle([-0.01, -0.01], 0.02, 0.02)],
+                name='c', layer='clamps')
+register_model('TEST-CLAMP', src, 'a test clamp')
+src.shapes.append(draw.Circle([0, 0], 0.001))
+check('a model is registered by value, not by reference',
+      len(model_shapes('TEST-CLAMP')) == 1)
+check('and carries its layer', from_model('TEST-CLAMP').layer == 'clamps')
+check('a bare shape list registers on the default layer',
+      (register_model('TEST-BLOCK', [draw.Circle([0, 0], 0.01)]) or True)
+      and from_model('TEST-BLOCK').layer == DEFAULT_LAYER)
+check('models() describes them',
+      models()['TEST-CLAMP'] == 'a test clamp')
+
+
+print('--- relink: the saved values are the truth until asked ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+c1 = from_model('TEST-CLAMP', name='C1', attached_to=M1)
+v1 = Mechanics(shapes=[draw.Circle([0, 0], 0.005)], name='V1',
+               center=[0.2, 0.2], model='VENDOR-ONLY')
+L.add_mechanics(c1)
+L.add_mechanics(v1)
+
+# The library moves on after the layout was built.
+register_model('TEST-CLAMP', [draw.Rectangle([-0.02, -0.02], 0.04, 0.04)],
+               'a bigger clamp')
+
+d = L.to_dict()
+L2 = OpticalLayout.from_dict(d)
+check('a load keeps the shapes it was saved with',
+      abs(L2.get_mechanics('C1').shapes[0].width - 0.02) < 1e-12)
+
+out = L2.relink_mechanics()
+check('relink redraws the labelled body from the library',
+      out == ['C1']
+      and abs(L2.get_mechanics('C1').shapes[0].width - 0.04) < 1e-12,
+      str(out))
+check('  a model the library does not know is left alone',
+      isinstance(L2.get_mechanics('V1').shapes[0], draw.Circle))
+check('  a body with no label is left alone',
+      L2.get_mechanics('BB1').shapes[0].width == 0.6)
+check('  and the pose and attachment stay',
+      L2.get_mechanics('C1').attached_to is L2.get_optics('M1')
+      and L2.get_mechanics('C1').model == 'TEST-CLAMP')
+
+check('relink can be aimed at names',
+      L.relink_mechanics(names=['V1']) == []
+      and abs(L.get_mechanics('C1').shapes[0].width - 0.02) < 1e-12)
+
+full = L2.to_dict()
+c1d = [m for m in full['mechanics'] if m['name'] == 'C1'][0]
+check('a relinked body saves the new shapes, by value',
+      abs(c1d['shapes'][0]['width'] - 0.04) < 1e-12
+      and c1d['model'] == 'TEST-CLAMP')
 
 
 print()

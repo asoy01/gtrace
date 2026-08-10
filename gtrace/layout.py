@@ -1358,6 +1358,49 @@ class OpticalLayout(object):
                     'is registered.' % (m.name, m._attach_name))
         self.mechanics.append(m)
 
+    def relink_mechanics(self, names=None):
+        '''
+        Redraw registered mechanics from the current library
+        definitions, matched by their model labels.
+
+        The saved values are always the truth: a layout opens with the
+        shapes it was saved with, however far the library has moved on
+        since. This is the one deliberate exception, and it runs only
+        when called - "bring these up to the library" is a thing to
+        ask for, not something a load does behind your back.
+
+        Only the shapes are replaced. The pose, the attachment, the
+        layer and the name all stay: a relink redraws the body, it
+        does not re-place it.
+
+        Parameters
+        ----------
+        names : sequence of str or None, optional
+            Which mechanics to relink. None - the default - offers
+            them all. A body with no model label, or whose model the
+            library does not know, is left as it is either way: the
+            saved shapes are all anyone knows about it.
+
+        Returns
+        -------
+        list of str
+            The names of the mechanics that were relinked.
+        '''
+        from gtrace.mechanics import model_shapes
+        relinked = []
+        for m in self.mechanics:
+            if names is not None and m.name not in names:
+                continue
+            if m.model is None:
+                continue
+            try:
+                shapes = model_shapes(m.model)
+            except KeyError:
+                continue
+            m.shapes = shapes
+            relinked.append(m.name)
+        return relinked
+
     def _link_mechanics(self):
         '''
         Resolve every attachment left pending by name against the

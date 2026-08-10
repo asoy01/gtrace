@@ -59,10 +59,29 @@ across them.
     `rotate` (`rotationAngle`), `set`, `remove`, `rename`. The scene
     gains a `mechanics` channel; corners and centre join the snap
     points, so the measuring tool reaches the hardware.
+- **A model library for hardware**, in `gtrace.mechanics`. The
+  definitions are data - the same serialized shapes a saved layout
+  carries - under one name each: `register_model(name, source)` puts a
+  shape you settled on into the library by value, `models()` lists
+  what there is, and `from_model(name, ...)` builds a `Mechanics`
+  carrying the model name as its label. The label stays a label: a
+  layout saves the shapes themselves, and a library that has moved on
+  changes nothing until `layout.relink_mechanics()` is explicitly
+  asked to redraw the labelled bodies from the current definitions
+  (pose, attachment and layer stay put; unlabelled bodies and models
+  the library does not know are left alone).
+- Two parametric builders behind it: `breadboard(width, height, ...)`
+  - a plate with the standard symmetric 25 mm hole grid - and
+  `mirror_mount(...)`, a generic top-view footprint whose local
+  origin is the point `attached_to` stands at the host's substrate
+  centre. The library is seeded with generic stock built from them
+  (`BB3030`, `BB4530`, `BB6045`, `MOUNT-25`, `MOUNT-50`); vendor
+  models are yours to register from measured footprints rather than
+  shipped with guessed dimensions.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (190 checks) and `verify_mech_browser.py` (45).
-  The suite is 21 files and 4073 checks.
+- `verify_mechanics.py` (218 checks) and `verify_mech_browser.py` (45).
+  The suite is 21 files and 4101 checks.
 
 ### Fixed
 
