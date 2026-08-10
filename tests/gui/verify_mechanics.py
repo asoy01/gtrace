@@ -560,11 +560,30 @@ check('detach bakes the derived pose in',
 mt.center = [0.2, 0.2]
 check('and the freed body edits again', close(mt.center, [0.2, 0.2]))
 
+# Where a mount belongs on its host is the model's to say - the local
+# origin is drawn to coincide with the host's substrate centre - so a
+# bare attach seats the body there, wherever it was lying.
 mt.attach(M1)
-# The baked angle was the host's pi, and keeping the pose keeps it.
-check('attach with no offset keeps the body where it stands',
+check('attach with no offset seats the body at its designed position',
+      close(mt.center, M1.center)
+      and abs(mt.rotationAngle - float(M1.normAngleHR)) < 1e-12
+      and close(mt.offset, [0, 0]) and mt.offset_angle == 0.0)
+
+mt.detach()
+mt.center = [0.2, 0.2]
+mt.rotationAngle = a0
+mt.attach(M1, keep_pose=True)
+check('keep_pose pins it where it stands instead',
       close(mt.center, [0.2, 0.2], tol=1e-12)
       and abs(mt.rotationAngle - a0) < 1e-12)
+try:
+    mt.detach()
+    mt.attach(M1, offset=[0, 0.01], keep_pose=True)
+    check('keep_pose with an offset is refused', False)
+except ValueError as e:
+    check('keep_pose with an offset is refused', True, '(%s)' % str(e)[:40])
+mt.detach()
+mt.attach(M1, keep_pose=True)
 
 try:
     mt.attach(Mechanics(name='other'))
@@ -620,8 +639,9 @@ bb = L.get_mechanics('BB1')
 
 L.trace()
 L.apply_edit({'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'M1'}})
-check('set attached_to attaches where it stands',
-      bb.attached_to is M1 and close(bb.center, [0.3, 0.0]))
+check('set attached_to seats the body at its designed position',
+      bb.attached_to is M1 and close(bb.center, M1.center)
+      and close(bb.offset, [0, 0]))
 check('and does not invalidate the trace', L.beams is not None)
 
 refused(L, {'op': 'move', 'target': 'BB1', 'center': [0, 0]},
@@ -713,11 +733,12 @@ bb2 = L2.get_mechanics('BB1')
 check('a fresh load joins the mount to its own host',
       bb2.attached_to is L2.get_optics('M1'))
 L2.get_optics('M1').HRcenter = [0.9, 0.9]
-# The offset was derived when BB1 attached where it stood: [0.225, 0]
-# in the frame of a host at [0.525, 0] facing pi. The moved host stands
-# at [0.925, 0.9], still facing pi, so the mount lands at [0.7, 0.9].
+# BB1 seats at its designed position - offset [0, 0], the host's
+# substrate centre - so it rides wherever its own host's centre goes,
+# and the original, on the original host, does not move.
 check('and it follows that host, not the original',
-      close(bb2.center, [0.7, 0.9]) and close(bb.center, [0.3, 0.0]))
+      close(bb2.center, L2.get_optics('M1').center)
+      and close(bb.center, M1.center))
 
 path = os.path.join(WORK, 'mech_attach_layout.json')
 L.save(path)

@@ -41,6 +41,14 @@ across them.
   - **`+ Hardware`** adds a model from the library at the centre of
     the view; the menu is filled from a `mechlib` scene channel, so
     it lists whatever the library holds when the scene was built.
+  - **The attachment is edited from the panel.** The Attached to row
+    is a choice of every optics in the layout, plus free: picking an
+    optics *seats the mount on it at the model's designed position* -
+    a mount is built around its optic, so where it belongs on the
+    host is unique and the library's to say, carried by the
+    convention that a model's local origin is the point that stands
+    at the host's substrate centre. Picking free detaches it where it
+    is.
   - **A breadboard resizes by its corners.** A body a builder made
     carries its parameters (`Mechanics.params`), and a selected,
     resizable one shows four corner handles: dragging one cuts the
@@ -71,7 +79,8 @@ across them.
     read-only, a drag on it pans, and a `move` through the protocol
     is refused with the reason. `detach()` (or
     `set attached_to: null`) bakes the derived pose in and frees it;
-    `attach()` with no offset takes the body where it stands. A saved
+    `attach()` with no offset seats the body at its designed position
+    (`keep_pose=True` pins it where it stands instead). A saved
     layout carries the host's *name* and the offset - no pose - and
     loading joins the two back up; removing an optics with hardware
     attached is refused until the hardware is detached or removed.
@@ -101,8 +110,8 @@ across them.
   shipped with guessed dimensions.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (248 checks) and `verify_mech_browser.py` (62).
-  The suite is 21 files and 4148 checks.
+- `verify_mechanics.py` (250 checks) and `verify_mech_browser.py` (68).
+  The suite is 21 files and 4156 checks.
 
 ### Fixed
 

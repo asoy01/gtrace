@@ -295,11 +295,21 @@ class Mechanics(object):
                 'first, or change the offset angle.' % self.name)
         self._rotationAngle = float(value)
 
-    def attach(self, host, offset=None, offset_angle=None):
+    def attach(self, host, offset=None, offset_angle=None,
+               keep_pose=False):
         '''
         Stand this body on an optics. From here on its pose is derived
         from the host's - move the mirror and the mount comes along,
         with no notification to miss.
+
+        Where it stands on the host is the model's to say, not the
+        drop point's: a mirror mount is built around its optic, so the
+        right relative position is unique and drawn into the shapes.
+        The convention that carries it is the local origin - every
+        builder and library model draws its shapes so that the origin
+        is the point meant to coincide with the host's substrate
+        centre - so attaching with no offset seats the body there,
+        wherever it happened to be lying beforehand.
 
         Parameters
         ----------
@@ -310,11 +320,14 @@ class Mechanics(object):
         offset : array-like or None, optional
             Where the local origin stands in the host's frame (its
             substrate centre, x along the HR normal). None - the
-            default - keeps the body where it stands now, by deriving
-            the offset from the current poses.
+            default - is ``[0, 0]``: the designed position.
         offset_angle : float or None, optional
-            The turn relative to the host. None keeps the current one,
-            like the offset.
+            The turn relative to the host. None is 0: squarely on it.
+        keep_pose : bool, optional
+            Derive the offset and the angle from where the body stands
+            now instead, so that attaching changes what moves it and
+            not where it is. For pinning something that was placed by
+            eye; offset and offset_angle must be left None with it.
 
         Returns
         -------
@@ -327,19 +340,25 @@ class Mechanics(object):
         if not (hasattr(host, 'center') and hasattr(host, 'normAngleHR')):
             raise ValueError('%r has no pose to attach to.' % (host,))
 
-        # The current world pose, read before the switch: this is what
-        # "keep it where it stands" means, and it works whether the
-        # body is free or already attached to something else. Read only
-        # when a half is actually being kept - a body attached by name
-        # has no pose to read until the link resolves, and resolving it
-        # is exactly the call that arrives with both halves given.
-        ha = float(host.normAngleHR)
-        if offset is None:
+        if keep_pose:
+            if offset is not None or offset_angle is not None:
+                raise ValueError(
+                    'keep_pose derives the offset from where the body '
+                    'stands; giving one as well is two answers to one '
+                    'question.')
+            # The current world pose, read before the switch. It works
+            # whether the body is free or already attached to
+            # something else.
+            ha = float(host.normAngleHR)
             d = self.center - np.asarray(host.center, dtype='float64')
             ca, sa = np.cos(-ha), np.sin(-ha)
             offset = [d[0] * ca - d[1] * sa, d[0] * sa + d[1] * ca]
-        if offset_angle is None:
             offset_angle = self.rotationAngle - ha
+        else:
+            if offset is None:
+                offset = [0.0, 0.0]
+            if offset_angle is None:
+                offset_angle = 0.0
 
         self.attached_to = host
         self._attach_name = None

@@ -835,6 +835,8 @@ Viewer.prototype._build = function () {
                   ['Drag selected hardware', 'move it'],
                   ['Drag a corner handle', 'cut a breadboard to size'],
                   ['+ Hardware', 'add a part from the model library'],
+                  ['Attached to', 'seat a mount on an optics; '
+                   + '(free) detaches it in place'],
                   ['Ctrl + drag', 'drop it square on a beam'],
                   ['Shift + drag', 'rotate it'],
                   ['Ctrl + click a beam', 'move the selected optics along it'],
@@ -1242,11 +1244,16 @@ var MECH_FIELDS = [
     // The catalogue model the shapes came from, when there is one. A
     // label rather than a link: the saved shapes are the truth.
     {key: 'model', label: 'Model', readonly: true, optional: true},
-    // The optics this body stands on, when it stands on one. The row
-    // hides for a body standing on its own; while it shows, the pose
-    // rows below are the host's doing and are disabled - the way to
-    // move a mount is to move its mirror.
-    {key: 'attached', label: 'Attached to', readonly: true, optional: true},
+    // The optics this body stands on, or nothing. Editable as a
+    // choice: picking an optics seats the mount on it at the model's
+    // designed position - a mount is built around its optic, so where
+    // it belongs on the host is the library's to say, not the drop
+    // point's - and picking free detaches it where it is. While it
+    // stands on something, the pose rows below are the host's doing
+    // and are disabled. The choices are filled by _refreshMechPanel,
+    // since they are the optics of the moment.
+    {key: 'attached', label: 'Attached to', optional: true,
+     choices: [], dynamicChoices: true},
     {key: 'cx', label: 'Center x', unit: 'm'},
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
@@ -2173,7 +2180,40 @@ Viewer.prototype._refreshMechPanel = function () {
     var m = this._selectedMech();
     refreshFieldTable(this.mechFields, MECH_FIELDS,
                       m ? function (key) { return mechFieldValue(m, key); }
-                        : null);
+                        : null,
+                      ['attached']);
+
+    // The Attached to row is filled by hand: its choices are the
+    // optics of the moment, and what "no value" means differs by
+    // viewer. Editable, the row is always on offer - a free mount is
+    // exactly the one with an attachment to make - with free as one
+    // of the choices. Read-only, a free body simply has no row.
+    var af = this.mechFields.attached;
+    if (af) {
+        var host = (m && m.attached_to) || '';
+        if (af.editable) {
+            af.row.style.display = m ? '' : 'none';
+            while (af.el.firstChild) { af.el.removeChild(af.el.firstChild); }
+            var free = htmlEl('option', null, '(free)');
+            free.value = '';
+            af.el.appendChild(free);
+            (this.scene.optics || []).forEach(function (o) {
+                var opt = htmlEl('option', null, o.name);
+                opt.value = o.name;
+                af.el.appendChild(opt);
+            });
+            af.el.value = host;
+            af.el.title = host
+                ? 'Standing on ' + host + ' - pick (free) to detach it '
+                  + 'where it is'
+                : 'Pick an optics to seat this body on, at its designed '
+                  + 'position';
+        } else {
+            af.row.style.display = (m && host) ? '' : 'none';
+            af.el.textContent = host || '-';
+        }
+    }
+
     // An attached body has no pose of its own: the rows show where the
     // host put it, and refuse the keyboard rather than letting a value
     // be typed only for Python to turn it down.
@@ -2209,6 +2249,19 @@ Viewer.prototype._commitMechField = function (key, input) {
 
     if (key === 'name') {
         this.renameSelected(input.value);
+        return;
+    }
+
+    // The attachment: an optics name to seat the body on, or empty
+    // for free. Attaching moves the body to the model's designed
+    // position on the host - Python owns that, through the local
+    // origin convention - and detaching frees it where it is.
+    if (key === 'attached') {
+        var current = m.attached_to || '';
+        if (input.value === current) { return; }
+        this.onEdit({op: 'set', target: m.name,
+                     attrs: {attached_to: input.value === ''
+                             ? null : input.value}});
         return;
     }
 

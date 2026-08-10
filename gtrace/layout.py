@@ -2167,8 +2167,10 @@ class OpticalLayout(object):
         has no pose of its own - it takes an offset instead, and a
         message trying to move it is refused with the reason. The
         attachment itself is edited through 'attached_to': an optics
-        name attaches the body where it stands, and null detaches it,
-        baking the derived pose in.
+        name seats the body on it at the model's designed position
+        (see Mechanics.attach - where a mount belongs on its host is
+        the model's to say, not the drop point's), and null detaches
+        it, baking the derived pose in.
 
         Everything is checked before anything is set - the host looked
         up, the numbers converted - so a message half right leaves the
@@ -2243,8 +2245,8 @@ class OpticalLayout(object):
         if detaching:
             m.detach()
         elif attaching:
-            # Attaching where it stands, unless the message also says
-            # where on the host to stand.
+            # At the model's designed position, unless the message
+            # says where on the host to stand instead.
             m.attach(new_host, offset=offs.pop('offset', None),
                      offset_angle=offs.pop('offset_angle', None))
         if size:

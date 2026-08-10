@@ -311,6 +311,26 @@ var EDITABLE = __EDITABLE__;
             out.clampDisabled.boardCx = v.mechFields.cx.el.disabled;
         }
 
+        // --- the attachment is edited from the panel ---
+        if (EDITABLE) {
+            clickAt(screenOf(MOUNT_PT));
+            out.attachOptions = Array.prototype.map.call(
+                v.mechFields.attached.el.options,
+                function (o) { return o.value; });
+            before = sent.length;
+            setField('attached', 'M1');
+            out.attach = {msg: sent[before] || null};
+            clickAt(screenOf(CLAMP_PT));
+            before = sent.length;
+            setField('attached', '');
+            out.detach = {msg: sent[before] || null};
+            // Choosing what is already chosen decides nothing.
+            clickAt(screenOf(MOUNT_PT));
+            before = sent.length;
+            setField('attached', '');
+            out.attachNoop = sent.length - before;
+        }
+
         // --- hardware under an element, reached by cycling ---
         // The board runs under M1, and M1's pick circle wins the
         // click; a mount with no offset is in exactly this position,
@@ -567,7 +587,10 @@ check('clicking the clamp selects it',
 cf = res['clampFields']
 check('the panel names its host',
       cf['attached'] == 'M1' and cf['attached_shown'], str(cf['attached']))
-check('a free body has no such row', not res['boardFields']['attached_shown'])
+check('a free body offers the row too, standing free',
+      res['boardFields']['attached_shown']
+      and res['boardFields']['attached'] == '',
+      repr(res['boardFields']['attached']))
 # Against the pose Python derived and put in the scene, not against
 # the nominal numbers of the layout: the substrate centre of M1 sits a
 # hair off 0.525 by way of its default wedge.
@@ -585,6 +608,41 @@ check('a drag on it pans and sends nothing',
       res['clampDrag']['sent'] == 0 and res['clampDrag']['panned']
       and res['clampDrag']['selected'] == 'Clamp',
       json.dumps(res['clampDrag']))
+
+print('--- the attachment is edited from the panel ---')
+check('the choices are free, and every optics',
+      res['attachOptions'] == ['', 'M1'], json.dumps(res['attachOptions']))
+at = res['attach']
+check('picking an optics sends the attachment',
+      at['msg'] and at['msg']['op'] == 'set'
+      and at['msg']['target'] == 'Mount'
+      and at['msg']['attrs'] == {'attached_to': 'M1'}, json.dumps(at))
+if at['msg']:
+    mount_m = layout.get_mechanics('Mount')
+    pos0 = mount_m.center.copy()
+    layout.apply_edit(at['msg'])
+    # Where a mount belongs on its host is the model's to say, so
+    # attaching seats it at the designed position - the host's
+    # substrate centre - rather than leaving it where it was dropped.
+    check('  and it seats at its designed position on M1',
+          mount_m.attached_to is layout.get_optics('M1')
+          and np.allclose(mount_m.center, layout.get_optics('M1').center)
+          and not np.allclose(mount_m.center, pos0))
+    layout.apply_edit({'op': 'undo'})
+dt = res['detach']
+check('picking free sends the detachment',
+      dt['msg'] and dt['msg']['op'] == 'set'
+      and dt['msg']['target'] == 'Clamp'
+      and dt['msg']['attrs'] == {'attached_to': None}, json.dumps(dt))
+if dt['msg']:
+    clamp_m = layout.get_mechanics('Clamp')
+    pos0 = clamp_m.center.copy()
+    layout.apply_edit(dt['msg'])
+    check('  and the clamp is freed in place',
+          clamp_m.attached_to is None and np.allclose(clamp_m.center, pos0))
+    layout.apply_edit({'op': 'undo'})
+check('choosing what is already chosen decides nothing',
+      res['attachNoop'] == 0, str(res['attachNoop']))
 
 print('--- hardware under an element, reached by cycling ---')
 check('clicking the same spot again reaches the hardware under M1',
