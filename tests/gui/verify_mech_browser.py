@@ -329,6 +329,13 @@ var EDITABLE = __EDITABLE__;
             before = sent.length;
             setField('attached', '');
             out.attachNoop = sent.length - before;
+
+            // The offset rows: the adjustment an attached body still
+            // owns.
+            clickAt(screenOf(CLAMP_PT));
+            before = sent.length;
+            setField('oy', '-80');
+            out.editOffset = sent[before] || null;
         }
 
         // --- hardware under an element, reached by cycling ---
@@ -643,6 +650,32 @@ if dt['msg']:
     layout.apply_edit({'op': 'undo'})
 check('choosing what is already chosen decides nothing',
       res['attachNoop'] == 0, str(res['attachNoop']))
+
+cf = res['clampFields']
+check('an attached body offers its offset, in millimetres',
+      cf['ox_shown'] and cf['oy_shown'] and cf['oangle_shown']
+      and abs(float(cf['ox'])) < 1e-9 and abs(float(cf['oy']) + 90) < 1e-9
+      and abs(float(cf['oangle'])) < 1e-9,
+      json.dumps({'ox': cf['ox'], 'oy': cf['oy'], 'oa': cf['oangle']}))
+check('a free body has no offset rows',
+      not res['boardFields']['ox_shown']
+      and not res['boardFields']['oangle_shown'])
+eo = res['editOffset']
+check('editing one sends the whole offset',
+      eo and eo['op'] == 'set' and eo['target'] == 'Clamp'
+      and np.allclose(eo['attrs']['offset'], [0.0, -0.08]),
+      json.dumps(eo))
+if eo:
+    clamp_m = layout.get_mechanics('Clamp')
+    layout.apply_edit(eo)
+    # The offset lives in the host frame: M1 faces pi, so a -0.08
+    # across in its frame lands +0.08 across on the bench.
+    check('  and the body moves off its designed spot accordingly',
+          np.allclose(clamp_m.center,
+                      np.asarray(layout.get_optics('M1').center)
+                      + [0.0, 0.08]),
+          str(list(clamp_m.center)))
+    layout.apply_edit({'op': 'undo'})
 
 print('--- hardware under an element, reached by cycling ---')
 check('clicking the same spot again reaches the hardware under M1',

@@ -44,6 +44,7 @@ from gtrace.layout import (OpticalLayout, TraceRules, EditError,
                            mechanics_snap_points)
 from gtrace.mechanics import (Mechanics, point_in_polygon, DEFAULT_LAYER,
                               LAYER_COLOR, breadboard, mirror_mount,
+                              mirror_mount_2in,
                               register_model, models, model_shapes,
                               from_model)
 from gtrace.unit import *
@@ -844,6 +845,29 @@ check('knobs=False leaves the plates and the tips',
 lo2, hi2 = mirror_mount(scale=2.0).local_bbox()
 check('scale scales every dimension',
       close(lo2, 2 * lo, tol=1e-15) and close(hi2, 2 * hi, tol=1e-15))
+
+# The two-inch mount follows the Thorlabs KA2A drawing
+# (local/Polaris-2inch.pdf): plates 68.6 and 69.9 wide, 7.0 and 12.7
+# deep across the same 3.2 gap (22.9 body overall), adjusters 35.6
+# apart protruding 12.2 (35.1 overall), and the origin 3.95 behind
+# the front face - where the 10.3 optic pocket centres a standard
+# 12.7 thick two-inch optic.
+m2 = mirror_mount_2in()
+lo, hi = m2.local_bbox()
+check('the 2in front face stands 3.95 mm ahead of the origin',
+      abs(hi[0] - 0.00395) < 1e-12, str(hi[0]))
+check('the whole mount is 35.1 mm deep',
+      abs((hi[0] - lo[0]) - 0.0351) < 1e-12, str(hi[0] - lo[0]))
+check('the back plate governs the width at 69.9 mm',
+      abs(hi[1] - 0.03495) < 1e-12 and abs(lo[1] + 0.03495) < 1e-12)
+rects = [s for s in m2.shapes if isinstance(s, draw.Rectangle)]
+check('the front plate is its own 68.6 mm wide',
+      abs(rects[0].height - 0.0686) < 1e-12, str(rects[0].height))
+tips2 = [s for s in m2.shapes if isinstance(s, draw.Arc)]
+check('the adjuster lines sit 35.6 mm apart',
+      sorted(round(float(s.center[1]), 9) for s in tips2)
+      == [-0.0178, 0.0178])
+check('the 2in drawing is eight shapes too', len(m2.shapes) == 8)
 
 
 print('--- the model library ---')

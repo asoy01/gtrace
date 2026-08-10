@@ -750,7 +750,8 @@ def mirror_mount(scale=1.0, knobs=True, **kwargs):
     ----------
     scale : float, optional
         Multiplies every dimension. 1 - the default - is the one-inch
-        mount; a two-inch mount is roughly half as large again.
+        mount; for a two-inch optic see mirror_mount_2in, which is
+        measured rather than scaled.
     knobs : bool, optional
         Whether to draw the adjuster knobs and their stems.
     **kwargs
@@ -761,34 +762,96 @@ def mirror_mount(scale=1.0, knobs=True, **kwargs):
     Mechanics
     '''
     u = 0.001 * float(scale)
-    half_w = 22.85 * u            # half the plate width
-    front_hi = 3.0 * u            # front face, ahead of the origin
-    front_lo = front_hi - 7.0 * u
-    back_hi = front_lo - 3.2 * u  # across the adjustment gap
-    back_lo = back_hi - 12.7 * u
-    tip_y = half_w - 6.4 * u      # the two adjuster lines
-    tip_r = 2.5 * u
+    shapes = _mount_shapes(u, knobs,
+                           front_w=45.7, front_d=7.0, gap=3.2,
+                           back_w=45.7, back_d=12.7,
+                           face_ahead=3.0, tip_span=16.45, tip_r=2.5,
+                           stem_d=7.6, stem_w=6.4,
+                           knob_d=8.6, knob_w=15.2)
+    return Mechanics(shapes=shapes, **kwargs)
+
+def mirror_mount_2in(scale=1.0, knobs=True, **kwargs):
+    '''
+    A two-inch kinematic mirror mount seen from above: the same
+    schematic as mirror_mount, with its dimensions taken from the
+    Thorlabs KA2A drawing (a three-adjuster 2" mount).
+
+    Measured off that drawing: front plate 68.6 wide and 7.0 deep,
+    the 3.2 adjustment gap (the 22.9 overall body minus the two
+    plates), back plate 69.9 wide and 12.7 deep, and the adjuster
+    lines 35.6 apart. The adjusters protrude 12.2 behind the back
+    plate (35.1 overall); how that splits into stem and knob, and the
+    knob width, are drawn in the one-inch mount's proportions, since
+    the drawing does not dimension them.
+
+    The local origin is the substrate centre of the mounted optic.
+    The drawing's optic pocket is 10.3 deep, so a standard 12.7 thick
+    two-inch optic seated against the stop centres 3.95 behind the
+    front face - which is where ``attached_to`` with no offset puts
+    the host's substrate centre.
+
+    Parameters
+    ----------
+    scale : float, optional
+        Multiplies every dimension.
+    knobs : bool, optional
+        Whether to draw the adjuster knobs and their stems.
+    **kwargs
+        Passed to Mechanics.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    u = 0.001 * float(scale)
+    shapes = _mount_shapes(u, knobs,
+                           front_w=68.6, front_d=7.0, gap=3.2,
+                           back_w=69.9, back_d=12.7,
+                           face_ahead=3.95, tip_span=17.8, tip_r=2.5,
+                           stem_d=5.7, stem_w=6.4,
+                           knob_d=6.5, knob_w=12.7)
+    return Mechanics(shapes=shapes, **kwargs)
+
+def _mount_shapes(u, knobs, front_w, front_d, gap, back_w, back_d,
+                  face_ahead, tip_span, tip_r, stem_d, stem_w,
+                  knob_d, knob_w):
+    '''
+    The shapes every kinematic mount is drawn from, with the
+    dimensions in millimetres and ``u`` carrying them to metres.
+
+    The frame is the attachment frame: the origin is the substrate
+    centre of the mounted optic, +x the host's HR normal. The front
+    face stands ``face_ahead`` of the origin; the plates stack
+    backwards from it, the adjuster tips bulge out of the back plate
+    into the gap on the two lines ``tip_span`` either side of the
+    centre, and the knobs hang off their stems out of the back.
+    '''
+    front_hi = face_ahead * u
+    front_lo = front_hi - front_d * u
+    back_hi = front_lo - gap * u
+    back_lo = back_hi - back_d * u
+    ty = tip_span * u
 
     shapes = []
-    shapes.append(draw.Rectangle([front_lo, -half_w],
-                                 front_hi - front_lo, 2 * half_w))
-    shapes.append(draw.Rectangle([back_lo, -half_w],
-                                 back_hi - back_lo, 2 * half_w))
+    shapes.append(draw.Rectangle([front_lo, -front_w * u / 2],
+                                 front_hi - front_lo, front_w * u))
+    shapes.append(draw.Rectangle([back_lo, -back_w * u / 2],
+                                 back_hi - back_lo, back_w * u))
     for s in (-1.0, 1.0):
-        # The adjuster tips, bulging out of the back plate into the
-        # gap: half circles on the +x side of their centres.
-        shapes.append(draw.Arc([back_hi, s * tip_y], tip_r,
+        # The adjuster tips: half circles on the +x side of their
+        # centres.
+        shapes.append(draw.Arc([back_hi, s * ty], tip_r * u,
                                -np.pi / 2, np.pi / 2))
     if knobs:
-        stem_lo = back_lo - 7.6 * u
-        knob_lo = stem_lo - 8.6 * u
+        stem_lo = back_lo - stem_d * u
+        knob_lo = stem_lo - knob_d * u
         for s in (-1.0, 1.0):
-            cy = s * tip_y
-            shapes.append(draw.Rectangle([stem_lo, cy - 3.2 * u],
-                                         7.6 * u, 6.4 * u))
-            shapes.append(draw.Rectangle([knob_lo, cy - 7.6 * u],
-                                         8.6 * u, 15.2 * u))
-    return Mechanics(shapes=shapes, **kwargs)
+            cy = s * ty
+            shapes.append(draw.Rectangle([stem_lo, cy - stem_w * u / 2],
+                                         stem_d * u, stem_w * u))
+            shapes.append(draw.Rectangle([knob_lo, cy - knob_w * u / 2],
+                                         knob_d * u, knob_w * u))
+    return shapes
 
 #}}}
 
@@ -930,7 +993,7 @@ register_model('BB6045', breadboard(0.60, 0.45),
                '600 x 450 mm breadboard, 25 mm grid')
 register_model('MOUNT-25', mirror_mount(),
                'kinematic mount for a 1 inch optic')
-register_model('MOUNT-50', mirror_mount(scale=1.5),
-               'kinematic mount for a 2 inch optic (scaled)')
+register_model('MOUNT-50', mirror_mount_2in(),
+               'kinematic mount for a 2 inch optic (KA2A footprint)')
 
 #}}}

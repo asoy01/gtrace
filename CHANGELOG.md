@@ -48,7 +48,10 @@ across them.
     host is unique and the library's to say, carried by the
     convention that a model's local origin is the point that stands
     at the host's substrate centre. Picking free detaches it where it
-    is.
+    is. While attached, Offset rows adjust where it stands on the
+    host - the one thing about an attached body's place that is its
+    own to edit; the derived position stays derived, so nothing can
+    fall out of step.
   - **A breadboard resizes by its corners.** A body a builder made
     carries its parameters (`Mechanics.params`), and a selected,
     resizable one shows four corner handles: dragging one cuts the
@@ -108,14 +111,18 @@ across them.
   the knobs on their stems. Its local origin is the substrate centre
   of the mounted optic, 3 mm behind the front face, so `attached_to`
   with no offset seats it with a 6 mm optic flush with that face.
-  The library is seeded with stock built from them (`BB3030`,
-  `BB4530`, `BB6045`, `MOUNT-25`, and `MOUNT-50` as the same mount
-  scaled); further vendor models are yours to register from measured
+  `mirror_mount_2in()` is its two-inch counterpart, measured from
+  the Thorlabs KA2A drawing rather than scaled: its own plate widths
+  and adjuster spacing, the same 3.2 gap, and the origin 3.95 behind
+  the front face, where the drawing's optic pocket centres a
+  standard 12.7 thick optic. The library is seeded with stock built
+  from them (`BB3030`, `BB4530`, `BB6045`, `MOUNT-25`, `MOUNT-50`);
+  further vendor models are yours to register from measured
   footprints.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (252 checks) and `verify_mech_browser.py` (68).
-  The suite is 21 files and 4158 checks.
+- `verify_mechanics.py` (258 checks) and `verify_mech_browser.py` (72).
+  The suite is 21 files and 4168 checks.
 
 ### Fixed
 

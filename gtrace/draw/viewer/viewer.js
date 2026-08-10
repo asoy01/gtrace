@@ -1254,6 +1254,16 @@ var MECH_FIELDS = [
     // since they are the optics of the moment.
     {key: 'attached', label: 'Attached to', optional: true,
      choices: [], dynamicChoices: true},
+    // Where it stands on that host, in the host's frame: the origin
+    // seats at the substrate centre, x runs along the HR normal. The
+    // rows show only while attached - a free body's place is its pose
+    // - and are the adjustment an attached body still owns: the
+    // model's designed position is the default, and these move the
+    // body off it deliberately. In millimetres and degrees, like the
+    // other adjustments.
+    {key: 'ox', label: 'Offset x', unit: 'mm', optional: true},
+    {key: 'oy', label: 'Offset y', unit: 'mm', optional: true},
+    {key: 'oangle', label: 'Offset angle', unit: '°', optional: true},
     {key: 'cx', label: 'Center x', unit: 'm'},
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
@@ -1276,6 +1286,13 @@ function mechFieldValue(m, key) {
     case 'cx': return m.center[0];
     case 'cy': return m.center[1];
     case 'angle': return normAngle(m.rotationAngle || 0) * DEG;
+    case 'ox':
+        return m.offset ? m.offset[0] / MM : undefined;
+    case 'oy':
+        return m.offset ? m.offset[1] / MM : undefined;
+    case 'oangle':
+        return m.offset_angle === null || m.offset_angle === undefined
+            ? undefined : normAngle(m.offset_angle) * DEG;
     case 'width':
     case 'height':
         return m[key] === null || m[key] === undefined
@@ -1295,6 +1312,15 @@ function mechFieldMessage(m, key, value) {
         return {op: 'move', target: m.name, center: [m.center[0], value]};
     case 'angle':
         return {op: 'rotate', target: m.name, rotationAngle: value / DEG};
+    case 'ox':
+        return {op: 'set', target: m.name,
+                attrs: {offset: [value * MM, m.offset[1]]}};
+    case 'oy':
+        return {op: 'set', target: m.name,
+                attrs: {offset: [m.offset[0], value * MM]}};
+    case 'oangle':
+        return {op: 'set', target: m.name,
+                attrs: {offset_angle: value / DEG}};
     case 'width':
     case 'height':
         // The panel is in millimetres; the model, as everywhere in

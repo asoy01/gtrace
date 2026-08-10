@@ -914,6 +914,14 @@ def mechanics_scene_dict(m):
             # that is dragged.
             'attached_to': (None if m.attached_to is None
                             else str(m.attached_to.name)),
+            # Where it stands on that host, for the offset rows of the
+            # panel: the one thing about an attached body's place that
+            # is its own to edit. Null for a free body, whose place is
+            # its pose.
+            'offset': (None if m.attached_to is None
+                       else [float(m.offset[0]), float(m.offset[1])]),
+            'offset_angle': (None if m.attached_to is None
+                             else float(m.offset_angle)),
             # Whether the body can be cut to a new size, and the size
             # it stands at: what the resize handles and the Width and
             # Height rows work from. Absent for a hand-drawn body,
