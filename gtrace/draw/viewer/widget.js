@@ -12,10 +12,78 @@
  * Copyright (c) 2011-2026, Yoichi Aso. BSD license.
  */
 
+/*
+ * How tall the viewer makes itself when nothing has said.
+ *
+ * A cell output is a letterbox, and 520 pixels of one is not enough of a
+ * bench drawing to work in: the first thing anyone did with it was drag
+ * it taller. So the height is taken from the width, which is the cell's
+ * own and therefore already the right scale for the window.
+ *
+ * From the width of the *drawing*, though, not of the widget: the side
+ * panel is a fixed 380 pixels of it and is a column of numbers, not part
+ * of the picture. Squaring the whole widget makes the drawing itself
+ * taller than it is wide, which is the wrong way round for a bench.
+ *
+ * Capped, because a maximized JupyterLab cell is wider than the window
+ * is tall and a viewer whose bottom edge is below the fold is unusable
+ * in its own way. The cap never falls below FALLBACK_HEIGHT: an
+ * embedder that reports a nonsense viewport - an output frame measuring
+ * only what it has so far been given, say - should leave the widget at
+ * the size it used to be rather than at nothing.
+ */
+const SIDE_PANEL_WIDTH = 380;
+const NARROW_BREAKPOINT = 700;
+const VIEWPORT_FRACTION = 0.70;
+const FALLBACK_HEIGHT = 520;
+
+function autoHeight(el) {
+    const width = el.getBoundingClientRect().width;
+    // Nothing to go on yet. anywidget calls render() before the output
+    // area is laid out, so this is the ordinary case on the first pass,
+    // not an error: the observer below runs again when a width arrives.
+    if (!width) { return 0; }
+    // Narrow enough and the side panel stops standing beside the
+    // drawing and stacks under it - the same breakpoint the stylesheet
+    // uses - so there the drawing has the whole width.
+    const drawing = width > NARROW_BREAKPOINT
+        ? width - SIDE_PANEL_WIDTH : width;
+    const cap = Math.max((globalThis.innerHeight || 0) * VIEWPORT_FRACTION,
+                         FALLBACK_HEIGHT);
+    const floor = globalThis.GTraceViewer.MIN_HEIGHT;
+    return Math.max(floor, Math.round(Math.min(drawing, cap)));
+}
+
 function render({ model, el }) {
     const host = document.createElement('div');
     host.className = 'gt-widget';
-    host.style.height = (model.get('height') || 520) + 'px';
+
+    // A height of zero means "work it out": see autoHeight. Anything
+    // else is a height someone chose, from Python or by dragging the
+    // grip, and is used as it stands.
+    //
+    // Until a width is known there is nothing to work it out from, and
+    // the fixed height the widget used to have stands in. That is a
+    // provisional answer rather than a fallback to live with: whichever
+    // of the three chances below sees a real width first replaces it,
+    // and refits, since the drawing was framed against the wrong box.
+    let resolved = false;
+    const applyHeight = () => {
+        const set = model.get('height');
+        if (set) {
+            host.style.height = set + 'px';
+            return true;
+        }
+        const auto = autoHeight(el);
+        host.style.height = (auto || FALLBACK_HEIGHT) + 'px';
+        if (!auto || resolved) { return !!auto; }
+        // The first time a real width is known. Anything drawn before
+        // now was framed against the provisional height.
+        resolved = true;
+        if (el.gtraceViewer) { el.gtraceViewer.fit(); }
+        return true;
+    };
+    applyHeight();
     el.appendChild(host);
 
     // Editing is enabled by handing the core somewhere to send edits.
@@ -53,10 +121,41 @@ function render({ model, el }) {
     // not throw away where the user was looking.
     const onScene = () => viewer.setScene(model.get('scene'));
     const onHeight = () => {
-        host.style.height = (model.get('height') || 520) + 'px';
+        applyHeight();
         if (dragged) { dragged = false; return; }
         viewer.fit();
     };
+
+    // While the height is being worked out, it follows the width: split
+    // the notebook pane and the viewer squares itself up again. It stops
+    // following the moment anything sets a height - the grip writes one
+    // back, so a drag settles it for good.
+    //
+    // This is also what resolves the first pass. anywidget calls
+    // render() before the output area has been laid out, so the width
+    // there is zero; the run that matters is the one this fires when a
+    // real width arrives. Getting a fit wrong at that moment is what
+    // once left the whole drawing scaled down to a point, so the height
+    // is only ever applied here - the viewer refits itself off its own
+    // observer once it has a size.
+    let observer = null;
+    if (globalThis.ResizeObserver) {
+        observer = new ResizeObserver(() => {
+            if (!model.get('height')) { applyHeight(); }
+        });
+        observer.observe(el);
+    }
+
+    // Two more chances, because the observer is not to be relied on for
+    // the one run that matters. A resize callback is delivered on a
+    // rendering step, and an embedder that has already laid the output
+    // area out before calling render() never resizes it again - there
+    // is nothing for the observer to report. A headless browser stops
+    // delivering them altogether once the page has settled, which is
+    // how this was found. Both of these are cheap and idempotent.
+    const retry = () => { if (!model.get('height')) { applyHeight(); } };
+    if (globalThis.requestAnimationFrame) { requestAnimationFrame(retry); }
+    const retryTimer = setTimeout(retry, 0);
 
     // An edit Python refused: say so rather than leaving the drawing
     // silently disagreeing with what the user just did.
@@ -92,14 +191,20 @@ function render({ model, el }) {
     onError();
     onNotice();
 
-    // Expose the viewer for debugging and for the tests.
+    // Expose the viewer for debugging and for the tests. The height
+    // resolver goes with it: what it comes to depends on the width of
+    // an element and on the size of the window, neither of which a
+    // check can arrange and then wait on reliably in a headless run.
     el.gtraceViewer = viewer;
+    el.gtraceApplyHeight = applyHeight;
 
     return () => {
         model.off('change:scene', onScene);
         model.off('change:height', onHeight);
         model.off('change:error', onError);
         model.off('change:notice', onNotice);
+        if (observer) { observer.disconnect(); observer = null; }
+        clearTimeout(retryTimer);
         viewer.destroy();
     };
 }

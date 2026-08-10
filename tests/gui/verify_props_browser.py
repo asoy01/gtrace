@@ -393,7 +393,7 @@ var LENS = __LENS__;
             setField('angle', '120');
             setField('rocHR', '3.5');
             setField('rocAR', '-2.5');
-            setField('diameter', '0.2');
+            setField('diameter', '200');
             setField('wedgeAngle', '0.5');
             setField('Refl_HR', '0.95');
             out.sentAfterEdits = sent.length;
@@ -1159,10 +1159,15 @@ check('angle is shown in degrees',
 check('wedge is shown in degrees',
       abs(float(f['wedgeAngle']) - math.degrees(m1['wedgeAngle'])) < 1e-9,
       f['wedgeAngle'])
-check('diameter', abs(float(f['diameter']) - m1['diameter']) < 1e-15,
-      f['diameter'])
-check('thickness', abs(float(f['thickness']) - m1['thickness']) < 1e-15,
-      f['thickness'])
+# The substrate is sized in millimetres: that is how a blank is
+# ordered, and a 1 inch mirror reading 0.0254 would be arithmetic
+# rather than a specification. Where it stands stays in metres.
+check('diameter is shown in millimetres',
+      abs(float(f['diameter']) - m1['diameter'] * 1000) < 1e-12,
+      '%s vs %g' % (f['diameter'], m1['diameter'] * 1000))
+check('thickness too',
+      abs(float(f['thickness']) - m1['thickness'] * 1000) < 1e-12,
+      '%s vs %g' % (f['thickness'], m1['thickness'] * 1000))
 check('a flat surface reads as an infinite ROC',
       m1['inv_ROC_HR'] == 0 and f['rocHR'] == 'inf', f['rocHR'])
 check('index n', abs(float(f['n']) - m1['n']) < 1e-15, f['n'])
@@ -1211,8 +1216,8 @@ check('ROC becomes an inverse ROC',
       str(sent[2]))
 check('a negative ROC keeps its sign',
       abs(sent[3]['attrs']['inv_ROC_AR'] - (-1/2.5)) < 1e-15, str(sent[3]))
-check('diameter goes through as it is',
-      sent[4]['attrs']['diameter'] == 0.2, str(sent[4]))
+check('the diameter is converted back to metres',
+      abs(sent[4]['attrs']['diameter'] - 0.2) < 1e-15, str(sent[4]))
 check('the wedge is converted to radians',
       abs(sent[5]['attrs']['wedgeAngle'] - math.radians(0.5)) < 1e-15,
       str(sent[5]))
@@ -1233,7 +1238,7 @@ print('--- bad and no-op input ---')
 check('rubbish is not sent', res['afterBadInput']['sent'] == 7,
       str(res['afterBadInput']['sent']))
 check('and the field snaps back to the model value',
-      abs(float(res['afterBadInput']['shown']) - m1['diameter']) < 1e-15,
+      abs(float(res['afterBadInput']['shown']) - m1['diameter'] * 1000) < 1e-12,
       res['afterBadInput']['shown'])
 check('setting a field to its current value sends nothing',
       res['afterNoop']['sent'] == 7, str(res['afterNoop']['sent']))

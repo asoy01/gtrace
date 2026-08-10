@@ -2399,7 +2399,7 @@ class OpticalLayout(object):
                           title=title if title is not None else self.name,
                           scene=self.scene_dict(**kwargs))
 
-    def widget(self, height=520, editable=True,
+    def widget(self, height=None, editable=True,
                path='layout.json', dxf_path=None, **kwargs):
         '''
         Return a Jupyter widget showing this layout.
@@ -2423,8 +2423,12 @@ class OpticalLayout(object):
 
         Parameters
         ----------
-        height : int, optional
-            Height of the viewer in pixels. Defaults to 520.
+        height : int or None, optional
+            Height of the viewer in pixels. Defaults to None, which
+            lets the front end make it as tall as it is wide - the
+            width of the output area, capped to the window, both of
+            which only the browser knows. Dragging the viewer's bottom
+            edge settles it on a height of its own.
         editable : bool, optional
             Whether the optics can be dragged in the viewer.
             Defaults to True.
@@ -2447,7 +2451,8 @@ class OpticalLayout(object):
         from gtrace.draw.viewer.widget import LayoutViewer
         return LayoutViewer(scene=self.scene_dict(**kwargs), layout=self,
                             draw_kwargs=kwargs,
-                            height=height, editable=editable,
+                            height=0 if height is None else height,
+                            editable=editable,
                             layout_path=path,
                             dxf_path=dxf_path if dxf_path is not None else '')
 

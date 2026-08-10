@@ -173,6 +173,83 @@ var SCENES = __SCENES__;
             wantCy: (bb2.miny + bb2.maxy) / 2,
             pending: !!v2.fitPending
         };
+
+        // --- a height of zero means "work one out" ---
+        // A cell output is a letterbox and a bench drawing is not, so
+        // with nothing said the viewer makes itself as tall as it is
+        // wide. Only the browser knows the width, and on the first pass
+        // it does not know it either: this mounts detached, exactly as
+        // a notebook does, so the height has to be settled by the same
+        // observer that settles the fit.
+        function autoCase(width, name) {
+            var box = document.createElement('div');
+            box.style.width = width + 'px';
+            var st = {scene: SCENES.a, height: 0};
+            var hh = {};
+            var m = {
+                get: function (k) { return st[k]; },
+                set: function (k, val) {
+                    st[k] = val;
+                    (hh['change:' + k] || []).forEach(function (f) { f(); });
+                },
+                on: function (ev, fn) { (hh[ev] = hh[ev] || []).push(fn); },
+                off: function () {},
+                save_changes: function () {}
+            };
+            var stop = mod.default.render({model: m, el: box});
+            var before = box.querySelector('.gt-widget').style.height;
+            document.getElementById('host2').appendChild(box);
+            return {box: box, model: m, state: st, stop: stop,
+                    detachedHeight: before, name: name};
+        }
+        var narrow = autoCase(420, 'narrow');
+        var wide = autoCase(1600, 'wide');
+        await new Promise(function (r) { setTimeout(r, 300); });
+
+        function heightOf(c) {
+            return parseFloat(
+                c.box.querySelector('.gt-widget').style.height) || 0;
+        }
+        out.auto = {
+            viewport: globalThis.innerHeight,
+            floor: globalThis.GTraceViewer.MIN_HEIGHT,
+            narrowDetached: narrow.detachedHeight,
+            narrow: heightOf(narrow),
+            wide: heightOf(wide),
+            // Nothing is written back: the height is still "work it
+            // out", so a pane that is resized later squares up again.
+            narrowModel: narrow.state.height,
+            wideModel: wide.state.height
+        };
+        // Narrower again, and it follows.
+        // Following a later resize is the same resolver run again. The
+        // observer that runs it is the one that resolved the height
+        // above, so what is left to check is what it comes to - and
+        // that is driven directly here rather than waited on: this
+        // headless run delivers no further resize callbacks once the
+        // page has settled, as the probe records.
+        var probe = {fired: 0};
+        if (globalThis.ResizeObserver) {
+            var ro = new ResizeObserver(function () { probe.fired++; });
+            ro.observe(narrow.box);
+        }
+        out.auto.observed = typeof narrow.box.gtraceApplyHeight === 'function';
+        narrow.box.style.width = '300px';
+        narrow.box.gtraceApplyHeight();
+        out.auto.narrowed = heightOf(narrow);
+        out.auto.narrowedWidth = narrow.box.getBoundingClientRect().width;
+        out.auto.probe = probe;
+
+        // Until something sets a height, which settles it. That is what
+        // a drag of the grip does.
+        narrow.model.set('height', 640);
+        out.auto.afterSet = heightOf(narrow);
+        narrow.box.style.width = '900px';
+        narrow.box.gtraceApplyHeight();
+        out.auto.afterSetThenResized = heightOf(narrow);
+
+        narrow.stop();
+        wide.stop();
     } catch (e) {
         out.error = String((e && e.stack) || e);
     }
@@ -284,6 +361,61 @@ check('centred on the scene',
       and abs(l['cy'] - l['wantCy']) < 1e-9,
       '((%s,%s) vs (%s,%s))' % (l.get('cx'), l.get('cy'),
                                 l.get('wantCx'), l.get('wantCy')))
+
+print('--- a height of zero means "work one out" ---')
+a = res.get('auto') or {}
+# The height is taken from the width of the *drawing*: the side panel is
+# a fixed 380 px of the widget and is a column of numbers, not part of
+# the picture, so squaring the whole thing would make the drawing itself
+# taller than it is wide. 520 is the height the widget used to be fixed
+# at, and the floor the cap never goes below: an embedder reporting a
+# nonsense viewport should leave the widget the size it used to be
+# rather than at nothing.
+SIDE, NARROW = 380, 700
+cap = max((a.get('viewport') or 0) * 0.70, 520)
+def want(width):
+    drawing = width - SIDE if width > NARROW else width
+    return max(240, min(drawing, cap))
+# The first pass measures nothing - anywidget renders before the output
+# area is laid out - so the height cannot be worked out there either.
+check('the height it used to be fixed at stands in until then',
+      a.get('narrowDetached') == '520px', str(a.get('narrowDetached')))
+# Below the breakpoint the side panel stacks under the drawing rather
+# than standing beside it, so there the drawing has the whole width.
+check('a narrow output, where the panel stacks, is as tall as it is wide',
+      abs((a.get('narrow') or 0) - want(420)) < 1.5,
+      '%s for a width of 420 (cap %.0f)' % (a.get('narrow'), cap))
+# A maximized cell is wider than the window is tall, and a viewer whose
+# bottom edge is below the fold is unusable in its own way.
+check('a wide one is capped to the window rather than the width',
+      abs((a.get('wide') or 0) - cap) < 1.5,
+      '%s for a width of 1600 (cap %.0f)' % (a.get('wide'), cap))
+check('  which is shorter than the width it would have taken',
+      (a.get('wide') or 0) < 1600 - SIDE, str(a.get('wide')))
+# The height above was resolved by the widget's own observer, which is
+# the wiring that matters: anywidget renders before the output area is
+# laid out, so that run is the only one that can settle it. What a later
+# resize comes to is the same resolver run again, driven directly here -
+# this headless run delivers no further resize callbacks once the page
+# has settled, which the probe records rather than leaves to be guessed.
+check('the resolver is reachable', a.get('observed') is True)
+check('and it follows the width when the pane is resized',
+      abs((a.get('narrowed') or 0) - want(300)) < 1.5,
+      '%s for a measured width of %s' % (a.get('narrowed'),
+                                         a.get('narrowedWidth')))
+check('  never going below the floor the grip respects',
+      (a.get('narrowed') or 0) >= (a.get('floor') or 240),
+      '%s vs %s' % (a.get('narrowed'), a.get('floor')))
+# Nothing is written back while it is being worked out. The height a
+# drag settles on is written back by the grip, and that is what stops it.
+check('nothing is written back while it is working it out',
+      a.get('narrowModel') == 0 and a.get('wideModel') == 0,
+      '%s / %s' % (a.get('narrowModel'), a.get('wideModel')))
+check('a height that is set is used as it stands',
+      a.get('afterSet') == 640, str(a.get('afterSet')))
+check('  and settles it: the width no longer decides',
+      a.get('afterSetThenResized') == 640,
+      str(a.get('afterSetThenResized')))
 
 print()
 print('%d passed, %d failed' % (npass, nfail))

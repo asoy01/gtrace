@@ -137,14 +137,23 @@ def _build_class():
         scene : dict
             A scene dict as returned by serialize.scene_to_dict().
         height : int
-            Height of the viewer in pixels.
+            Height of the viewer in pixels, or 0 to let the front end
+            work one out. See the trait below.
         '''
 
         _esm = widget_esm()
         _css = viewer_css()
 
         scene = traitlets.Dict().tag(sync=True)
-        height = traitlets.Int(520).tag(sync=True)
+        #: Height of the viewer in pixels. Zero - the default - means
+        #: "as tall as it is wide", worked out in the browser from the
+        #: width of the output area and capped to the window, since only
+        #: the browser knows either. A cell output is a letterbox, and a
+        #: fixed height either wasted a large window or had to be
+        #: dragged taller on every layout. Dragging the grip writes the
+        #: height it was dragged to back here, which settles it: from
+        #: then on the widget is the size that was chosen.
+        height = traitlets.Int(0).tag(sync=True)
         #: Whether the front end may send edit messages back.
         editable = traitlets.Bool(True).tag(sync=True)
         #: Last edit failure, shown by the front end. Empty when fine.

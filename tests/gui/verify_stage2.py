@@ -78,7 +78,14 @@ check('widget created', w is not None, type(w).__name__)
 # The side bar has no heading, so the widget carries no title: a
 # traitlet that changed nothing on screen would be a trap.
 check('the widget has no title to set', not hasattr(w, 'title'))
-check('height default', w.height == 520, str(w.height))
+# Zero means "work one out": the front end makes the viewer as tall as
+# it is wide, capped to the window. Only the browser knows either, and a
+# fixed height either wasted a large window or had to be dragged taller
+# on every layout. See verify_stage2_browser.py for the resolving.
+check('height is left to the front end by default', w.height == 0,
+      str(w.height))
+check('and a height asked for is carried as it stands',
+      layout.widget(height=700).height == 700)
 check('_esm set on the class', len(w._esm) > 1000, '(%d chars)' % len(w._esm))
 check('_css set on the class', len(w._css) > 500, '(%d chars)' % len(w._css))
 

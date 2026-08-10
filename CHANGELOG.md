@@ -57,6 +57,24 @@ across them.
 
 ### Changed
 
+- The notebook widget starts with its **drawing as tall as it is wide**
+  rather than at a fixed 520 pixels, capped to 70% of the window and
+  never below 520. The side panel is a fixed strip of the width and is
+  a column of numbers rather than part of the picture, so the height
+  comes from the width less that strip - or from the whole width below
+  the breakpoint where the panel stacks underneath instead. A cell
+  output is a letterbox, and the first thing anyone did with the old
+  default was drag it taller. `height` still takes a number, and the
+  traitlet now defaults to 0, meaning "work one out"; dragging the grip
+  writes a height back, which settles it.
+- The **Diameter** and **Thickness** rows of the optics panel are in
+  millimetres, as the focal length already was. That is how a blank is
+  ordered and spoken of, and a 1 inch mirror reading `0.0254` is
+  arithmetic rather than a specification. Where an element *stands*
+  stays in metres — a distance across the bench rather than a dimension
+  of the part — and the edit messages are in metres as before.
+- The **Anchor** choices read `HR center` and `substrate center`,
+  rather than `HR apex` and `substrate centre`.
 - One add button per kind of thing — `+ Mirror`, `+ Lens`, `+ Source` —
   with the spherical and cylindrical variants behind the first two,
   instead of a button apiece. A cylindrical mirror is a mirror; five

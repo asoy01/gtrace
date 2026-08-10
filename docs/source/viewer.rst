@@ -90,6 +90,10 @@ Making room
 
 A notebook cell is a letterbox and a bench drawing is not, so there are two ways to give the drawing more of it.
 
+**The drawing starts as tall as it is wide.** A cell output is a letterbox, and a fixed height either wasted a large window or had to be dragged taller on every layout, so with nothing said the widget takes its height from the width of the output area. From the width of the *drawing* rather than of the widget: the side panel is a fixed strip of the width and is a column of numbers, not part of the picture, so squaring the whole thing would leave the drawing itself taller than it is wide — the wrong way round for a bench. Narrow enough that the panel stacks underneath instead, the drawing has the whole width and the rule follows. The height is capped to the window, since a viewer whose bottom edge is below the fold is unusable in its own way, and never falls below the height it used to be fixed at. Only the browser knows any of these numbers, so this is settled there, on the pass that first sees a real width. Split the notebook pane and it squares itself up again.
+
+Pass a number to fix it: ``layout.show(height=700)``, or ``w.height = 700`` afterwards, which also reframes the drawing to suit. That settles it, and the width no longer decides.
+
 **Drag the bottom edge.** A grip runs along the bottom of the widget; dragging it down makes the viewer taller. The new height is written back to the ``height`` traitlet, so it survives a re-render and ``w.height`` reports what you dragged to. Dragging does not reframe the view — you are already looking where you meant to. Setting ``w.height`` from Python still does, since a height chosen there is usually a request to see the whole thing at that size.
 
 **Fold the side panel away** with the small button at the top right of the drawing, which gives it the whole width. The button stays where it was, turned round, to bring the panel back; a button inside the panel could not.
@@ -166,7 +170,7 @@ Ctrl + clicking the same place again steps to the next beam of the bundle, as cl
 
 The mark carries an arrow halfway along it, showing which way the chosen beam travels. That is not decoration: it is the direction **Move by** counts as positive, and two beams sharing one line commonly run opposite ways, so stepping from one to the other would otherwise leave the picture unchanged while the sign of every move quietly reversed.
 
-**Move by [mm]** is a distance to move, not a place to be: type it, press Enter, and the element slides that far, positive in the direction the beam travels. The field returns to zero at once, so leaning on Enter does not walk the element down the bench. It is in millimetres — the other row on the panel that is, along with the focal length — because an adjustment on a bench is spoken of in millimetres, and ``0.05`` invites the slip that unit exists to avoid.
+**Move by [mm]** is a distance to move, not a place to be: type it, press Enter, and the element slides that far, positive in the direction the beam travels. The field returns to zero at once, so leaning on Enter does not walk the element down the bench. It is in millimetres, because an adjustment on a bench is spoken of in millimetres, and ``0.05`` invites the slip that unit exists to avoid.
 
 Nothing else moves: not the orientation, not the offset across the beam. An element already square on the beam stays square and simply slides along it. The whole substrate translates, so which point of it is nominally being moved makes no difference::
 
@@ -200,11 +204,11 @@ Lenses
 
 Selecting a lens adds a **Focal length** row, directly under the type. It is the row to reach for, and it is first because for a lens it is the number that matters: writing to it re-solves both curvatures together, keeping the shape of the lens and leaving it where it is, exactly as assigning to :py:attr:`f<gtrace.optcomp.Lens.f>` does in Python. The two radii further down follow it, and editing them instead is still allowed — they are the lens's real description, and the focal length is read back from them. The row is absent for anything that is not a lens.
 
-It is the one row in millimetres. Everything else on the panel is in metres, as gtrace is throughout, but a lens is listed in a catalogue in millimetres and spoken of that way, and typing ``0.075`` for a 75 mm lens invites the slip the row exists to avoid. The message that leaves the page is in metres like every other.
+It is in millimetres, as the rows describing the substrate are: a lens is listed in a catalogue in millimetres and spoken of that way, and typing ``0.075`` for a 75 mm lens invites the slip the unit exists to avoid. Where the element *stands* stays in metres — that is a distance across the bench rather than a dimension of the part — and the message that leaves the page is in metres like every other.
 
 A focal length the blank cannot be ground to is refused, with the reason shown in the panel, and the lens is left exactly as it was. ``inf`` is refused before it is even sent: a lens with no power is a flat window, which is a different element rather than somewhere to arrive at by typing.
 
-The **Anchor** row says which point the element is held by — the apex of the front face, or the middle of the substrate. It is the point that stays put when a curvature changes and the point the element turns about. A mirror pins its HR face, so that sweeping a telescope's radii does not walk the beam spot off it; a lens pins its middle, since the beam goes through. See :ref:`changing-a-curvature` for what this moves.
+The **Anchor** row says which point the element is held by — **HR center**, the apex of the front face, or **substrate center**, the middle of the glass. It is the point that stays put when a curvature changes and the point the element turns about. A mirror pins its HR face, so that sweeping a telescope's radii does not walk the beam spot off it; a lens pins its middle, since the beam goes through. See :ref:`changing-a-curvature` for what this moves.
 
 Measuring
 ^^^^^^^^^^

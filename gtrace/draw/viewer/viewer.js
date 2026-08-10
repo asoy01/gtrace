@@ -920,8 +920,13 @@ var OPTIC_FIELDS = [
     {key: 'slide_beam', label: 'Along beam', optional: true,
      choices: [], dynamicChoices: true},
     {key: 'slide_by', label: 'Move by', unit: 'mm', optional: true},
-    {key: 'diameter', label: 'Diameter', unit: 'm'},
-    {key: 'thickness', label: 'Thickness', unit: 'm'},
+    // The size of the substrate, in millimetres: that is how a blank is
+    // ordered and how anyone speaks of one, and a 1 inch mirror reading
+    // 0.0254 is arithmetic rather than a specification. Where it stands
+    // on the bench stays in metres, since that is a distance across the
+    // table rather than a dimension of the part.
+    {key: 'diameter', label: 'Diameter', unit: 'mm'},
+    {key: 'thickness', label: 'Thickness', unit: 'mm'},
     {key: 'wedgeAngle', label: 'Wedge', unit: '°'},
     {key: 'rocHR', label: 'ROC HR', unit: 'm'},
     {key: 'rocAR', label: 'ROC AR', unit: 'm'},
@@ -930,7 +935,7 @@ var OPTIC_FIELDS = [
     // face so the beam spot on it does not move; a lens pins its
     // middle, since the beam goes through.
     {key: 'anchor_point', label: 'Anchor', optional: true,
-     choices: [['HRcenter', 'HR apex'], ['center', 'substrate centre']]},
+     choices: [['HRcenter', 'HR center'], ['center', 'substrate center']]},
     {key: 'n', label: 'Index n'},
     {key: 'Refl_HR', label: 'Refl HR'},
     {key: 'Trans_HR', label: 'Trans HR'},
@@ -976,6 +981,12 @@ function opticFieldValue(o, key) {
     case 'cy': return c[1];
     case 'angle': return normAngle(o.normAngleHR || 0) * DEG;
     case 'wedgeAngle': return (o.wedgeAngle || 0) * DEG;
+    // In millimetres. An element that does not carry the attribute at
+    // all reads as absent rather than as a NaN.
+    case 'diameter':
+    case 'thickness':
+        return o[key] === undefined || o[key] === null
+            ? o[key] : o[key] / MM;
     case 'rocHR': return o.inv_ROC_HR ? 1 / o.inv_ROC_HR : Infinity;
     case 'rocAR': return o.inv_ROC_AR ? 1 / o.inv_ROC_AR : Infinity;
     case 'f':
@@ -1008,6 +1019,12 @@ function opticFieldMessage(o, key, value) {
         return {op: 'rotate', target: o.name, normAngleHR: value / DEG};
     case 'wedgeAngle':
         attrs.wedgeAngle = value / DEG;
+        break;
+    case 'diameter':
+    case 'thickness':
+        // The panel is in millimetres; the model, like everything else
+        // in gtrace, is in metres.
+        attrs[key] = value * MM;
         break;
     case 'rocHR':
         // A flat surface is an infinite radius, which is the inverse
@@ -4026,7 +4043,11 @@ var GTraceViewer = {
     },
     Viewer: Viewer,
     beamParamsAt: beamParamsAt,
-    projectOnBeam: projectOnBeam
+    projectOnBeam: projectOnBeam,
+    // What an embedder may not make the viewer shorter than, whether by
+    // dragging the grip or by working a height out for itself. Exported
+    // so that the widget does not carry a second copy of the number.
+    MIN_HEIGHT: MIN_HEIGHT
 };
 
 if (typeof module !== 'undefined' && module.exports) {
