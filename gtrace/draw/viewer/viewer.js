@@ -479,6 +479,11 @@ function Viewer(container, scene, options) {
     this.hoverMech = null;
     this.dragMech = null;
     this.mechFallback = null;
+    // A corner of a resizable body being dragged to a new size, and
+    // where its handles were last drawn (screen coordinates, for the
+    // mousedown hit test).
+    this.dragMechResize = null;
+    this._handlePts = null;
 
     // Measuring. The tool is a mode because it takes two clicks, and
     // between them the picture has to answer to the cursor rather than
@@ -608,6 +613,33 @@ Viewer.prototype._build = function () {
             addRow.appendChild(wrap);
             self.addMenus.push({button: btn, menu: menu, wrap: wrap});
         });
+
+        // The hardware, behind one more button of the same row. Its
+        // variants are not classes but library models, and the library
+        // rides in the scene - so the menu is filled by
+        // _refreshHardwareMenu, and refilled whenever a new scene
+        // brings a new library.
+        var hwrap = htmlEl('div', 'gt-add');
+        var hbtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Hardware');
+        hbtn.title = 'Add hardware from the model library at the centre '
+            + 'of the view';
+        var hmenu = htmlEl('div', 'gt-menu');
+        hmenu.style.display = 'none';
+        hbtn.addEventListener('click', function () {
+            var open = hmenu.style.display === 'none';
+            self.closeAddMenus();
+            if (open) {
+                hmenu.style.display = '';
+                hbtn.classList.add('gt-open');
+            }
+        });
+        hwrap.appendChild(hbtn);
+        hwrap.appendChild(hmenu);
+        addRow.appendChild(hwrap);
+        self.addMenus.push({button: hbtn, menu: hmenu, wrap: hwrap});
+        this.hardwareMenu = {button: hbtn, menu: hmenu, wrap: hwrap};
+        this._refreshHardwareMenu();
+
         head.appendChild(addRow);
     }
 
@@ -798,7 +830,11 @@ Viewer.prototype._build = function () {
                 ['Esc', 'clear selection']];
     if (this.opts.onEdit) {
         rows.push(['Drag an optics or a laser', 'move it'],
+                  ['Drag near a screw hole', 'land the anchor on it '
+                   + '(Alt rides free)'],
                   ['Drag selected hardware', 'move it'],
+                  ['Drag a corner handle', 'cut a breadboard to size'],
+                  ['+ Hardware', 'add a part from the model library'],
                   ['Ctrl + drag', 'drop it square on a beam'],
                   ['Shift + drag', 'rotate it'],
                   ['Ctrl + click a beam', 'move the selected optics along it'],
@@ -1214,6 +1250,12 @@ var MECH_FIELDS = [
     {key: 'cx', label: 'Center x', unit: 'm'},
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
+    // Only a parametric body - a breadboard - has a size to set; the
+    // rows hide themselves for hardware drawn by hand, whose shapes
+    // are all anyone knows about it. In millimetres, like every other
+    // dimension of a part.
+    {key: 'width', label: 'Width', unit: 'mm', optional: true},
+    {key: 'height', label: 'Height', unit: 'mm', optional: true},
     {key: 'layer', label: 'Layer', readonly: true}
 ];
 
@@ -1227,6 +1269,10 @@ function mechFieldValue(m, key) {
     case 'cx': return m.center[0];
     case 'cy': return m.center[1];
     case 'angle': return normAngle(m.rotationAngle || 0) * DEG;
+    case 'width':
+    case 'height':
+        return m[key] === null || m[key] === undefined
+            ? undefined : m[key] / MM;
     default: return m[key];
     }
 }
@@ -1242,10 +1288,32 @@ function mechFieldMessage(m, key, value) {
         return {op: 'move', target: m.name, center: [m.center[0], value]};
     case 'angle':
         return {op: 'rotate', target: m.name, rotationAngle: value / DEG};
+    case 'width':
+    case 'height':
+        // The panel is in millimetres; the model, as everywhere in
+        // gtrace, in metres.
+        var size = {};
+        size[key] = value * MM;
+        return {op: 'set', target: m.name, attrs: size};
     }
     var attrs = {};
     attrs[key] = value;
     return {op: 'set', target: m.name, attrs: attrs};
+}
+
+/*
+ * The corners of a rectangle of a given pose, counterclockwise from
+ * the lower left. What the resize handles sit on and the resize
+ * preview is drawn from: a parametric body's outline is exactly this
+ * rectangle, centred on its local origin.
+ */
+function rectCorners(center, w, h, angle) {
+    var ca = Math.cos(angle), sa = Math.sin(angle);
+    return [[-w / 2, -h / 2], [w / 2, -h / 2],
+            [w / 2, h / 2], [-w / 2, h / 2]].map(function (p) {
+        return [center[0] + p[0] * ca - p[1] * sa,
+                center[1] + p[0] * sa + p[1] * ca];
+    });
 }
 
 /*
@@ -1581,6 +1649,47 @@ Viewer.prototype.addOptics = function (type, params) {
  */
 Viewer.prototype.addMirror = function (params) {
     return this.addOptics('Mirror', params);
+};
+
+/*
+ * Fill the + Hardware menu from the library the scene carries. The
+ * shapes stay on the Python side; the menu deals in names, and the
+ * layout builds the body when one is chosen.
+ */
+Viewer.prototype._refreshHardwareMenu = function () {
+    var self = this;
+    var hm = this.hardwareMenu;
+    if (!hm) { return; }
+    var lib = this.scene.mechlib || [];
+    hm.wrap.style.display = lib.length ? '' : 'none';
+    hm.menu.textContent = '';
+    lib.forEach(function (entry) {
+        var item = htmlEl('button', 'gt-menuitem', entry.name);
+        item.title = entry.description || '';
+        item.addEventListener('click', function () {
+            self.closeAddMenus();
+            self.addHardware(entry.name);
+        });
+        hm.menu.appendChild(item);
+    });
+};
+
+/*
+ * Add a library model at the centre of the current view. The name is
+ * chosen here, like a new optics' name, so the viewer can select what
+ * it asked for as soon as the scene comes back.
+ */
+Viewer.prototype.addHardware = function (model) {
+    if (!this.onEdit) { return null; }
+    var name = this._freshOpticName('H');
+    var msg = {op: 'add', type: 'Mechanics', name: name,
+               params: {model: model, center: [this.cx, this.cy]}};
+    this.selectedMech = name;
+    this.selectedOptic = null;
+    this.selectedSource = null;
+    this.selectedDim = null;
+    this.onEdit(msg);
+    return msg;
 };
 
 Viewer.prototype._freshOpticName = function (prefix) {
@@ -2773,6 +2882,16 @@ Viewer.prototype._renderScene = function () {
     // The outline of a mechanics: its own element, so that a hovered
     // optics and a selected breadboard can both be marked at once.
     this.mechOutline = svgEl('polygon', {'class': 'gt-optic-outline'});
+    // The corner handles a resizable body is cut by. Four, built once,
+    // shown only while such a body is selected.
+    this.mechHandles = [];
+    for (var hi = 0; hi < 4; hi++) {
+        var handle = svgEl('rect', {'class': 'gt-mech-handle',
+                                    width: 7, height: 7});
+        handle.style.display = 'none';
+        this.mechHandles.push(handle);
+    }
+    this._handlePts = null;
     // The beam the Along beam row names. A name like 'b0:M1t1' says
     // nothing about which line in the picture it is, so the choice is
     // drawn. Underneath everything else, since it is a standing mark
@@ -2794,6 +2913,9 @@ Viewer.prototype._renderScene = function () {
     this.overlayGroup.appendChild(this.rubber);
     this.overlayGroup.appendChild(this.snapMark);
     this.overlayGroup.appendChild(this.mechOutline);
+    for (var hj = 0; hj < this.mechHandles.length; hj++) {
+        this.overlayGroup.appendChild(this.mechHandles[hj]);
+    }
     this.overlayGroup.appendChild(this.outline);
     this.overlayGroup.appendChild(this.highlight);
     this.overlayGroup.appendChild(this.arrow);
@@ -3320,6 +3442,20 @@ Viewer.prototype._bindEvents = function () {
         var px = ev.clientX - r.left, py = ev.clientY - r.top;
         var pt = self.screenToScene(px, py);
 
+        // A resize handle first: it is UI chrome drawn on top of the
+        // picture, and only exists while a resizable body is selected.
+        if (self.onEdit && !self.measuring) {
+            var hidx = self._pickMechHandle(px, py);
+            if (hidx >= 0 && self._selectedMech()) {
+                self._beginMechResize(self._selectedMech(), hidx);
+                dragging = true; moved = 0;
+                lastX = ev.clientX; lastY = ev.clientY;
+                self.svg.classList.add('gt-dragging');
+                ev.preventDefault();
+                return;
+            }
+        }
+
         // Grabbing an optics or a laser starts an edit; grabbing
         // anywhere else pans.
         //
@@ -3365,6 +3501,13 @@ Viewer.prototype._bindEvents = function () {
 
     on(global, 'mousemove', function (ev) {
         var r = self.svg.getBoundingClientRect();
+        if (self.dragMechResize) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateMechResize(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+            return;
+        }
         if (self.dragSource) {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
@@ -3377,7 +3520,7 @@ Viewer.prototype._bindEvents = function () {
             lastX = ev.clientX; lastY = ev.clientY;
             self._updateOpticDrag(
                 self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
-                ev.ctrlKey);
+                ev.ctrlKey, ev.altKey);
             return;
         }
         if (self.dragMech) {
@@ -3402,6 +3545,15 @@ Viewer.prototype._bindEvents = function () {
     });
 
     on(global, 'mouseup', function (ev) {
+        if (self.dragMechResize) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            var rz = self.svg.getBoundingClientRect();
+            self._updateMechResize(
+                self.screenToScene(ev.clientX - rz.left, ev.clientY - rz.top));
+            self._endMechResize(moved >= 4);
+            return;
+        }
         if (self.dragSource) {
             dragging = false;
             self.svg.classList.remove('gt-dragging');
@@ -3454,12 +3606,12 @@ Viewer.prototype._bindEvents = function () {
                               ev.ctrlKey);
                 return;
             }
-            // Re-read the pose at the moment of release: Ctrl may have
-            // been pressed or let go since the last movement, and it is
-            // the state on release that the user is answering for.
+            // Re-read the pose at the moment of release: Ctrl or Alt
+            // may have been pressed or let go since the last movement,
+            // and it is the state on release the user is answering for.
             self._updateOpticDrag(
                 self.screenToScene(ev.clientX - ru.left, ev.clientY - ru.top),
-                ev.ctrlKey);
+                ev.ctrlKey, ev.altKey);
             self._endOpticDrag();
             return;
         }
@@ -3577,7 +3729,7 @@ function _centreAfterTurn(d, da, pivot) {
     return [pivot[0] + ox * ca - oy * sa, pivot[1] + ox * sa + oy * ca];
 }
 
-Viewer.prototype._updateOpticDrag = function (scenePt, snap) {
+Viewer.prototype._updateOpticDrag = function (scenePt, snap, free) {
     var d = this.dragOptic;
     if (!d) { return; }
     if (d.rotate) {
@@ -3588,6 +3740,7 @@ Viewer.prototype._updateOpticDrag = function (scenePt, snap) {
         var dx = scenePt[0] - d.grab[0], dy = scenePt[1] - d.grab[1];
         d.center = [d.center0[0] + dx, d.center0[1] + dy];
         d.snap = null;
+        d.hole = null;
         // Held down, Ctrl asks for the element to be put on the beam it
         // was dropped over properly - square to it, and centred on it -
         // rather than merely near it. The preview shows the answer, so
@@ -3612,10 +3765,47 @@ Viewer.prototype._updateOpticDrag = function (scenePt, snap) {
                 d.snap = {beam: hit.beam.name, index: hit.index,
                           point: hit.point};
             }
+        } else if (!free) {
+            // Riding over a screw hole, the anchor point lands on it
+            // exactly: the holes are where a bench actually puts
+            // things, and the anchor is the point the element is held
+            // by. Alt rides free. Only a nudge - the reach is small
+            // against the grid - so anywhere off the holes still
+            // means where it says.
+            var hx = d.pivot[0] + dx, hy = d.pivot[1] + dy;
+            var hole = this._nearestHole(hx, hy);
+            if (hole) {
+                d.center = [d.center[0] + hole.point[0] - hx,
+                            d.center[1] + hole.point[1] - hy];
+                d.hole = hole;
+            }
         }
     }
     this._updateOpticOutline(d.optic, d.center, d.angle);
+    this._updateOverlay();
     this._updateStatus();
+};
+
+/*
+ * How far a screw hole reaches for a dragged anchor, at most, in
+ * metres. The screen-pixel reach shrinks it further when zoomed in;
+ * the cap is what keeps a whole 25 mm grid from being one big magnet
+ * when zoomed out - it stays well under half a pitch, so the space
+ * between holes still exists.
+ */
+var HOLE_SNAP_MAX = 0.008;
+
+Viewer.prototype._nearestHole = function (x, y) {
+    var reach = Math.min(SNAP_RADIUS / this.scale, HOLE_SNAP_MAX);
+    var best = null, bestD = reach;
+    var snaps = this.scene.snap || [];
+    for (var i = 0; i < snaps.length; i++) {
+        if (snaps[i].kind !== 'hole') { continue; }
+        var p = snaps[i].point;
+        var d = Math.hypot(x - p[0], y - p[1]);
+        if (d < bestD) { best = snaps[i]; bestD = d; }
+    }
+    return best;
 };
 
 /*
@@ -3885,6 +4075,122 @@ Viewer.prototype._updateMechOutline = function (m, center, angle) {
         'gt-selected',
         !this.dragMech && !this.hoverMech && m.name === this.selectedMech);
     this.mechOutline.style.display = '';
+};
+
+/*
+ * The outline as a bare polygon of world points: what the resize
+ * preview draws, since mid-resize there is no body of that size to
+ * derive one from yet.
+ */
+Viewer.prototype._setMechOutlinePts = function (worldPts, dragging) {
+    var self = this;
+    this.mechOutline.setAttribute('points', worldPts.map(function (p) {
+        var s = self.sceneToScreen(p[0], p[1]);
+        return s[0] + ',' + s[1];
+    }).join(' '));
+    this.mechOutline.classList.toggle('gt-dragging', !!dragging);
+    this.mechOutline.classList.remove('gt-selected');
+    this.mechOutline.style.display = '';
+};
+
+/*
+ * Stand the corner handles on a rectangle, remembering where they are
+ * for the mousedown hit test.
+ */
+Viewer.prototype._placeMechHandles = function (center, w, h, angle) {
+    var self = this;
+    this._handlePts = rectCorners(center, w, h, angle).map(function (p) {
+        return self.sceneToScreen(p[0], p[1]);
+    });
+    this.mechHandles.forEach(function (el, i) {
+        el.setAttribute('x', self._handlePts[i][0] - 3.5);
+        el.setAttribute('y', self._handlePts[i][1] - 3.5);
+        el.style.display = '';
+    });
+};
+
+Viewer.prototype._hideMechHandles = function () {
+    this._handlePts = null;
+    (this.mechHandles || []).forEach(function (el) {
+        el.style.display = 'none';
+    });
+};
+
+/*
+ * The handle under a screen point, or -1. A little reach beyond the
+ * drawn square, since a grip that has to be hit to the pixel is a
+ * grip that gets missed.
+ */
+Viewer.prototype._pickMechHandle = function (px, py) {
+    if (!this._handlePts) { return -1; }
+    for (var i = 0; i < this._handlePts.length; i++) {
+        if (Math.abs(px - this._handlePts[i][0]) <= 6
+                && Math.abs(py - this._handlePts[i][1]) <= 6) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+/*
+ * Dragging a corner of a resizable body. The opposite corner stays
+ * put - that is what dragging a corner of anything means - and on
+ * release Python re-drills the board at the new size, which is why
+ * this is not a scale: the holes keep their diameter and their pitch.
+ */
+var MECH_MIN_SIZE = 0.01;
+
+Viewer.prototype._beginMechResize = function (mech, corner) {
+    if (!mech) { return; }
+    var a = mech.rotationAngle || 0;
+    this.dragMechResize = {
+        mech: mech,
+        angle: a,
+        center: [mech.center[0], mech.center[1]],
+        width: mech.width,
+        height: mech.height,
+        fixed: rectCorners(mech.center, mech.width, mech.height,
+                           a)[(corner + 2) % 4]
+    };
+    this._updateOverlay();
+};
+
+Viewer.prototype._updateMechResize = function (scenePt) {
+    var r = this.dragMechResize;
+    if (!r) { return; }
+    function rot(p, ang) {
+        var c = Math.cos(ang), s = Math.sin(ang);
+        return [p[0] * c - p[1] * s, p[0] * s + p[1] * c];
+    }
+    // Both the cursor and the fixed corner into the body's own frame,
+    // where the rectangle is axis-aligned and the arithmetic is two
+    // absolute values.
+    var u = rot(scenePt, -r.angle);
+    var f = rot(r.fixed, -r.angle);
+    var w = Math.max(MECH_MIN_SIZE, Math.abs(u[0] - f[0]));
+    var h = Math.max(MECH_MIN_SIZE, Math.abs(u[1] - f[1]));
+    // The centre is half a size from the fixed corner, towards the
+    // cursor - which keeps that corner fixed even when the size hits
+    // its floor.
+    var sx = u[0] >= f[0] ? 1 : -1;
+    var sy = u[1] >= f[1] ? 1 : -1;
+    r.width = w;
+    r.height = h;
+    r.center = rot([f[0] + sx * w / 2, f[1] + sy * h / 2], r.angle);
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endMechResize = function (commit) {
+    var r = this.dragMechResize;
+    this.dragMechResize = null;
+    if (!r) { return; }
+    this._updateOverlay();
+    // A press on a handle that never moved decided nothing.
+    if (!commit || !this.onEdit) { return; }
+    this.onEdit({op: 'set', target: r.mech.name,
+                 attrs: {width: r.width, height: r.height,
+                         center: r.center}});
 };
 
 Viewer.prototype._onHover = function (px, py) {
@@ -4195,10 +4501,13 @@ Viewer.prototype._updateOverlay = function () {
     }
     // Where the next click would land, when that is a marked point
     // rather than the cursor. Without it the tool is guesswork: the
-    // snap is invisible until the measurement is already made.
-    if (this.measuring && this.snapped) {
-        var s = this.sceneToScreen(this.snapped.point[0],
-                                   this.snapped.point[1]);
+    // snap is invisible until the measurement is already made. The
+    // same mark shows the screw hole a dragged anchor has caught on.
+    var snapPt = (this.measuring && this.snapped) ? this.snapped.point
+        : (this.dragOptic && this.dragOptic.hole)
+            ? this.dragOptic.hole.point : null;
+    if (snapPt) {
+        var s = this.sceneToScreen(snapPt[0], snapPt[1]);
         this.snapMark.setAttribute('cx', s[0]);
         this.snapMark.setAttribute('cy', s[1]);
         this.snapMark.style.display = '';
@@ -4215,12 +4524,29 @@ Viewer.prototype._updateOverlay = function () {
         this._updateOpticOutline(this.hoverOptic || this._selectedOptic());
     }
 
-    // The hardware outline, by the same rules on its own element.
-    if (this.dragMech) {
+    // The hardware outline, by the same rules on its own element -
+    // or, mid-resize, the rectangle being cut. The corner handles
+    // stand on the selected resizable body, and follow the preview.
+    if (this.dragMechResize) {
+        var rz = this.dragMechResize;
+        this._setMechOutlinePts(
+            rectCorners(rz.center, rz.width, rz.height, rz.angle), true);
+        this._placeMechHandles(rz.center, rz.width, rz.height, rz.angle);
+    } else if (this.dragMech) {
         this._updateMechOutline(this.dragMech.mech, this.dragMech.center,
                                 this.dragMech.angle);
+        this._hideMechHandles();
     } else {
         this._updateMechOutline(this.hoverMech || this._selectedMech());
+        var selMech = this._selectedMech();
+        if (this.onEdit && selMech && selMech.resizable
+                && !selMech.attached_to) {
+            this._placeMechHandles(selMech.center, selMech.width,
+                                   selMech.height,
+                                   selMech.rotationAngle || 0);
+        } else {
+            this._hideMechHandles();
+        }
     }
 
     // The beam the Along beam row names, marked along its whole length
@@ -4296,7 +4622,8 @@ Viewer.prototype._updateStatus = function () {
                 ? d.optic.name + ':  ' + fmtDeg(normAngle(d.angle)) +
                   '   (was ' + fmtDeg(normAngle(d.angle0)) + ')'
                 : d.optic.name + ':  ' + fmtLen(d.center[0]) + ',  ' +
-                  fmtLen(d.center[1]);
+                  fmtLen(d.center[1]) +
+                  (d.hole ? '   on ' + d.hole.label : '');
         }
         return;
     }
@@ -4409,6 +4736,7 @@ Viewer.prototype.setScene = function (scene) {
     this.dragOptic = null;
     this.dragSource = null;
     this.dragMech = null;
+    this.dragMechResize = null;
     this.cycle = 0;
     this.lastClick = null;
     this.labels = [];
@@ -4425,6 +4753,7 @@ Viewer.prototype.setScene = function (scene) {
     this._renderScene();
     this._refreshDisplayPanel();
     this._refreshRulesPanel();
+    this._refreshHardwareMenu();
     this._refreshUndo();
     this._setReadout(null);
 

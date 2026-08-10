@@ -38,6 +38,27 @@ across them.
     covered completely by its own mirror - takes the last turn of the
     repeated-click walk that already steps from an element into the
     beams under it.
+  - **`+ Hardware`** adds a model from the library at the centre of
+    the view; the menu is filled from a `mechlib` scene channel, so
+    it lists whatever the library holds when the scene was built.
+  - **A breadboard resizes by its corners.** A body a builder made
+    carries its parameters (`Mechanics.params`), and a selected,
+    resizable one shows four corner handles: dragging one cuts the
+    board to a new size with the opposite corner standing still, and
+    Python *re-drills* the grid from the parameters - same pitch,
+    same holes - rather than scaling the drawing. Width and Height
+    rows in the panel edit the same thing in numbers, and
+    `Mechanics.resize()` from Python. The parameters travel through
+    save, undo, copy and the model library; a hand-drawn body has
+    none, and says so when asked to resize.
+  - **The screw holes are snap points.** The measuring tool takes
+    them like any marked point, and a dragged mirror or lens lands
+    its anchor point on the nearest hole when it comes close (a small
+    reach, well under the grid pitch; hold Alt to ride free). The
+    holes are where a bench actually puts things.
+  - Hardware names are drawn only when the new `drawMechanicsNames`
+    option asks (off by default): the hardware is background, and a
+    name across a breadboard labels what nobody needed named.
   - Editing a mechanics does not invalidate the trace: the picture
     changes, the beams did not move.
   - **A mechanics can be attached to an optics** (`attached_to`),
@@ -80,8 +101,8 @@ across them.
   shipped with guessed dimensions.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (218 checks) and `verify_mech_browser.py` (45).
-  The suite is 21 files and 4101 checks.
+- `verify_mechanics.py` (248 checks) and `verify_mech_browser.py` (62).
+  The suite is 21 files and 4148 checks.
 
 ### Fixed
 

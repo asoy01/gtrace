@@ -204,11 +204,20 @@ class Mechanics(object):
 
     def __init__(self, shapes=None, center=None, rotationAngle=None,
                  name='Hardware', layer=DEFAULT_LAYER, model=None,
-                 attached_to=None, offset=None, offset_angle=0.0):
+                 attached_to=None, offset=None, offset_angle=0.0,
+                 params=None):
         self.name = name
         self.shapes = list(shapes) if shapes is not None else []
         self.layer = str(layer)
         self.model = model if model is None else str(model)
+        #: How the shapes were built, when a builder built them: a
+        #: JSON-compatible dict with a 'kind' and that kind's
+        #: parameters. What it buys is resize(): a breadboard cut to a
+        #: new size is re-drilled from its parameters, where scaling
+        #: the shapes would scale the holes and the grid with them.
+        #: None for a body drawn by hand, which has no parameters to
+        #: rebuild from.
+        self.params = None if params is None else dict(params)
 
         #: The host object, or None. A name given instead is kept in
         #: _attach_name until a layout resolves it; the pose refuses to
@@ -547,6 +556,50 @@ class Mechanics(object):
                 [offset[0] * ca - offset[1] * sa,
                  offset[0] * sa + offset[1] * ca])
 
+    def resize(self, width=None, height=None):
+        '''
+        Rebuild a parametric body at a new size.
+
+        Only a body a builder made knows how to do this: a breadboard
+        cut to a new size is re-drilled from its parameters, with the
+        same pitch and the same holes, where scaling the shapes would
+        scale the holes and the grid along with the plate. A body
+        drawn by hand has no parameters, and is refused - its shapes
+        are all anyone knows about it.
+
+        Parameters
+        ----------
+        width, height : float or None, optional
+            The new size, in metres. None keeps that side as it is.
+
+        Returns
+        -------
+        self : Mechanics
+        '''
+        kind = self.params.get('kind') if self.params else None
+        if kind not in _RESIZABLE:
+            raise ValueError(
+                "'%s' is not a resizable body: it was drawn by hand, so "
+                'edit its shapes instead.' % self.name)
+        p = dict(self.params)
+        if width is not None:
+            p['width'] = float(width)
+        if height is not None:
+            p['height'] = float(height)
+        if p['width'] <= 0 or p['height'] <= 0:
+            raise ValueError('A size must be positive, not %g x %g.'
+                             % (p['width'], p['height']))
+        self.shapes = _RESIZABLE[kind](p)
+        self.params = p
+        return self
+
+    @property
+    def resizable(self):
+        '''
+        Whether resize() knows how to rebuild this body.
+        '''
+        return bool(self.params and self.params.get('kind') in _RESIZABLE)
+
     def copy(self):
         '''
         A new Mechanics with the same pose and a copy of the shape
@@ -562,12 +615,14 @@ class Mechanics(object):
                                        if self.attached_to is not None
                                        else self._attach_name),
                           offset=self.offset.copy(),
-                          offset_angle=self.offset_angle)
+                          offset_angle=self.offset_angle,
+                          params=self.params)
             return m
         m = Mechanics(shapes=list(self.shapes),
                       center=self._center.copy(),
                       rotationAngle=self._rotationAngle,
-                      name=self.name, layer=self.layer, model=self.model)
+                      name=self.name, layer=self.layer, model=self.model,
+                      params=self.params)
         return m
 
 #}}}
@@ -611,12 +666,28 @@ def breadboard(width, height, pitch=0.025, hole_diameter=0.006,
     -------
     Mechanics
     '''
+    params = {'kind': 'breadboard',
+              'width': float(width), 'height': float(height),
+              'pitch': float(pitch),
+              'hole_diameter': float(hole_diameter),
+              'margin': None if margin is None else float(margin),
+              'holes': bool(holes)}
+    return Mechanics(shapes=_breadboard_shapes(params), params=params,
+                     **kwargs)
+
+def _breadboard_shapes(p):
+    '''
+    The shapes of a breadboard, from its parameters. Split out so that
+    resize() can re-drill an existing board the same way breadboard()
+    drilled it.
+    '''
+    width, height, pitch = p['width'], p['height'], p['pitch']
     shapes = []
     shapes.append(draw.Rectangle([-width / 2.0, -height / 2.0],
                                  width, height))
-    m = pitch / 2.0 if margin is None else float(margin)
-    if holes and width >= 2 * m and height >= 2 * m:
-        r = hole_diameter / 2.0
+    m = pitch / 2.0 if p['margin'] is None else p['margin']
+    if p['holes'] and width >= 2 * m and height >= 2 * m:
+        r = p['hole_diameter'] / 2.0
         # The +1e-9 keeps a span that is an exact number of pitches
         # from losing its last row to floating point.
         nx = int(np.floor((width - 2 * m) / pitch + 1e-9)) + 1
@@ -627,7 +698,12 @@ def breadboard(width, height, pitch=0.025, hole_diameter=0.006,
             for j in range(ny):
                 shapes.append(draw.Circle([x0 + i * pitch,
                                            y0 + j * pitch], r))
-    return Mechanics(shapes=shapes, **kwargs)
+    return shapes
+
+#: The parametric kinds resize() can rebuild, and how. A mount is
+#: deliberately not here: what its width means to the plate and the
+#: knobs is not a corner-drag's to decide.
+_RESIZABLE = {'breadboard': _breadboard_shapes}
 
 def mirror_mount(width=0.05, depth=0.012, clearance=0.01, knob_radius=0.004,
                  knobs=True, **kwargs):
@@ -724,13 +800,19 @@ def register_model(name, source, description=''):
     if isinstance(source, Mechanics):
         shapes = source.shapes
         layer = source.layer
+        params = None if source.params is None else dict(source.params)
     else:
         shapes = list(source)
         layer = DEFAULT_LAYER
+        params = None
     _MODEL_REGISTRY[str(name)] = {
         'shapes': [shape_to_dict(s) for s in shapes],
         'layer': str(layer),
-        'description': str(description)}
+        'description': str(description),
+        # Carried so that a body built from the model keeps whatever
+        # the source knew about itself - a breadboard from the library
+        # is still a breadboard, and still resizes.
+        'params': params}
     return str(name)
 
 def models():
@@ -754,6 +836,23 @@ def model_shapes(name):
         raise KeyError('No model named %r in the library. '
                        'mechanics.models() lists what there is.' % (name,))
     return [shape_from_dict(s) for s in d['shapes']]
+
+def model_params(name):
+    '''
+    The builder parameters of a registered model, or None for one
+    registered from hand-drawn shapes. A copy; the registry is not
+    handed out to be edited in place.
+
+    Raises
+    ------
+    KeyError
+        If the library has no such model.
+    '''
+    d = _MODEL_REGISTRY.get(str(name))
+    if d is None:
+        raise KeyError('No model named %r in the library. '
+                       'mechanics.models() lists what there is.' % (name,))
+    return None if d.get('params') is None else dict(d['params'])
 
 def from_model(model, **kwargs):
     '''
@@ -783,7 +882,7 @@ def from_model(model, **kwargs):
                        'mechanics.models() lists what there is.' % (model,))
     kwargs.setdefault('layer', d['layer'])
     return Mechanics(shapes=[shape_from_dict(s) for s in d['shapes']],
-                     model=str(model), **kwargs)
+                     model=str(model), params=d.get('params'), **kwargs)
 
 # The generic stock: a few breadboards and mounts under names that say
 # what they are and no more. Registered through the same door a user's

@@ -36,7 +36,7 @@ import gtrace.draw as draw
 import gtrace.optcomp as opt
 from gtrace.draw.viewer import viewer_css
 from gtrace.layout import OpticalLayout, TraceRules, q_from_waist
-from gtrace.mechanics import Mechanics
+from gtrace.mechanics import Mechanics, breadboard
 from gtrace.unit import *
 
 SP = WORK
@@ -62,8 +62,9 @@ def make_layout():
                     name='M1')
     # The board runs under the whole beam path and under M1, so that
     # every "X wins over the board" check has a real overlap to decide.
-    board = Mechanics(shapes=[draw.Rectangle([-0.3, -0.2], 0.6, 0.4)],
-                      center=[0.3, 0.0], name='Board')
+    # A real breadboard rather than a bare rectangle: its holes are
+    # what the drag snap and the resize checks work against.
+    board = breadboard(0.6, 0.4, center=[0.3, 0.0], name='Board')
     # A mount on the board: the smallest-wins rule needs two mechanics
     # on top of each other. It carries a model so the model row has
     # something to show; the board has none so the row can hide.
@@ -329,6 +330,76 @@ var EDITABLE = __EDITABLE__;
         clickAt(screenOf(m1c));
         out.cycleWraps = panel();
 
+        // --- the model library menu ---
+        var hm = v.hardwareMenu;
+        out.hwMenu = {
+            shown: !!hm && hm.wrap.style.display !== 'none',
+            items: hm ? Array.prototype.map.call(
+                hm.menu.querySelectorAll('button'),
+                function (b) { return b.textContent; }) : []
+        };
+        before = sent.length;
+        var bbItem = null;
+        if (hm) {
+            Array.prototype.forEach.call(hm.menu.querySelectorAll('button'),
+                function (b) { if (b.textContent === 'BB3030') { bbItem = b; } });
+        }
+        if (bbItem) { bbItem.click(); }
+        out.hwAdd = {msg: sent[before] || null, selected: v.selectedMech};
+        v.selectedMech = null;   // nothing was really added
+
+        // --- the size rows, and the corner handles ---
+        clickAt(screenOf(BOARD_PT));
+        out.sizeRows = {board: fields()};
+        var hcorners = [[0.0, -0.2], [0.6, -0.2], [0.6, 0.2], [0.0, 0.2]];
+        out.handles = v.mechHandles.map(function (elh, i) {
+            var s = v.sceneToScreen(hcorners[i][0], hcorners[i][1]);
+            return {shown: elh.style.display !== 'none',
+                    dx: Math.abs(Number(elh.getAttribute('x')) + 3.5 - s[0]),
+                    dy: Math.abs(Number(elh.getAttribute('y')) + 3.5 - s[1])};
+        });
+        clickAt(screenOf(MOUNT_PT));
+        out.sizeRows.mount = fields();
+        out.mountHandles = v.mechHandles.some(function (elh) {
+            return elh.style.display !== 'none';
+        });
+
+        // --- dragging a corner cuts the board to size ---
+        clickAt(screenOf(BOARD_PT));
+        before = sent.length;
+        dragFromTo(screenOf([0.6, 0.2]), screenOf([0.75, 0.25]));
+        out.resize = {msg: sent[before] || null, n: sent.length - before};
+
+        // --- the screw holes catch a dragged anchor ---
+        // Zoomed in first: the hole reach is capped in metres, and the
+        // page reflows by a pixel or two as the status bar changes, so
+        // the test wants those pixels to be small on the bench.
+        v.scale = 1200;
+        v.cx = 0.45; v.cy = 0.05;
+        v._applyTransform();
+        var holes = (SCENE.snap || []).filter(function (p) {
+            return p.kind === 'hole';
+        });
+        out.holeCount = holes.length;
+        var anchor = SCENE.optics[0].HRcenter;
+        var hole = null, hbest = Infinity;
+        holes.forEach(function (p) {
+            var dd = Math.hypot(p.point[0] - 0.4, p.point[1] - 0.1);
+            if (dd < hbest) { hbest = dd; hole = p; }
+        });
+        var hdelta = [hole.point[0] + 0.001 - anchor[0],
+                      hole.point[1] + 0.0005 - anchor[1]];
+        before = sent.length;
+        dragFromTo(screenOf(m1c),
+                   screenOf([m1c[0] + hdelta[0], m1c[1] + hdelta[1]]));
+        out.holeSnap = {msg: sent[before] || null, hole: hole.point};
+        // The same drag with Alt held rides free.
+        before = sent.length;
+        dragFromTo(screenOf(m1c),
+                   screenOf([m1c[0] + hdelta[0], m1c[1] + hdelta[1]]),
+                   {altKey: true});
+        out.holeFree = {msg: sent[before] || null};
+
         out.sent = sent;
     } catch (e) {
         out.error = String(e && e.stack || e);
@@ -524,6 +595,84 @@ check('and the next click wraps back to the mirror',
       and not res['cycleWraps']['selectedMech'],
       json.dumps(res['cycleWraps']))
 
+print('--- the model library menu ---')
+check('+ Hardware lists exactly the library shelf',
+      res['hwMenu']['shown']
+      and set(res['hwMenu']['items'])
+          == set(e['name'] for e in scene['mechlib']),
+      json.dumps(res['hwMenu']['items']))
+ha = res['hwAdd']
+check('choosing a model sends the add, carried optimistically',
+      ha['msg'] and ha['msg']['op'] == 'add'
+      and ha['msg']['type'] == 'Mechanics'
+      and ha['msg']['params']['model'] == 'BB3030'
+      and ha['selected'] == ha['msg']['name'], json.dumps(ha))
+layout.apply_edit(ha['msg'])
+check('  and Python builds it from the shelf',
+      layout.get_mechanics(ha['msg']['name']).resizable)
+layout.apply_edit({'op': 'undo'})
+
+print('--- the size rows and the corner handles ---')
+bf = res['sizeRows']['board']
+mf = res['sizeRows']['mount']
+check('the board shows its size in millimetres',
+      bf['width_shown'] and bf['height_shown']
+      and abs(float(bf['width']) - 600) < 1e-9
+      and abs(float(bf['height']) - 400) < 1e-9,
+      json.dumps({'w': bf['width'], 'h': bf['height']}))
+check('a hand-drawn body has no size rows',
+      not mf['width_shown'] and not mf['height_shown'])
+check('four handles stand on the corners',
+      all(h['shown'] and h['dx'] < 1e-6 and h['dy'] < 1e-6
+          for h in res['handles']), json.dumps(res['handles']))
+check('and none on a hand-drawn body', not res['mountHandles'])
+
+print('--- dragging a corner cuts the board to size ---')
+rz = res['resize']
+check('one set message per corner drag',
+      rz['n'] == 1 and rz['msg'] and rz['msg']['op'] == 'set',
+      json.dumps(rz['msg']))
+if rz['msg']:
+    at = rz['msg']['attrs']
+    check('  roughly the rectangle that was dragged',
+          abs(at['width'] - 0.75) < 0.02 and abs(at['height'] - 0.45) < 0.02,
+          '(%.4f x %.4f)' % (at['width'], at['height']))
+    # The dragged corner was the top right, so the bottom left stayed.
+    check('  with the opposite corner standing still',
+          abs(at['center'][0] - at['width'] / 2 - 0.0) < 0.02
+          and abs(at['center'][1] - at['height'] / 2 + 0.2) < 0.02)
+    n0 = sum(1 for s in layout.get_mechanics('Board').shapes
+             if isinstance(s, draw.Circle))
+    layout.apply_edit(rz['msg'])
+    n1 = sum(1 for s in layout.get_mechanics('Board').shapes
+             if isinstance(s, draw.Circle))
+    check('  and Python re-drills the grid rather than scaling it',
+          n1 > n0 and abs(layout.get_mechanics('Board').params['width']
+                          - at['width']) < 1e-12,
+          '(%d -> %d holes)' % (n0, n1))
+    layout.apply_edit({'op': 'undo'})
+
+print('--- the screw holes catch a dragged anchor ---')
+check('the scene has a grid to snap to', res['holeCount'] >= 384,
+      str(res['holeCount']))
+hs = res['holeSnap']
+check('the drag sends a move', hs['msg'] and hs['msg']['op'] == 'move'
+      and hs['msg']['target'] == 'M1', json.dumps(hs['msg']))
+if hs['msg']:
+    layout.apply_edit(hs['msg'])
+    check('  landing the anchor exactly on the hole',
+          np.allclose(layout.get_optics('M1').HRcenter, hs['hole'],
+                      atol=1e-9),
+          '(%s vs %s)' % (list(layout.get_optics('M1').HRcenter),
+                          hs['hole']))
+    layout.apply_edit({'op': 'undo'})
+hf = res['holeFree']
+check('Alt rides free of the grid',
+      hf['msg'] and hs['msg']
+      and math.hypot(hf['msg']['center'][0] - hs['msg']['center'][0],
+                     hf['msg']['center'][1] - hs['msg']['center'][1]) > 1e-6,
+      json.dumps(hf['msg']))
+
 print('--- read-only viewer ---')
 errs, res = run(False)
 check('no console error', errs == [], '\n        '.join(errs[:3]))
@@ -541,6 +690,9 @@ check('the clamp still names its host',
       res['clampFields']['attached'] == 'M1'
       and res['clampFields']['attached_shown'])
 check('no Remove on offer', not res['removeShown'])
+check('no hardware menu either', not res['hwMenu']['shown'])
+check('and no resize handles',
+      all(not h['shown'] for h in res['handles']))
 check('nothing was ever sent', res['sent'] == [], str(res['sent'][:2]))
 
 print()

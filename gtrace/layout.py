@@ -34,7 +34,10 @@ import numpy as np
 
 import gtrace.optcomp as optcomp
 from gtrace.beam import GaussianBeam
-from gtrace.mechanics import Mechanics
+from gtrace.mechanics import (Mechanics, from_model as mechanics_from_model,
+                              models as mechanics_models,
+                              model_shapes as mechanics_model_shapes,
+                              model_params as mechanics_model_params)
 from gtrace.nonsequential import non_seq_trace
 from gtrace.draw.tools import drawAllOptics
 from gtrace.draw.serialize import (scene_to_dict, shape_to_dict,
@@ -307,12 +310,18 @@ DRAW_OPTIONS = {
     #: Whether to annotate each optics with its name. On, since optics
     #: carry no other label.
     'drawOpticsNames': True,
+    #: Whether to annotate each mechanics with its name. Off: the
+    #: hardware is background to the optics, and a breadboard with its
+    #: name across it labels the one thing on the bench nobody needed
+    #: named. The panel says what was clicked either way.
+    'drawMechanicsNames': False,
 }
 
 #: Drawing options a front end may change.
 EDITABLE_DRAW_OPTIONS = frozenset([
     'sigma_main', 'sigma_stray', 'width_mode',
     'drawMainWidth', 'drawStrayWidth', 'drawBeamLabels', 'drawOpticsNames',
+    'drawMechanicsNames',
 ])
 
 #: Attributes of the tracing rules that a front end may change.
@@ -457,7 +466,11 @@ MECHANICS_TYPE = 'Mechanics'
 #: leaves the body standing where it was.
 EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle',
                                       'attached_to', 'offset',
-                                      'offset_angle'])
+                                      'offset_angle',
+                                      # Only a parametric body has a
+                                      # size to set; Mechanics.resize
+                                      # says so when it refuses.
+                                      'width', 'height'])
 
 #: The pose half of those: what an attached body does not have.
 _MECHANICS_POSE_ATTRS = frozenset(['center', 'rotationAngle'])
@@ -800,6 +813,11 @@ def mechanics_to_dict(m):
          'layer': str(m.layer),
          'model': None if m.model is None else str(m.model),
          'shapes': [shape_to_dict(s) for s in m.shapes]}
+    if m.params is not None:
+        # How the shapes were built, when a builder built them - what
+        # keeps a saved breadboard resizable. The shapes above are
+        # still the drawing; the parameters only say how to redo it.
+        d['params'] = dict(m.params)
     host = m.attached_to.name if m.attached_to is not None else m._attach_name
     if host is not None:
         d['attached_to'] = str(host)
@@ -827,14 +845,16 @@ def mechanics_from_dict(d):
                          model=d.get('model', None),
                          attached_to=str(d['attached_to']),
                          offset=d.get('offset', [0.0, 0.0]),
-                         offset_angle=d.get('offset_angle', 0.0))
+                         offset_angle=d.get('offset_angle', 0.0),
+                         params=d.get('params'))
     return Mechanics(shapes=[shape_from_dict(s)
                              for s in d.get('shapes', [])],
                      center=d.get('center', [0.0, 0.0]),
                      rotationAngle=d.get('rotationAngle', 0.0),
                      name=d['name'],
                      layer=d.get('layer', 'hardware'),
-                     model=d.get('model', None))
+                     model=d.get('model', None),
+                     params=d.get('params'))
 
 def _update_mechanics(m, d):
     '''
@@ -864,6 +884,10 @@ def _update_mechanics(m, d):
         m.model = None if d['model'] is None else str(d['model'])
     if 'shapes' in d:
         m.shapes = [shape_from_dict(s) for s in d['shapes']]
+        # The parameters describe the shapes, so they travel with
+        # them: a file with none was saved from a body that had none.
+        m.params = (None if d.get('params') is None
+                    else dict(d['params']))
 
 def mechanics_scene_dict(m):
     '''
@@ -890,14 +914,26 @@ def mechanics_scene_dict(m):
             # that is dragged.
             'attached_to': (None if m.attached_to is None
                             else str(m.attached_to.name)),
+            # Whether the body can be cut to a new size, and the size
+            # it stands at: what the resize handles and the Width and
+            # Height rows work from. Absent for a hand-drawn body,
+            # whose rows hide themselves.
+            'resizable': bool(m.resizable),
+            'width': (float(m.params['width']) if m.resizable else None),
+            'height': (float(m.params['height']) if m.resizable else None),
             'outline': [[float(p[0]), float(p[1])] for p in outline]}
 
 def mechanics_snap_points(m):
     '''
-    The points of a Mechanics worth snapping a measurement to: the four
-    corners of its outline, and its center. The distance from a mirror
-    to the edge of the breadboard it stands on is exactly the kind of
-    thing the measuring tool is for.
+    The points of a Mechanics worth snapping to: the four corners of
+    its outline, its center, and the centre of every circle it draws.
+
+    The circles are the screw holes of a breadboard - which is where a
+    bench actually puts things, so they are what a measurement wants
+    to run between and what a dragged mirror wants to land on. They
+    are marked 'hole', which is the kind the drag snap listens for;
+    knobs and other decorative circles ride along, which costs a snap
+    point that is still a real feature of the drawing.
     '''
     points = []
     for i, c in enumerate(m.outline()):
@@ -907,6 +943,12 @@ def mechanics_snap_points(m):
     points.append({'point': [float(m.center[0]), float(m.center[1])],
                    'optic': str(m.name), 'kind': 'centre',
                    'label': '%s centre' % m.name})
+    for s in m.shapes:
+        if isinstance(s, draw.Circle):
+            p = m.to_world(np.asarray(s.center, dtype='float64'))
+            points.append({'point': [float(p[0]), float(p[1])],
+                           'optic': str(m.name), 'kind': 'hole',
+                           'label': '%s hole' % m.name})
     return points
 
 #: What a snap point on an optics is called, and where it is. The corner
@@ -1386,7 +1428,6 @@ class OpticalLayout(object):
         list of str
             The names of the mechanics that were relinked.
         '''
-        from gtrace.mechanics import model_shapes
         relinked = []
         for m in self.mechanics:
             if names is not None and m.name not in names:
@@ -1394,10 +1435,15 @@ class OpticalLayout(object):
             if m.model is None:
                 continue
             try:
-                shapes = model_shapes(m.model)
+                shapes = mechanics_model_shapes(m.model)
+                params = mechanics_model_params(m.model)
             except KeyError:
                 continue
             m.shapes = shapes
+            # The builder parameters travel with the shapes they
+            # built: a relinked breadboard is still a breadboard, at
+            # the library's size.
+            m.params = params
             relinked.append(m.name)
         return relinked
 
@@ -2186,6 +2232,12 @@ class OpticalLayout(object):
         if 'rotationAngle' in pose:
             pose['rotationAngle'] = _as_distance(pose['rotationAngle'],
                                                  'rotationAngle')
+        size = {k: _as_positive(attrs[k], k, 'a size in metres')
+                for k in ('width', 'height') if k in attrs}
+        if size and not m.resizable:
+            raise EditError(
+                "'%s' is not a resizable body: it was drawn by hand, so "
+                'edit its shapes instead.' % m.name)
 
         # The attachment first: it decides what the rest lands on.
         if detaching:
@@ -2195,6 +2247,8 @@ class OpticalLayout(object):
             # where on the host to stand.
             m.attach(new_host, offset=offs.pop('offset', None),
                      offset_angle=offs.pop('offset_angle', None))
+        if size:
+            m.resize(**size)
         for key, value in sorted(offs.items()):
             setattr(m, key, value)
         for key, value in sorted(pose.items()):
@@ -2208,6 +2262,12 @@ class OpticalLayout(object):
         them; a shape gtrace cannot draw, or one missing a coordinate,
         comes back as a refusal rather than as a body that fails the
         first time the scene is built.
+
+        A message naming a 'model' and no shapes means "one of those":
+        the shapes come off the library shelf, along with the layer
+        the model prefers and the builder parameters that keep a
+        breadboard resizable. A message carrying both keeps its own
+        shapes, and the model name is the label it always was.
         '''
         params = msg.get('params') or {}
         for key in params:
@@ -2219,26 +2279,41 @@ class OpticalLayout(object):
             raise EditError('A name must be a non-empty string, not %r.'
                             % (name,))
 
-        shapes_in = params.get('shapes', [])
-        if not isinstance(shapes_in, (list, tuple)):
-            raise EditError("'shapes' must be a list of serialized shapes, "
-                            'not %r.' % (shapes_in,))
-        try:
-            shapes = [shape_from_dict(s) for s in shapes_in]
-        except UnknownShapeError as e:
-            raise EditError(str(e))
-        except (KeyError, TypeError, ValueError, IndexError) as e:
-            raise EditError('A shape in the message is malformed (%s: %s).'
-                            % (type(e).__name__, e))
-
-        layer = params.get('layer', 'hardware')
-        if not isinstance(layer, str) or not layer.strip():
-            raise EditError('A layer must be a non-empty string, not %r.'
-                            % (layer,))
         model = params.get('model', None)
         if model is not None and not isinstance(model, str):
             raise EditError('A model is a name or nothing, not %r.'
                             % (model,))
+        layer = params.get('layer')
+        if layer is not None and (not isinstance(layer, str)
+                                  or not layer.strip()):
+            raise EditError('A layer must be a non-empty string, not %r.'
+                            % (layer,))
+
+        kwargs = {'name': name}
+        if layer is not None:
+            kwargs['layer'] = layer
+
+        if model is not None and 'shapes' not in params:
+            def build(**kw):
+                try:
+                    return mechanics_from_model(model, **kw)
+                except KeyError as e:
+                    raise EditError(e.args[0] if e.args else str(e))
+        else:
+            shapes_in = params.get('shapes', [])
+            if not isinstance(shapes_in, (list, tuple)):
+                raise EditError("'shapes' must be a list of serialized "
+                                'shapes, not %r.' % (shapes_in,))
+            try:
+                shapes = [shape_from_dict(s) for s in shapes_in]
+            except UnknownShapeError as e:
+                raise EditError(str(e))
+            except (KeyError, TypeError, ValueError, IndexError) as e:
+                raise EditError('A shape in the message is malformed '
+                                '(%s: %s).' % (type(e).__name__, e))
+
+            def build(**kw):
+                return Mechanics(shapes=shapes, model=model, **kw)
 
         if params.get('attached_to') is not None:
             host_name = params['attached_to']
@@ -2258,15 +2333,13 @@ class OpticalLayout(object):
             offset = _as_point(params.get('offset', [0.0, 0.0]), 'offset')
             offset_angle = _as_distance(params.get('offset_angle', 0.0),
                                         'offset_angle')
-            return Mechanics(shapes=shapes, name=name, layer=layer,
-                             model=model, attached_to=host, offset=offset,
-                             offset_angle=offset_angle)
+            return build(attached_to=host, offset=offset,
+                         offset_angle=offset_angle, **kwargs)
 
         center = _as_point(params.get('center', [0.0, 0.0]), 'center')
         angle = _as_distance(params.get('rotationAngle', 0.0),
                              'rotationAngle')
-        return Mechanics(shapes=shapes, center=center, rotationAngle=angle,
-                         name=name, layer=layer, model=model)
+        return build(center=center, rotationAngle=angle, **kwargs)
 
     def _edit_source(self, b, op, msg):
         '''
@@ -2659,10 +2732,11 @@ class OpticalLayout(object):
 
         # The hardware, on its own layer, so that CAD - and the layer
         # panel of the viewer - can switch it off as one thing. Its
-        # names follow the same option as the optics names: both label
-        # the elements of the bench.
+        # names have an option of their own, off by default: the
+        # hardware is background, and a name across a breadboard
+        # labels what nobody needed named.
         for m in self.mechanics:
-            m.draw(canvas, drawName=opt['drawOpticsNames'])
+            m.draw(canvas, drawName=opt['drawMechanicsNames'])
 
         return canvas
 
@@ -2726,6 +2800,12 @@ class OpticalLayout(object):
         # their own layer; this channel is what lets a front end point
         # at a body - pick it by its outline, and edit its pose.
         scene['mechanics'] = self.mechanics_dict()
+        # What the hardware library has on its shelf, so a front end
+        # can offer to add one. Names and descriptions only: the
+        # shapes stay on the Python side, which builds the body when
+        # asked.
+        scene['mechlib'] = [{'name': k, 'description': v}
+                            for k, v in mechanics_models().items()]
         # How deep the trace went, which is not a property of any
         # element but decides how much of the picture there is.
         scene['rules'] = self.rules.to_dict()

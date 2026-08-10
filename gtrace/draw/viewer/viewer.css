@@ -239,6 +239,16 @@
     stroke-dasharray: none;
 }
 
+/* Corner handles of the selected, resizable hardware: dragging one
+   cuts a breadboard to a new size (Python re-drills the grid). The
+   blue of a selection, filled white so they read as grips. */
+.gt-mech-handle {
+    fill: #fff;
+    stroke: #2f5fa8;
+    stroke-width: 1.4;
+    cursor: nwse-resize;
+}
+
 /* ----------------------------------------------------------------- sources */
 
 /* The laser drawn at the start of a source beam. Filled rather than

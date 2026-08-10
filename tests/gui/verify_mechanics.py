@@ -892,6 +892,129 @@ check('a relinked body saves the new shapes, by value',
       and c1d['model'] == 'TEST-CLAMP')
 
 
+print('--- resize: a parametric body is re-drilled, not scaled ---')
+
+def hole_count(m):
+    return sum(isinstance(s, draw.Circle) for s in m.shapes)
+
+def hole_r(m):
+    return [float(s.radius) for s in m.shapes
+            if isinstance(s, draw.Circle)][0]
+
+bb = breadboard(0.30, 0.30, name='RB')
+check('a builder body knows it is resizable', bb.resizable
+      and bb.params['kind'] == 'breadboard')
+r0 = hole_r(bb)
+bb.resize(0.45, 0.30)
+check('a wider board has more holes, on the same grid',
+      hole_count(bb) == 216 and abs(hole_r(bb) - r0) < 1e-15,
+      str(hole_count(bb)))
+check('  and remembers its new size',
+      bb.params['width'] == 0.45 and bb.params['height'] == 0.30)
+bb.resize(height=0.20)
+check('one side alone resizes alone',
+      bb.params['width'] == 0.45 and bb.params['height'] == 0.20)
+try:
+    bb.resize(-0.1)
+    check('a negative size is refused', False)
+except ValueError:
+    check('a negative size is refused', True)
+try:
+    Mechanics(shapes=[draw.Circle([0, 0], 0.01)], name='hd').resize(0.1, 0.1)
+    check('a hand-drawn body is refused, with the reason', False)
+except ValueError as e:
+    check('a hand-drawn body is refused, with the reason', True,
+          '(%s)' % str(e)[:50])
+check('  and does not claim to be resizable',
+      not Mechanics(shapes=[draw.Circle([0, 0], 0.01)]).resizable)
+
+check('the parameters survive a copy', bb.copy().resizable)
+d = mechanics_to_dict(bb)
+check('and a save', d['params']['width'] == 0.45)
+check('and a load', mechanics_from_dict(d).resize(0.5).params['width'] == 0.5)
+d_plain = mechanics_to_dict(Mechanics(shapes=[draw.Circle([0, 0], 0.01)]))
+check('a hand-drawn body saves no parameters', 'params' not in d_plain)
+
+check('a library model built from a builder keeps them',
+      from_model('BB3030', name='LB').resizable)
+
+L = fresh()
+L.add_mechanics(breadboard(0.30, 0.30, name='RB', center=[0.9, 0.9]))
+rb = L.get_mechanics('RB')
+L.trace()
+L.apply_edit({'op': 'set', 'target': 'RB',
+              'attrs': {'width': 0.45, 'height': 0.30,
+                        'center': [0.95, 0.9]}})
+check('the protocol resizes and re-places in one message',
+      rb.params['width'] == 0.45 and close(rb.center, [0.95, 0.9])
+      and hole_count(rb) == 216)
+check('  without invalidating the trace', L.beams is not None)
+L.apply_edit({'op': 'undo'})
+check('  and undo puts the old grid back',
+      rb.params['width'] == 0.30 and hole_count(rb) == 144)
+refused(L, {'op': 'set', 'target': 'RB', 'attrs': {'width': 0}},
+        'a size of nothing')
+refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'width': 0.1}},
+        'sizing a hand-drawn body')
+
+sc = L.scene_dict()
+rbd = [m for m in sc['mechanics'] if m['name'] == 'RB'][0]
+bbd = [m for m in sc['mechanics'] if m['name'] == 'BB1'][0]
+check('the scene says which bodies resize, and at what size',
+      rbd['resizable'] and rbd['width'] == 0.30
+      and not bbd['resizable'] and bbd['width'] is None)
+
+
+print('--- adding from the library, and the mechlib channel ---')
+
+L = fresh()
+L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'H1',
+              'params': {'model': 'MOUNT-25', 'attached_to': 'M1'}})
+h1 = L.get_mechanics('H1')
+check('an add naming a model takes its shapes off the shelf',
+      h1.model == 'MOUNT-25' and len(h1.shapes) == 3
+      and h1.attached_to is L.get_optics('M1'))
+L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'H2',
+              'params': {'model': 'BB3030', 'center': [1.0, 1.0]}})
+check('  and a board from the shelf still resizes',
+      L.get_mechanics('H2').resizable)
+refused(L, {'op': 'add', 'type': 'Mechanics',
+            'params': {'model': 'NO-SUCH'}}, 'a model not in the library')
+
+sc = L.scene_dict()
+check('the scene carries the library shelf',
+      set(e['name'] for e in sc['mechlib'])
+      >= {'BB3030', 'BB4530', 'MOUNT-25'}
+      and all('description' in e for e in sc['mechlib']))
+check('the scene is still strict JSON', json.dumps(sc) is not None)
+
+
+print('--- the holes are snap points, and the names are quiet ---')
+
+L = fresh()
+L.add_mechanics(breadboard(0.10, 0.10, name='SB', center=[1.0, 1.0],
+                           rotationAngle=np.pi / 2))
+sc = L.scene_dict()
+holes = [p for p in sc['snap'] if p['kind'] == 'hole'
+         and p['optic'] == 'SB']
+check('every screw hole is a snap point', len(holes) == 16,
+      str(len(holes)))
+sb = L.get_mechanics('SB')
+want = sorted(tuple(np.round(sb.to_world(s.center), 9))
+              for s in sb.shapes if isinstance(s, draw.Circle))
+got = sorted(tuple(np.round(p['point'], 9)) for p in holes)
+check('  standing where the turned board drilled them', want == got)
+
+texts = [s for ly in sc['canvas']['layers'] if ly['name'] == 'text'
+         for s in ly['shapes'] if s.get('text') in ('SB', 'BB1')]
+check('mechanics names are off by default', texts == [])
+L.apply_edit({'op': 'draw', 'params': {'drawMechanicsNames': True}})
+sc = L.scene_dict()
+texts = [s for ly in sc['canvas']['layers'] if ly['name'] == 'text'
+         for s in ly['shapes'] if s.get('text') in ('SB', 'BB1')]
+check('  and come back when asked for', len(texts) == 2)
+
+
 print()
 print('%d passed, %d failed' % (npass, nfail))
 sys.exit(1 if nfail else 0)
