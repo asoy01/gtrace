@@ -812,6 +812,34 @@ def mirror_mount_2in(scale=1.0, knobs=True, **kwargs):
                            knob_d=6.5, knob_w=12.7)
     return Mechanics(shapes=shapes, **kwargs)
 
+def lens_holder(length=0.030, thickness=0.010, **kwargs):
+    '''
+    A lens holder seen from above: a plain rectangle, centred on the
+    substrate centre of the optic it holds.
+
+    A holder wraps its lens symmetrically, so the local origin is the
+    middle of the rectangle - ``attached_to`` with no offset centres
+    it on the host's substrate.
+
+    Parameters
+    ----------
+    length : float, optional
+        Across the beam, in metres. Defaults to 30 mm, which suits a
+        one-inch optic.
+    thickness : float, optional
+        Along the beam. Defaults to 10 mm.
+    **kwargs
+        Passed to Mechanics.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    shapes = []
+    shapes.append(draw.Rectangle([-thickness / 2.0, -length / 2.0],
+                                 thickness, length))
+    return Mechanics(shapes=shapes, **kwargs)
+
 def _mount_shapes(u, knobs, front_w, front_d, gap, back_w, back_d,
                   face_ahead, tip_span, tip_r, stem_d, stem_w,
                   knob_d, knob_w):
@@ -995,5 +1023,9 @@ register_model('MOUNT-25', mirror_mount(),
                'kinematic mount for a 1 inch optic')
 register_model('MOUNT-50', mirror_mount_2in(),
                'kinematic mount for a 2 inch optic (KA2A footprint)')
+register_model('HOLDER-25', lens_holder(length=0.030, thickness=0.010),
+               'lens holder for a 1 inch optic, 30 x 10 mm')
+register_model('HOLDER-50', lens_holder(length=0.056, thickness=0.0127),
+               'lens holder for a 2 inch optic, 56 x 12.7 mm')
 
 #}}}

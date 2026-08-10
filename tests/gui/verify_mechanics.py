@@ -44,7 +44,7 @@ from gtrace.layout import (OpticalLayout, TraceRules, EditError,
                            mechanics_snap_points)
 from gtrace.mechanics import (Mechanics, point_in_polygon, DEFAULT_LAYER,
                               LAYER_COLOR, breadboard, mirror_mount,
-                              mirror_mount_2in,
+                              mirror_mount_2in, lens_holder,
                               register_model, models, model_shapes,
                               from_model)
 from gtrace.unit import *
@@ -868,6 +868,21 @@ check('the adjuster lines sit 35.6 mm apart',
       sorted(round(float(s.center[1]), 9) for s in tips2)
       == [-0.0178, 0.0178])
 check('the 2in drawing is eight shapes too', len(m2.shapes) == 8)
+
+# The lens holders: a plain rectangle wrapping its lens symmetrically,
+# so the origin is the middle of it.
+lh = lens_holder()
+lo, hi = lh.local_bbox()
+check('the holder is one rectangle centred on the origin',
+      len(lh.shapes) == 1
+      and close(lo, [-0.005, -0.015]) and close(hi, [0.005, 0.015]))
+lh2 = lens_holder(length=0.056, thickness=0.0127)
+lo, hi = lh2.local_bbox()
+check('  cut to whatever lens it is for',
+      close(lo, [-0.00635, -0.028]) and close(hi, [0.00635, 0.028]))
+check('both holders are on the shelf',
+      from_model('HOLDER-25', name='lh1').local_bbox()[1][1] == 0.015
+      and from_model('HOLDER-50', name='lh2').local_bbox()[1][0] == 0.00635)
 
 
 print('--- the model library ---')

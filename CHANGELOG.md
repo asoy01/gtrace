@@ -115,14 +115,16 @@ across them.
   the Thorlabs KA2A drawing rather than scaled: its own plate widths
   and adjuster spacing, the same 3.2 gap, and the origin 3.95 behind
   the front face, where the drawing's optic pocket centres a
-  standard 12.7 thick optic. The library is seeded with stock built
-  from them (`BB3030`, `BB4530`, `BB6045`, `MOUNT-25`, `MOUNT-50`);
-  further vendor models are yours to register from measured
-  footprints.
+  standard 12.7 thick optic. `lens_holder(length, thickness)` is a
+  plain rectangle centred on the substrate centre of the optic it
+  holds. The library is seeded with stock built from them (`BB3030`,
+  `BB4530`, `BB6045`, `MOUNT-25`, `MOUNT-50`, `HOLDER-25` at 30 x 10
+  mm, `HOLDER-50` at 56 x 12.7 mm); further vendor models are yours
+  to register from measured footprints.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (258 checks) and `verify_mech_browser.py` (72).
-  The suite is 21 files and 4168 checks.
+- `verify_mechanics.py` (261 checks) and `verify_mech_browser.py` (72).
+  The suite is 21 files and 4171 checks.
 
 ### Fixed
 
