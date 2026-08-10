@@ -506,6 +506,242 @@ check('undo of a rename keeps the object too',
       bb.name == 'BB1' and L.get_mechanics('BB1') is bb)
 
 
+print('--- attachment: the pose is the host\'s ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+mt = Mechanics(shapes=[draw.Circle([0, 0], 0.02)], name='MT1',
+               attached_to=M1)
+L.add_mechanics(mt)
+
+check('offset [0,0] stands at the host centre',
+      close(mt.center, M1.center))
+check('and turns as the host faces',
+      abs(mt.rotationAngle - float(M1.normAngleHR)) < 1e-15)
+
+# The whole point: the host moves and the mount follows, with no
+# notification anywhere to miss. The 2026-08-03 bugs were all a
+# notification not arriving; a derived value has none to lose.
+M1.HRcenter = [0.6, 0.1]
+check('the mount follows a host moved directly in Python',
+      close(mt.center, M1.center))
+M1.normAngleHR = np.pi / 2
+check('and follows a turn', abs(mt.rotationAngle - np.pi / 2) < 1e-15)
+
+mt.offset = np.array([0.0, -0.05])
+check('the offset lives in the host frame',
+      close(mt.center, np.asarray(M1.center) + [0.05, 0.0]))
+
+L.apply_edit({'op': 'rotate', 'target': 'M1', 'normAngleHR': np.pi})
+# The same local offset [0, -0.05], now seen through a host facing pi:
+# R(pi) flips both axes, so it lands at +0.05 across.
+check('and through the edit protocol too',
+      close(mt.center, np.asarray(M1.center) + [0.0, 0.05]))
+
+for fn, what in [(lambda: setattr(mt, 'center', [0, 0]), 'the centre'),
+                 (lambda: setattr(mt, 'rotationAngle', 0.1), 'the angle'),
+                 (lambda: mt.translate([0.1, 0]), 'translate()'),
+                 (lambda: mt.rotate(0.1), 'rotate()')]:
+    try:
+        fn()
+        check('writing %s of an attached body is refused' % what, False)
+    except ValueError as e:
+        check('writing %s of an attached body is refused' % what, True,
+              '(%s)' % str(e)[:40])
+
+c0 = mt.center.copy()
+a0 = mt.rotationAngle
+mt.detach()
+check('detach bakes the derived pose in',
+      close(mt.center, c0) and mt.rotationAngle == a0
+      and mt.attached_to is None)
+mt.center = [0.2, 0.2]
+check('and the freed body edits again', close(mt.center, [0.2, 0.2]))
+
+mt.attach(M1)
+# The baked angle was the host's pi, and keeping the pose keeps it.
+check('attach with no offset keeps the body where it stands',
+      close(mt.center, [0.2, 0.2], tol=1e-12)
+      and abs(mt.rotationAngle - a0) < 1e-12)
+
+try:
+    mt.attach(Mechanics(name='other'))
+    check('hardware cannot stand on hardware', False)
+except ValueError as e:
+    check('hardware cannot stand on hardware', True, '(%s)' % str(e)[:40])
+try:
+    Mechanics(name='x').attach(object())
+    check('nor on something with no pose', False)
+except ValueError:
+    check('nor on something with no pose', True)
+try:
+    Mechanics(name='x', attached_to=M1, center=[0, 0])
+    check('a pose alongside an attachment is refused', False)
+except ValueError:
+    check('a pose alongside an attachment is refused', True)
+
+c = mt.copy()
+check('a copy stands on the same host', c.attached_to is M1
+      and close(c.offset, mt.offset))
+mt.detach()
+
+
+print('--- attachment by name, resolved at registration ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+p = Mechanics(name='P1', attached_to='M1', offset=[0.0, 0.02])
+try:
+    p.center
+    check('an unresolved link refuses to give a pose', False)
+except ValueError as e:
+    check('an unresolved link refuses to give a pose', True,
+          '(%s)' % str(e)[:40])
+L.add_mechanics(p)
+check('registration joins it to the optics of that name',
+      p.attached_to is M1 and close(p.offset, [0.0, 0.02]))
+L.remove_mechanics('P1')
+
+try:
+    L.add_mechanics(Mechanics(name='P2', attached_to='NoSuch'))
+    check('a host name nothing answers to is refused', False)
+except ValueError as e:
+    check('a host name nothing answers to is refused', True,
+          '(%s)' % str(e)[:50])
+
+
+print('--- attachment through the protocol ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+bb = L.get_mechanics('BB1')
+
+L.trace()
+L.apply_edit({'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'M1'}})
+check('set attached_to attaches where it stands',
+      bb.attached_to is M1 and close(bb.center, [0.3, 0.0]))
+check('and does not invalidate the trace', L.beams is not None)
+
+refused(L, {'op': 'move', 'target': 'BB1', 'center': [0, 0]},
+        'moving an attached body')
+refused(L, {'op': 'rotate', 'target': 'BB1', 'rotationAngle': 0.1},
+        'turning an attached body')
+refused(L, {'op': 'set', 'target': 'BB1',
+            'attrs': {'attached_to': 'M1', 'center': [0, 0]}},
+        'a pose alongside an attachment')
+refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'b0'}},
+        'attaching to a source')
+refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'BB1'}},
+        'attaching to hardware')
+refused(L, {'op': 'remove', 'target': 'M1'},
+        'removing an optics with hardware attached')
+
+L.apply_edit({'op': 'set', 'target': 'BB1',
+              'attrs': {'offset': [0.05, 0.0], 'offset_angle': 0.1}})
+check('the offset edits while attached',
+      close(bb.offset, [0.05, 0.0]) and bb.offset_angle == 0.1)
+
+pose_before = (bb.center.copy(), bb.rotationAngle)
+L.apply_edit({'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': None}})
+check('null detaches, and the body stays where it stood',
+      bb.attached_to is None and close(bb.center, pose_before[0])
+      and bb.rotationAngle == pose_before[1])
+refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'offset': [0, 0]}},
+        'an offset on a body standing on its own')
+
+L.apply_edit({'op': 'undo'})
+check('undo of a detach re-attaches', bb.attached_to is M1)
+L.apply_edit({'op': 'redo'})
+check('redo detaches again', bb.attached_to is None)
+L.apply_edit({'op': 'undo'})
+
+pos0 = bb.center.copy()
+L.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.7, 0.2]})
+moved = bb.center.copy()
+check('the mount moves with its host under the protocol',
+      not close(moved, pos0))
+L.apply_edit({'op': 'undo'})
+check('and back when the host move is undone', close(bb.center, pos0))
+
+L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'MT2',
+              'params': {'attached_to': 'M1', 'offset': [0.0, -0.08],
+                         'shapes': [{'type': 'circle', 'center': [0, 0],
+                                     'radius': 0.01, 'thickness': 0}]}})
+mt2 = L.get_mechanics('MT2')
+check('add with attached_to lands on the host',
+      mt2.attached_to is M1)
+refused(L, {'op': 'add', 'type': 'Mechanics',
+            'params': {'attached_to': 'NoSuch'}},
+        'adding onto an optics that is not there')
+refused(L, {'op': 'add', 'type': 'Mechanics',
+            'params': {'attached_to': 'M1', 'center': [0, 0]}},
+        'adding with a pose and an attachment at once')
+
+L.apply_edit({'op': 'remove', 'target': 'MT2'})
+check('the mount itself removes freely', not L._is_mechanics('MT2'))
+L.apply_edit({'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': None}})
+L.apply_edit({'op': 'remove', 'target': 'M1'})
+check('and the host removes once nothing stands on it',
+      'M1' not in [o.name for o in L.optics])
+
+
+print('--- attachment saved by name, and relinked ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+bb = L.get_mechanics('BB1')
+L.apply_edit({'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'M1'}})
+
+d = mechanics_to_dict(bb)
+check('an attached body saves its host and offset, and no pose',
+      d['attached_to'] == 'M1' and 'offset' in d
+      and 'center' not in d and 'rotationAngle' not in d)
+d_free = mechanics_to_dict(Mechanics(name='f', center=[1, 2]))
+check('a free body saves its pose, and no attachment',
+      'attached_to' not in d_free and close(d_free['center'], [1, 2]))
+
+L.apply_edit({'op': 'rename', 'target': 'M1', 'name': 'PRM'})
+check('a renamed host saves under its current name',
+      mechanics_to_dict(bb)['attached_to'] == 'PRM')
+L.apply_edit({'op': 'undo'})
+
+full = L.to_dict()
+L2 = OpticalLayout.from_dict(full)
+bb2 = L2.get_mechanics('BB1')
+check('a fresh load joins the mount to its own host',
+      bb2.attached_to is L2.get_optics('M1'))
+L2.get_optics('M1').HRcenter = [0.9, 0.9]
+# The offset was derived when BB1 attached where it stood: [0.225, 0]
+# in the frame of a host at [0.525, 0] facing pi. The moved host stands
+# at [0.925, 0.9], still facing pi, so the mount lands at [0.7, 0.9].
+check('and it follows that host, not the original',
+      close(bb2.center, [0.7, 0.9]) and close(bb.center, [0.3, 0.0]))
+
+path = os.path.join(WORK, 'mech_attach_layout.json')
+L.save(path)
+L.apply_edit({'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': None}})
+L.apply_edit({'op': 'load', 'path': path})
+check('loading into a layout re-attaches the same objects',
+      L.get_mechanics('BB1') is bb and bb.attached_to is M1)
+
+dangling = L.to_dict()
+dangling['optics'] = []
+try:
+    OpticalLayout.from_dict(dangling)
+    check('a file whose host is missing is refused', False)
+except ValueError as e:
+    check('a file whose host is missing is refused', True,
+          '(%s)' % str(e)[:50])
+
+scene = L.scene_dict()
+mch = [m for m in scene['mechanics'] if m['name'] == 'BB1'][0]
+check('the scene names the host', mch['attached_to'] == 'M1')
+check('and carries the derived pose', close(mch['center'], bb.center))
+check('a free body rides as null',
+      json.dumps(scene) is not None
+      and all('attached_to' in m for m in scene['mechanics']))
+
+
 print('--- save, load, and the merge that keeps identity ---')
 
 L = fresh()

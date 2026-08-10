@@ -34,9 +34,26 @@ across them.
     angle, rename, remove); dragging a *selected* mechanics moves it
     and Shift-dragging turns it. An unselected one is not grabbed - a
     breadboard can cover most of the bench, and a drag across it
-    should pan the view.
+    should pan the view. Hardware covered by an optics - a mount is
+    covered completely by its own mirror - takes the last turn of the
+    repeated-click walk that already steps from an element into the
+    beams under it.
   - Editing a mechanics does not invalidate the trace: the picture
     changes, the beams did not move.
+  - **A mechanics can be attached to an optics** (`attached_to`),
+    which is what a mirror mount is. An attached body has no pose of
+    its own: `center` and `rotationAngle` are derived on every read
+    from the host's pose and an offset in the host's frame, so moving
+    the mirror moves the mount with no callback to miss and no stored
+    copy to go stale. The price is the meaning of the word: an
+    attached body cannot be moved on its own - its pose rows go
+    read-only, a drag on it pans, and a `move` through the protocol
+    is refused with the reason. `detach()` (or
+    `set attached_to: null`) bakes the derived pose in and frees it;
+    `attach()` with no offset takes the body where it stands. A saved
+    layout carries the host's *name* and the offset - no pose - and
+    loading joins the two back up; removing an optics with hardware
+    attached is refused until the hardware is detached or removed.
   - Edit operations: `add` with `type: 'Mechanics'` (shapes arrive
     serialized, as the layout file carries them), `move` (`center`),
     `rotate` (`rotationAngle`), `set`, `remove`, `rename`. The scene
@@ -44,8 +61,8 @@ across them.
     points, so the measuring tool reaches the hardware.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (131 checks) and `verify_mech_browser.py` (35).
-  The suite is 21 files and 4004 checks.
+- `verify_mechanics.py` (190 checks) and `verify_mech_browser.py` (45).
+  The suite is 21 files and 4073 checks.
 
 ### Fixed
 

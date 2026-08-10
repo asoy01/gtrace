@@ -449,16 +449,25 @@ DIMENSION_TYPE = 'Dimension'
 #: shapes rather than construction parameters.
 MECHANICS_TYPE = 'Mechanics'
 
-#: Attributes of a Mechanics a front end may change: its pose, and
-#: nothing else. The shapes are the body itself - they come from Python
-#: or from a saved layout, and a front end moves the body rather than
-#: redrawing it.
-EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle'])
+#: Attributes of a Mechanics a front end may change: its pose - or,
+#: attached, its attachment - and nothing else. The shapes are the body
+#: itself: they come from Python or from a saved layout, and a front
+#: end moves the body rather than redrawing it. 'attached_to' takes an
+#: optics name, or null to detach, which bakes the derived pose in and
+#: leaves the body standing where it was.
+EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle',
+                                      'attached_to', 'offset',
+                                      'offset_angle'])
+
+#: The pose half of those: what an attached body does not have.
+_MECHANICS_POSE_ATTRS = frozenset(['center', 'rotationAngle'])
 
 #: Parameters a new Mechanics may be given. 'shapes' is a list of
 #: serialized primitives, exactly as a saved layout carries them.
 CREATABLE_MECHANICS_PARAMS = frozenset(['center', 'rotationAngle',
-                                        'shapes', 'layer', 'model'])
+                                        'shapes', 'layer', 'model',
+                                        'attached_to', 'offset',
+                                        'offset_angle'])
 
 #: How many edits back undo can go. A snapshot is the serialized
 #: layout, so the cost is a few tens of kilobytes each for a system of
@@ -779,19 +788,46 @@ def mechanics_to_dict(m):
     layout is complete in itself, the way a written HTML page is, and a
     library that has moved on since cannot silently redraw it. The
     model name travels alongside as a label.
+
+    An attached body writes its host's name and its offset, and no
+    pose: the pose is derived, and a stored copy of a derived value is
+    exactly the second description this design exists to avoid. The
+    name is read from the host object at save time, so a host renamed
+    since the attachment saves under its current name.
     '''
-    return {'type': 'Mechanics',
-            'name': str(m.name),
-            'center': [float(x) for x in np.asarray(m.center)],
-            'rotationAngle': float(m.rotationAngle),
-            'layer': str(m.layer),
-            'model': None if m.model is None else str(m.model),
-            'shapes': [shape_to_dict(s) for s in m.shapes]}
+    d = {'type': 'Mechanics',
+         'name': str(m.name),
+         'layer': str(m.layer),
+         'model': None if m.model is None else str(m.model),
+         'shapes': [shape_to_dict(s) for s in m.shapes]}
+    host = m.attached_to.name if m.attached_to is not None else m._attach_name
+    if host is not None:
+        d['attached_to'] = str(host)
+        d['offset'] = [float(x) for x in np.asarray(m.offset)]
+        d['offset_angle'] = float(m.offset_angle)
+    else:
+        d['center'] = [float(x) for x in np.asarray(m.center)]
+        d['rotationAngle'] = float(m.rotationAngle)
+    return d
 
 def mechanics_from_dict(d):
     '''
     Construct a Mechanics from a dict produced by mechanics_to_dict().
+
+    An attached body comes back attached by name: the host is another
+    entry of the same file, so only the layout that is loading both can
+    join them up - which OpticalLayout does when the body is registered
+    or merged. Until then the pose refuses to be read.
     '''
+    if d.get('attached_to') is not None:
+        return Mechanics(shapes=[shape_from_dict(s)
+                                 for s in d.get('shapes', [])],
+                         name=d['name'],
+                         layer=d.get('layer', 'hardware'),
+                         model=d.get('model', None),
+                         attached_to=str(d['attached_to']),
+                         offset=d.get('offset', [0.0, 0.0]),
+                         offset_angle=d.get('offset_angle', 0.0))
     return Mechanics(shapes=[shape_from_dict(s)
                              for s in d.get('shapes', [])],
                      center=d.get('center', [0.0, 0.0]),
@@ -803,11 +839,25 @@ def mechanics_from_dict(d):
 def _update_mechanics(m, d):
     '''
     Apply a serialized Mechanics to an existing one, in place.
+
+    The attachment is settled first, because it decides what the pose
+    keys then mean: a body the file says is attached takes an offset
+    and no pose, and one the file says is free takes a pose. The host
+    name is left pending for the layout to resolve against its own
+    optics - see OpticalLayout._link_mechanics.
     '''
-    if 'center' in d:
-        m.center = np.array(d['center'], dtype='float64')
-    if 'rotationAngle' in d:
-        m.rotationAngle = float(d['rotationAngle'])
+    if d.get('attached_to') is not None:
+        m.attached_to = None
+        m._attach_name = str(d['attached_to'])
+        m.offset = np.array(d.get('offset', [0.0, 0.0]), dtype='float64')
+        m.offset_angle = float(d.get('offset_angle', 0.0))
+    else:
+        m.attached_to = None
+        m._attach_name = None
+        if 'center' in d:
+            m.center = np.array(d['center'], dtype='float64')
+        if 'rotationAngle' in d:
+            m.rotationAngle = float(d['rotationAngle'])
     if 'layer' in d:
         m.layer = str(d['layer'])
     if 'model' in d:
@@ -827,12 +877,19 @@ def mechanics_scene_dict(m):
     against and what a drag previews.
     '''
     outline = m.outline()
+    center = m.center
     return {'name': str(m.name),
             'type': 'Mechanics',
-            'center': [float(m.center[0]), float(m.center[1])],
+            'center': [float(center[0]), float(center[1])],
             'rotationAngle': float(m.rotationAngle),
             'layer': str(m.layer),
             'model': None if m.model is None else str(m.model),
+            # The name of the host, or null. What a front end needs to
+            # know is that the pose is not this body's own: the panel
+            # says whose it is, and the drag lets the host be the thing
+            # that is dragged.
+            'attached_to': (None if m.attached_to is None
+                            else str(m.attached_to.name)),
             'outline': [[float(p[0]), float(p[1])] for p in outline]}
 
 def mechanics_snap_points(m):
@@ -1284,9 +1341,42 @@ class OpticalLayout(object):
         '''
         Register a Mechanics. It is held by reference, and its name must
         be unique within the layout.
+
+        A body attached by name (built as ``Mechanics(attached_to='M1')``
+        or loaded from a file) is joined to the registered optics of
+        that name here; a name nothing answers to is refused, since a
+        body with an unreadable pose is not something to hold.
         '''
         self._check_name_free(m.name)
+        if m._attach_name is not None:
+            try:
+                m.attach(self.get_optics(m._attach_name),
+                         offset=m.offset, offset_angle=m.offset_angle)
+            except KeyError:
+                raise ValueError(
+                    "'%s' is attached to '%s', and no optics of that name "
+                    'is registered.' % (m.name, m._attach_name))
         self.mechanics.append(m)
+
+    def _link_mechanics(self):
+        '''
+        Resolve every attachment left pending by name against the
+        registered optics.
+
+        Loading and restoring build the bodies before the joins can be
+        made - the host is another entry of the same file or snapshot -
+        so the names are kept until everything is in place and then
+        resolved here, in one pass, after the optics list is settled.
+        '''
+        for m in self.mechanics:
+            if m._attach_name is not None:
+                try:
+                    m.attach(self.get_optics(m._attach_name),
+                             offset=m.offset, offset_angle=m.offset_angle)
+                except KeyError:
+                    raise ValueError(
+                        "'%s' is attached to '%s', and no optics of that "
+                        'name is in the layout.' % (m.name, m._attach_name))
 
     def _check_name_free(self, name):
         '''
@@ -1316,8 +1406,23 @@ class OpticalLayout(object):
     def remove_optics(self, name):
         '''
         Remove the optics with the given name from the layout.
+
+        An optics with hardware attached is refused: the mounts would
+        be left standing on something no longer there, with a pose
+        derived from a ghost. Detaching them - which leaves each one
+        exactly where it stands - or removing them first says what is
+        actually meant.
         '''
-        self.optics.remove(self.get_optics(name))
+        target = self.get_optics(name)
+        attached = [m.name for m in self.mechanics
+                    if m.attached_to is target]
+        if attached:
+            raise ValueError(
+                "Cannot remove '%s': %s attached to it. Detach or remove "
+                '%s first.'
+                % (name, ' and '.join("'%s'" % n for n in attached),
+                   'it' if len(attached) == 1 else 'them'))
+        self.optics.remove(target)
 
     def remove_source(self, name):
         '''
@@ -1490,6 +1595,11 @@ class OpticalLayout(object):
                                                     'thickness': 0}]}}
             {'op': 'move',   'target': 'BB1', 'center': [0.2, 0.1]}
             {'op': 'rotate', 'target': 'BB1', 'rotationAngle': 0.1}
+            {'op': 'add',    'type': 'Mechanics', 'name': 'MT1',
+                             'params': {'attached_to': 'M1',
+                                        'offset': [0.0, 0.0],
+                                        'shapes': [...]}}
+            {'op': 'set',    'target': 'MT1', 'attrs': {'attached_to': None}}
             {'op': 'undo'}
             {'op': 'redo'}
 
@@ -1591,6 +1701,10 @@ class OpticalLayout(object):
         for mech, spec in zip(self.mechanics, d.get('mechanics', [])):
             mech.name = spec['name']
             _update_mechanics(mech, spec)
+        # After every name is back: an attachment is stored by the
+        # host's name, and the host may itself have just been renamed
+        # by this restore.
+        self._link_mechanics()
 
         self.rules = TraceRules.from_dict(d.get('rules', {}))
         self.draw_options = dict(d.get('draw_options', {}))
@@ -1827,6 +1941,10 @@ class OpticalLayout(object):
                 except KeyError:
                     raise EditError("No optics named %r in the layout."
                                     % (name,))
+                except ValueError as e:
+                    # An optics with hardware attached; the message
+                    # already says what to do about it.
+                    raise EditError(str(e))
 
         elif op == 'rules':
             rules = msg.get('rules') or {}
@@ -1956,11 +2074,16 @@ class OpticalLayout(object):
         Apply a 'move', 'rotate' or 'set' to a mechanics.
 
         As everywhere else, 'move' and 'rotate' are spellings of a
-        one-attribute 'set'. A mechanics is a rigid body with nothing
-        derived from anything: its position is its center and its
-        orientation is its rotation angle, and those two are the whole
-        of what a front end may change - the shapes are the body
-        itself.
+        one-attribute 'set'. A free body takes a pose; an attached one
+        has no pose of its own - it takes an offset instead, and a
+        message trying to move it is refused with the reason. The
+        attachment itself is edited through 'attached_to': an optics
+        name attaches the body where it stands, and null detaches it,
+        baking the derived pose in.
+
+        Everything is checked before anything is set - the host looked
+        up, the numbers converted - so a message half right leaves the
+        body exactly as it was.
         '''
         if op == 'set':
             attrs = msg.get('attrs') or {}
@@ -1970,17 +2093,69 @@ class OpticalLayout(object):
             if not attrs:
                 raise EditError("A '%s' message for a mechanics needs %s."
                                 % (op, ' or '.join(keys)))
-        # Every name is checked before any value is set, so a message
-        # naming one bad attribute leaves the body exactly as it was.
         for key in attrs:
             if key not in EDITABLE_MECHANICS_ATTRS:
                 raise EditError('%r is not an editable attribute of a '
                                 'mechanics.' % (key,))
-        for key, value in sorted(attrs.items()):
-            if key == 'center':
-                m.center = _as_point(value, key)
-            else:
-                m.rotationAngle = _as_distance(value, key)
+
+        # What the attachment will be once this message is applied,
+        # which is what decides whether a pose or an offset makes
+        # sense in the same message.
+        detaching = 'attached_to' in attrs and attrs['attached_to'] is None
+        attaching = 'attached_to' in attrs and attrs['attached_to'] is not None
+        will_be_attached = attaching or (m.attached_to is not None
+                                         and not detaching)
+
+        pose = {k: attrs[k] for k in _MECHANICS_POSE_ATTRS if k in attrs}
+        if pose and will_be_attached:
+            host = (attrs['attached_to'] if attaching
+                    else m.attached_to.name)
+            raise EditError(
+                "'%s' is attached to '%s': it goes where its host goes. "
+                "Move the optics, change the offset, or detach it first "
+                "(set attached_to to null)." % (m.name, host))
+        offs = {k: attrs[k] for k in ('offset', 'offset_angle')
+                if k in attrs}
+        if offs and not will_be_attached:
+            raise EditError(
+                "'%s' is not attached to anything, so it has no offset. "
+                'Set center and rotationAngle instead.' % m.name)
+
+        # Convert and look everything up before touching the body.
+        new_host = None
+        if attaching:
+            name = attrs['attached_to']
+            if not isinstance(name, str):
+                raise EditError("'attached_to' is an optics name or null, "
+                                'not %r.' % (name,))
+            try:
+                new_host = self.get_optics(name)
+            except KeyError:
+                raise EditError("Cannot attach '%s' to %r: no optics of "
+                                'that name in the layout.' % (m.name, name))
+        if 'offset' in offs:
+            offs['offset'] = _as_point(offs['offset'], 'offset')
+        if 'offset_angle' in offs:
+            offs['offset_angle'] = _as_distance(offs['offset_angle'],
+                                                'offset_angle')
+        if 'center' in pose:
+            pose['center'] = _as_point(pose['center'], 'center')
+        if 'rotationAngle' in pose:
+            pose['rotationAngle'] = _as_distance(pose['rotationAngle'],
+                                                 'rotationAngle')
+
+        # The attachment first: it decides what the rest lands on.
+        if detaching:
+            m.detach()
+        elif attaching:
+            # Attaching where it stands, unless the message also says
+            # where on the host to stand.
+            m.attach(new_host, offset=offs.pop('offset', None),
+                     offset_angle=offs.pop('offset_angle', None))
+        for key, value in sorted(offs.items()):
+            setattr(m, key, value)
+        for key, value in sorted(pose.items()):
+            setattr(m, key, value)
 
     def _mechanics_from_message(self, msg):
         '''
@@ -2013,9 +2188,6 @@ class OpticalLayout(object):
             raise EditError('A shape in the message is malformed (%s: %s).'
                             % (type(e).__name__, e))
 
-        center = _as_point(params.get('center', [0.0, 0.0]), 'center')
-        angle = _as_distance(params.get('rotationAngle', 0.0),
-                             'rotationAngle')
         layer = params.get('layer', 'hardware')
         if not isinstance(layer, str) or not layer.strip():
             raise EditError('A layer must be a non-empty string, not %r.'
@@ -2024,6 +2196,32 @@ class OpticalLayout(object):
         if model is not None and not isinstance(model, str):
             raise EditError('A model is a name or nothing, not %r.'
                             % (model,))
+
+        if params.get('attached_to') is not None:
+            host_name = params['attached_to']
+            if not isinstance(host_name, str):
+                raise EditError("'attached_to' is an optics name, not %r."
+                                % (host_name,))
+            if 'center' in params or 'rotationAngle' in params:
+                raise EditError('An attached body has no pose of its own: '
+                                "give 'offset' and 'offset_angle' instead "
+                                "of 'center' and 'rotationAngle'.")
+            try:
+                host = self.get_optics(host_name)
+            except KeyError:
+                raise EditError("Cannot attach '%s' to %r: no optics of "
+                                'that name in the layout.'
+                                % (name, host_name))
+            offset = _as_point(params.get('offset', [0.0, 0.0]), 'offset')
+            offset_angle = _as_distance(params.get('offset_angle', 0.0),
+                                        'offset_angle')
+            return Mechanics(shapes=shapes, name=name, layer=layer,
+                             model=model, attached_to=host, offset=offset,
+                             offset_angle=offset_angle)
+
+        center = _as_point(params.get('center', [0.0, 0.0]), 'center')
+        angle = _as_distance(params.get('rotationAngle', 0.0),
+                             'rotationAngle')
         return Mechanics(shapes=shapes, center=center, rotationAngle=angle,
                          name=name, layer=layer, model=model)
 
@@ -2883,6 +3081,9 @@ class OpticalLayout(object):
                                         d.get('mechanics', []),
                                         mechanics_from_dict,
                                         _update_mechanics)
+        # The merges are done and the optics list is settled, so the
+        # attachments stored by name can be joined to their hosts.
+        self._link_mechanics()
         self.rules = TraceRules.from_dict(d.get('rules', {}))
         self.draw_options = dict(d.get('draw_options', {}))
         self.name = d.get('name', self.name)

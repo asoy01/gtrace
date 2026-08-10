@@ -70,8 +70,16 @@ def make_layout():
     mount = Mechanics(shapes=[draw.Circle([0.0, 0.0], 0.012),
                               draw.Rectangle([-0.015, -0.015], 0.03, 0.03)],
                       center=[0.42, -0.12], name='Mount', model='POLARIS-K1')
+    # A clamp standing on M1, whose pose is the mirror's doing: the
+    # panel has to say so, its pose rows have to refuse the keyboard,
+    # and a drag on it has to pan rather than move. M1's substrate
+    # centre is [0.525, 0] facing pi, so an offset of [0, -0.09] in
+    # its frame stands the clamp at [0.525, 0.09] - on the board, off
+    # the beam, and clear of the mirror's own pick circle.
+    clamp = Mechanics(shapes=[draw.Rectangle([-0.01, -0.01], 0.02, 0.02)],
+                      name='Clamp', attached_to=M1, offset=[0.0, -0.09])
     return OpticalLayout(optics=[M1], sources=[b0],
-                         mechanics=[board, mount],
+                         mechanics=[board, mount, clamp],
                          rules=TraceRules(order=2, power_threshold=1e-4))
 
 layout = make_layout()
@@ -279,6 +287,48 @@ var EDITABLE = __EDITABLE__;
             {key: 'Escape', bubbles: true}));
         out.escape = panel();
 
+        // --- an attached body ---
+        var CLAMP_PT = [0.525, 0.09];
+        clickAt(screenOf(CLAMP_PT));
+        out.clickClamp = panel();
+        out.clampFields = fields();
+        out.clampDisabled = EDITABLE ? {
+            cx: v.mechFields.cx.el.disabled,
+            cy: v.mechFields.cy.el.disabled,
+            angle: v.mechFields.angle.el.disabled,
+            boardCx: null
+        } : null;
+        before = sent.length;
+        var cp = screenOf(CLAMP_PT);
+        var cvx = v.cx;
+        dragFromTo(cp, [cp[0] + 40, cp[1] + 20]);
+        out.clampDrag = {sent: sent.length - before, panned: v.cx !== cvx,
+                         selected: v.selectedMech};
+        // And the pose rows come back to life on a free body.
+        if (EDITABLE) {
+            clickAt(screenOf(BOARD_PT));
+            out.clampDisabled.boardCx = v.mechFields.cx.el.disabled;
+        }
+
+        // --- hardware under an element, reached by cycling ---
+        // The board runs under M1, and M1's pick circle wins the
+        // click; a mount with no offset is in exactly this position,
+        // covered completely by its own mirror. Clicking the same
+        // spot again walks element -> beams -> hardware, so the board
+        // has to turn up within one lap.
+        clickAt(screenOf(OFF_PT));
+        var reached = null;
+        for (var ci = 0; ci < 12 && !reached; ci++) {
+            clickAt(screenOf(m1c));
+            if (v.selectedMech) {
+                reached = {clicks: ci + 1, mech: v.selectedMech};
+            }
+        }
+        out.cycleToMech = reached;
+        // And one more lap of the same spot comes back to the mirror.
+        clickAt(screenOf(m1c));
+        out.cycleWraps = panel();
+
         out.sent = sent;
     } catch (e) {
         out.error = String(e && e.stack || e);
@@ -322,7 +372,7 @@ check('ran without exception', res['error'] is None, str(res['error'])[:500])
 board = scene['mechanics'][0]
 
 print('--- the pick order ---')
-check('the scene carries both mechanics', res['mechCount'] == 2)
+check('the scene carries all three mechanics', res['mechCount'] == 3)
 p = res['clickBoard']
 check('a click on the empty board selects it',
       p['mechShown'] and p['selectedMech'] == 'Board'
@@ -439,6 +489,41 @@ check('  and lets go of the selection',
 check('Escape lets go too', not res['escape']['selectedMech']
       and res['escape']['beamShown'])
 
+print('--- an attached body ---')
+check('clicking the clamp selects it',
+      res['clickClamp']['selectedMech'] == 'Clamp',
+      json.dumps(res['clickClamp']))
+cf = res['clampFields']
+check('the panel names its host',
+      cf['attached'] == 'M1' and cf['attached_shown'], str(cf['attached']))
+check('a free body has no such row', not res['boardFields']['attached_shown'])
+# Against the pose Python derived and put in the scene, not against
+# the nominal numbers of the layout: the substrate centre of M1 sits a
+# hair off 0.525 by way of its default wedge.
+clamp = [m for m in scene['mechanics'] if m['name'] == 'Clamp'][0]
+check('its pose in the panel is the derived one',
+      abs(float(cf['cx']) - clamp['center'][0]) < 1e-12
+      and abs(float(cf['cy']) - clamp['center'][1]) < 1e-12,
+      json.dumps({'cx': cf['cx'], 'cy': cf['cy']}))
+check('its pose rows refuse the keyboard',
+      res['clampDisabled']['cx'] and res['clampDisabled']['cy']
+      and res['clampDisabled']['angle'], json.dumps(res['clampDisabled']))
+check('  and come back to life on a free body',
+      res['clampDisabled']['boardCx'] is False)
+check('a drag on it pans and sends nothing',
+      res['clampDrag']['sent'] == 0 and res['clampDrag']['panned']
+      and res['clampDrag']['selected'] == 'Clamp',
+      json.dumps(res['clampDrag']))
+
+print('--- hardware under an element, reached by cycling ---')
+check('clicking the same spot again reaches the hardware under M1',
+      res['cycleToMech'] and res['cycleToMech']['mech'] == 'Board',
+      json.dumps(res['cycleToMech']))
+check('and the next click wraps back to the mirror',
+      res['cycleWraps']['selectedOptic'] == 'M1'
+      and not res['cycleWraps']['selectedMech'],
+      json.dumps(res['cycleWraps']))
+
 print('--- read-only viewer ---')
 errs, res = run(False)
 check('no console error', errs == [], '\n        '.join(errs[:3]))
@@ -452,6 +537,9 @@ check('a click still shows the hardware',
 f = res['boardFields']
 check('the pose reads as static text',
       abs(float(f['cx']) - board['center'][0]) < 1e-12, str(f['cx']))
+check('the clamp still names its host',
+      res['clampFields']['attached'] == 'M1'
+      and res['clampFields']['attached_shown'])
 check('no Remove on offer', not res['removeShown'])
 check('nothing was ever sent', res['sent'] == [], str(res['sent'][:2]))
 

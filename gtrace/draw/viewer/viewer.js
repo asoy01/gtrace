@@ -789,7 +789,7 @@ Viewer.prototype._build = function () {
                 ['Drag', 'pan'],
                 ['Move over a beam', 'live readout'],
                 ['Click', 'pin the readout'],
-                ['Click again', 'cycle overlapping beams'],
+                ['Click again', 'cycle overlapping beams and hardware'],
                 ['Click an optics', 'show its properties'],
                 ['Click a laser', 'show the source it stands for'],
                 ['Click hardware', 'show its pose'],
@@ -1206,6 +1206,11 @@ var MECH_FIELDS = [
     // The catalogue model the shapes came from, when there is one. A
     // label rather than a link: the saved shapes are the truth.
     {key: 'model', label: 'Model', readonly: true, optional: true},
+    // The optics this body stands on, when it stands on one. The row
+    // hides for a body standing on its own; while it shows, the pose
+    // rows below are the host's doing and are disabled - the way to
+    // move a mount is to move its mirror.
+    {key: 'attached', label: 'Attached to', readonly: true, optional: true},
     {key: 'cx', label: 'Center x', unit: 'm'},
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
@@ -1216,6 +1221,9 @@ function mechFieldValue(m, key) {
     switch (key) {
     case 'type': return 'Mechanics';
     case 'model': return m.model === null ? undefined : m.model;
+    case 'attached':
+        return m.attached_to === null || m.attached_to === undefined
+            ? undefined : m.attached_to;
     case 'cx': return m.center[0];
     case 'cy': return m.center[1];
     case 'angle': return normAngle(m.rotationAngle || 0) * DEG;
@@ -2057,6 +2065,19 @@ Viewer.prototype._refreshMechPanel = function () {
     refreshFieldTable(this.mechFields, MECH_FIELDS,
                       m ? function (key) { return mechFieldValue(m, key); }
                         : null);
+    // An attached body has no pose of its own: the rows show where the
+    // host put it, and refuse the keyboard rather than letting a value
+    // be typed only for Python to turn it down.
+    var attached = !!(m && m.attached_to);
+    var self = this;
+    ['cx', 'cy', 'angle'].forEach(function (key) {
+        var f = self.mechFields[key];
+        if (!f || !f.editable) { return; }
+        f.el.disabled = attached;
+        f.el.title = attached
+            ? 'Attached to ' + m.attached_to + ' - move the optics instead'
+            : '';
+    });
 };
 
 Viewer.prototype._selectMech = function (mech) {
@@ -3319,10 +3340,14 @@ Viewer.prototype._bindEvents = function () {
         // A mechanics is grabbed only while it is the selection. A
         // breadboard can cover most of the bench, and a press on it
         // usually means "pan the view" - so the first click selects,
-        // and only then does dragging move the hardware.
+        // and only then does dragging move the hardware. An attached
+        // body is never grabbed: it goes where its host goes, and its
+        // host is right there to be dragged.
         var h = (grabbable && !s && !o && self.selectedMech)
             ? self._pickMech(pt[0], pt[1]) : null;
-        if (h && h.name !== self.selectedMech) { h = null; }
+        if (h && (h.name !== self.selectedMech || h.attached_to)) {
+            h = null;
+        }
         if (s) {
             self._beginSourceDrag(s, pt, ev.shiftKey);
             ev.preventDefault();
@@ -3657,6 +3682,8 @@ Viewer.prototype._endSourceDrag = function () {
  * preview is its outline carried and turned and nothing more.
  */
 Viewer.prototype._beginMechDrag = function (mech, scenePt, rotate) {
+    // Belt and braces: the mousedown handler already refuses these.
+    if (mech.attached_to) { return; }
     var c = mech.center;
     this.dragMech = {
         mech: mech,
@@ -3901,10 +3928,12 @@ Viewer.prototype._onHover = function (px, py) {
         : this._pickMech(pt[0], pt[1]);
     var over = this.hoverOptic || this.hoverSource;
     // A selected mechanics is grabbable; an unselected one only
-    // selectable. The cursor says which - see the mousedown handler
-    // for why a breadboard is not grabbed until it is selected.
+    // selectable, and an attached one never - it goes where its host
+    // goes. The cursor says which - see the mousedown handler for why
+    // a breadboard is not grabbed until it is selected.
     var mechGrab = this.hoverMech && this.onEdit
-        && this.hoverMech.name === this.selectedMech;
+        && this.hoverMech.name === this.selectedMech
+        && !this.hoverMech.attached_to;
     this.svg.classList.toggle('gt-over-optic',
                               (!!over && !!this.onEdit) || !!mechGrab);
     this.svg.classList.toggle('gt-over-pickable',
@@ -3989,13 +4018,20 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     // clicking the same spot again steps from the element into the
     // bundle of beams under it and back around, exactly as repeated
     // clicks already walk a bundle of overlapping beams.
+    //
+    // The hardware under the element takes the last turn of that walk.
+    // It has to be in the cycle: a mount stands where its mirror
+    // stands, so the mirror's own pick circle covers it entirely, and
+    // there is no spot to click that reaches the mount any other way.
     var optic = this._pickOptic(pt[0], pt[1]);
     if (optic) {
         var under = this._pickAll(pt[0], pt[1], 12 / this.scale);
+        var mechUnder = this._pickMech(pt[0], pt[1]);
+        var slots = 1 + under.length + (mechUnder ? 1 : 0);
         var again = !pickBeamFor && this.lastClick &&
             Math.abs(px - this.lastClick[0]) < 5 &&
             Math.abs(py - this.lastClick[1]) < 5;
-        this.cycle = again ? (this.cycle + 1) % (1 + under.length) : 0;
+        this.cycle = again ? (this.cycle + 1) % slots : 0;
         this.lastClick = [px, py];
         if (this.cycle === 0) {
             this.pinned = null;
@@ -4003,7 +4039,14 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
             this._selectOptic(optic);
             return;
         }
+        if (this.cycle > under.length) {
+            this.pinned = null;
+            this.selectedOptic = null;
+            this._selectMech(mechUnder);
+            return;
+        }
         this.selectedOptic = null;
+        this.selectedMech = null;
         this._showPanel('beam');
         this.pinned = under[this.cycle - 1];
         this._setReadout(this.pinned);

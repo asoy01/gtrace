@@ -158,15 +158,27 @@ class Mechanics(object):
     is turned about it. The shapes themselves never change when the
     body moves.
 
+    A body can be **attached** to an optics, which is what a mirror
+    mount is: something that stands where its mirror stands. An
+    attached body has no pose of its own - ``center`` and
+    ``rotationAngle`` are derived, on every read, from the host's pose
+    and the attachment offset. There is no callback to miss and no
+    stored copy to go stale: the 2026-08-03 bugs were all a
+    notification not arriving, and a derived value cannot fail to be
+    notified. The price is that an attached body cannot be moved on
+    its own - which is what "attached" means. ``detach()`` bakes the
+    derived pose in and frees it.
+
     Attributes
     ----------
     name : str
         Name of the body, unique within a layout.
     center : numpy.ndarray
         Where the local origin stands on the bench, of shape (2,).
+        Derived from the host while attached, and read-only then.
     rotationAngle : float
         How far the body is turned about the local origin, in radians,
-        counterclockwise.
+        counterclockwise. Derived while attached, like center.
     shapes : list of gtrace.draw.Shape
         The geometry, in local coordinates.
     layer : str
@@ -176,16 +188,180 @@ class Mechanics(object):
         a reference: the shapes saved with a layout are the truth, and
         the model name only records where they were taken from, so a
         library that has moved on cannot silently redraw an old layout.
+    attached_to : gtrace.optcomp.Optics or None
+        The optics this body stands on, held by reference, or None for
+        a body standing on its own. The constructor also accepts a
+        name, which OpticalLayout resolves when the body is
+        registered; until then the pose cannot be read.
+    offset : numpy.ndarray
+        Where the local origin stands in the host's frame: the host's
+        substrate centre, with x along its HR normal. ``[0, 0]`` puts
+        the body's origin at the host's centre.
+    offset_angle : float
+        How far the body is turned relative to the host, in radians.
     '''
 
-    def __init__(self, shapes=None, center=[0.0, 0.0], rotationAngle=0.0,
-                 name='Hardware', layer=DEFAULT_LAYER, model=None):
+    def __init__(self, shapes=None, center=None, rotationAngle=None,
+                 name='Hardware', layer=DEFAULT_LAYER, model=None,
+                 attached_to=None, offset=None, offset_angle=0.0):
         self.name = name
-        self.center = np.array(center, dtype='float64')
-        self.rotationAngle = float(rotationAngle)
         self.shapes = list(shapes) if shapes is not None else []
         self.layer = str(layer)
         self.model = model if model is None else str(model)
+
+        #: The host object, or None. A name given instead is kept in
+        #: _attach_name until a layout resolves it; the pose refuses to
+        #: be read in between, which is louder than being wrong.
+        self.attached_to = None
+        self._attach_name = None
+        self.offset = np.zeros(2)
+        self.offset_angle = 0.0
+        self._center = np.zeros(2)
+        self._rotationAngle = 0.0
+
+        if attached_to is not None:
+            if center is not None or rotationAngle is not None:
+                raise ValueError(
+                    'An attached body has no pose of its own: give '
+                    'offset and offset_angle instead of center and '
+                    'rotationAngle.')
+            if isinstance(attached_to, str):
+                self._attach_name = attached_to
+                self.offset = (np.zeros(2) if offset is None
+                               else np.array(offset, dtype='float64'))
+                self.offset_angle = float(offset_angle)
+            else:
+                self.attach(attached_to, offset=(offset if offset is not None
+                                                 else [0.0, 0.0]),
+                            offset_angle=offset_angle)
+        else:
+            self._center = np.array([0.0, 0.0] if center is None else center,
+                                    dtype='float64')
+            self._rotationAngle = float(0.0 if rotationAngle is None
+                                        else rotationAngle)
+
+#{{{ Pose: derived while attached, held while free
+
+    def _require_link(self):
+        if self._attach_name is not None:
+            raise ValueError(
+                "'%s' is attached to '%s' by name only. Register it in a "
+                'layout holding that optics to resolve the link.'
+                % (self.name, self._attach_name))
+
+    @property
+    def center(self):
+        self._require_link()
+        if self.attached_to is None:
+            return self._center
+        host = self.attached_to
+        a = float(host.normAngleHR)
+        ca, sa = np.cos(a), np.sin(a)
+        off = self.offset
+        return (np.asarray(host.center, dtype='float64')
+                + np.array([off[0] * ca - off[1] * sa,
+                            off[0] * sa + off[1] * ca]))
+
+    @center.setter
+    def center(self, value):
+        if self.attached_to is not None or self._attach_name is not None:
+            raise ValueError(
+                "'%s' is attached: it goes where its host goes. Detach it "
+                'first, or change the offset.' % self.name)
+        self._center = np.array(value, dtype='float64')
+
+    @property
+    def rotationAngle(self):
+        self._require_link()
+        if self.attached_to is None:
+            return self._rotationAngle
+        return float(self.attached_to.normAngleHR) + self.offset_angle
+
+    @rotationAngle.setter
+    def rotationAngle(self, value):
+        if self.attached_to is not None or self._attach_name is not None:
+            raise ValueError(
+                "'%s' is attached: it turns as its host turns. Detach it "
+                'first, or change the offset angle.' % self.name)
+        self._rotationAngle = float(value)
+
+    def attach(self, host, offset=None, offset_angle=None):
+        '''
+        Stand this body on an optics. From here on its pose is derived
+        from the host's - move the mirror and the mount comes along,
+        with no notification to miss.
+
+        Parameters
+        ----------
+        host : gtrace.optcomp.Optics
+            The optics to stand on. Only an optics: a chain of
+            hardware standing on hardware is a graph to walk and a
+            cycle to forbid, and nothing on a bench has needed it.
+        offset : array-like or None, optional
+            Where the local origin stands in the host's frame (its
+            substrate centre, x along the HR normal). None - the
+            default - keeps the body where it stands now, by deriving
+            the offset from the current poses.
+        offset_angle : float or None, optional
+            The turn relative to the host. None keeps the current one,
+            like the offset.
+
+        Returns
+        -------
+        self : Mechanics
+        '''
+        if isinstance(host, Mechanics):
+            raise ValueError(
+                'A mechanics attaches to an optics, not to another '
+                'mechanics: the attachment is one-way by design.')
+        if not (hasattr(host, 'center') and hasattr(host, 'normAngleHR')):
+            raise ValueError('%r has no pose to attach to.' % (host,))
+
+        # The current world pose, read before the switch: this is what
+        # "keep it where it stands" means, and it works whether the
+        # body is free or already attached to something else. Read only
+        # when a half is actually being kept - a body attached by name
+        # has no pose to read until the link resolves, and resolving it
+        # is exactly the call that arrives with both halves given.
+        ha = float(host.normAngleHR)
+        if offset is None:
+            d = self.center - np.asarray(host.center, dtype='float64')
+            ca, sa = np.cos(-ha), np.sin(-ha)
+            offset = [d[0] * ca - d[1] * sa, d[0] * sa + d[1] * ca]
+        if offset_angle is None:
+            offset_angle = self.rotationAngle - ha
+
+        self.attached_to = host
+        self._attach_name = None
+        self.offset = np.array(offset, dtype='float64')
+        self.offset_angle = float(offset_angle)
+        return self
+
+    def detach(self):
+        '''
+        Free this body, leaving it exactly where it stands: the derived
+        pose is baked into center and rotationAngle. A body that is not
+        attached is left alone.
+
+        Returns
+        -------
+        self : Mechanics
+        '''
+        if self._attach_name is not None:
+            # Attached by name and never resolved: there is no derived
+            # pose to bake, so the free pose it was built with stands.
+            self._attach_name = None
+            return self
+        if self.attached_to is None:
+            return self
+        c = self.center
+        a = self.rotationAngle
+        self.attached_to = None
+        self._center = c
+        self._rotationAngle = a
+        return self
+
+#}}}
 
 #{{{ Coordinate transform
 
@@ -375,11 +551,21 @@ class Mechanics(object):
         A new Mechanics with the same pose and a copy of the shape
         list. The shapes themselves are shared: nothing in gtrace
         mutates a drawing primitive, and the copy is what save, undo
-        and the clipboard-of-the-future need.
+        and the clipboard-of-the-future need. An attached body copies
+        as attached, standing on the same host.
         '''
+        if self.attached_to is not None or self._attach_name is not None:
+            m = Mechanics(shapes=list(self.shapes),
+                          name=self.name, layer=self.layer, model=self.model,
+                          attached_to=(self.attached_to
+                                       if self.attached_to is not None
+                                       else self._attach_name),
+                          offset=self.offset.copy(),
+                          offset_angle=self.offset_angle)
+            return m
         m = Mechanics(shapes=list(self.shapes),
-                      center=self.center.copy(),
-                      rotationAngle=self.rotationAngle,
+                      center=self._center.copy(),
+                      rotationAngle=self._rotationAngle,
                       name=self.name, layer=self.layer, model=self.model)
         return m
 
