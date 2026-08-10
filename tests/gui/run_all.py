@@ -57,6 +57,10 @@ SUITES = [
      'sources: the waist a laser is specified by, and the protocol reaching it'),
     ('verify_source_browser.py',
      'headless browser: the laser drawn for a source, and editing it'),
+    ('verify_mechanics.py',
+     'mechanics: the hardware the trace never sees, and the protocol reaching it'),
+    ('verify_mech_browser.py',
+     'headless browser: picking hardware by its area, and editing its pose'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in
@@ -67,8 +71,15 @@ EXTRA = [
 ]
 
 def run(cmd, cwd=None):
+    # The suites print µ, °, » and the like. Captured output is a pipe,
+    # and on a Japanese Windows console Python encodes a pipe as cp932
+    # unless told otherwise - so without this a suite dies of
+    # UnicodeEncodeError in its own PASS line and reads as a failure of
+    # gtrace. Harmless to node and to the browser.
+    env = dict(os.environ)
+    env['PYTHONUTF8'] = '1'
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
-                       encoding='utf-8', errors='replace')
+                       encoding='utf-8', errors='replace', env=env)
     return p
 
 def summarise(out):

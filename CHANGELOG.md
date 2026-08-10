@@ -13,6 +13,48 @@ across them.
 
 ### Added
 
+- **`Mechanics`: hardware on the layout** (`gtrace.mechanics`). A named
+  body - a breadboard, a mirror mount, the housing of a beam dump -
+  that is drawn, saved and edited like everything else and that the
+  trace never sees. Anything that is to stop light is still an
+  `Optics`; a `Mechanics` is only to be seen.
+  - The geometry is a list of `gtrace.draw` primitives in local
+    coordinates, placed on the bench by a pose (`center`,
+    `rotationAngle`). The pose is the only statement of where the body
+    is: the world shapes, the outline and the snap points are derived
+    from it, so moving the body is a change of two numbers.
+  - Registered with `OpticalLayout.add_mechanics()`, saved by value in
+    the layout file (with an optional `model` name as a label), drawn
+    on a `hardware` layer of its own - which the viewer and any CAD
+    reading the DXF can switch off as one thing - and picked in the
+    viewer by point-in-polygon on its outline, after everything else:
+    a beam, an optics or a mount lying on a breadboard wins the click
+    over it, and among mechanics the smallest wins.
+  - In the viewer, clicking a mechanics opens a pose panel (centre,
+    angle, rename, remove); dragging a *selected* mechanics moves it
+    and Shift-dragging turns it. An unselected one is not grabbed - a
+    breadboard can cover most of the bench, and a drag across it
+    should pan the view.
+  - Editing a mechanics does not invalidate the trace: the picture
+    changes, the beams did not move.
+  - Edit operations: `add` with `type: 'Mechanics'` (shapes arrive
+    serialized, as the layout file carries them), `move` (`center`),
+    `rotate` (`rotationAngle`), `set`, `remove`, `rename`. The scene
+    gains a `mechanics` channel; corners and centre join the snap
+    points, so the measuring tool reaches the hardware.
+- `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
+  `shape_to_dict`, which loading a mechanics needs.
+- `verify_mechanics.py` (131 checks) and `verify_mech_browser.py` (35).
+  The suite is 21 files and 4004 checks.
+
+### Fixed
+
+- `gtrace.draw.serialize.UnknownShapeError` derived from
+  `BaseException`, so it sailed through every `except Exception`
+  between the serializer and the user - including the one that shows a
+  failure in the widget. The copies of this class in `renderer.py` and
+  `draw.py` were fixed in 0.4.0; this one had been missed.
+
 - **Source beams are editable from the viewer.** Each registered source
   is drawn as a small laser at the point its light comes from; clicking
   it opens a properties panel, dragging it moves it, and Shift-dragging

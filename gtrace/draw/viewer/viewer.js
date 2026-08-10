@@ -162,6 +162,39 @@ function opticRadius(o) {
 }
 
 /*
+ * Whether a point lies inside a polygon, by ray casting. The same
+ * algorithm as Mechanics.contains on the Python side: a mechanics is
+ * picked by its area, because the enclosing circle the optics use
+ * would let a breadboard cover the whole bench around itself.
+ */
+function pointInPolygon(x, y, poly) {
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        var xi = poly[i][0], yi = poly[i][1];
+        var xj = poly[j][0], yj = poly[j][1];
+        if ((yi > y) !== (yj > y) &&
+                x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+/*
+ * Area of a polygon, by the shoelace formula. Used to pick the
+ * smallest of several overlapping mechanics: the mount standing on
+ * the breadboard must win over the breadboard, or it could never be
+ * pointed at.
+ */
+function polygonArea(poly) {
+    var a = 0;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        a += poly[j][0] * poly[i][1] - poly[i][0] * poly[j][1];
+    }
+    return Math.abs(a) / 2;
+}
+
+/*
  * Project a scene point onto a beam segment.
  * Returns {d, foot, dist} where d is the distance from the beam origin
  * (clamped to the segment), foot the projected point and dist the
@@ -439,6 +472,14 @@ function Viewer(container, scene, options) {
     this.sourceEls = [];
     this.sourceFallback = null;
 
+    // The mechanics - the hardware the trace never sees. Their shapes
+    // are in the canvas like the substrates of the optics; this is the
+    // selection state their outlines and panel work from.
+    this.selectedMech = null;
+    this.hoverMech = null;
+    this.dragMech = null;
+    this.mechFallback = null;
+
     // Measuring. The tool is a mode because it takes two clicks, and
     // between them the picture has to answer to the cursor rather than
     // to what is under it.
@@ -615,15 +656,18 @@ Viewer.prototype._build = function () {
     this.opticBody = htmlEl('div', 'gt-props');
     this.dimBody = htmlEl('div', 'gt-props');
     this.sourceBody = htmlEl('div', 'gt-props');
+    this.mechBody = htmlEl('div', 'gt-props');
     rpanel.appendChild(this.readoutBody);
     rpanel.appendChild(this.opticBody);
     rpanel.appendChild(this.dimBody);
     rpanel.appendChild(this.sourceBody);
+    rpanel.appendChild(this.mechBody);
     side.appendChild(rpanel);
     this._buildReadout();
     this._buildOpticPanel();
     this._buildDimPanel();
     this._buildSourcePanel();
+    this._buildMechPanel();
     this._showPanel('beam');
 
     // Two file panels, kept apart because they deal in two different
@@ -748,11 +792,13 @@ Viewer.prototype._build = function () {
                 ['Click again', 'cycle overlapping beams'],
                 ['Click an optics', 'show its properties'],
                 ['Click a laser', 'show the source it stands for'],
+                ['Click hardware', 'show its pose'],
                 ['f', 'fit to view'],
                 ['Measure, or m', 'measure between two points'],
                 ['Esc', 'clear selection']];
     if (this.opts.onEdit) {
         rows.push(['Drag an optics or a laser', 'move it'],
+                  ['Drag selected hardware', 'move it'],
                   ['Ctrl + drag', 'drop it square on a beam'],
                   ['Shift + drag', 'rotate it'],
                   ['Ctrl + click a beam', 'move the selected optics along it'],
@@ -1149,6 +1195,52 @@ function sourceFieldMessage(s, key, value) {
 }
 
 /*
+ * Properties of a mechanics: its pose, and the labels that say what it
+ * is. The shapes are not here - they are the body itself, drawn
+ * through the canvas, and a front end moves the body rather than
+ * redrawing it.
+ */
+var MECH_FIELDS = [
+    {key: 'name', label: 'Name', text: true},
+    {key: 'type', label: 'Type', readonly: true},
+    // The catalogue model the shapes came from, when there is one. A
+    // label rather than a link: the saved shapes are the truth.
+    {key: 'model', label: 'Model', readonly: true, optional: true},
+    {key: 'cx', label: 'Center x', unit: 'm'},
+    {key: 'cy', label: 'Center y', unit: 'm'},
+    {key: 'angle', label: 'Angle', unit: '°'},
+    {key: 'layer', label: 'Layer', readonly: true}
+];
+
+function mechFieldValue(m, key) {
+    switch (key) {
+    case 'type': return 'Mechanics';
+    case 'model': return m.model === null ? undefined : m.model;
+    case 'cx': return m.center[0];
+    case 'cy': return m.center[1];
+    case 'angle': return normAngle(m.rotationAngle || 0) * DEG;
+    default: return m[key];
+    }
+}
+
+/*
+ * The edit message that sets one field of a mechanics.
+ */
+function mechFieldMessage(m, key, value) {
+    switch (key) {
+    case 'cx':
+        return {op: 'move', target: m.name, center: [value, m.center[1]]};
+    case 'cy':
+        return {op: 'move', target: m.name, center: [m.center[0], value]};
+    case 'angle':
+        return {op: 'rotate', target: m.name, rotationAngle: value / DEG};
+    }
+    var attrs = {};
+    attrs[key] = value;
+    return {op: 'set', target: m.name, attrs: attrs};
+}
+
+/*
  * How deep the trace goes. Not a property of any one element - the cap
  * an element may put on its own ghosts is in OPTIC_FIELDS - but of the
  * layout, and the pair anyone chasing stray light reaches for first.
@@ -1415,6 +1507,28 @@ Viewer.prototype._buildSourcePanel = function () {
 };
 
 /*
+ * The mechanics panel. The same rows again, over the hardware.
+ */
+Viewer.prototype._buildMechPanel = function () {
+    var self = this;
+    var built = buildFieldTable(
+        MECH_FIELDS, !!this.onEdit,
+        function (key, el) { self._commitMechField(key, el); },
+        function () { self._refreshMechPanel(); });
+    this.mechFields = built.fields;
+    this.mechBody.appendChild(built.table);
+
+    if (this.onEdit) {
+        var foot = htmlEl('div', 'gt-props-foot');
+        var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
+        delBtn.title = 'Remove this mechanics from the layout';
+        delBtn.addEventListener('click', function () { self.removeSelected(); });
+        foot.appendChild(delBtn);
+        this.mechBody.appendChild(foot);
+    }
+};
+
+/*
  * Add an optics at the centre of the current view.
  *
  * The name is chosen here rather than by Python, so that the viewer can
@@ -1468,7 +1582,8 @@ Viewer.prototype._freshOpticName = function (prefix) {
     // clash anyway; asking for one and having it turned down would
     // leave the optimistic selection pointing at nothing.
     var taken = {};
-    [this.scene.optics, this.scene.sources, this.scene.dimensions]
+    [this.scene.optics, this.scene.sources, this.scene.dimensions,
+     this.scene.mechanics]
         .forEach(function (list) {
             (list || []).forEach(function (o) { taken[o.name] = true; });
         });
@@ -1601,6 +1716,7 @@ Viewer.prototype._refreshUndo = function () {
 Viewer.prototype.removeSelected = function () {
     var target = this.panelKind === 'dimension' ? this.selectedDim
         : this.panelKind === 'source' ? this.selectedSource
+        : this.panelKind === 'mech' ? this.selectedMech
         : this.selectedOptic;
     if (!target) { return null; }
 
@@ -1615,6 +1731,7 @@ Viewer.prototype.removeSelected = function () {
     this.selectedOptic = null;
     this.selectedDim = null;
     this.selectedSource = null;
+    this.selectedMech = null;
     this._showPanel('beam');
     if (local && !this.onEdit) {
         this.scene.dimensions = this.scene.dimensions.filter(
@@ -1693,7 +1810,8 @@ Viewer.prototype._refreshDisplayPanel = function () {
  * Show one of the two panels.
  */
 var PANEL_TITLES = {optic: 'Optics properties', dimension: 'Dimension',
-                    source: 'Source properties', beam: 'Beam readout'};
+                    source: 'Source properties',
+                    mech: 'Mechanics properties', beam: 'Beam readout'};
 
 Viewer.prototype._showPanel = function (kind) {
     this.panelKind = kind;
@@ -1701,6 +1819,7 @@ Viewer.prototype._showPanel = function (kind) {
     this.opticBody.style.display = kind === 'optic' ? '' : 'none';
     this.dimBody.style.display = kind === 'dimension' ? '' : 'none';
     this.sourceBody.style.display = kind === 'source' ? '' : 'none';
+    this.mechBody.style.display = kind === 'mech' ? '' : 'none';
     this.panelTitle.textContent = PANEL_TITLES[kind] || PANEL_TITLES.beam;
     if (kind !== 'beam') { this.pinLabel.textContent = ''; }
 };
@@ -1878,6 +1997,7 @@ Viewer.prototype._selectSource = function (source) {
     if (source) {
         this.selectedOptic = null;
         this.selectedDim = null;
+        this.selectedMech = null;
         this._refreshSourcePanel();
         this._showPanel('source');
     } else {
@@ -1923,9 +2043,60 @@ Viewer.prototype._commitSourceField = function (key, input) {
     this.onEdit(sourceFieldMessage(s, key, value));
 };
 
+Viewer.prototype._selectedMech = function () {
+    if (!this.selectedMech) { return null; }
+    var mechs = this.scene.mechanics || [];
+    for (var i = 0; i < mechs.length; i++) {
+        if (mechs[i].name === this.selectedMech) { return mechs[i]; }
+    }
+    return null;
+};
+
+Viewer.prototype._refreshMechPanel = function () {
+    var m = this._selectedMech();
+    refreshFieldTable(this.mechFields, MECH_FIELDS,
+                      m ? function (key) { return mechFieldValue(m, key); }
+                        : null);
+};
+
+Viewer.prototype._selectMech = function (mech) {
+    this.selectedMech = mech ? mech.name : null;
+    if (mech) {
+        this.selectedOptic = null;
+        this.selectedDim = null;
+        this.selectedSource = null;
+        this._refreshMechPanel();
+        this._showPanel('mech');
+    } else {
+        this._showPanel('beam');
+    }
+    this._updateOverlay();
+};
+
+Viewer.prototype._commitMechField = function (key, input) {
+    var m = this._selectedMech();
+    if (!m || !this.onEdit) { return; }
+
+    if (key === 'name') {
+        this.renameSelected(input.value);
+        return;
+    }
+
+    var value = parseField(input.value);
+    // Every number a mechanics takes is finite: a pose has no
+    // 'infinity' and no 'leave it to the layout'.
+    if (typeof value !== 'number' || !isFinite(value)) {
+        this._refreshMechPanel();
+        return;
+    }
+    if (value === mechFieldValue(m, key)) { return; }
+    this.onEdit(mechFieldMessage(m, key, value));
+};
+
 Viewer.prototype._selectOptic = function (optic) {
     this.selectedOptic = optic ? optic.name : null;
     if (optic) {
+        this.selectedMech = null;
         this._refreshOpticPanel();
         this._showPanel('optic');
     } else {
@@ -2015,14 +2186,17 @@ Viewer.prototype._commitOpticField = function (key, input) {
 Viewer.prototype.renameSelected = function (name) {
     // Whichever panel is up names the thing being renamed. The message
     // is the same either way - the layout resolves a target across
-    // optics, sources and dimensions alike - so only which selection to
-    // carry optimistically differs.
+    // optics, sources, dimensions and mechanics alike - so only which
+    // selection to carry optimistically differs.
     var source = this.panelKind === 'source';
-    var o = source ? this._selectedSource() : this._selectedOptic();
+    var mech = this.panelKind === 'mech';
+    var o = source ? this._selectedSource()
+        : mech ? this._selectedMech() : this._selectedOptic();
     if (!o || !this.onEdit) { return null; }
     name = String(name).trim();
     if (!name || name === o.name) {
         if (source) { this._refreshSourcePanel(); }
+        else if (mech) { this._refreshMechPanel(); }
         else { this._refreshOpticPanel(); }
         return null;
     }
@@ -2030,6 +2204,9 @@ Viewer.prototype.renameSelected = function (name) {
     if (source) {
         this.sourceFallback = o.name;
         this.selectedSource = name;
+    } else if (mech) {
+        this.mechFallback = o.name;
+        this.selectedMech = name;
     } else {
         this.selectionFallback = o.name;
         this.selectedOptic = name;
@@ -2054,12 +2231,18 @@ Viewer.prototype.revertSelection = function () {
         this.selectedSource = this.sourceFallback;
         this._showPanel('source');
     }
+    if (this.mechFallback && !this._selectedMech()) {
+        this.selectedMech = this.mechFallback;
+        this._showPanel('mech');
+    }
     this.selectionFallback = null;
     this.dimFallback = null;
     this.sourceFallback = null;
+    this.mechFallback = null;
     this._refreshOpticPanel();
     this._refreshDimPanel();
     this._refreshSourcePanel();
+    this._refreshMechPanel();
     this._updateOverlay();
 };
 
@@ -2321,8 +2504,14 @@ Viewer.prototype._pendingDim = function () {
  */
 Viewer.prototype._freshDimName = function () {
     var taken = {};
-    (this.scene.optics || []).forEach(function (o) { taken[o.name] = true; });
-    (this.scene.dimensions || []).forEach(function (d) { taken[d.name] = true; });
+    // Everything in the one namespace, the same list _freshOpticName
+    // walks: a dimension named after a source or a breadboard would be
+    // refused by Python, stranding the optimistic selection.
+    [this.scene.optics, this.scene.sources, this.scene.dimensions,
+     this.scene.mechanics]
+        .forEach(function (list) {
+            (list || []).forEach(function (o) { taken[o.name] = true; });
+        });
     var i = 1;
     while (taken['D' + i]) { i++; }
     return 'D' + i;
@@ -2340,6 +2529,7 @@ Viewer.prototype._selectedDim = function () {
 Viewer.prototype._selectDim = function (dim) {
     this.selectedDim = dim ? dim.name : null;
     this.selectedOptic = null;
+    this.selectedMech = null;
     this.pinned = null;
     if (dim) {
         this._refreshDimPanel();
@@ -2559,6 +2749,9 @@ Viewer.prototype._renderScene = function () {
     this.arrow = svgEl('path', {'class': 'gt-arrow'});
     this.marker = svgEl('circle', {'class': 'gt-marker', r: 4});
     this.outline = svgEl('polygon', {'class': 'gt-optic-outline'});
+    // The outline of a mechanics: its own element, so that a hovered
+    // optics and a selected breadboard can both be marked at once.
+    this.mechOutline = svgEl('polygon', {'class': 'gt-optic-outline'});
     // The beam the Along beam row names. A name like 'b0:M1t1' says
     // nothing about which line in the picture it is, so the choice is
     // drawn. Underneath everything else, since it is a standing mark
@@ -2579,12 +2772,14 @@ Viewer.prototype._renderScene = function () {
     this.overlayGroup.appendChild(this.slideArrow);
     this.overlayGroup.appendChild(this.rubber);
     this.overlayGroup.appendChild(this.snapMark);
+    this.overlayGroup.appendChild(this.mechOutline);
     this.overlayGroup.appendChild(this.outline);
     this.overlayGroup.appendChild(this.highlight);
     this.overlayGroup.appendChild(this.arrow);
     this.overlayGroup.appendChild(this.marker);
     this._showMarker(false);
     this.outline.style.display = 'none';
+    this.mechOutline.style.display = 'none';
     this.slideMark.style.display = 'none';
     this.slideArrow.style.display = 'none';
     this.rubber.style.display = 'none';
@@ -3121,11 +3316,21 @@ Viewer.prototype._bindEvents = function () {
             && !self._pickDimension(pt[0], pt[1]);
         var s = grabbable ? self._pickSource(px, py) : null;
         var o = (grabbable && !s) ? self._pickOptic(pt[0], pt[1]) : null;
+        // A mechanics is grabbed only while it is the selection. A
+        // breadboard can cover most of the bench, and a press on it
+        // usually means "pan the view" - so the first click selects,
+        // and only then does dragging move the hardware.
+        var h = (grabbable && !s && !o && self.selectedMech)
+            ? self._pickMech(pt[0], pt[1]) : null;
+        if (h && h.name !== self.selectedMech) { h = null; }
         if (s) {
             self._beginSourceDrag(s, pt, ev.shiftKey);
             ev.preventDefault();
         } else if (o) {
             self._beginOpticDrag(o, pt, ev.shiftKey);
+            ev.preventDefault();
+        } else if (h) {
+            self._beginMechDrag(h, pt, ev.shiftKey);
             ev.preventDefault();
         }
         dragging = true; moved = 0;
@@ -3148,6 +3353,13 @@ Viewer.prototype._bindEvents = function () {
             self._updateOpticDrag(
                 self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
                 ev.ctrlKey);
+            return;
+        }
+        if (self.dragMech) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateMechDrag(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
             return;
         }
         if (dragging) {
@@ -3184,6 +3396,24 @@ Viewer.prototype._bindEvents = function () {
             self._updateSourceDrag(
                 self.screenToScene(ev.clientX - rs.left, ev.clientY - rs.top));
             self._endSourceDrag();
+            return;
+        }
+        if (self.dragMech) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            var rm = self.svg.getBoundingClientRect();
+            if (moved < 4) {
+                // A grab that went nowhere is a click on the selected
+                // hardware, which keeps it selected. Let the click
+                // pipeline say so, as it does for the others.
+                self.dragMech = null;
+                self._onClick(ev.clientX - rm.left, ev.clientY - rm.top,
+                              ev.ctrlKey);
+                return;
+            }
+            self._updateMechDrag(
+                self.screenToScene(ev.clientX - rm.left, ev.clientY - rm.top));
+            self._endMechDrag();
             return;
         }
         if (self.dragOptic) {
@@ -3258,6 +3488,7 @@ Viewer.prototype._bindEvents = function () {
             self.selectedOptic = null;
             self.selectedDim = null;
             self.selectedSource = null;
+            self.selectedMech = null;
             self._setReadout(null);
             self._showPanel('beam');
             self._updateOverlay();
@@ -3417,6 +3648,55 @@ Viewer.prototype._endSourceDrag = function () {
         : {op: 'move', target: d.source.name, pos: d.pos});
 };
 
+/*
+ * Dragging a mechanics.
+ *
+ * The same gesture as the others - drag to move, Shift-drag to turn -
+ * over the simplest body of the three: a mechanics turns about its own
+ * center, which is the local origin its shapes are drawn from, so the
+ * preview is its outline carried and turned and nothing more.
+ */
+Viewer.prototype._beginMechDrag = function (mech, scenePt, rotate) {
+    var c = mech.center;
+    this.dragMech = {
+        mech: mech,
+        rotate: !!rotate,
+        grab: scenePt,
+        center0: [c[0], c[1]],
+        angle0: mech.rotationAngle || 0,
+        grabAngle: Math.atan2(scenePt[1] - c[1], scenePt[0] - c[0]),
+        center: [c[0], c[1]],
+        angle: mech.rotationAngle || 0
+    };
+    this._updateOverlay();
+};
+
+Viewer.prototype._updateMechDrag = function (scenePt) {
+    var d = this.dragMech;
+    if (!d) { return; }
+    if (d.rotate) {
+        var a = Math.atan2(scenePt[1] - d.center0[1],
+                           scenePt[0] - d.center0[0]);
+        d.angle = d.angle0 + (a - d.grabAngle);
+    } else {
+        d.center = [d.center0[0] + scenePt[0] - d.grab[0],
+                    d.center0[1] + scenePt[1] - d.grab[1]];
+    }
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endMechDrag = function () {
+    var d = this.dragMech;
+    this.dragMech = null;
+    if (!d) { return; }
+    this._selectMech(d.mech);
+    if (!this.onEdit) { return; }
+    this.onEdit(d.rotate
+        ? {op: 'rotate', target: d.mech.name, rotationAngle: d.angle}
+        : {op: 'move', target: d.mech.name, center: d.center});
+};
+
 Viewer.prototype._endOpticDrag = function () {
     var d = this.dragOptic;
     this.dragOptic = null;
@@ -3526,6 +3806,60 @@ Viewer.prototype._pickOptic = function (sx, sy) {
     return best;
 };
 
+/*
+ * The mechanics under a scene point, or null. Tested against the
+ * outline polygon by area rather than against an enclosing circle: a
+ * breadboard is huge, and a circle around it would cover the bench.
+ * Of several hits the smallest wins, so a mount standing on a
+ * breadboard is not shadowed by it.
+ */
+Viewer.prototype._pickMech = function (sx, sy) {
+    var best = null, bestArea = Infinity;
+    var mechs = this.scene.mechanics || [];
+    for (var i = 0; i < mechs.length; i++) {
+        var m = mechs[i];
+        var g = this.layerGroups[m.layer];
+        if (g && !g.visible) { continue; }
+        if (!m.outline || m.outline.length < 3) { continue; }
+        if (!pointInPolygon(sx, sy, m.outline)) { continue; }
+        var area = polygonArea(m.outline);
+        if (area < bestArea) { best = m; bestArea = area; }
+    }
+    return best;
+};
+
+/*
+ * Where the outline of a mechanics falls for a trial pose. The scene
+ * carries the outline for the pose Python knows; a drag turns and
+ * carries those same points, so the preview costs no geometry.
+ */
+Viewer.prototype._mechOutlinePoints = function (m, center, angle) {
+    var c0 = m.center, a0 = m.rotationAngle || 0;
+    var cx = center === undefined ? c0[0] : center[0];
+    var cy = center === undefined ? c0[1] : center[1];
+    var da = (angle === undefined ? a0 : angle) - a0;
+    var ca = Math.cos(da), sa = Math.sin(da);
+    return (m.outline || []).map(function (p) {
+        var ox = p[0] - c0[0], oy = p[1] - c0[1];
+        return [cx + ox * ca - oy * sa, cy + ox * sa + oy * ca];
+    });
+};
+
+Viewer.prototype._updateMechOutline = function (m, center, angle) {
+    if (!m) { this.mechOutline.style.display = 'none'; return; }
+    var self = this;
+    var pts = this._mechOutlinePoints(m, center, angle).map(function (p) {
+        var s = self.sceneToScreen(p[0], p[1]);
+        return s[0] + ',' + s[1];
+    });
+    this.mechOutline.setAttribute('points', pts.join(' '));
+    this.mechOutline.classList.toggle('gt-dragging', !!this.dragMech);
+    this.mechOutline.classList.toggle(
+        'gt-selected',
+        !this.dragMech && !this.hoverMech && m.name === this.selectedMech);
+    this.mechOutline.style.display = '';
+};
+
 Viewer.prototype._onHover = function (px, py) {
     var pt = this.screenToScene(px, py);
     this.cursor = pt;
@@ -3544,6 +3878,7 @@ Viewer.prototype._onHover = function (px, py) {
         }
         this.hoverOptic = null;
         this.hoverSource = null;
+        this.hoverMech = null;
         this.hover = null;
         this._updateOverlay();
         this._updateStatus();
@@ -3559,9 +3894,22 @@ Viewer.prototype._onHover = function (px, py) {
     this.hoverSource = this._pickSource(px, py);
     this.hoverOptic = this.hoverSource ? null
         : this._pickOptic(pt[0], pt[1]);
+    // The hardware comes last, as it does in the click order: it is
+    // the largest thing in the picture, and everything else stands on
+    // or in front of it.
+    this.hoverMech = (this.hoverSource || this.hoverOptic) ? null
+        : this._pickMech(pt[0], pt[1]);
     var over = this.hoverOptic || this.hoverSource;
-    this.svg.classList.toggle('gt-over-optic', !!over && !!this.onEdit);
-    this.svg.classList.toggle('gt-over-pickable', !!over && !this.onEdit);
+    // A selected mechanics is grabbable; an unselected one only
+    // selectable. The cursor says which - see the mousedown handler
+    // for why a breadboard is not grabbed until it is selected.
+    var mechGrab = this.hoverMech && this.onEdit
+        && this.hoverMech.name === this.selectedMech;
+    this.svg.classList.toggle('gt-over-optic',
+                              (!!over && !!this.onEdit) || !!mechGrab);
+    this.svg.classList.toggle('gt-over-pickable',
+                              (!!over && !this.onEdit)
+                              || (!!this.hoverMech && !mechGrab));
 
     var hit = this._pick(pt[0], pt[1], 12 / this.scale);
     this.hover = hit;
@@ -3680,6 +4028,25 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
             this._updateOverlay();
             return;
         }
+    }
+
+    // The hardware is picked after everything else, as the largest
+    // thing in the picture: a beam crossing a breadboard would be
+    // unreachable the other way round, and the board is still there to
+    // be clicked anywhere its beams are not.
+    if (!hits.length) {
+        var mech = this._pickMech(pt[0], pt[1]);
+        if (mech) {
+            this.pinned = null;
+            this.cycle = 0;
+            this.lastClick = [px, py];
+            this._selectMech(mech);
+            return;
+        }
+    }
+    if (this.panelKind === 'mech') {
+        this.selectedMech = null;
+        this._showPanel('beam');
     }
 
     if (this.panelKind === 'optic') {
@@ -3805,6 +4172,14 @@ Viewer.prototype._updateOverlay = function () {
         this._updateOpticOutline(this.hoverOptic || this._selectedOptic());
     }
 
+    // The hardware outline, by the same rules on its own element.
+    if (this.dragMech) {
+        this._updateMechOutline(this.dragMech.mech, this.dragMech.center,
+                                this.dragMech.angle);
+    } else {
+        this._updateMechOutline(this.hoverMech || this._selectedMech());
+    }
+
     // The beam the Along beam row names, marked along its whole length
     // so that the name in the panel and a line in the picture are the
     // same thing. Only while that panel is up: it belongs to the
@@ -3856,6 +4231,15 @@ Viewer.prototype._updateStatus = function () {
               '   (was ' + fmtDeg(normAngle(s.angle0)) + ')'
             : s.source.name + ':  ' + fmtLen(s.pos[0]) + ',  ' +
               fmtLen(s.pos[1]);
+        return;
+    }
+    var h = this.dragMech;
+    if (h) {
+        this.statusBar.textContent = h.rotate
+            ? h.mech.name + ':  ' + fmtDeg(normAngle(h.angle)) +
+              '   (was ' + fmtDeg(normAngle(h.angle0)) + ')'
+            : h.mech.name + ':  ' + fmtLen(h.center[0]) + ',  ' +
+              fmtLen(h.center[1]);
         return;
     }
     var d = this.dragOptic;
@@ -3978,8 +4362,10 @@ Viewer.prototype.setScene = function (scene) {
     this.hover = null;
     this.hoverOptic = null;
     this.hoverSource = null;
+    this.hoverMech = null;
     this.dragOptic = null;
     this.dragSource = null;
+    this.dragMech = null;
     this.cycle = 0;
     this.lastClick = null;
     this.labels = [];
@@ -4005,12 +4391,16 @@ Viewer.prototype.setScene = function (scene) {
     this.selectionFallback = null;
     this.dimFallback = null;
     this.sourceFallback = null;
+    this.mechFallback = null;
     if (this._selectedDim()) {
         this._refreshDimPanel();
         this._showPanel('dimension');
     } else if (this._selectedSource()) {
         this._refreshSourcePanel();
         this._showPanel('source');
+    } else if (this._selectedMech()) {
+        this._refreshMechPanel();
+        this._showPanel('mech');
     } else if (this._selectedOptic()) {
         this._refreshOpticPanel();
         this._showPanel('optic');
@@ -4024,6 +4414,10 @@ Viewer.prototype.setScene = function (scene) {
     } else if (this.panelKind === 'dimension') {
         // The dimension it was showing is gone - removed, or undone.
         this.selectedDim = null;
+        this._showPanel('beam');
+    } else if (this.panelKind === 'mech') {
+        // The mechanics it was showing is gone - removed, or undone.
+        this.selectedMech = null;
         this._showPanel('beam');
     }
 

@@ -62,8 +62,18 @@ __status__ = "Beta"
 
 #{{{ Helper functions
 
-class UnknownShapeError(BaseException):
+class UnknownShapeError(Exception):
+    '''
+    Raised when a shape cannot be serialized or rebuilt.
+
+    Derived from Exception, not BaseException: the copy of this class
+    in renderer.py was fixed the same way on 2026-08-04, after a
+    BaseException sailed through every 'except Exception' between the
+    renderer and the user - including the one that would have shown the
+    failure in the GUI.
+    '''
     def __init__(self, message):
+        super().__init__(message)
         self.message = message
 
 def _vec(v):
@@ -132,6 +142,55 @@ def shape_to_dict(s):
                 'rotation': float(s.rotation)}
     else:
         raise UnknownShapeError('Shape not supported: %s' % type(s).__name__)
+
+#}}}
+
+#{{{ shape_from_dict
+
+def shape_from_dict(d):
+    '''
+    Rebuild a draw.Shape from a dict produced by shape_to_dict().
+
+    The inverse exists because a Mechanics carries its geometry as
+    shapes: a saved layout writes them out with shape_to_dict, and
+    loading it - or receiving them in an edit message - has to build
+    the primitives back.
+
+    Raises
+    ------
+    UnknownShapeError
+        If the dict does not describe a shape gtrace can draw. A
+        malformed dict (a missing key, a value of the wrong kind) comes
+        back as whatever the constructor raised.
+    '''
+    if not isinstance(d, dict):
+        raise UnknownShapeError('A shape must be a dict, not %s'
+                                % type(d).__name__)
+    kind = d.get('type')
+    thickness = float(d.get('thickness', 0.0))
+    if kind == 'line':
+        return draw.Line(list(d['start']), list(d['stop']),
+                         thickness=thickness)
+    elif kind == 'polyline':
+        return draw.PolyLine([float(v) for v in d['x']],
+                             [float(v) for v in d['y']],
+                             thickness=thickness)
+    elif kind == 'rectangle':
+        return draw.Rectangle(list(d['point']), float(d['width']),
+                              float(d['height']), thickness=thickness)
+    elif kind == 'circle':
+        return draw.Circle(list(d['center']), float(d['radius']),
+                           thickness=thickness)
+    elif kind == 'arc':
+        return draw.Arc(list(d['center']), float(d['radius']),
+                        float(d['startangle']), float(d['stopangle']),
+                        thickness=thickness)
+    elif kind == 'text':
+        return draw.Text(str(d['text']), list(d['point']),
+                         height=float(d.get('height', 1.0)),
+                         rotation=float(d.get('rotation', 0.0)))
+    else:
+        raise UnknownShapeError('Shape not supported: %r' % (kind,))
 
 #}}}
 

@@ -1,0 +1,460 @@
+'''
+The hardware in a real browser: that a breadboard can be picked by its
+area and only by its area, that everything else wins the click over it,
+and that its pose is edited the way the others are - panel, drag,
+Shift-drag - with every message fed back to Python and compared.
+
+Two decisions carry the interaction and are checked hardest.
+
+The first is the pick order. A mechanics is the largest thing in the
+picture, and it is picked last: a beam crossing a breadboard, an optics
+standing on it, a mount lying on it - all of them win, or they could
+never be pointed at again. Among mechanics themselves the smallest
+wins, for the same reason.
+
+The second is that a mechanics is grabbed only while it is selected.
+A breadboard can cover most of the bench, and a press on it usually
+means "pan the view"; so the first click selects, and only then does a
+drag move the hardware. The check drags an unselected board and
+requires the view to move and the board to stay.
+'''
+
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _harness import REPO, WORK, require_chrome
+
+import json
+import math
+import re
+import subprocess
+
+import numpy as np
+
+import gtrace.beam as beam
+import gtrace.draw as draw
+import gtrace.optcomp as opt
+from gtrace.draw.viewer import viewer_css
+from gtrace.layout import OpticalLayout, TraceRules, q_from_waist
+from gtrace.mechanics import Mechanics
+from gtrace.unit import *
+
+SP = WORK
+CHROME = require_chrome()
+
+npass = 0
+nfail = 0
+
+def check(name, cond, detail=''):
+    global npass, nfail
+    if cond:
+        npass += 1
+        print('  PASS  %s %s' % (name, detail))
+    else:
+        nfail += 1
+        print('  FAIL  %s %s' % (name, detail))
+
+def make_layout():
+    b0 = beam.GaussianBeam(q0=q_from_waist(0.2*mm, 0.0, 1064*nm), wl=1064*nm,
+                           pos=[0, 0], dirAngle=0, name='b0')
+    M1 = opt.Mirror(HRcenter=[0.5, 0.0], normAngleHR=np.pi, diameter=10*cm,
+                    thickness=5*cm, Refl_HR=0.99, Trans_HR=0.01, n=1.45,
+                    name='M1')
+    # The board runs under the whole beam path and under M1, so that
+    # every "X wins over the board" check has a real overlap to decide.
+    board = Mechanics(shapes=[draw.Rectangle([-0.3, -0.2], 0.6, 0.4)],
+                      center=[0.3, 0.0], name='Board')
+    # A mount on the board: the smallest-wins rule needs two mechanics
+    # on top of each other. It carries a model so the model row has
+    # something to show; the board has none so the row can hide.
+    mount = Mechanics(shapes=[draw.Circle([0.0, 0.0], 0.012),
+                              draw.Rectangle([-0.015, -0.015], 0.03, 0.03)],
+                      center=[0.42, -0.12], name='Mount', model='POLARIS-K1')
+    return OpticalLayout(optics=[M1], sources=[b0],
+                         mechanics=[board, mount],
+                         rules=TraceRules(order=2, power_threshold=1e-4))
+
+layout = make_layout()
+scene = layout.scene_dict()
+
+with open(os.path.join(SP, 'stage2_widget.mjs'), encoding='utf-8') as f:
+    esm = f.read()
+
+def js(obj):
+    return json.dumps(obj, ensure_ascii=True).replace('</', '<\\/')
+
+PAGE = '''<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+html, body { margin: 0; height: 100%; }
+#host { width: 1000px; height: 640px; }
+__CSS__
+</style></head>
+<body>
+<div id="host"></div>
+<div id="out" style="display:none"></div>
+<script>
+var ESM_SRC = __ESM__;
+var SCENE = __SCENE__;
+var EDITABLE = __EDITABLE__;
+</script>
+<script type="module">
+(async function () {
+    var out = {error: null, sent: []};
+    function mouse(target, type, x, y, opts) {
+        target.dispatchEvent(new MouseEvent(type, Object.assign({
+            clientX: x, clientY: y, button: 0, bubbles: true, cancelable: true
+        }, opts || {})));
+    }
+    try {
+        var url = URL.createObjectURL(
+            new Blob([ESM_SRC], {type: 'text/javascript'}));
+        var mod = await import(url);
+
+        var state = {scene: SCENE, height: 640, editable: EDITABLE,
+                     error: ''};
+        var handlers = {}, sent = [];
+        var model = {
+            get: function (k) { return state[k]; },
+            set: function (k, v) {
+                state[k] = v;
+                (handlers['change:' + k] || []).forEach(function (f) { f(); });
+            },
+            on: function (e, f) { (handlers[e] = handlers[e] || []).push(f); },
+            off: function (e, f) {
+                handlers[e] = (handlers[e] || []).filter(function (g) {
+                    return g !== f;
+                });
+            },
+            send: function (m) { sent.push(m); },
+            save_changes: function () {}
+        };
+
+        var el = document.getElementById('host');
+        mod.default.render({model: model, el: el});
+        var v = el.gtraceViewer;
+
+        // Re-measured every time it is used: the status bar changes
+        // length as the cursor moves, and that reflows the page.
+        function rect() { return v.svg.getBoundingClientRect(); }
+        function screenOf(p) {
+            var r = rect();
+            var s = v.sceneToScreen(p[0], p[1]);
+            return [s[0] + r.left, s[1] + r.top];
+        }
+        function panel() {
+            return {
+                title: el.querySelector('.gt-panel-title span').textContent,
+                beamShown: v.readoutBody.style.display !== 'none',
+                opticShown: v.opticBody.style.display !== 'none',
+                mechShown: v.mechBody.style.display !== 'none',
+                selectedMech: v.selectedMech,
+                selectedOptic: v.selectedOptic
+            };
+        }
+        function fields() {
+            var o = {};
+            for (var k in v.mechFields) {
+                var f = v.mechFields[k];
+                o[k] = f.editable ? f.el.value : f.el.textContent;
+                o[k + '_shown'] = f.row.style.display !== 'none';
+            }
+            return o;
+        }
+        function setField(key, text) {
+            var f = v.mechFields[key];
+            f.el.value = text;
+            f.el.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+        function outlinePts() {
+            if (v.mechOutline.style.display === 'none') { return null; }
+            return v.mechOutline.getAttribute('points').split(' ')
+                .map(function (p) { return p.split(',').map(Number); });
+        }
+        function clickAt(p, opts) {
+            mouse(v.svg, 'mousedown', p[0], p[1], opts);
+            mouse(window, 'mouseup', p[0], p[1], opts);
+        }
+        function dragFromTo(a, b, opts) {
+            mouse(v.svg, 'mousedown', a[0], a[1], opts);
+            mouse(window, 'mousemove',
+                  (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, opts);
+            mouse(window, 'mousemove', b[0], b[1], opts);
+            mouse(window, 'mouseup', b[0], b[1], opts);
+        }
+
+        // Scene points chosen against the layout: on the board but off
+        // the beam, the optics, the mount and the laser box.
+        var BOARD_PT = [0.2, 0.15];
+        var MOUNT_PT = [0.42, -0.12];
+        var BEAM_PT = [0.25, 0.0];
+        var OFF_PT = [0.3, 0.45];
+
+        out.mechCount = (SCENE.mechanics || []).length;
+
+        // --- the pick order ---
+        clickAt(screenOf(BOARD_PT));
+        out.clickBoard = panel();
+        out.boardFields = fields();
+        out.boardOutline = outlinePts();
+        out.boardOutlineWant = SCENE.mechanics[0].outline.map(function (p) {
+            return v.sceneToScreen(p[0], p[1]);
+        });
+
+        clickAt(screenOf(BEAM_PT));
+        out.clickBeam = panel();
+
+        clickAt(screenOf(MOUNT_PT));
+        out.clickMount = panel();
+        out.mountFields = fields();
+
+        var m1c = [0.525, 0.0];    // substrate centre of M1, on the board
+        clickAt(screenOf(m1c));
+        out.clickOptic = panel();
+
+        clickAt(screenOf(OFF_PT));
+        out.clickOff = panel();
+
+        // --- a hidden layer is unpickable ---
+        v.setLayerVisible('hardware', false);
+        clickAt(screenOf(BOARD_PT));
+        out.clickHidden = panel();
+        v.setLayerVisible('hardware', true);
+
+        // --- panning is not moving ---
+        // The board is not selected: a drag across it pans the view and
+        // sends nothing.
+        var cx0 = v.cx;
+        var a = screenOf(BOARD_PT);
+        dragFromTo(a, [a[0] + 60, a[1]]);
+        out.panned = {moved: v.cx !== cx0, sent: sent.length,
+                      selected: v.selectedMech};
+
+        // --- dragging the selection ---
+        clickAt(screenOf(BOARD_PT));
+        var before = sent.length;
+        a = screenOf(BOARD_PT);
+        dragFromTo(a, [a[0] + 50, a[1] + 30]);
+        out.dragMove = {msg: sent[before] || null,
+                        n: sent.length - before,
+                        scale: v.scale};
+
+        // --- Shift-drag turns about the centre ---
+        // Grab a point of the board, swing it a quarter turn about the
+        // centre, and require the angle in the message. The grab has
+        // to land on bare board - a grab on M1 would take the mirror,
+        // which is the pick order doing its job - so it starts above
+        // the centre and swings to the left.
+        clickAt(screenOf(BOARD_PT));
+        before = sent.length;
+        var c = SCENE.mechanics[0].center;
+        var g0 = screenOf([c[0], c[1] + 0.15]);
+        var g1 = screenOf([c[0] - 0.15, c[1]]);
+        dragFromTo(g0, g1, {shiftKey: true});
+        out.dragRotate = {msg: sent[before] || null, n: sent.length - before};
+
+        // --- the panel edits ---
+        clickAt(screenOf(BOARD_PT));
+        before = sent.length;
+        setField('cx', '0.31');
+        out.editCx = sent[before] || null;
+        before = sent.length;
+        setField('angle', '15');
+        out.editAngle = sent[before] || null;
+        before = sent.length;
+        setField('name', 'Bench');
+        out.rename = {msg: sent[before] || null, selected: v.selectedMech};
+        v.selectedMech = 'Board';   // the model was not really renamed
+
+        // --- remove ---
+        clickAt(screenOf(MOUNT_PT));
+        before = sent.length;
+        var foot = v.mechBody.querySelector('.gt-btn-danger');
+        out.removeShown = !!foot;
+        if (foot) { foot.click(); }
+        out.remove = {msg: sent[before] || null, panel: panel()};
+
+        // --- Escape lets go ---
+        clickAt(screenOf(BOARD_PT));
+        window.dispatchEvent(new KeyboardEvent('keydown',
+            {key: 'Escape', bubbles: true}));
+        out.escape = panel();
+
+        out.sent = sent;
+    } catch (e) {
+        out.error = String(e && e.stack || e);
+    }
+    document.getElementById('out').textContent = JSON.stringify(out);
+})();
+</script>
+</body></html>
+'''
+
+def run(editable):
+    page = PAGE.replace('__CSS__', viewer_css()) \
+               .replace('__ESM__', js(esm)) \
+               .replace('__SCENE__', js(scene)) \
+               .replace('__EDITABLE__', 'true' if editable else 'false')
+    path = os.path.join(SP, 'mech_page_%s.html' % editable)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(page)
+    p = subprocess.run(
+        [CHROME, '--headless=new', '--disable-gpu', '--window-size=1300,800',
+         '--virtual-time-budget=6000', '--enable-logging=stderr', '--v=0',
+         '--dump-dom', 'file:///' + path.replace('\\', '/')],
+        capture_output=True, text=True, encoding='utf-8', errors='replace',
+        timeout=120)
+    errs = [l.strip() for l in (p.stderr or '').splitlines()
+            if 'CONSOLE' in l and ('Uncaught' in l or 'Error' in l)]
+    m = re.search(r'<div id="out"[^>]*>(.*?)</div>', p.stdout or '', re.S)
+    payload = (m.group(1).replace('&quot;', '"').replace('&amp;', '&')
+               .replace('&lt;', '<').replace('&gt;', '>')) if m else None
+    return errs, (json.loads(payload) if payload else None)
+
+
+print('--- editable viewer ---')
+errs, res = run(True)
+check('no console error', errs == [], '\n        '.join(errs[:3]))
+if res is None:
+    print('  FAIL  no output')
+    sys.exit(1)
+check('ran without exception', res['error'] is None, str(res['error'])[:500])
+
+board = scene['mechanics'][0]
+
+print('--- the pick order ---')
+check('the scene carries both mechanics', res['mechCount'] == 2)
+p = res['clickBoard']
+check('a click on the empty board selects it',
+      p['mechShown'] and p['selectedMech'] == 'Board'
+      and p['title'] == 'Mechanics properties', json.dumps(p))
+check('its outline is drawn', res['boardOutline'] is not None)
+if res['boardOutline']:
+    want = res['boardOutlineWant']
+    got = res['boardOutline']
+    check('  where the scene says it stands',
+          all(math.hypot(g[0] - w[0], g[1] - w[1]) < 1e-6
+              for g, w in zip(got, want)))
+check('a beam crossing the board wins the click',
+      res['clickBeam']['beamShown']
+      and not res['clickBeam']['selectedMech'], json.dumps(res['clickBeam']))
+check('the mount wins over the board it lies on',
+      res['clickMount']['selectedMech'] == 'Mount',
+      str(res['clickMount']['selectedMech']))
+check('an optics standing on the board wins over it',
+      res['clickOptic']['opticShown']
+      and res['clickOptic']['selectedOptic'] == 'M1'
+      and not res['clickOptic']['selectedMech'],
+      json.dumps(res['clickOptic']))
+check('a click off everything lets go of the board',
+      res['clickOff']['beamShown'] and not res['clickOff']['selectedMech'])
+check('a hidden hardware layer is unpickable',
+      not res['clickHidden']['selectedMech']
+      and res['clickHidden']['beamShown'], json.dumps(res['clickHidden']))
+
+print('--- the panel ---')
+f = res['boardFields']
+check('name, type and layer', f['name'] == 'Board'
+      and f['type'] == 'Mechanics' and f['layer'] == 'hardware',
+      json.dumps({k: f[k] for k in ['name', 'type', 'layer']}))
+check('the pose in metres and degrees',
+      abs(float(f['cx']) - board['center'][0]) < 1e-12
+      and abs(float(f['cy']) - board['center'][1]) < 1e-12
+      and abs(float(f['angle'])) < 1e-12,
+      json.dumps({k: f[k] for k in ['cx', 'cy', 'angle']}))
+check('no model row for a body with no model', not f['model_shown'])
+check('the mount shows its model',
+      res['mountFields']['model_shown']
+      and res['mountFields']['model'] == 'POLARIS-K1',
+      str(res['mountFields']['model']))
+
+print('--- panning is not moving ---')
+check('dragging an unselected board pans the view',
+      res['panned']['moved'] and res['panned']['sent'] == 0
+      and not res['panned']['selected'], json.dumps(res['panned']))
+
+print('--- dragging the selection ---')
+d = res['dragMove']
+check('one move message per drag', d['n'] == 1
+      and d['msg'] and d['msg']['op'] == 'move'
+      and d['msg']['target'] == 'Board', json.dumps(d['msg']))
+if d['msg']:
+    dx = d['msg']['center'][0] - board['center'][0]
+    dy = d['msg']['center'][1] - board['center'][1]
+    # 50 px right and 30 px down on screen, in a y-up scene.
+    check('  by what the cursor moved',
+          abs(dx - 50 / d['scale']) < 1e-9
+          and abs(dy + 30 / d['scale']) < 1e-9,
+          '(%.6f, %.6f at scale %.1f)' % (dx, dy, d['scale']))
+    # What Python then does is what the preview showed.
+    layout.apply_edit(d['msg'])
+    check('  and Python lands it there',
+          np.allclose(layout.get_mechanics('Board').center,
+                      d['msg']['center']))
+    layout.apply_edit({'op': 'undo'})
+
+r = res['dragRotate']
+check('one rotate message per Shift-drag', r['n'] == 1
+      and r['msg'] and r['msg']['op'] == 'rotate'
+      and r['msg']['target'] == 'Board', json.dumps(r['msg']))
+if r['msg']:
+    # Within half a degree, not exactly: the status bar changes as the
+    # cursor moves, which reflows the page and shifts the drawing by a
+    # pixel or two between the press and the release - the same
+    # re-measurement trap verify_stage2b_browser documents. The exact
+    # contract is the next check: Python lands the angle the preview
+    # sent, whatever the pixels came to.
+    check('  a quarter turn about the centre',
+          abs(r['msg']['rotationAngle'] - np.pi / 2) < np.deg2rad(0.5),
+          '(%.6f rad)' % r['msg']['rotationAngle'])
+    layout.apply_edit(r['msg'])
+    check('  and Python lands it there',
+          abs(layout.get_mechanics('Board').rotationAngle
+              - r['msg']['rotationAngle']) < 1e-12)
+    layout.apply_edit({'op': 'undo'})
+
+print('--- the panel edits ---')
+check('Center x edits as a move',
+      res['editCx'] and res['editCx']['op'] == 'move'
+      and abs(res['editCx']['center'][0] - 0.31) < 1e-12
+      and abs(res['editCx']['center'][1] - board['center'][1]) < 1e-12,
+      json.dumps(res['editCx']))
+check('Angle edits as a rotate, in radians',
+      res['editAngle'] and res['editAngle']['op'] == 'rotate'
+      and abs(res['editAngle']['rotationAngle'] - np.deg2rad(15)) < 1e-12,
+      json.dumps(res['editAngle']))
+check('the name edits as a rename, carried optimistically',
+      res['rename']['msg'] and res['rename']['msg']['op'] == 'rename'
+      and res['rename']['msg']['name'] == 'Bench'
+      and res['rename']['selected'] == 'Bench', json.dumps(res['rename']))
+
+print('--- remove and escape ---')
+check('the Remove button is offered', res['removeShown'])
+check('and sends the removal',
+      res['remove']['msg'] and res['remove']['msg']['op'] == 'remove'
+      and res['remove']['msg']['target'] == 'Mount',
+      json.dumps(res['remove']['msg']))
+check('  and lets go of the selection',
+      not res['remove']['panel']['selectedMech']
+      and res['remove']['panel']['beamShown'])
+check('Escape lets go too', not res['escape']['selectedMech']
+      and res['escape']['beamShown'])
+
+print('--- read-only viewer ---')
+errs, res = run(False)
+check('no console error', errs == [], '\n        '.join(errs[:3]))
+if res is None:
+    print('  FAIL  no output')
+    sys.exit(1)
+check('ran without exception', res['error'] is None, str(res['error'])[:500])
+check('a click still shows the hardware',
+      res['clickBoard']['mechShown']
+      and res['clickBoard']['selectedMech'] == 'Board')
+f = res['boardFields']
+check('the pose reads as static text',
+      abs(float(f['cx']) - board['center'][0]) < 1e-12, str(f['cx']))
+check('no Remove on offer', not res['removeShown'])
+check('nothing was ever sent', res['sent'] == [], str(res['sent'][:2]))
+
+print()
+print('%d passed, %d failed' % (npass, nfail))
+sys.exit(1 if nfail else 0)

@@ -34,9 +34,11 @@ import numpy as np
 
 import gtrace.optcomp as optcomp
 from gtrace.beam import GaussianBeam
+from gtrace.mechanics import Mechanics
 from gtrace.nonsequential import non_seq_trace
 from gtrace.draw.tools import drawAllOptics
-from gtrace.draw.serialize import scene_to_dict
+from gtrace.draw.serialize import (scene_to_dict, shape_to_dict,
+                                   shape_from_dict, UnknownShapeError)
 from gtrace.draw.viewer import renderHTML
 import gtrace.draw as draw
 import gtrace.draw.renderer as renderer
@@ -441,6 +443,23 @@ def _fmt_mm(metres):
 #: rather than construction parameters.
 DIMENSION_TYPE = 'Dimension'
 
+#: The type an 'add' message names to create a Mechanics. Kept out of
+#: CREATABLE_OPTIC_TYPES for the same reason a dimension is: a
+#: Mechanics is not an optics - the trace never sees it - and it takes
+#: shapes rather than construction parameters.
+MECHANICS_TYPE = 'Mechanics'
+
+#: Attributes of a Mechanics a front end may change: its pose, and
+#: nothing else. The shapes are the body itself - they come from Python
+#: or from a saved layout, and a front end moves the body rather than
+#: redrawing it.
+EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle'])
+
+#: Parameters a new Mechanics may be given. 'shapes' is a list of
+#: serialized primitives, exactly as a saved layout carries them.
+CREATABLE_MECHANICS_PARAMS = frozenset(['center', 'rotationAngle',
+                                        'shapes', 'layer', 'model'])
+
 #: How many edits back undo can go. A snapshot is the serialized
 #: layout, so the cost is a few tens of kilobytes each for a system of
 #: any size, and a bound is what keeps a long session from growing
@@ -751,6 +770,87 @@ def _update_dimension(dim, d):
             setattr(dim, key, np.array(d[key], dtype='float64'))
     if 'offset' in d:
         dim.offset = float(d['offset'])
+
+def mechanics_to_dict(m):
+    '''
+    Convert a Mechanics to a JSON-compatible dict.
+
+    The shapes are written out by value, not by model name: a saved
+    layout is complete in itself, the way a written HTML page is, and a
+    library that has moved on since cannot silently redraw it. The
+    model name travels alongside as a label.
+    '''
+    return {'type': 'Mechanics',
+            'name': str(m.name),
+            'center': [float(x) for x in np.asarray(m.center)],
+            'rotationAngle': float(m.rotationAngle),
+            'layer': str(m.layer),
+            'model': None if m.model is None else str(m.model),
+            'shapes': [shape_to_dict(s) for s in m.shapes]}
+
+def mechanics_from_dict(d):
+    '''
+    Construct a Mechanics from a dict produced by mechanics_to_dict().
+    '''
+    return Mechanics(shapes=[shape_from_dict(s)
+                             for s in d.get('shapes', [])],
+                     center=d.get('center', [0.0, 0.0]),
+                     rotationAngle=d.get('rotationAngle', 0.0),
+                     name=d['name'],
+                     layer=d.get('layer', 'hardware'),
+                     model=d.get('model', None))
+
+def _update_mechanics(m, d):
+    '''
+    Apply a serialized Mechanics to an existing one, in place.
+    '''
+    if 'center' in d:
+        m.center = np.array(d['center'], dtype='float64')
+    if 'rotationAngle' in d:
+        m.rotationAngle = float(d['rotationAngle'])
+    if 'layer' in d:
+        m.layer = str(d['layer'])
+    if 'model' in d:
+        m.model = None if d['model'] is None else str(d['model'])
+    if 'shapes' in d:
+        m.shapes = [shape_from_dict(s) for s in d['shapes']]
+
+def mechanics_scene_dict(m):
+    '''
+    Convert a Mechanics into the dict a viewer addresses it by: its
+    pose, and the polygon it is picked with.
+
+    The shapes are not here - they are drawn through the canvas, on the
+    body's own layer, like the substrates of the optics. What a front
+    end needs on top of the drawing is the identity ("the user grabbed
+    the breadboard") and the outline, which is what a click is tested
+    against and what a drag previews.
+    '''
+    outline = m.outline()
+    return {'name': str(m.name),
+            'type': 'Mechanics',
+            'center': [float(m.center[0]), float(m.center[1])],
+            'rotationAngle': float(m.rotationAngle),
+            'layer': str(m.layer),
+            'model': None if m.model is None else str(m.model),
+            'outline': [[float(p[0]), float(p[1])] for p in outline]}
+
+def mechanics_snap_points(m):
+    '''
+    The points of a Mechanics worth snapping a measurement to: the four
+    corners of its outline, and its center. The distance from a mirror
+    to the edge of the breadboard it stands on is exactly the kind of
+    thing the measuring tool is for.
+    '''
+    points = []
+    for i, c in enumerate(m.outline()):
+        points.append({'point': [float(c[0]), float(c[1])],
+                       'optic': str(m.name), 'kind': 'corner',
+                       'label': '%s corner %d' % (m.name, i + 1)})
+    points.append({'point': [float(m.center[0]), float(m.center[1])],
+                   'optic': str(m.name), 'kind': 'centre',
+                   'label': '%s centre' % m.name})
+    return points
 
 #: What a snap point on an optics is called, and where it is. The corner
 #: entries are filled in from get_corners(), which is where the wedge and
@@ -1114,13 +1214,16 @@ class OpticalLayout(object):
     '''
 
     def __init__(self, optics=None, sources=None, rules=None, name='Layout',
-                 dimensions=None):
+                 dimensions=None, mechanics=None):
         self.name = name
         self.optics = []
         self.sources = []
         #: Registered Dimensions - measurements noted on the layout.
         #: They take no part in the trace; see the Dimension class.
         self.dimensions = []
+        #: Registered Mechanics - bodies on the bench the trace never
+        #: sees. Drawn, saved, edited and undone like everything else.
+        self.mechanics = []
         self.rules = rules if rules is not None else TraceRules()
         #: Overrides for DRAW_OPTIONS, as chosen by a front end. Display
         #: settings, so changing one redraws but does not re-trace.
@@ -1147,6 +1250,9 @@ class OpticalLayout(object):
         if dimensions is not None:
             for d in dimensions:
                 self.add_dimension(d)
+        if mechanics is not None:
+            for m in mechanics:
+                self.add_mechanics(m)
 
 #{{{ Registration
 
@@ -1174,17 +1280,25 @@ class OpticalLayout(object):
         self._check_name_free(d.name)
         self.dimensions.append(d)
 
+    def add_mechanics(self, m):
+        '''
+        Register a Mechanics. It is held by reference, and its name must
+        be unique within the layout.
+        '''
+        self._check_name_free(m.name)
+        self.mechanics.append(m)
+
     def _check_name_free(self, name):
         '''
-        Refuse a name already taken by an optics, a source or a
-        dimension.
+        Refuse a name already taken by an optics, a source, a dimension
+        or a mechanics.
 
-        The three share a namespace because a front end points at all of
+        The four share a namespace because a front end points at all of
         them the same way - an edit message names its target and nothing
         else - and a name that meant one thing in one message and
         another in the next would be a trap. Sources joined that
         namespace when they became editable; before that they were only
-        ever addressed as a list.
+        ever addressed as a list. Mechanics joined it on arrival.
         '''
         if name in [o.name for o in self.optics]:
             raise ValueError("An optics named '%s' is already registered."
@@ -1194,6 +1308,9 @@ class OpticalLayout(object):
                              % name)
         if name in [d.name for d in self.dimensions]:
             raise ValueError("A dimension named '%s' is already registered."
+                             % name)
+        if name in [m.name for m in self.mechanics]:
+            raise ValueError("A mechanics named '%s' is already registered."
                              % name)
 
     def remove_optics(self, name):
@@ -1213,6 +1330,12 @@ class OpticalLayout(object):
         Remove the dimension with the given name from the layout.
         '''
         self.dimensions.remove(self.get_dimension(name))
+
+    def remove_mechanics(self, name):
+        '''
+        Remove the mechanics with the given name from the layout.
+        '''
+        self.mechanics.remove(self.get_mechanics(name))
 
     def get_optics(self, name):
         '''
@@ -1241,6 +1364,15 @@ class OpticalLayout(object):
                 return d
         raise KeyError("No dimension named '%s' in the layout." % name)
 
+    def get_mechanics(self, name):
+        '''
+        Return the registered mechanics with the given name.
+        '''
+        for m in self.mechanics:
+            if m.name == name:
+                return m
+        raise KeyError("No mechanics named '%s' in the layout." % name)
+
     def unique_optics_name(self, prefix='M'):
         '''
         Return a name of the form prefix + number that nothing in the
@@ -1250,6 +1382,7 @@ class OpticalLayout(object):
         taken = set(o.name for o in self.optics)
         taken.update(s.name for s in self.sources)
         taken.update(d.name for d in self.dimensions)
+        taken.update(m.name for m in self.mechanics)
         i = 1
         while '%s%d' % (prefix, i) in taken:
             i += 1
@@ -1267,6 +1400,14 @@ class OpticalLayout(object):
         '''
         Return a name of the form prefix + number that nothing in the
         layout uses. The same namespace again.
+        '''
+        return self.unique_optics_name(prefix)
+
+    def unique_mechanics_name(self, prefix='H'):
+        '''
+        Return a name of the form prefix + number that nothing in the
+        layout uses. The same namespace again; H for hardware, since M
+        already means a mirror.
         '''
         return self.unique_optics_name(prefix)
 
@@ -1340,12 +1481,21 @@ class OpticalLayout(object):
                                         'p2': [0.5, 0.0],
                                         'offset': 0.05}}
             {'op': 'set',    'target': 'D1', 'attrs': {'p2': [0.6, 0.0]}}
+            {'op': 'add',    'type': 'Mechanics', 'name': 'BB1',
+                             'params': {'center': [0.0, -0.1],
+                                        'shapes': [{'type': 'rectangle',
+                                                    'point': [-0.15, -0.15],
+                                                    'width': 0.3,
+                                                    'height': 0.3,
+                                                    'thickness': 0}]}}
+            {'op': 'move',   'target': 'BB1', 'center': [0.2, 0.1]}
+            {'op': 'rotate', 'target': 'BB1', 'rotationAngle': 0.1}
             {'op': 'undo'}
             {'op': 'redo'}
 
-        A source and a dimension are named and addressed exactly as an
-        optics is: 'remove', 'rename' and 'set' resolve their target
-        across all three, which share one namespace. What the operations
+        A source, a dimension and a mechanics are named and addressed
+        exactly as an optics is: 'remove', 'rename' and 'set' resolve
+        their target across all four, which share one namespace. What the operations
         mean differs where the things differ - 'move' on a source names
         where the laser stands rather than the middle of a substrate,
         and a source takes a waist where an optics takes a curvature -
@@ -1413,13 +1563,13 @@ class OpticalLayout(object):
         comes back as itself rather than as a copy.
         '''
         return (self.to_dict(), list(self.optics), list(self.sources),
-                list(self.dimensions))
+                list(self.dimensions), list(self.mechanics))
 
     def _restore(self, snapshot):
         '''
         Put back a state captured by _snapshot().
         '''
-        d, optics, sources, dimensions = snapshot
+        d, optics, sources, dimensions, mechanics = snapshot
 
         # The object lists and the serialized ones were made from the
         # same lists at the same moment, so they line up entry for
@@ -1428,6 +1578,7 @@ class OpticalLayout(object):
         self.optics = list(optics)
         self.sources = list(sources)
         self.dimensions = list(dimensions)
+        self.mechanics = list(mechanics)
         for m, spec in zip(self.optics, d.get('optics', [])):
             m.name = spec['name']
             _update_optic(m, spec)
@@ -1437,6 +1588,9 @@ class OpticalLayout(object):
         for dim, spec in zip(self.dimensions, d.get('dimensions', [])):
             dim.name = spec['name']
             _update_dimension(dim, spec)
+        for mech, spec in zip(self.mechanics, d.get('mechanics', [])):
+            mech.name = spec['name']
+            _update_mechanics(mech, spec)
 
         self.rules = TraceRules.from_dict(d.get('rules', {}))
         self.draw_options = dict(d.get('draw_options', {}))
@@ -1541,6 +1695,14 @@ class OpticalLayout(object):
             # nothing else. No beam has moved, so the trace still stands.
             return self
 
+        elif op in ('move', 'rotate', 'set') and self._is_mechanics(
+                msg.get('target')):
+            self._edit_mechanics(self.get_mechanics(msg['target']), op, msg)
+            # A mechanics takes no part in the trace: moving one changes
+            # the picture and nothing about the beams, so the trace
+            # still stands.
+            return self
+
         elif op in ('move', 'rotate', 'set') and self._is_source(
                 msg.get('target')):
             # A source is not an optics and is not addressed like one:
@@ -1599,7 +1761,7 @@ class OpticalLayout(object):
             # Nothing else is keyed by the name: the per-optics tracing
             # settings live on the optics itself, so they travel with it.
             target.name = new
-            if isinstance(target, Dimension):
+            if isinstance(target, (Dimension, Mechanics)):
                 return self
 
         elif op in ('align', 'slide'):
@@ -1614,6 +1776,15 @@ class OpticalLayout(object):
                 self._slide_along_beam(optics, msg)
 
         elif op == 'add':
+            if msg.get('type') == MECHANICS_TYPE:
+                mech = self._mechanics_from_message(msg)
+                try:
+                    self.add_mechanics(mech)
+                except ValueError as e:
+                    raise EditError(str(e))
+                # The trace never sees a mechanics; the picture grew,
+                # the beams did not move.
+                return self
             if msg.get('type') == DIMENSION_TYPE:
                 dim = self._dimension_from_message(msg)
                 try:
@@ -1640,6 +1811,9 @@ class OpticalLayout(object):
             name = msg.get('target')
             if self._is_dimension(name):
                 self.remove_dimension(name)
+                return self
+            if self._is_mechanics(name):
+                self.remove_mechanics(name)
                 return self
             if self._is_source(name):
                 # Taking the last source out leaves a layout with
@@ -1748,11 +1922,17 @@ class OpticalLayout(object):
         '''
         return any(s.name == name for s in self.sources)
 
+    def _is_mechanics(self, name):
+        '''
+        Whether a target name belongs to a registered mechanics.
+        '''
+        return any(m.name == name for m in self.mechanics)
+
     def _resolve_target(self, name):
         '''
-        The optics, source or dimension a message names.
+        The optics, source, dimension or mechanics a message names.
 
-        The three share a namespace, so a message can say 'remove D1',
+        The four share a namespace, so a message can say 'remove D1',
         'remove S1' or 'remove M1' without also having to say which kind
         of thing it is: a front end has a name under the cursor, not a
         class.
@@ -1766,7 +1946,86 @@ class OpticalLayout(object):
         for d in self.dimensions:
             if d.name == name:
                 return d
+        for h in self.mechanics:
+            if h.name == name:
+                return h
         raise EditError('Nothing named %r in the layout.' % (name,))
+
+    def _edit_mechanics(self, m, op, msg):
+        '''
+        Apply a 'move', 'rotate' or 'set' to a mechanics.
+
+        As everywhere else, 'move' and 'rotate' are spellings of a
+        one-attribute 'set'. A mechanics is a rigid body with nothing
+        derived from anything: its position is its center and its
+        orientation is its rotation angle, and those two are the whole
+        of what a front end may change - the shapes are the body
+        itself.
+        '''
+        if op == 'set':
+            attrs = msg.get('attrs') or {}
+        else:
+            keys = ['center'] if op == 'move' else ['rotationAngle']
+            attrs = {k: msg[k] for k in keys if k in msg}
+            if not attrs:
+                raise EditError("A '%s' message for a mechanics needs %s."
+                                % (op, ' or '.join(keys)))
+        # Every name is checked before any value is set, so a message
+        # naming one bad attribute leaves the body exactly as it was.
+        for key in attrs:
+            if key not in EDITABLE_MECHANICS_ATTRS:
+                raise EditError('%r is not an editable attribute of a '
+                                'mechanics.' % (key,))
+        for key, value in sorted(attrs.items()):
+            if key == 'center':
+                m.center = _as_point(value, key)
+            else:
+                m.rotationAngle = _as_distance(value, key)
+
+    def _mechanics_from_message(self, msg):
+        '''
+        Build a Mechanics from an 'add' message.
+
+        The shapes arrive serialized, exactly as a saved layout writes
+        them; a shape gtrace cannot draw, or one missing a coordinate,
+        comes back as a refusal rather than as a body that fails the
+        first time the scene is built.
+        '''
+        params = msg.get('params') or {}
+        for key in params:
+            if key not in CREATABLE_MECHANICS_PARAMS:
+                raise EditError('%r is not a parameter a new mechanics '
+                                'takes.' % (key,))
+        name = msg.get('name') or self.unique_mechanics_name()
+        if not isinstance(name, str) or not name.strip():
+            raise EditError('A name must be a non-empty string, not %r.'
+                            % (name,))
+
+        shapes_in = params.get('shapes', [])
+        if not isinstance(shapes_in, (list, tuple)):
+            raise EditError("'shapes' must be a list of serialized shapes, "
+                            'not %r.' % (shapes_in,))
+        try:
+            shapes = [shape_from_dict(s) for s in shapes_in]
+        except UnknownShapeError as e:
+            raise EditError(str(e))
+        except (KeyError, TypeError, ValueError, IndexError) as e:
+            raise EditError('A shape in the message is malformed (%s: %s).'
+                            % (type(e).__name__, e))
+
+        center = _as_point(params.get('center', [0.0, 0.0]), 'center')
+        angle = _as_distance(params.get('rotationAngle', 0.0),
+                             'rotationAngle')
+        layer = params.get('layer', 'hardware')
+        if not isinstance(layer, str) or not layer.strip():
+            raise EditError('A layer must be a non-empty string, not %r.'
+                            % (layer,))
+        model = params.get('model', None)
+        if model is not None and not isinstance(model, str):
+            raise EditError('A model is a name or nothing, not %r.'
+                            % (model,))
+        return Mechanics(shapes=shapes, center=center, rotationAngle=angle,
+                         name=name, layer=layer, model=model)
 
     def _edit_source(self, b, op, msg):
         '''
@@ -2157,6 +2416,13 @@ class OpticalLayout(object):
 
         drawAllOptics(canvas, self.optics, drawName=opt['drawOpticsNames'])
 
+        # The hardware, on its own layer, so that CAD - and the layer
+        # panel of the viewer - can switch it off as one thing. Its
+        # names follow the same option as the optics names: both label
+        # the elements of the bench.
+        for m in self.mechanics:
+            m.draw(canvas, drawName=opt['drawOpticsNames'])
+
         return canvas
 
     def resolve_draw_options(self, **options):
@@ -2215,10 +2481,23 @@ class OpticalLayout(object):
         # there like any other - and a front end that cannot tell them
         # apart can neither draw the laser nor offer to edit it.
         scene['sources'] = self.sources_dict()
+        # The hardware. Its shapes are already in the canvas, drawn on
+        # their own layer; this channel is what lets a front end point
+        # at a body - pick it by its outline, and edit its pose.
+        scene['mechanics'] = self.mechanics_dict()
         # How deep the trace went, which is not a property of any
         # element but decides how much of the picture there is.
         scene['rules'] = self.rules.to_dict()
         return scene
+
+    def mechanics_dict(self):
+        '''
+        The registered mechanics, as a front end addresses them. See
+        mechanics_scene_dict for what each carries. The outline is
+        worked out here rather than stored, like everything else that
+        is derived: a stored copy could only go stale.
+        '''
+        return [mechanics_scene_dict(m) for m in self.mechanics]
 
     def sources_dict(self):
         '''
@@ -2270,6 +2549,8 @@ class OpticalLayout(object):
         points = []
         for o in self.optics:
             points.extend(optic_snap_points(o))
+        for m in self.mechanics:
+            points.extend(mechanics_snap_points(m))
         return points
 
 #}}}
@@ -2528,6 +2809,7 @@ class OpticalLayout(object):
                 'optics': [optic_to_dict(m) for m in self.optics],
                 'sources': [source_to_dict(b) for b in self.sources],
                 'dimensions': [dimension_to_dict(d) for d in self.dimensions],
+                'mechanics': [mechanics_to_dict(m) for m in self.mechanics],
                 'rules': self.rules.to_dict(),
                 'draw_options': dict(self.draw_options)}
 
@@ -2548,6 +2830,9 @@ class OpticalLayout(object):
                    #which is a layout with no measurements noted on it.
                    dimensions=[dimension_from_dict(x)
                                for x in d.get('dimensions', [])],
+                   #Absent from a file written before mechanics existed.
+                   mechanics=[mechanics_from_dict(x)
+                              for x in d.get('mechanics', [])],
                    rules=TraceRules.from_dict(d.get('rules', {})),
                    name=d.get('name', 'Layout'))
 
@@ -2594,6 +2879,10 @@ class OpticalLayout(object):
                                          d.get('dimensions', []),
                                          dimension_from_dict,
                                          _update_dimension)
+        self.mechanics = _merge_by_name(self.mechanics,
+                                        d.get('mechanics', []),
+                                        mechanics_from_dict,
+                                        _update_mechanics)
         self.rules = TraceRules.from_dict(d.get('rules', {}))
         self.draw_options = dict(d.get('draw_options', {}))
         self.name = d.get('name', self.name)
