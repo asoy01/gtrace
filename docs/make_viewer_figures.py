@@ -9,8 +9,10 @@ model of the kind anywidget provides, and screenshotted. Run this again
 whenever the viewer's appearance changes, so that the tutorial does not
 end up describing a version of the interface that no longer exists.
 
-The layout is the one the tutorial builds in its "Optical layouts"
-section, so the pictures and the text agree.
+The layouts are the ones the tutorial builds - the three mirrors it
+opens with, and the small bench it puts hardware on - so the pictures
+and the text agree. The last figure is of the shape editor, which is
+the same front end handed a part instead of a bench.
 '''
 
 import json
@@ -32,8 +34,12 @@ import gtrace.beam as beam                                       # noqa: E402
 import gtrace.optcomp as opt                                     # noqa: E402
 import gtrace.optics.gaussian as gauss                           # noqa: E402
 from gtrace.draw.viewer import viewer_css                        # noqa: E402
+from gtrace.draw.viewer.editor import ShapeEditor                # noqa: E402
 from gtrace.draw.viewer.widget import widget_esm                 # noqa: E402
-from gtrace.layout import OpticalLayout, TraceRules              # noqa: E402
+from gtrace.layout import (OpticalLayout, TraceRules,            # noqa: E402
+                           q_from_waist)
+from gtrace.mechanics import (from_model, lens_holder,           # noqa: E402
+                              mirror_mount)
 from gtrace.unit import *                                        # noqa: E402
 
 OUT = os.path.join(REPO, 'docs', 'source', 'tutorial', 'figures')
@@ -82,6 +88,43 @@ def make_layout():
                          name='Tutorial')
 
 
+def make_bench():
+    '''
+    The small bench the tutorial puts hardware on: a lens and two
+    steering mirrors on a breadboard, each in a mount of its own.
+    '''
+    L1 = opt.Lens(f=250 * mm, center=[0.28, 0.0], normAngleHR=np.pi,
+                  diameter=1 * inch, thickness=6 * mm, n=1.45, name='L1')
+    S1 = opt.Mirror(HRcenter=[0.42, 0.0], normAngleHR=deg2rad(135),
+                    diameter=1 * inch, thickness=6 * mm,
+                    Refl_HR=0.99, Trans_HR=0.01, n=1.45, name='S1')
+    S2 = opt.Mirror(HRcenter=[0.42, 0.20], normAngleHR=deg2rad(-135),
+                    diameter=1 * inch, thickness=6 * mm,
+                    Refl_HR=0.99, Trans_HR=0.01, n=1.45, name='S2')
+    laser = beam.GaussianBeam(q0=q_from_waist(0.4 * mm, 0.0, 1064 * nm),
+                              wl=1064 * nm, pos=[0.10, 0.0], dirAngle=0.0,
+                              name='in')
+
+    bench = OpticalLayout(optics=[L1, S1, S2], sources=[laser],
+                          rules=TraceRules(order=2, power_threshold=1e-4),
+                          name='Bench')
+    bench.add_mechanics(from_model('BB4530', name='BB1',
+                                   center=[0.30, 0.10]))
+    bench.add_mechanics(mirror_mount(name='MT1', attached_to=S1))
+    bench.add_mechanics(mirror_mount(name='MT2', attached_to=S2))
+    bench.add_mechanics(lens_holder(name='LH1', attached_to=L1))
+    return bench
+
+
+def make_part():
+    '''
+    A part open in the shape editor: the kinematic mount, which is the
+    one stock model with enough shapes in it to show what the panel is
+    a list of.
+    '''
+    return ShapeEditor(mirror_mount(name='MOUNT'))
+
+
 PAGE = '''<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 html, body { margin: 0; background: #fff; }
@@ -128,6 +171,12 @@ var SCENE = __SCENE__;
     var v = el.gtraceViewer;
 
     function screenOf(x, y) { return v.sceneToScreen(x, y); }
+    function selectMech(name) {
+        var m = (v.scene.mechanics || []).filter(function (p) {
+            return p.name === name;
+        })[0];
+        if (m) { v._selectMech(m); }
+    }
     function clickOptic(name) {
         var o = (v.scene.optics || []).filter(function (p) {
             return p.name === name;
@@ -193,7 +242,7 @@ def shoot(chrome, page, name):
 #: and two nearly identical screenshots cost the reader more attention
 #: than the second one returns.
 FIGURES = [
-    ('viewer_readout.png', '''
+    ('viewer_readout.png', 'layout', '''
     /* Pin the readout partway along the longest main beam, which is
        what a reader sees after clicking one. */
     var main = v.scene.beams.filter(function (b) {
@@ -206,10 +255,10 @@ FIGURES = [
     v._onHover(p[0], p[1]);
     v._onClick(p[0], p[1]);
 '''),
-    ('viewer_properties.png', '''
+    ('viewer_properties.png', 'layout', '''
     clickOptic('M1');
 '''),
-    ('viewer_measure.png', '''
+    ('viewer_measure.png', 'layout', '''
     /* A measurement taken across the substrate of M1, from the apex of
        its HR face to the apex of its AR face - the span that runs
        inside the glass, and so the one that carries an optical distance
@@ -254,6 +303,33 @@ FIGURES = [
                                button: 0, bubbles: true, cancelable: true}));
     });
 '''),
+    ('viewer_hardware.png', 'bench', '''
+    /* The mount under the first steering mirror, selected so that the
+       panel shows what an attached body is: a host to stand on and an
+       offset from it, with the pose greyed out because it is derived
+       rather than stored. */
+    selectMech('MT1');
+    /* Framed on the board rather than fitted: the beams run a metre
+       out on either side of it, and a fit would leave the bench a
+       thumbnail in the middle of them. */
+    v.cx = 0.30; v.cy = 0.10; v.scale = 1500;
+    v._applyTransform();
+'''),
+    ('viewer_editor.png', 'editor', '''
+    /* The front plate of the mount, picked out of the drawing rather
+       than out of the list, so that the grips on its corners are in
+       the picture along with the rows that give the same numbers
+       exactly. */
+    var r = v.svg.getBoundingClientRect();
+    var s = v.scene.shapes[0];
+    var p = v.sceneToScreen(s.point[0] + s.width / 2,
+                            s.point[1] + s.height / 2);
+    ['mousemove', 'mousedown', 'mouseup'].forEach(function (t) {
+        (t === 'mousedown' ? v.svg : window).dispatchEvent(
+            new MouseEvent(t, {clientX: p[0] + r.left, clientY: p[1] + r.top,
+                               button: 0, bubbles: true, cancelable: true}));
+    });
+'''),
 ]
 
 
@@ -263,15 +339,18 @@ def main():
         raise SystemExit('No Chrome-like browser found. Set GTRACE_CHROME '
                          'to the executable to regenerate the figures.')
 
-    layout = make_layout()
-    scene = layout.scene_dict()
-    print('layout: %d optics, %d beams' % (len(layout.optics),
-                                           len(scene['beams'])))
+    scenes = {'layout': make_layout().scene_dict(),
+              'bench': make_bench().scene_dict(),
+              'editor': make_part().scene_dict()}
+    for key, sc in scenes.items():
+        print('%-8s %2d optics, %2d bodies, %2d shapes, %3d beams'
+              % (key, len(sc.get('optics', [])), len(sc.get('mechanics', [])),
+                 len(sc.get('shapes', [])), len(sc.get('beams', []))))
     print('browser: %s' % chrome)
 
     os.makedirs(OUT, exist_ok=True)
-    for name, actions in FIGURES:
-        shoot(chrome, build_page(scene, actions), name)
+    for name, which, actions in FIGURES:
+        shoot(chrome, build_page(scenes[which], actions), name)
 
 
 if __name__ == '__main__':

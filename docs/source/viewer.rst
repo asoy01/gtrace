@@ -112,7 +112,7 @@ Editing
 
 In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements and sources can be added, removed and renamed, and distances can be measured off the drawing (``Measure``).
 
-There is one add button per kind of thing — ``+ Mirror``, ``+ Lens``, ``+ Source`` — and the two that have variants open on the choice between them, spherical or cylindrical. A cylindrical mirror is a mirror; offered as a button of its own it read as an unrelated fifth thing, and five of them wrapped in a side bar this narrow.
+There is one add button per kind of thing — ``+ Mirror``, ``+ Lens``, ``+ Source``, ``+ Hardware`` — and the two that have variants open on the choice between them, spherical or cylindrical. A cylindrical mirror is a mirror; offered as a button of its own it read as an unrelated fifth thing, and five of them wrapped in a side bar this narrow. ``+ Hardware`` opens on the model library instead, which is a list rather than a pair.
 
 Each edit is applied to the registered object, the layout is re-traced, and the new scene is pushed back into the view — keeping your current zoom, pan and layer visibility, so the picture does not jump underneath you.
 
@@ -156,6 +156,23 @@ The geometry is Python's: the browser says which beam and where along it, and :p
     layout.apply_edit({'op': 'align', 'target': 'L1',
                        'beam': 'b0', 'beam_index': 0,
                        'point': [0.4, 0.02]})
+
+.. _aiming-by-places:
+
+Aiming by places
+^^^^^^^^^^^^^^^^^
+
+Ctrl-drag answers "square onto *that* beam". The other question a bench asks is which way a face should look when the beam that will strike it does not exist yet — the first mirror of a chain, or one whose beam only appears once it is aimed. **Align** answers that one from places rather than from beams, and it never moves the element: where it stands is a separate question, and one that already has three answers.
+
+**Line 2 points** (``a``) turns the face square across the line between two places you click, looking from the first towards the second. A line has two normals, and the click order is what says which — so clicking the same two places the other way about turns the element right round, which is how a face is flipped.
+
+**Bisect 3 points** (``b``) takes from, at, to: the face ends up on the bisector of that corner, which is where a mirror folding light from the first place to the last has to look. That is the law of reflection, said with three places instead of an angle.
+
+**Turn ±45°** (``]`` and ``[``) is the quarter turn a steering mirror is specified by, from wherever it faces now.
+
+The clicks land on the same marked points a measurement snaps to — the corners and apexes of a substrate, the ends of a beam, and **the screw holes of a breadboard**, which is what makes this exact rather than approximate: a mount goes on the hole pattern, so the angle it should face is a question about two holes. The arms are drawn to the cursor as you go, the element is outlined as it would face, and the status bar names the angle it is about to take. It is a mode, like measuring, and Escape leaves it without letting go of the selection.
+
+Turning is about the anchor point, so the substrate centre travels with it; that is the model's own rule about pivots rather than something Align decides.
 
 Moving along a beam by a number
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -209,6 +226,49 @@ It is in millimetres, as the rows describing the substrate are: a lens is listed
 A focal length the blank cannot be ground to is refused, with the reason shown in the panel, and the lens is left exactly as it was. ``inf`` is refused before it is even sent: a lens with no power is a flat window, which is a different element rather than somewhere to arrive at by typing.
 
 The **Anchor** row says which point the element is held by — **HR center**, the apex of the front face, or **substrate center**, the middle of the glass. It is the point that stays put when a curvature changes and the point the element turns about. A mirror pins its HR face, so that sweeping a telescope's radii does not walk the beam spot off it; a lens pins its middle, since the beam goes through. See :ref:`changing-a-curvature` for what this moves.
+
+.. _hardware-in-the-viewer:
+
+Hardware
+^^^^^^^^^
+
+Bodies drawn on the ``hardware`` layer — breadboards, mounts, clamps — are picked, dragged and edited like anything else, with two differences that come from what they are.
+
+**They are picked last.** A breadboard covers most of a bench, so a click lands on the beam or the element in front of it first, and only reaches the board where nothing else is. Where several bodies overlap the smallest wins, so a mount standing on a board is not shadowed by it. A mount hidden entirely under its own mirror is reached by clicking the same place again: the cycle that steps from an element down through the beams under it ends on the hardware.
+
+**They are dragged only once selected.** A press on an unselected board means "pan the view" far more often than it means "move the bench", so the first click selects and only then does dragging move it. An attached body is never dragged at all — it goes where its host goes, and its host is right there to be dragged.
+
+A body with a size — a breadboard, or anything else built with parameters — carries four corner handles while it is selected. Dragging one cuts it to a new size, with the opposite corner fixed; Python re-drills the hole grid rather than scaling it, so the holes keep their diameter and their pitch.
+
+**Screw holes are snap points.** An element dragged near one lands its anchor point exactly on it, which is what a bench actually offers: optics go on the grid. Alt suppresses that. The measuring tool and Align take the holes as marked points too.
+
+The properties panel of an attached body shows what it is attached to, and its pose greyed out — those numbers are derived from the host, so there is nothing there to type into. **Attached to** is a menu of the elements: choosing one seats the body at its model's own place, and ``(free)`` cuts it loose where it stands. **Offset x/y** and **Offset angle** are the deliberate departure from that place.
+
+Names are not drawn for hardware. A bench has more of it than it has optics, and a picture labelled with three mounts and a board says less than one that is not; ``drawMechanicsNames=True`` puts them back.
+
+.. _the-shape-editor:
+
+The shape editor
+^^^^^^^^^^^^^^^^^
+
+:py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens a part in an editor of its own:
+
+.. code-block:: python
+
+    from gtrace.mechanics import mirror_mount
+
+    part = mirror_mount(name='MY-MOUNT')
+    part.edit()
+
+It is not a second viewer. It is the same one, handed a scene of nothing but the shapes of one body, drawn in the frame they are written in **with the origin marked** — the origin being the point that comes to sit at the host's substrate centre when the part is attached, so seeing it is most of what makes a part right. Zoom, pan, undo, measuring and the layer panel come along because they were never about optics.
+
+The side bar swaps: buttons that put a rectangle, circle, line, polyline, arc or text down at the origin; the list of shapes in the order they are drawn, which is where one is picked, copied, moved earlier or later and taken away; the numbers of whichever is picked, in millimetres and degrees; and **Save to library**, which registers the part under a name.
+
+A shape is also worked on in the drawing. A click picks it — by its outline, or by what it encloses, the smallest winning, and the same place clicked again steps down through what overlaps. The picked shape is carried by dragging it and stands on grips, one grip to one number: the four corners of a rectangle with the opposite one staying put, a point on the rim of a circle for its radius, the two ends of a line, where an arc starts, stops and how far out it runs, and one grip per vertex of an outline. Shift-drag turns it about the middle of its box, and ``[`` and ``]`` turn it 45° at a time.
+
+A drag settles on the marked points — the origin, and the corners, centres, vertices and edge midpoints of the other shapes — unless Alt says to take the cursor at its word. A polyline is edited vertex by vertex: the rows work on the one the grips pick out, and **+ Vertex** and **− Vertex** put a corner in halfway along to the next one or take the one in hand out.
+
+Every gesture commits as one message, so it is one step of undo and goes through the same constructor a typed row does. **A turned rectangle becomes an outline** — a ``Rectangle`` has its sides along the axes and no turned form — which one undo puts back. The editor works on the body itself, by reference, so a part already registered in a layout is redrawn there as soon as the layout is drawn again.
 
 Measuring
 ^^^^^^^^^^

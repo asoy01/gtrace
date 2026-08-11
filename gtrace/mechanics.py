@@ -179,7 +179,7 @@ def turned_shape(s, angle, offset=(0.0, 0.0)):
 
     Raises
     ------
-    UnknownShapeError
+    gtrace.draw.serialize.UnknownShapeError
         If the shape is of a kind this does not know.
     '''
     ca = np.cos(angle)

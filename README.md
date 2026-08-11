@@ -60,12 +60,11 @@ jupyter lab docs/source/tutorial/gtrace-tutorial.ipynb
 VS Code's notebook editor works just as well: open the file and select
 the interpreter you installed gtrace into.
 
-Run the cells from the top. The last chapter opens the viewer in the cell
-output, which is the part that wants `anywidget`; everything before it
-works without. The notebook writes its results next to itself —
-`SeqTrace.dxf`, `NonSeq.dxf` and `MC.dxf` from the tracing sections, and
-`tutorial_viewer.html`, `tutorial_layout.json` and `tutorial_layout.dxf`
-from the layout section.
+Run the cells from the top. The viewer appears in the cell output, which
+is the part that wants `anywidget`; everything else works without it. The
+notebook writes its results next to itself — `tutorial_viewer.html`,
+`tutorial_layout.json` and `tutorial_layout.dxf` from the last chapter,
+and `bench_parts.json` from the section on hardware.
 
 To read it rather than run it:
 <https://gtrace.readthedocs.io/en/latest/tutorial.html>.

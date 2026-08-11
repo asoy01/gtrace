@@ -296,6 +296,28 @@ across them.
   instead of a button apiece. A cylindrical mirror is a mirror; five
   buttons read as five unrelated things, and wrapped in a side bar that
   narrow.
+- **The tutorial is rewritten around the viewer.** It used to build
+  mirrors and beams, pass them around by hand and write the results to
+  DXF, reaching an `OpticalLayout` and the viewer only in a chapter
+  appended at the end. It now puts a system into a layout in its first
+  code cell and opens it, because that is the loop the work actually
+  happens in: place something, look at what the beams do, move it.
+  Reading a beam off the drawing, aiming an element by places,
+  measuring across a substrate, standing the optics in mounts on a
+  breadboard and drawing a part in the shape editor each have a section
+  of their own, and every gesture is shown as the message it sends. The
+  KAGRA input mode cleaner stays as the worked example of the other
+  half of the workflow - build and align in ordinary Python, then
+  register and look - and DXF closes the notebook rather than carrying
+  it. The version that led with DXF is in the repository's history.
+- **The reference pages cover the hardware.** `layout.rst` gains
+  Mechanics: the bodies themselves, attaching one to an optics, the
+  model library, the messages that reach them and the shape editor's
+  own protocol. `viewer.rst` gains how hardware is picked and dragged,
+  the corner handles, screw-hole snapping, aiming by places, and the
+  shape editor. Two figures are new - a bench with its mounts, and a
+  part open in the editor - and `docs/make_viewer_figures.py` now
+  photographs the three scenes they come from.
 - The tutorial page introduces each of its two notebooks in a
   subsection of its own — what it covers and where its reference
   pages are — instead of listing the second one without a word.

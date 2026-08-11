@@ -9,18 +9,27 @@ see here is what you get when you run them.
 The gtrace tutorial
 -------------------
 
-A worked introduction to gtrace. It starts from the coordinate
-conventions and builds up to a traced optical system, the KAGRA input
-mode cleaner, and the interactive viewer.
+A worked introduction to gtrace, built around the loop you actually
+work in: place something, look at what the beams do, move it.
 
-The first part uses the low level interface throughout: it makes
-mirrors and beams and passes them around itself, drawing the results to
-DXF. This is the layer described in :doc:`basic_concepts` and
-:doc:`propagation`. The last part collects the same optics into an
-:py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` and opens them
-in the viewer, which is where clicking a beam will tell you what the
-beam is doing at that point. :doc:`layout` and :doc:`viewer` describe
-both in reference detail.
+It puts three mirrors and a laser into an
+:py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, opens the
+result in the viewer, and adjusts it there - reading a beam off the
+drawing, aiming an element by places, measuring across a substrate,
+standing the optics in mounts on a breadboard and drawing a part of
+its own in the shape editor. Every gesture is also a message you can
+send from a cell, and the notebook shows both sides of that.
+
+The last chapter is the KAGRA input mode cleaner, which is the other
+half of the workflow: where the optics go follows from what the system
+has to do, so the cavity is built and aligned in ordinary Python and
+only then registered in a layout and looked at. Writing the drawing out
+to DXF closes the notebook, which is where it belongs - it is how a
+finished layout is handed to the rest of an engineering workflow.
+
+:doc:`basic_concepts` and :doc:`propagation` describe the surfaces and
+the matrices underneath; :doc:`layout` and :doc:`viewer` are the
+reference pages for the two halves of the tutorial.
 
 .. toctree::
    :maxdepth: 1

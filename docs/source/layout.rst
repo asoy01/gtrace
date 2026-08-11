@@ -244,16 +244,127 @@ What a dimension comes to is worked out afresh every time the scene is built, ne
 
 The question behind that is :py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>`, which asks the optics itself rather than describing its faces a second time. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when it is approached from outside, so from inside a substrate it finds nothing at all — and that is the whole of the test. Ends lying exactly on a face count as inside, since that is where such a measurement is usually taken from.
 
+Hardware
+---------
+
+A bench is not only light. What holds the optics takes up room, bumps into things and has to be bolted somewhere, so a layout carries that too. A :py:class:`Mechanics<gtrace.mechanics.Mechanics>` is a named body of drawing primitives that the trace never sees:
+
+.. code-block:: python
+
+    import gtrace.draw as draw
+    from gtrace.mechanics import Mechanics
+
+    clamp = Mechanics(shapes=[draw.Rectangle([-0.015, -0.015], 0.03, 0.03),
+                              draw.Circle([0.0, 0.0], 0.003)],
+                      center=[0.2, 0.1], name='C1')
+    layout.add_mechanics(clamp)
+
+The shapes are in the body's **own** coordinates and the pose carries them onto the bench: ``center`` is where the local origin lands, ``rotationAngle`` how far the body is turned about it. The shapes never change when the body moves, which is what lets one drawing serve every copy of a part; :py:meth:`world_shapes<gtrace.mechanics.Mechanics.world_shapes>` is where they are, and it builds new primitives rather than moving the ones you hold.
+
+A body is drawn, picked, measured, saved and exported like anything else, and it is invisible to the beams — adding, moving or editing one does not invalidate a trace. It goes on the ``hardware`` layer by default, so a DXF or the viewer's layer panel can take all of it out of the way at once. What a click lands on is decided by :py:meth:`contains<gtrace.mechanics.Mechanics.contains>`, a point-in-polygon test against the body's :py:meth:`outline<gtrace.mechanics.Mechanics.outline>`; of several bodies under one point the smallest wins, so a mount standing on a breadboard is not shadowed by it.
+
+Attached to an optics
+^^^^^^^^^^^^^^^^^^^^^^
+
+A mirror mount is a body that stands where its mirror stands, so it has no pose of its own:
+
+.. code-block:: python
+
+    from gtrace.mechanics import mirror_mount
+
+    layout.add_mechanics(mirror_mount(name='MT1', attached_to=M1))
+
+``center`` and ``rotationAngle`` of an attached body are **derived on every read** from the host's pose and the attachment offset. There is no notification to miss and no stored copy to go stale: move the mirror in a cell, in the viewer or by loading a file, and the mount is already where it should be. The price is that an attached body cannot be moved on its own — which is what "attached" means. Writing to its pose, or dragging it, is refused.
+
+Where a body sits on its host is a **coordinate convention** rather than a number: the local origin of a part is the point that comes to rest at the host's substrate centre. A mount is therefore drawn around the mirror it will hold, and needs no offset to land correctly. ``offset`` and ``offset_angle`` are there for the times you mean to sit slightly off it.
+
+:py:meth:`detach<gtrace.mechanics.Mechanics.detach>` bakes the derived pose in and frees the body; :py:meth:`attach<gtrace.mechanics.Mechanics.attach>` seats it on a host, at the model's own place by default, or where it already stands with ``keep_pose=True``. A layout saves the host's **name** and the offset, never the derived pose, and re-links the two when it is loaded. An optics with something attached to it cannot be removed until it is let go of.
+
+The model library
+^^^^^^^^^^^^^^^^^^
+
+Parts repeat, so they are worth registering once:
+
+.. code-block:: python
+
+    from gtrace.mechanics import (register_model, models, from_model,
+                                  save_models, load_models)
+
+    register_model('CLAMP-30', clamp, 'a 30 mm clamp with one bolt hole')
+    models()                                   # name -> description
+    layout.add_mechanics(from_model('CLAMP-30', name='C2',
+                                    center=[0.4, 0.1]))
+
+    save_models('parts.json', names=['CLAMP-30'])
+    load_models('parts.json')                  # merged by name, last wins
+
+A model is a **value** - shapes, a layer, a description and the builder parameters - copied in when it is registered and copied out when it is used, so a body and the model it came from cannot drift into each other. Loading a file merges it into the registry name by name, which is how a library is assembled from several files; a file with one bad shape in it is refused whole, leaving the registry untouched.
+
+What a body keeps is the shapes themselves, and the model name only as a label. **The saved layout is the truth**: a library that has moved on cannot change a drawing you already made. :py:meth:`relink_mechanics<gtrace.layout.OpticalLayout.relink_mechanics>` is how you deliberately ask for the newer definition, and it touches neither pose nor attachment.
+
+The stock models are generic on purpose — ``BB3030``, ``MOUNT-25``, ``HOLDER-50`` and the like — because gtrace does not invent a vendor's dimensions. The builders behind them take the numbers you measured:
+
+.. code-block:: python
+
+    from gtrace.mechanics import breadboard, mirror_mount, lens_holder
+
+    breadboard(0.45, 0.30, pitch=0.025, hole_diameter=0.006)
+    mirror_mount(scale=1.0, knobs=True)
+    lens_holder(length=0.030, thickness=0.010)
+
+A body built by one of these keeps the parameters it was built from, in ``params``, which is what makes it resizable: :py:meth:`resize<gtrace.mechanics.Mechanics.resize>` re-drills a breadboard at the new size rather than scaling it, so the holes keep their diameter and their pitch.
+
+Editing hardware from a front end
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The same operations reach a body, with its own whitelist (``EDITABLE_MECHANICS_ATTRS``: ``center``, ``rotationAngle``, ``attached_to``, ``offset``, ``offset_angle``, ``width`` and ``height``):
+
+.. code-block:: python
+
+    layout.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'BB1',
+                       'params': {'model': 'BB4530',
+                                  'center': [0.3, 0.15]}})
+    layout.apply_edit({'op': 'set', 'target': 'MT1',
+                       'attrs': {'attached_to': 'M2'}})
+    layout.apply_edit({'op': 'set', 'target': 'BB1',
+                       'attrs': {'width': 0.6, 'height': 0.45}})
+
+An ``add`` naming a ``model`` and no ``shapes`` is built from the library; one carrying ``shapes`` is built from them. ``attached_to`` takes a name or ``None``, and seating a body on a host puts it at the model's place, since where a mount belongs on a mirror is the library's business rather than the cursor's. Setting ``width`` or ``height`` goes through ``resize``, which says so when the body is not one that has a size.
+
+Drawing a part
+^^^^^^^^^^^^^^^
+
+:py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens the shape editor on a body — the same viewer, handed a scene of nothing but the shapes, drawn in the local frame with the origin marked. See :ref:`the-shape-editor` for what it offers. The model behind it is :py:class:`ShapeEditor<gtrace.draw.viewer.editor.ShapeEditor>`, which is drivable without a browser and speaks a protocol of its own:
+
+.. code-block:: python
+
+    from gtrace.draw.viewer.editor import ShapeEditor
+
+    ed = ShapeEditor(clamp)
+    ed.apply_edit({'op': 'add_shape', 'type': 'circle'})
+    ed.apply_edit({'op': 'set_shape', 'index': 2,
+                   'attrs': {'radius': 0.004}})
+    ed.apply_edit({'op': 'rotate_shape', 'index': 0, 'angle': 0.7854})
+    ed.apply_edit({'op': 'undo'})
+
+The operations are ``add_shape``, ``set_shape``, ``remove_shape``, ``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``save_model``, ``undo`` and ``redo``. A shape is edited by taking it apart into the dict :py:func:`shape_to_dict<gtrace.draw.serialize.shape_to_dict>` writes, changing what the message names and building it again, so the constructors are the only rule about what a shape is; what they do not catch — a size of none or less, a coordinate at infinity, an outline of one vertex — is refused on the way out. An index is a **place in the list**, which is also the order the shapes are drawn in, so removing one renumbers those after it.
+
+A turn is the one edit that is not a set of attributes, because what turning means differs by kind: an arc's two angles move, a text turns with its own rotation, and a ``Rectangle`` — a corner, a width and a height, with its sides along the axes — has no turned form at all and comes back as the closed polyline of its four corners. That rule is :py:func:`turned_shape<gtrace.mechanics.turned_shape>`, which is also how a turned body's rectangles reach the bench. ``pivot`` defaults to :py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the middle of the shape's bounding box.
+
+The editor holds the ``Mechanics`` **by reference**, like everything else here, so a body already registered in a layout is redrawn there at the layout's next draw, with its attachment, pose and builder parameters untouched.
+
 Scene channels for a front end
 -------------------------------
 
-:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds six entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` — the points of the optics a front end may snap a measurement to — and ``sources`` and ``rules``.
+:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds eight entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` — the points of the optics a front end may snap a measurement to — ``sources`` and ``rules``, and ``mechanics`` and ``mechlib`` for the hardware.
 
 ``sources`` is what says which of the beams the user put there. Nothing else can: a source is traced from a *copy* of itself, so its own beam sits in ``beams`` looking exactly like the ones the trace made from it. Each entry carries where the laser stands, which way it fires, and the light it emits — including the waist, worked out on this side rather than stored, for the same reason a dimension's length is. ``rules`` carries the tracing rules, which are not a property of any element but decide how much of the picture there is.
 
 Each dimension carries a ``line``, the two ends its line lands on once the offset is applied, so that only one place has an opinion about which side the offset goes.
 
-``snap`` carries the four corners of each substrate, the apex of each face and the middle. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
+``mechanics`` carries each body's pose, what it is attached to, and the outline a front end picks it by — worked out here, since it is the same polygon :py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against and there is no reason for a browser to have a second opinion about it. ``mechlib`` is the model library as names and descriptions, which is what the ``+ Hardware`` menu is; the shapes stay on this side until one is chosen.
+
+``snap`` carries the four corners of each substrate, the apex of each face and the middle, and the centre of every screw hole in the hardware. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
 
 Undo and redo
 --------------
