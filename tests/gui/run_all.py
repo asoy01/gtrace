@@ -67,6 +67,8 @@ SUITES = [
      'the shape editor: the protocol behind Mechanics.edit(), and what it refuses'),
     ('verify_editor_browser.py',
      'headless browser: the editor side bar, and the messages its rows send'),
+    ('verify_editor_drag_browser.py',
+     'headless browser: drawing a part by hand - picking, carrying, grips'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in

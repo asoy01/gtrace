@@ -29,10 +29,44 @@ across them.
     moved earlier or later and taken away; the numbers of whichever
     is picked, in millimetres and degrees; and one button that
     registers the part in the model library under a name.
+  - **A part is drawn by hand as well as by number.** A click picks a
+    shape out of the drawing - by its outline, or by what it encloses,
+    the smallest winning - and the same place clicked again steps down
+    through whatever overlaps there. The shape on show is carried by
+    dragging it, and stands on grips: the four corners of a rectangle
+    (the opposite one staying put), a point on the rim of a circle for
+    its radius, the two ends of a line, where an arc starts, stops and
+    how far out it runs, and one grip per vertex of a polyline. A drag
+    settles on the marked points - the origin, and the corners,
+    centres, vertices and **edge midpoints** of the other shapes -
+    unless Alt says to take the cursor at its word. The measuring tool
+    reaches the same points, midpoints included. Each gesture commits as one `set_shape`,
+    so it is one step of undo and goes through the same constructor a
+    typed row does.
+  - **A shape is turned** by Shift-dragging it, or with `[` and `]`
+    for 45° at a time - the same gesture and the same keys that turn
+    an element out on the bench. The turn is about the middle of the
+    shape's bounding box, which is the box already drawn around it.
+    A `Rectangle` is a corner, a width and a height with its sides
+    along the axes, so **a turned rectangle comes back as the closed
+    polyline of its four corners** - the rule gtrace has always drawn
+    a turned body's rectangles by, now stated once in
+    `mechanics.turned_shape` and used by both. One undo puts the
+    rectangle back.
+  - **A polyline is edited vertex by vertex.** The rows work on the
+    vertex the grips pick out and say which of how many it is;
+    `+ Vertex` puts a corner in halfway along to the next one and
+    `- Vertex` takes the one in hand out. Fewer than two vertices
+    draws nothing, and is refused.
   - It edits the `Mechanics` **by reference**, like everything else
     in gtrace, so a body already registered in a layout is redrawn
     there at the layout's next draw - attachment, pose and builder
     parameters all untouched.
+  - `mechanics.turned_shape(shape, angle, offset)`,
+    `mechanics.rotate_shape(shape, angle, pivot)` and
+    `mechanics.shape_centre(shape)`: how a drawing primitive turns,
+    which `Mechanics.world_shapes()` was already doing privately and
+    the editor now needs too.
   - `gtrace.draw.viewer.editor.ShapeEditor` is the model behind it,
     drivable without a browser. A shape is edited by taking it apart
     into the dict `shape_to_dict` writes, changing what the message

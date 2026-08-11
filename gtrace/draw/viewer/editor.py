@@ -34,7 +34,8 @@ import gtrace.draw as draw
 from gtrace.draw.serialize import (scene_to_dict, shape_to_dict,
                                    shape_from_dict, UnknownShapeError)
 from gtrace.layout import EditError, UNDO_DEPTH
-from gtrace.mechanics import DEFAULT_LAYER, LAYER_COLOR, register_model
+from gtrace.mechanics import (DEFAULT_LAYER, LAYER_COLOR, register_model,
+                              rotate_shape, shape_centre)
 
 #}}}
 
@@ -237,7 +238,8 @@ class ShapeEditor(object):
     def snap_points(self):
         '''
         Points worth snapping to while drawing: the origin, and the
-        corners and centres of the shapes already down.
+        corners, centres and edge midpoints of the shapes already
+        down.
 
         The origin is first because it is the one point every part is
         drawn around - it becomes the host's substrate centre - and
@@ -268,6 +270,8 @@ class ShapeEditor(object):
             {'op': 'remove_shape',    'index': 2}
             {'op': 'duplicate_shape', 'index': 2}
             {'op': 'move_shape',      'index': 2, 'to': 0}
+            {'op': 'rotate_shape',    'index': 2, 'angle': 0.7854,
+                                      'pivot': [0.0, 0.0]}
             {'op': 'save_model',      'name': 'MY-PART',
                                       'description': 'one line'}
             {'op': 'undo'}
@@ -278,6 +282,14 @@ class ShapeEditor(object):
         building it again - so a value that describes no shape is
         refused by the constructor, and the shape it would have
         replaced is left alone.
+
+        A turn is the one edit that is not a set of attributes: what
+        turning means differs by kind - an arc's angles move, a text
+        turns with its own rotation - and a rectangle, having its
+        sides along the axes, comes back as the closed polyline of its
+        corners. The angle is in radians, counterclockwise; ``pivot``
+        defaults to the middle of the shape's bounding box, which is
+        the box a front end draws around it.
 
         Raises
         ------
@@ -355,6 +367,34 @@ class ShapeEditor(object):
             self.shapes.insert(to, self.shapes.pop(i))
             return self
 
+        if op == 'rotate_shape':
+            i = self._index(msg.get('index'))
+            angle = msg.get('angle')
+            if isinstance(angle, bool) or not isinstance(angle, (int, float)):
+                raise EditError('A turn is an angle in radians, not %r.'
+                                % (angle,))
+            angle = float(angle)
+            if not np.isfinite(angle):
+                raise EditError('A shape cannot be turned by %r.' % (angle,))
+            if msg.get('pivot') is None:
+                pivot = shape_centre(self.shapes[i])
+            else:
+                try:
+                    pivot = np.asarray(msg['pivot'],
+                                       dtype='float64').reshape(2)
+                except (TypeError, ValueError):
+                    raise EditError('A shape is turned about a point '
+                                    '[x, y], not %r.' % (msg['pivot'],))
+                if not np.all(np.isfinite(pivot)):
+                    raise EditError('A shape cannot be turned about %r.'
+                                    % (msg['pivot'],))
+            # Through the same door as every other edit: what comes
+            # back is taken apart and built again, so the constructors
+            # have the last word here too.
+            self.shapes[i] = self._build(
+                shape_to_dict(rotate_shape(self.shapes[i], angle, pivot)))
+            return self
+
         if op == 'save_model':
             name = msg.get('name')
             if not isinstance(name, str) or not name.strip():
@@ -423,6 +463,13 @@ class ShapeEditor(object):
             if key in out and not out[key] > 0:
                 raise EditError('A %s needs a positive %s, not %r.'
                                 % (out['type'], key, out[key]))
+        # A polyline of one vertex draws nothing and has nothing to
+        # take hold of; of none, not even a place. The constructor
+        # only asks that x and y be of the same length, so this is
+        # the same kind of arithmetic as a positive width.
+        if out['type'] == 'polyline' and len(out['x']) < 2:
+            raise EditError('A polyline needs at least two vertices, '
+                            'not %d.' % len(out['x']))
         if out.get('thickness', 0.0) < 0:
             raise EditError('A %s cannot be drawn with a thickness of %r.'
                             % (out['type'], out['thickness']))
@@ -499,18 +546,33 @@ class ShapeEditor(object):
 def _shape_points(s):
     '''
     The points of a shape worth snapping to, as (point, kind) pairs.
+
+    The middle of every straight edge is among them, alongside the
+    corners and the ends. It is not one of the shape's own numbers -
+    no row of a panel sets it - but it is a place a part is drawn
+    against: a plate centred on the edge of another, a hole on the
+    middle of a side. A curve has none; the middle of an arc is not a
+    place anything is lined up on.
     '''
     if isinstance(s, draw.Line):
-        return [(s.start, 'end'), (s.stop, 'end')]
+        a = np.asarray(s.start, dtype='float64')
+        b = np.asarray(s.stop, dtype='float64')
+        return [(a, 'end'), (b, 'end'), ((a + b) / 2.0, 'midpoint')]
     if isinstance(s, draw.PolyLine):
-        return [([x, y], 'vertex') for x, y in zip(s.x, s.y)]
+        pts = [(np.array([x, y], dtype='float64'), 'vertex')
+               for x, y in zip(s.x, s.y)]
+        return pts + [((pts[i][0] + pts[i + 1][0]) / 2.0, 'midpoint')
+                      for i in range(len(pts) - 1)]
     if isinstance(s, draw.Rectangle):
         p = np.asarray(s.point, dtype='float64')
-        return [(p, 'corner'),
-                (p + [s.width, 0.0], 'corner'),
-                (p + [s.width, s.height], 'corner'),
-                (p + [0.0, s.height], 'corner'),
-                (p + [s.width / 2.0, s.height / 2.0], 'centre')]
+        corners = [p,
+                   p + [s.width, 0.0],
+                   p + [s.width, s.height],
+                   p + [0.0, s.height]]
+        return ([(c, 'corner') for c in corners]
+                + [(p + [s.width / 2.0, s.height / 2.0], 'centre')]
+                + [((corners[i] + corners[(i + 1) % 4]) / 2.0, 'midpoint')
+                   for i in range(4)])
     if isinstance(s, (draw.Circle, draw.Arc)):
         return [(s.center, 'centre')]
     if isinstance(s, draw.Text):

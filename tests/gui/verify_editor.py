@@ -120,6 +120,29 @@ check('  and the origin is at zero',
       [p['point'] for p in scene['snap'] if p['kind'] == 'origin']
       == [[0.0, 0.0]])
 
+# The middle of a straight edge is a place a part is drawn against,
+# and the measuring tool reaches the same points a drag settles on.
+mids = ShapeEditor(Mechanics(shapes=[
+    draw.Rectangle([-0.02, -0.01], 0.04, 0.02),
+    draw.PolyLine([0.0, 0.04, 0.04], [0.05, 0.05, 0.09]),
+    draw.Line([-0.05, 0.03], [-0.01, 0.03]),
+    draw.Circle([0.0, -0.05], 0.01)], name='P2')).snap_points()
+def points_of(kind, index):
+    return sorted([tuple(np.round(p['point'], 12)) for p in mids
+                   if p['kind'] == kind and p['label'].split()[1] == index])
+check('the four edges of a plate are marked at their middles',
+      points_of('midpoint', '1')
+      == [(-0.02, 0.0), (0.0, -0.01), (0.0, 0.01), (0.02, 0.0)],
+      str(points_of('midpoint', '1')))
+check('every segment of an outline is, too',
+      points_of('midpoint', '2') == [(0.02, 0.05), (0.04, 0.07)],
+      str(points_of('midpoint', '2')))
+check('and a line is marked at its middle, between its two ends',
+      points_of('midpoint', '3') == [(-0.03, 0.03)],
+      str(points_of('midpoint', '3')))
+check('a curve has none: the middle of an arc lines nothing up',
+      points_of('midpoint', '4') == [])
+
 
 print('--- adding, setting, copying, reordering, removing ---')
 
@@ -192,17 +215,113 @@ refused(ed, {'op': 'move_shape', 'index': 0, 'to': 7}, 'a move past the end')
 refused(ed, {'op': 'jiggle'}, 'an operation it does not have')
 refused(ed, 'not a message', 'a message that is not a dict')
 
-# The polyline is the one shape with no numeric rows in the panel
-# yet; the protocol still takes its vertices, which is what a cell or
-# a later editor would send.
+# A polyline is edited by its whole list of vertices - that is what
+# the shape carries - so adding, moving and taking one away are all
+# the same message with a different list in it.
 ed.apply_edit({'op': 'add_shape', 'type': 'polyline',
                'params': {'x': [0.0, 0.01], 'y': [0.0, 0.02]}})
 check('a polyline takes its vertices through the protocol',
       list(ed.shapes[-1].x) == [0.0, 0.01]
       and list(ed.shapes[-1].y) == [0.0, 0.02])
-refused(ed, {'op': 'set_shape', 'index': len(ed.shapes) - 1,
+last = len(ed.shapes) - 1
+refused(ed, {'op': 'set_shape', 'index': last,
              'attrs': {'x': [0.0, 0.01, 0.02]}},
         'a polyline whose x and y no longer match')
+ed.apply_edit({'op': 'set_shape', 'index': last,
+               'attrs': {'x': [0.0, 0.01, 0.02], 'y': [0.0, 0.02, 0.03]}})
+check('a vertex put in is a longer list',
+      len(ed.shapes[last].x) == 3 and ed.shapes[last].numpoints == 3)
+ed.apply_edit({'op': 'set_shape', 'index': last,
+               'attrs': {'x': [0.0, 0.02], 'y': [0.0, 0.03]}})
+check('  and one taken out is a shorter one',
+      len(ed.shapes[last].x) == 2 and ed.shapes[last].numpoints == 2)
+# The constructor only asks that x and y be of the same length, so the
+# floor is the editor's to hold - as the positive width is.
+refused(ed, {'op': 'set_shape', 'index': last,
+             'attrs': {'x': [0.01], 'y': [0.02]}},
+        'a polyline of one vertex, which draws nothing')
+refused(ed, {'op': 'set_shape', 'index': last,
+             'attrs': {'x': [], 'y': []}},
+        'a polyline of none at all')
+check('  and the shape it would have replaced is untouched',
+      len(ed.shapes[last].x) == 2)
+
+
+print('--- turning a shape ---')
+
+# A turn is the one edit that is not a set of attributes: what it
+# means differs by kind, and a rectangle cannot carry one at all.
+ed = ShapeEditor(Mechanics(shapes=[
+    draw.Rectangle([-0.02, -0.01], 0.04, 0.02),
+    draw.Circle([0.01, 0.0], 0.003),
+    draw.Arc([0.0, 0.0], 0.01, 0.0, np.pi),
+    draw.Text('hi', [0.01, 0.0], height=0.005),
+    draw.Line([0.0, 0.0], [0.02, 0.0])], name='P3'))
+
+ed.apply_edit({'op': 'rotate_shape', 'index': 4, 'angle': np.pi / 2,
+               'pivot': [0.0, 0.0]})
+check('a line turns about the point it is given',
+      np.allclose(ed.shapes[4].start, [0.0, 0.0], atol=1e-15)
+      and np.allclose(ed.shapes[4].stop, [0.0, 0.02], atol=1e-12),
+      str(np.round(ed.shapes[4].stop, 6)))
+
+# Nothing said about a pivot means the middle of the box the shape
+# occupies, which is the box a front end draws around it.
+ed.apply_edit({'op': 'rotate_shape', 'index': 1, 'angle': 1.0})
+check('a circle turned about its own middle does not move at all',
+      np.allclose(ed.shapes[1].center, [0.01, 0.0], atol=1e-15)
+      and abs(ed.shapes[1].radius - 0.003) < 1e-15,
+      str(np.round(ed.shapes[1].center, 6)))
+
+ed.apply_edit({'op': 'rotate_shape', 'index': 2, 'angle': np.pi / 2})
+check('an arc turns by turning both of its angles',
+      np.allclose(ed.shapes[2].center, [0.0, 0.0], atol=1e-15)
+      and abs(ed.shapes[2].startangle - np.pi / 2) < 1e-15
+      and abs(ed.shapes[2].stopangle - 3 * np.pi / 2) < 1e-15,
+      '%.4f .. %.4f' % (ed.shapes[2].startangle, ed.shapes[2].stopangle))
+
+ed.apply_edit({'op': 'rotate_shape', 'index': 3, 'angle': np.pi / 2,
+               'pivot': [0.0, 0.0]})
+check('a text turns about the pivot and turns with it',
+      np.allclose(ed.shapes[3].point, [0.0, 0.01], atol=1e-12)
+      and abs(ed.shapes[3].rotation - np.pi / 2) < 1e-15,
+      '%s %.4f' % (np.round(ed.shapes[3].point, 6), ed.shapes[3].rotation))
+
+# The rectangle. Its corners are written out here rather than asked
+# for: a shape turned by the code that turns it proves nothing.
+ed.apply_edit({'op': 'rotate_shape', 'index': 0, 'angle': np.pi / 4})
+turned = ed.shapes[0]
+th = np.pi / 4
+R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+want = np.array([[-0.02, -0.01], [0.02, -0.01], [0.02, 0.01],
+                 [-0.02, 0.01], [-0.02, -0.01]]) @ R.T
+check('a turned rectangle comes back as an outline, closed',
+      isinstance(turned, draw.PolyLine) and len(turned.x) == 5
+      and turned.x[0] == turned.x[-1] and turned.y[0] == turned.y[-1],
+      type(turned).__name__)
+check('  of its four corners, turned about the middle of the shape',
+      np.allclose(np.column_stack([turned.x, turned.y]), want, atol=1e-15),
+      str(np.round(np.column_stack([turned.x, turned.y]), 6).tolist()))
+check('  and it keeps its place in the list',
+      len(ed.shapes) == 5 and isinstance(ed.shapes[1], draw.Circle))
+ed.apply_edit({'op': 'undo'})
+check('  undo puts the rectangle back',
+      isinstance(ed.shapes[0], draw.Rectangle)
+      and abs(ed.shapes[0].width - 0.04) < 1e-15)
+ed.apply_edit({'op': 'rotate_shape', 'index': 0, 'angle': 0.0})
+check('a turn of nothing leaves a rectangle a rectangle',
+      isinstance(ed.shapes[0], draw.Rectangle))
+
+refused(ed, {'op': 'rotate_shape', 'index': 0, 'angle': 'a lot'},
+        'a turn that is not an angle')
+refused(ed, {'op': 'rotate_shape', 'index': 0, 'angle': float('inf')},
+        'a turn of infinity')
+refused(ed, {'op': 'rotate_shape', 'index': 0, 'angle': 0.5,
+             'pivot': [0.0, 'x']}, 'a pivot that is not a point')
+refused(ed, {'op': 'rotate_shape', 'index': 0, 'angle': 0.5,
+             'pivot': [0.0, 0.0, 0.0]}, 'a pivot of three numbers')
+refused(ed, {'op': 'rotate_shape', 'index': 9, 'angle': 0.5},
+        'turning a shape that is not there')
 
 
 print('--- undo and redo ---')

@@ -733,6 +733,32 @@
     pointer-events: none;
 }
 
+/* The grips of the shape on show: a corner of a rectangle, a point on
+   a circle, a vertex of an outline. The white-on-blue of the hardware
+   handles, since they are the same gesture on a smaller thing - and
+   filled solid for the vertex the panel is showing, which is the one
+   the numbers below answer for. */
+.gt-shape-handle {
+    fill: #fff;
+    stroke: #2f5fa8;
+    stroke-width: 1.4;
+    cursor: move;
+}
+
+.gt-shape-handle.gt-selected { fill: #2f5fa8; }
+
+/* A shape being dragged, drawn where it would land. Drawn in scene
+   coordinates - it is the drawing itself rather than a box round it -
+   so the stroke has to be told not to grow with the zoom. The amber
+   of every other drag in the viewer. */
+.gt-preview {
+    stroke: #b45309;
+    stroke-width: 1.6;
+    fill: none;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
 /* The list of shapes a part is drawn from. The order is the order
    they are drawn in, so the list is the part. */
 .gt-shapelist {

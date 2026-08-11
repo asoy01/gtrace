@@ -408,7 +408,12 @@ var SHAPE_FIELDS = {
         {key: 'rotation', label: 'Angle', unit: '°'}
     ],
     polyline: [
-        {key: 'points', label: 'Vertices', readonly: true}
+        // A polyline is a list, and a panel of rows is not: so the
+        // rows speak of one vertex at a time - the one the grips in
+        // the drawing pick out - and say which of how many it is.
+        {key: 'vertex', label: 'Vertex', readonly: true},
+        {key: 'vx', label: 'Vertex x', unit: 'mm'},
+        {key: 'vy', label: 'Vertex y', unit: 'mm'}
     ]
 };
 
@@ -432,7 +437,6 @@ function shapeFieldValue(s, key) {
     case 'stopangle': return normAngle(s.stopangle) * DEG;
     case 'rotation': return normAngle(s.rotation) * DEG;
     case 'text': return s.text;
-    case 'points': return (s.x || []).length + ' points';
     default: return s[key];
     }
 }
@@ -493,6 +497,355 @@ function shapeBounds(s) {
     var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs);
     var miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
     return [[minx, miny], [maxx, miny], [maxx, maxy], [minx, maxy]];
+}
+
+/*
+ * How small a shape may be made by dragging, in metres. A grip that
+ * has taken a rectangle down to nothing is a grip that cannot be
+ * found again; anything finer than this is drawn by typing it.
+ */
+var SHAPE_MIN = 0.0001;
+
+/*
+ * The corners of a rectangle, lower left first and counterclockwise.
+ * That is the order the corner grips are numbered in, so grip i is
+ * dragged against corner i + 2 - the one that stays put.
+ */
+function rectangleCorners(s) {
+    var x = s.point[0], y = s.point[1];
+    return [[x, y], [x + s.width, y],
+            [x + s.width, y + s.height], [x, y + s.height]];
+}
+
+/*
+ * How far an arc runs, counterclockwise from its start, in radians.
+ */
+function arcSpan(s) {
+    var span = (s.stopangle - s.startangle) % (2 * Math.PI);
+    if (span < 0) { span += 2 * Math.PI; }
+    return span;
+}
+
+/*
+ * A point on the circle an arc is cut from.
+ */
+function arcPoint(s, a) {
+    return [s.center[0] + s.radius * Math.cos(a),
+            s.center[1] + s.radius * Math.sin(a)];
+}
+
+/*
+ * The points of a shape a drag may settle on: corners, ends,
+ * vertices and centres.
+ *
+ * The same question Python answers for the measuring tool, asked
+ * again here because a drag has to leave out the shape being dragged
+ * - a shape would otherwise snap to itself and never move - and the
+ * scene's list of marked points does not say which shape each came
+ * from.
+ */
+function shapePoints(s) {
+    switch (s.type) {
+    // Every case builds a fresh list, so a caller may add to what it
+    // is handed without writing on the scene it came from.
+    case 'line': return [s.start, s.stop];
+    case 'polyline':
+        return s.x.map(function (x, i) { return [x, s.y[i]]; });
+    case 'rectangle':
+        return rectangleCorners(s).concat(
+            [[s.point[0] + s.width / 2, s.point[1] + s.height / 2]]);
+    case 'circle':
+    case 'arc': return [s.center];
+    case 'text': return [s.point];
+    }
+    return [];
+}
+
+/*
+ * The places a drag settles on: the points a shape is defined by, and
+ * the middle of every straight edge between them.
+ *
+ * A midpoint is not one of a shape's numbers - no row of the panel
+ * sets it - but it is a place a part is drawn against all the same: a
+ * plate centred on the edge of another, a hole on the middle of a
+ * side. Curves have no midpoint here; the middle of an arc is not a
+ * place anything is lined up on.
+ */
+function shapeSnapPoints(s) {
+    var out = shapePoints(s), i;
+    function mid(a, b) { out.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); }
+    switch (s.type) {
+    case 'line':
+        mid(s.start, s.stop);
+        break;
+    case 'polyline':
+        for (i = 0; i + 1 < s.x.length; i++) {
+            mid([s.x[i], s.y[i]], [s.x[i + 1], s.y[i + 1]]);
+        }
+        break;
+    case 'rectangle': {
+        var cs = rectangleCorners(s);
+        for (i = 0; i < 4; i++) { mid(cs[i], cs[(i + 1) % 4]); }
+        break;
+    }
+    }
+    return out;
+}
+
+/*
+ * The grips a shape is taken hold of by: {p, role, i}, where p is
+ * where the grip stands and role is what dragging it does.
+ *
+ * One grip changes one thing. A corner of a rectangle sets its size,
+ * a point on a circle its radius, an end of an arc that end's angle -
+ * so a grip does what the row of the same name in the panel does, and
+ * neither has to be explained in terms of the other. A text has no
+ * grips: it has a place, taken hold of by the text itself, and a
+ * size, which is a number.
+ */
+function shapeHandles(s) {
+    var out = [], i;
+    switch (s.type) {
+    case 'rectangle':
+        rectangleCorners(s).forEach(function (p, k) {
+            out.push({p: p, role: 'corner', i: k});
+        });
+        break;
+    case 'circle':
+        for (i = 0; i < 4; i++) {
+            out.push({p: arcPoint(s, i * Math.PI / 2), role: 'radius', i: i});
+        }
+        break;
+    case 'arc':
+        out.push({p: arcPoint(s, s.startangle), role: 'startangle', i: 0});
+        out.push({p: arcPoint(s, s.startangle + arcSpan(s)),
+                  role: 'stopangle', i: 1});
+        out.push({p: arcPoint(s, s.startangle + arcSpan(s) / 2),
+                  role: 'radius', i: 2});
+        break;
+    case 'line':
+        out.push({p: s.start, role: 'end', i: 0});
+        out.push({p: s.stop, role: 'end', i: 1});
+        break;
+    case 'polyline':
+        for (i = 0; i < s.x.length; i++) {
+            out.push({p: [s.x[i], s.y[i]], role: 'vertex', i: i});
+        }
+        break;
+    }
+    return out;
+}
+
+/*
+ * Carrying a whole shape by (dx, dy): the attributes that say so.
+ */
+function shapeMoveAttrs(s, dx, dy) {
+    switch (s.type) {
+    case 'line':
+        return {start: [s.start[0] + dx, s.start[1] + dy],
+                stop: [s.stop[0] + dx, s.stop[1] + dy]};
+    case 'polyline':
+        return {x: s.x.map(function (v) { return v + dx; }),
+                y: s.y.map(function (v) { return v + dy; })};
+    case 'rectangle':
+    case 'text':
+        return {point: [s.point[0] + dx, s.point[1] + dy]};
+    case 'circle':
+    case 'arc':
+        return {center: [s.center[0] + dx, s.center[1] + dy]};
+    }
+    return {};
+}
+
+/*
+ * Dragging one grip to a place: the attributes that put it there.
+ * Nothing else about the shape is touched, which is what lets a
+ * corner be moved without the opposite one drifting.
+ */
+function shapeHandleAttrs(s, h, pt) {
+    var a = {};
+    switch (h.role) {
+    case 'corner': {
+        // The opposite corner stays put - that is what dragging a
+        // corner of anything means - so the size is two absolute
+        // values taken from it, and the lower left follows.
+        var f = rectangleCorners(s)[(h.i + 2) % 4];
+        var w = Math.max(SHAPE_MIN, Math.abs(pt[0] - f[0]));
+        var ht = Math.max(SHAPE_MIN, Math.abs(pt[1] - f[1]));
+        return {point: [pt[0] >= f[0] ? f[0] : f[0] - w,
+                        pt[1] >= f[1] ? f[1] : f[1] - ht],
+                width: w, height: ht};
+    }
+    case 'radius':
+        return {radius: Math.max(SHAPE_MIN,
+                                 Math.hypot(pt[0] - s.center[0],
+                                            pt[1] - s.center[1]))};
+    case 'startangle':
+    case 'stopangle':
+        a[h.role] = Math.atan2(pt[1] - s.center[1], pt[0] - s.center[0]);
+        return a;
+    case 'end':
+        return h.i === 0 ? {start: [pt[0], pt[1]]} : {stop: [pt[0], pt[1]]};
+    case 'vertex': {
+        var xs = s.x.slice(), ys = s.y.slice();
+        xs[h.i] = pt[0];
+        ys[h.i] = pt[1];
+        return {x: xs, y: ys};
+    }
+    }
+    return a;
+}
+
+/*
+ * The middle of the box a shape occupies: what it is turned about
+ * unless something else is said. The box is the one already drawn
+ * around the shape on show, so a turn about its middle is the one
+ * turn that can be seen coming.
+ */
+function shapeCentre(s) {
+    var box = shapeBounds(s);
+    if (!box) { return [0, 0]; }
+    return [(box[0][0] + box[2][0]) / 2, (box[0][1] + box[2][1]) / 2];
+}
+
+/*
+ * A serialized shape turned about a point: what a turn previews, and
+ * what Python will make of the same angle.
+ *
+ * A rectangle comes back as the closed polyline of its corners. It is
+ * defined by a corner, a width and a height with its sides along the
+ * axes, so there is no such thing as a turned one - the same rule
+ * gtrace has always drawn a turned body's rectangles by, and the same
+ * one mechanics.turned_shape applies when this angle reaches Python.
+ */
+function turnedShape(s, da, pivot) {
+    var ca = Math.cos(da), sa = Math.sin(da);
+    function turn(p) {
+        var ox = p[0] - pivot[0], oy = p[1] - pivot[1];
+        return [pivot[0] + ox * ca - oy * sa, pivot[1] + ox * sa + oy * ca];
+    }
+    switch (s.type) {
+    case 'line':
+        return shapeWith(s, {start: turn(s.start), stop: turn(s.stop)});
+    case 'polyline': {
+        var pts = shapePoints(s).map(turn);
+        return shapeWith(s, {x: pts.map(function (q) { return q[0]; }),
+                             y: pts.map(function (q) { return q[1]; })});
+    }
+    case 'rectangle': {
+        if (da === 0) { return shapeWith(s, {}); }
+        var cs = rectangleCorners(s).map(turn);
+        cs.push(cs[0]);
+        var out = shapeWith(s, {x: cs.map(function (q) { return q[0]; }),
+                                y: cs.map(function (q) { return q[1]; })});
+        out.type = 'polyline';
+        delete out.point;
+        delete out.width;
+        delete out.height;
+        return out;
+    }
+    case 'circle':
+        return shapeWith(s, {center: turn(s.center)});
+    case 'arc':
+        return shapeWith(s, {center: turn(s.center),
+                             startangle: s.startangle + da,
+                             stopangle: s.stopangle + da});
+    case 'text':
+        return shapeWith(s, {point: turn(s.point),
+                             rotation: (s.rotation || 0) + da});
+    }
+    return shapeWith(s, {});
+}
+
+/*
+ * A serialized shape with some of its attributes replaced: what a
+ * drag draws while it is being made, from exactly the attributes it
+ * will send when it is let go.
+ */
+function shapeWith(s, attrs) {
+    var out = {}, k;
+    for (k in s) { out[k] = s[k]; }
+    for (k in attrs) { out[k] = attrs[k]; }
+    return out;
+}
+
+/*
+ * How far a scene point lies from the line a shape is drawn as. What
+ * a click has to be within to take hold of the shape by its outline,
+ * which is the only way to reach one that encloses nothing.
+ */
+function distToShape(s, x, y) {
+    var i, d = Infinity, cs;
+    switch (s.type) {
+    case 'line': return distToSegment(x, y, s.start, s.stop);
+    case 'polyline':
+        for (i = 0; i + 1 < s.x.length; i++) {
+            d = Math.min(d, distToSegment(x, y, [s.x[i], s.y[i]],
+                                          [s.x[i + 1], s.y[i + 1]]));
+        }
+        return d;
+    case 'rectangle':
+        cs = rectangleCorners(s);
+        for (i = 0; i < 4; i++) {
+            d = Math.min(d, distToSegment(x, y, cs[i], cs[(i + 1) % 4]));
+        }
+        return d;
+    case 'circle':
+        return Math.abs(Math.hypot(x - s.center[0], y - s.center[1])
+                        - s.radius);
+    case 'arc': {
+        // Only along the part of the circle the arc actually runs;
+        // past its ends it is the ends themselves that are near.
+        var span = arcSpan(s);
+        var a = (Math.atan2(y - s.center[1], x - s.center[0])
+                 - s.startangle) % (2 * Math.PI);
+        if (a < 0) { a += 2 * Math.PI; }
+        if (a <= span) {
+            return Math.abs(Math.hypot(x - s.center[0], y - s.center[1])
+                            - s.radius);
+        }
+        var p0 = arcPoint(s, s.startangle);
+        var p1 = arcPoint(s, s.startangle + span);
+        return Math.min(Math.hypot(x - p0[0], y - p0[1]),
+                        Math.hypot(x - p1[0], y - p1[1]));
+    }
+    case 'text':
+        return Math.hypot(x - s.point[0], y - s.point[1]);
+    }
+    return Infinity;
+}
+
+/*
+ * Whether a point is inside a shape that closes. A plate is clicked
+ * anywhere on it, not only along its edge - but a line and an arc
+ * enclose nothing, and are reached by their outline alone.
+ */
+function shapeEncloses(s, x, y) {
+    switch (s.type) {
+    case 'rectangle':
+        return x >= s.point[0] && x <= s.point[0] + s.width
+            && y >= s.point[1] && y <= s.point[1] + s.height;
+    case 'circle':
+        return Math.hypot(x - s.center[0], y - s.center[1]) <= s.radius;
+    case 'polyline':
+        return pointInPolygon(x, y, shapePoints(s));
+    }
+    return false;
+}
+
+/*
+ * How much a shape covers, for choosing between shapes under one
+ * click: the smallest wins, so a hole is not shadowed by the plate it
+ * is drilled in.
+ */
+function shapeArea(s) {
+    switch (s.type) {
+    case 'rectangle': return Math.abs(s.width * s.height);
+    case 'circle':
+    case 'arc': return Math.PI * s.radius * s.radius;
+    case 'polyline': return Math.abs(polygonArea(shapePoints(s)));
+    }
+    return 0;
 }
 
 /*
@@ -727,6 +1080,15 @@ function Viewer(container, scene, options) {
     // than a thing, so it is re-read against every scene.
     this.selectedShape = null;
     this._shapeFieldsKind = null;
+    // Which vertex of a polyline the panel and the grips are working
+    // on, by index into its own list. Another place rather than a
+    // thing, for the same reason and read back the same way.
+    this.selectedVertex = null;
+    // A shape being dragged by itself or by one of its grips, and
+    // where those grips were last drawn (screen coordinates, for the
+    // mousedown hit test).
+    this.dragShape = null;
+    this._shapeHandlePts = null;
 
     VIEWERS.push(this);
     this._build();
@@ -1149,15 +1511,11 @@ Viewer.prototype._build = function () {
     var rows = editing
         ? [['Wheel', 'zoom at cursor'],
            ['Drag', 'pan'],
-           ['Click a shape in the list', 'edit its numbers'],
-           ['+ Rect / + Circle / …', 'put one down at the origin'],
-           ['Copy', 'a second one, just beside it'],
-           ['Remove', 'take it away'],
-           ['↑ / ↓', 'draw it earlier or later'],
+           ['Click a shape', 'pick it, in the drawing or in the list'],
+           ['Click again', 'step down through what overlaps'],
            ['Measure, or m', 'measure between two points'],
            ['f', 'fit to view'],
-           ['Undo, or Ctrl + Z', 'put the last edit back'],
-           ['Save to library', 'register the part under a name']]
+           ['Esc', 'let go of the shape']]
         : [['Wheel', 'zoom at cursor'],
                 ['Drag', 'pan'],
                 ['Move over a beam', 'live readout'],
@@ -1169,6 +1527,23 @@ Viewer.prototype._build = function () {
                 ['f', 'fit to view'],
                 ['Measure, or m', 'measure between two points'],
                 ['Esc', 'clear selection']];
+    if (this.opts.onEdit && editing) {
+        rows.push(['Drag the picked shape', 'move it'],
+                  ['  near a marked point',
+                   'land on it - the origin, a corner, a centre, '
+                   + 'the middle of an edge (Alt rides free)'],
+                  ['Drag a grip', 'a corner, a radius, an end, a vertex'],
+                  ['Shift + drag', 'turn it about its middle'],
+                  ['[ and ]', 'turn it a quarter turn'],
+                  ['+ Rect / + Circle / …', 'put one down at the origin'],
+                  ['+ Vertex / − Vertex',
+                   'put a corner into an outline, or take one out'],
+                  ['Copy', 'a second one, just beside it'],
+                  ['Remove', 'take it away'],
+                  ['↑ / ↓', 'draw it earlier or later'],
+                  ['Undo, or Ctrl + Z', 'put the last edit back'],
+                  ['Save to library', 'register the part under a name']);
+    }
     if (this.opts.onEdit && !editing) {
         rows.push(['Drag an optics or a laser', 'move it'],
                   ['Drag near a screw hole', 'land the anchor on it '
@@ -2001,6 +2376,25 @@ Viewer.prototype._buildShapePanel = function () {
     this.shapeBody.appendChild(this.shapeRows);
 
     if (this.onEdit) {
+        // A polyline is the one shape whose parts can be added to and
+        // taken away, so it is the one with a row of its own. Shown
+        // only while one is selected: a circle has no vertices, and a
+        // button that does nothing is a button that has to be tried.
+        this.vertexFoot = htmlEl('div', 'gt-props-foot');
+        [['+ Vertex', 'Put a corner in, halfway along to the next one',
+          function () { self.addVertex(); }],
+         ['\u2212 Vertex', 'Take this corner out of the outline',
+          function () { self.removeVertex(); }]
+        ].forEach(function (spec) {
+            var vb = htmlEl('button', 'gt-btn', spec[0]);
+            vb.title = spec[1];
+            vb.addEventListener('click', spec[2]);
+            self.vertexFoot.appendChild(vb);
+        });
+        this.vertexRemoveBtn = this.vertexFoot.childNodes[1];
+        this.vertexFoot.style.display = 'none';
+        this.shapeBody.appendChild(this.vertexFoot);
+
         var foot = htmlEl('div', 'gt-props-foot');
         [['Copy', 'Add a second one just beside it',
           function () { self.duplicateShape(); }],
@@ -2039,6 +2433,9 @@ Viewer.prototype._selectedShape = function () {
 };
 
 Viewer.prototype._selectShape = function (index) {
+    // A vertex belongs to the shape it was picked out of, so leaving
+    // that shape leaves the vertex behind with it.
+    if (index !== this.selectedShape) { this.selectedVertex = null; }
     this.selectedShape = index;
     this._refreshShapePanel();
     this._updateOverlay();
@@ -2084,14 +2481,121 @@ Viewer.prototype._refreshShapePanel = function () {
     if (this.shapeFields) {
         refreshFieldTable(this.shapeFields, SHAPE_FIELDS[kind],
                           s ? function (key) {
-                              return shapeFieldValue(s, key);
+                              return self._shapeFieldValue(s, key);
                           } : null);
     }
+    if (this.vertexFoot) {
+        this.vertexFoot.style.display = (kind === 'polyline') ? '' : 'none';
+        // Two points are a line and one is nothing to draw, so the
+        // last two are not offered up.
+        this.vertexRemoveBtn.disabled = !s || s.type !== 'polyline'
+            || s.x.length <= 2;
+    }
+};
+
+/*
+ * Which vertex of the selected polyline is in hand.
+ *
+ * Null unless a polyline is selected. The first one until another is
+ * picked, since a row that says nothing is worse than one that says
+ * where the list starts, and the last one if the list has since grown
+ * shorter under it.
+ */
+Viewer.prototype._vertexIndex = function () {
+    var s = this._selectedShape();
+    if (!s || s.type !== 'polyline' || !s.x.length) { return null; }
+    var i = this.selectedVertex;
+    if (i === null || i === undefined || i < 0) { return 0; }
+    return Math.min(i, s.x.length - 1);
+};
+
+/*
+ * What a row of the shape panel reads. The rows of a polyline are
+ * about one vertex, which is the viewer's business rather than the
+ * shape's; everything else the shape answers for itself.
+ */
+Viewer.prototype._shapeFieldValue = function (s, key) {
+    if (key === 'vertex' || key === 'vx' || key === 'vy') {
+        var i = this._vertexIndex();
+        if (i === null) { return null; }
+        if (key === 'vertex') { return (i + 1) + ' of ' + s.x.length; }
+        return (key === 'vx' ? s.x[i] : s.y[i]) / MM;
+    }
+    return shapeFieldValue(s, key);
+};
+
+/*
+ * Put a corner in after the one in hand, and take hold of the new one.
+ *
+ * Halfway along to the next vertex, which is where a corner is
+ * usually wanted and where it can be seen; off the end of the last
+ * one, carrying on the way the line was already going, since there is
+ * no next one to halve the way to.
+ */
+Viewer.prototype.addVertex = function () {
+    var s = this._selectedShape();
+    if (!s || s.type !== 'polyline' || !this.onEdit) { return null; }
+    var i = this._vertexIndex();
+    if (i === null || s.x.length < 2) { return null; }
+    var xs = s.x.slice(), ys = s.y.slice();
+    var nx, ny;
+    if (i + 1 < xs.length) {
+        nx = (xs[i] + xs[i + 1]) / 2;
+        ny = (ys[i] + ys[i + 1]) / 2;
+    } else {
+        nx = xs[i] + (xs[i] - xs[i - 1]) / 2;
+        ny = ys[i] + (ys[i] - ys[i - 1]) / 2;
+    }
+    xs.splice(i + 1, 0, nx);
+    ys.splice(i + 1, 0, ny);
+    this.selectedVertex = i + 1;
+    var msg = {op: 'set_shape', index: this.selectedShape,
+               attrs: {x: xs, y: ys}};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Take the corner in hand out of the outline.
+ */
+Viewer.prototype.removeVertex = function () {
+    var s = this._selectedShape();
+    if (!s || s.type !== 'polyline' || !this.onEdit) { return null; }
+    // Python refuses a polyline of fewer than two vertices; this only
+    // saves the asking.
+    if (s.x.length <= 2) { return null; }
+    var i = this._vertexIndex();
+    var xs = s.x.slice(), ys = s.y.slice();
+    xs.splice(i, 1);
+    ys.splice(i, 1);
+    this.selectedVertex = Math.min(i, xs.length - 1);
+    var msg = {op: 'set_shape', index: this.selectedShape,
+               attrs: {x: xs, y: ys}};
+    this.onEdit(msg);
+    return msg;
 };
 
 Viewer.prototype._commitShapeField = function (key, input) {
     var s = this._selectedShape();
     if (!s || !this.onEdit) { return; }
+
+    // A vertex row sets one point of the list, which is sent as the
+    // whole list: that is what a polyline carries, and what the
+    // constructor on the other side takes.
+    if (key === 'vx' || key === 'vy') {
+        var vi = this._vertexIndex();
+        var vv = parseField(input.value);
+        if (vi === null || typeof vv !== 'number' || !isFinite(vv)) {
+            this._refreshShapePanel();
+            return;
+        }
+        var xs = s.x.slice(), ys = s.y.slice();
+        if (key === 'vx') { xs[vi] = vv * MM; } else { ys[vi] = vv * MM; }
+        this.onEdit({op: 'set_shape', index: this.selectedShape,
+                     attrs: {x: xs, y: ys}});
+        return;
+    }
+
     var field = null;
     (SHAPE_FIELDS[s.type] || []).forEach(function (f) {
         if (f.key === key) { field = f; }
@@ -3553,8 +4057,7 @@ function shapeToSVG(s) {
  * sweep direction, hence sweep-flag = 1.
  */
 function arcToSVG(s) {
-    var span = (s.stopangle - s.startangle) % (2 * Math.PI);
-    if (span < 0) { span += 2 * Math.PI; }
+    var span = arcSpan(s);
     if (span < 1e-12 || Math.abs(span - 2 * Math.PI) < 1e-12) {
         return svgEl('circle', {cx: s.center[0], cy: s.center[1], r: s.radius});
     }
@@ -3623,6 +4126,16 @@ Viewer.prototype._renderScene = function () {
     this.originMark.style.display = 'none';
     this.shapeMark = svgEl('polygon', {'class': 'gt-optic-outline gt-selected'});
     this.shapeMark.style.display = 'none';
+    // The shape being dragged, drawn where it would land. In scene
+    // coordinates, unlike the outlines: what is previewed here is the
+    // drawing itself rather than a box around something.
+    this.shapePreview = svgEl('g', {'class': 'gt-preview'});
+    // The grips of the shape on show. However many it has - four for a
+    // rectangle, one per vertex for a polyline - so they are made as
+    // they are called for rather than once.
+    this.shapeHandleGroup = svgEl('g');
+    this.shapeHandleEls = [];
+    this._shapeHandlePts = null;
 
     // The corner handles a resizable body is cut by. Four, built once,
     // shown only while such a body is selected.
@@ -3665,6 +4178,8 @@ Viewer.prototype._renderScene = function () {
     for (var hj = 0; hj < this.mechHandles.length; hj++) {
         this.overlayGroup.appendChild(this.mechHandles[hj]);
     }
+    this.overlayGroup.appendChild(this.shapeHandleGroup);
+    this.sceneGroup.appendChild(this.shapePreview);
     this.overlayGroup.appendChild(this.outline);
     this.overlayGroup.appendChild(this.highlight);
     this.overlayGroup.appendChild(this.arrow);
@@ -4192,6 +4707,27 @@ Viewer.prototype._bindEvents = function () {
         var px = ev.clientX - r.left, py = ev.clientY - r.top;
         var pt = self.screenToScene(px, py);
 
+        // Editing a part: a grip first, then the shape on show, then
+        // the view. Nothing else in an editor scene can be pointed
+        // at, so the rest of this handler has nothing to look for.
+        if (self.scene.editor) {
+            if (self.onEdit && !self.measuring && !self.aligning) {
+                var grip = self._pickShapeHandle(px, py);
+                var pick = grip ? null : self._pickShape(pt[0], pt[1]);
+                if (grip) {
+                    self._beginShapeDrag(self.selectedShape, pt, grip);
+                    ev.preventDefault();
+                } else if (pick && pick.index === self.selectedShape) {
+                    self._beginShapeDrag(pick.index, pt, null, ev.shiftKey);
+                    ev.preventDefault();
+                }
+            }
+            dragging = true; moved = 0;
+            lastX = ev.clientX; lastY = ev.clientY;
+            self.svg.classList.add('gt-dragging');
+            return;
+        }
+
         // A resize handle first: it is UI chrome drawn on top of the
         // picture, and only exists while a resizable body is selected.
         if (self.onEdit && !self.measuring && !self.aligning) {
@@ -4258,6 +4794,14 @@ Viewer.prototype._bindEvents = function () {
                 self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
             return;
         }
+        if (self.dragShape) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateShapeDrag(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
+                ev.altKey);
+            return;
+        }
         if (self.dragSource) {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
@@ -4302,6 +4846,29 @@ Viewer.prototype._bindEvents = function () {
             self._updateMechResize(
                 self.screenToScene(ev.clientX - rz.left, ev.clientY - rz.top));
             self._endMechResize(moved >= 4);
+            return;
+        }
+        if (self.dragShape) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            var rp = self.svg.getBoundingClientRect();
+            if (moved < 4) {
+                // A grab that went nowhere. On a grip that is how a
+                // vertex is picked out, and _beginShapeDrag has
+                // already done it; anywhere else it is a click, and
+                // the click pipeline steps through what overlaps.
+                var wasGrip = !!self.dragShape.handle;
+                self._endShapeDrag(false);
+                if (!wasGrip) {
+                    self._onClick(ev.clientX - rp.left, ev.clientY - rp.top,
+                                  ev.ctrlKey);
+                }
+                return;
+            }
+            self._updateShapeDrag(
+                self.screenToScene(ev.clientX - rp.left, ev.clientY - rp.top),
+                ev.altKey);
+            self._endShapeDrag(true);
             return;
         }
         if (self.dragSource) {
@@ -4406,10 +4973,18 @@ Viewer.prototype._bindEvents = function () {
         // by places, and the quarter turn. See ALIGN_ITEMS, which
         // carries the same keys into the menu's tooltips.
         if (!ev.ctrlKey && !ev.metaKey) {
-            if (ev.key === 'a' || ev.key === 'A') { self.startAlign(2); }
-            if (ev.key === 'b' || ev.key === 'B') { self.startAlign(3); }
-            if (ev.key === ']') { self.turnSelected(45); }
-            if (ev.key === '[') { self.turnSelected(-45); }
+            // In an editor the same keys turn the shape on show:
+            // there is no optics to aim, and a quarter turn is a
+            // quarter turn either way.
+            if (self.scene.editor) {
+                if (ev.key === ']') { self.turnShape(45); }
+                if (ev.key === '[') { self.turnShape(-45); }
+            } else {
+                if (ev.key === 'a' || ev.key === 'A') { self.startAlign(2); }
+                if (ev.key === 'b' || ev.key === 'B') { self.startAlign(3); }
+                if (ev.key === ']') { self.turnSelected(45); }
+                if (ev.key === '[') { self.turnSelected(-45); }
+            }
         }
         if (ev.key === 'Escape') {
             // An open menu is the innermost thing Escape can close, so
@@ -4424,6 +4999,10 @@ Viewer.prototype._bindEvents = function () {
             // selection it was being taken for.
             if (self.cancelAlign()) { return; }
             if (self.measuring) { self.toggleMeasure(false); }
+            if (self.scene.editor) {
+                self._selectShape(null);
+                return;
+            }
             self.pinned = null;
             self.selectedOptic = null;
             self.selectedDim = null;
@@ -4956,6 +5535,196 @@ Viewer.prototype._endMechResize = function (commit) {
                          center: r.center}});
 };
 
+/*
+ * Dragging a shape while a part is being drawn.
+ *
+ * The same gesture as everywhere else - take hold of it and put it
+ * somewhere - previewed locally and committed on release as one edit
+ * message, which is what makes it one step of undo. What is sent is
+ * a set_shape with the attributes the drag worked out: Python builds
+ * the shape again from them and refuses anything that describes no
+ * shape, exactly as it does for a number typed into the panel.
+ */
+
+/*
+ * How near, in screen pixels, a click has to pass the outline of a
+ * shape to take hold of it.
+ */
+var SHAPE_PICK = 6;
+
+/*
+ * Whether the shapes are being shown at all: the editor draws them on
+ * a single layer, and one switched off is one the user has said they
+ * are not looking at.
+ */
+Viewer.prototype._shapesVisible = function () {
+    var layers = (this.scene.canvas && this.scene.canvas.layers) || [];
+    if (!layers.length) { return false; }
+    var g = this.layerGroups[layers[0].name];
+    return !g || g.visible;
+};
+
+/*
+ * The shapes under a scene point, nearest first.
+ *
+ * A shape is reached either by its outline or by what it encloses,
+ * and the outline wins: it is the more deliberate aim of the two, and
+ * a small shape drawn over a large one has nothing else to be reached
+ * by. Between two enclosing shapes the smaller wins, as it does for
+ * the hardware on a bench and for the same reason.
+ */
+Viewer.prototype._pickShapes = function (x, y, tol) {
+    if (!this._shapesVisible()) { return []; }
+    var hits = [];
+    this._shapes().forEach(function (s, i) {
+        var d = distToShape(s, x, y);
+        if (d <= tol) {
+            hits.push({index: i, shape: s, on: true, d: d});
+        } else if (shapeEncloses(s, x, y)) {
+            hits.push({index: i, shape: s, on: false, d: shapeArea(s)});
+        }
+    });
+    hits.sort(function (a, b) {
+        if (a.on !== b.on) { return a.on ? -1 : 1; }
+        return a.d !== b.d ? a.d - b.d : a.index - b.index;
+    });
+    return hits;
+};
+
+Viewer.prototype._pickShape = function (x, y) {
+    var hits = this._pickShapes(x, y, SHAPE_PICK / this.scale);
+    return hits.length ? hits[0] : null;
+};
+
+/*
+ * Where a drag settles: the marked point nearest any of the points it
+ * is carrying, or nothing if none is near enough.
+ *
+ * The marks are the origin and the points of the other shapes, the
+ * middle of their edges included: that is what a part is drawn
+ * against - a plate laid on the centre line, a hole put on a corner,
+ * a slot centred on a side. The shape being dragged is left out, or it
+ * would catch on itself and never move. Alt says to take the cursor
+ * at its word instead, as it does when hardware is dragged over a
+ * grid of holes.
+ */
+Viewer.prototype._shapeSnap = function (pts, except, free) {
+    if (free) { return null; }
+    var targets = [[0.0, 0.0]];
+    this._shapes().forEach(function (s, i) {
+        if (i === except) { return; }
+        shapeSnapPoints(s).forEach(function (q) { targets.push(q); });
+    });
+    var best = null, bestD = SNAP_RADIUS / this.scale;
+    pts.forEach(function (p) {
+        targets.forEach(function (t) {
+            var d = Math.hypot(p[0] - t[0], p[1] - t[1]);
+            if (d < bestD - SNAP_TIE) {
+                best = {point: t, dx: t[0] - p[0], dy: t[1] - p[1]};
+                bestD = d;
+            }
+        });
+    });
+    return best;
+};
+
+Viewer.prototype._beginShapeDrag = function (index, scenePt, handle,
+                                             rotate) {
+    var s = this._shapes()[index];
+    if (!s) { return; }
+    // Taking hold of a vertex is also how one is picked out, so that
+    // the rows below say what the grip in the drawing is holding.
+    if (handle && handle.role === 'vertex' && handle.i !== this.selectedVertex) {
+        this.selectedVertex = handle.i;
+        this._refreshShapePanel();
+    }
+    // Turning is about the middle of the shape, which is where the
+    // box around it is centred: a grip sets one number, and a turn
+    // sets them all, so it answers to the shape as a whole.
+    var pivot = shapeCentre(s);
+    this.dragShape = {index: index, shape: s, handle: handle || null,
+                      rotate: !!rotate && !handle, pivot: pivot,
+                      grab: scenePt, delta: [0, 0], angle: 0, attrs: null,
+                      preview: s, snap: null,
+                      grabAngle: Math.atan2(scenePt[1] - pivot[1],
+                                            scenePt[0] - pivot[0])};
+    this._updateOverlay();
+};
+
+Viewer.prototype._updateShapeDrag = function (scenePt, free) {
+    var d = this.dragShape;
+    if (!d) { return; }
+    if (d.rotate) {
+        d.angle = Math.atan2(scenePt[1] - d.pivot[1],
+                             scenePt[0] - d.pivot[0]) - d.grabAngle;
+        d.snap = null;
+        d.attrs = null;
+        d.preview = turnedShape(d.shape, d.angle, d.pivot);
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
+    if (d.handle) {
+        d.snap = this._shapeSnap([scenePt], d.index, free);
+        d.attrs = shapeHandleAttrs(d.shape, d.handle,
+                                   d.snap ? d.snap.point : scenePt);
+    } else {
+        var dx = scenePt[0] - d.grab[0], dy = scenePt[1] - d.grab[1];
+        // Every point of the shape is offered to the marks, and the
+        // nearest match carries the whole shape with it - which is
+        // what makes a corner land on a corner rather than the cursor
+        // landing on one.
+        d.snap = this._shapeSnap(shapeSnapPoints(d.shape).map(function (q) {
+            return [q[0] + dx, q[1] + dy];
+        }), d.index, free);
+        if (d.snap) { dx += d.snap.dx; dy += d.snap.dy; }
+        d.delta = [dx, dy];
+        d.attrs = shapeMoveAttrs(d.shape, dx, dy);
+    }
+    d.preview = shapeWith(d.shape, d.attrs);
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endShapeDrag = function (commit) {
+    var d = this.dragShape;
+    this.dragShape = null;
+    if (!d) { return null; }
+    this._updateOverlay();
+    // A grab that went nowhere decided nothing.
+    if (!commit || !this.onEdit) { return null; }
+    // The pivot travels with the message: what was previewed and what
+    // Python turns are then the same point, whatever either would
+    // have chosen on its own.
+    var msg = d.rotate
+        ? {op: 'rotate_shape', index: d.index, angle: d.angle,
+           pivot: [d.pivot[0], d.pivot[1]]}
+        : (d.attrs ? {op: 'set_shape', index: d.index, attrs: d.attrs}
+                   : null);
+    if (!msg) { return null; }
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Turn the shape on show by a whole number of degrees, about its
+ * middle. The quarter turn a bench is laid out by, on the same keys
+ * that turn an optics out on the bench.
+ */
+Viewer.prototype.turnShape = function (deg) {
+    var s = this._selectedShape();
+    if (!s || !this.onEdit) { return null; }
+    var pivot = shapeCentre(s);
+    var msg = {op: 'rotate_shape', index: this.selectedShape,
+               angle: deg / DEG, pivot: [pivot[0], pivot[1]]};
+    this.onEdit(msg);
+    return msg;
+};
+
+//}}}
+
+//{{{ Hover and click
+
 Viewer.prototype._onHover = function (px, py) {
     var pt = this.screenToScene(px, py);
     this.cursor = pt;
@@ -4994,6 +5763,26 @@ Viewer.prototype._onHover = function (px, py) {
         return;
     }
     this.measurePreview = null;
+
+    // Editing a part: there are no optics, beams or hardware to point
+    // at - only the shapes, and of those only the one on show can be
+    // taken hold of. The rest are selected first, as a breadboard is,
+    // so that a press anywhere else still pans the view.
+    if (this.scene.editor) {
+        var sgrip = this.onEdit ? this._pickShapeHandle(px, py) : null;
+        var sp = sgrip ? null : this._pickShape(pt[0], pt[1]);
+        var sgrab = !!this.onEdit && (!!sgrip
+                                      || (sp && sp.index === this.selectedShape));
+        this.svg.classList.toggle('gt-over-optic', !!sgrab);
+        this.svg.classList.toggle('gt-over-pickable', !sgrab && !!sp);
+        this.hoverOptic = null;
+        this.hoverSource = null;
+        this.hoverMech = null;
+        this.hover = null;
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
 
     // An optics or a laser under the cursor takes precedence: it is
     // what the next mousedown would act on, so say so before the user
@@ -5058,6 +5847,27 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
 
     if (this.measuring) {
         this._onMeasureClick(pt[0], pt[1]);
+        return;
+    }
+
+    // Editing a part: the shapes are the whole of what there is to
+    // click on. Clicking the same place again steps down through the
+    // ones that overlap, as it does for beams and for hardware, and
+    // clicking away from them all lets go of the selection.
+    if (this.scene.editor) {
+        var shits = this._pickShapes(pt[0], pt[1], SHAPE_PICK / this.scale);
+        if (!shits.length) {
+            this.lastClick = null;
+            this.cycle = 0;
+            this._selectShape(null);
+            return;
+        }
+        var sagain = this.lastClick &&
+            Math.abs(px - this.lastClick[0]) < 5 &&
+            Math.abs(py - this.lastClick[1]) < 5;
+        this.cycle = sagain ? (this.cycle + 1) % shits.length : 0;
+        this.lastClick = [px, py];
+        this._selectShape(shits[this.cycle].index);
         return;
     }
 
@@ -5246,9 +6056,12 @@ Viewer.prototype._arrowPath = function (px, py, dirVect) {
 var ORIGIN_ARM = 14;
 
 Viewer.prototype._updateEditorMarks = function () {
+    if (!this.shapePreview) { return; }
     if (!this.scene.editor) {
         this.originMark.style.display = 'none';
         this.shapeMark.style.display = 'none';
+        if (this.shapePreview) { this.shapePreview.textContent = ''; }
+        this._placeShapeHandles(null);
         return;
     }
     var o = this.sceneToScreen(0, 0);
@@ -5259,7 +6072,23 @@ Viewer.prototype._updateEditorMarks = function () {
              ' L ' + o[0] + ' ' + (o[1] + ORIGIN_ARM));
     this.originMark.style.display = '';
 
-    var s = this._selectedShape();
+    // A drag shows the shape where it would land, and the box and the
+    // grips go with it: they are what is being aimed, so leaving them
+    // behind on the old shape would be showing the answer to a
+    // question the user has stopped asking.
+    var d = this.dragShape;
+    this.shapePreview.textContent = '';
+    if (d && d.preview) {
+        var pv = shapePreviewSVG(d.preview);
+        if (pv) { this.shapePreview.appendChild(pv); }
+    }
+
+    // A layer switched off is one the user has said they are not
+    // looking at, and neither a box nor a grip should be left
+    // standing where nothing appears to be.
+    var s = this._shapesVisible() ? (d ? d.preview : this._selectedShape())
+                                  : null;
+    this._placeShapeHandles(s);
     var box = s ? shapeBounds(s) : null;
     if (!box) {
         this.shapeMark.style.display = 'none';
@@ -5271,6 +6100,69 @@ Viewer.prototype._updateEditorMarks = function () {
         return q[0] + ',' + q[1];
     }).join(' '));
     this.shapeMark.style.display = '';
+};
+
+/*
+ * The preview of a shape being dragged. The same drawing the scene
+ * would get, except for a text: it is drawn by the browser from a
+ * font and a size in screen pixels, and what a drag of one is about
+ * is where its anchor point lands - so that is what is shown.
+ */
+function shapePreviewSVG(s) {
+    if (s.type !== 'text') { return shapeToSVG(s); }
+    var h = Math.abs(s.height) || 0.005;
+    var x = s.point[0], y = s.point[1];
+    return svgEl('path', {d: 'M ' + (x - h / 2) + ' ' + y +
+                             ' L ' + (x + h / 2) + ' ' + y +
+                             ' M ' + x + ' ' + (y - h / 2) +
+                             ' L ' + x + ' ' + (y + h / 2)});
+}
+
+/*
+ * Stand the grips on a shape, remembering where they are for the
+ * mousedown hit test. Null for "no shape", which is also what a
+ * read-only viewer gets: a grip that cannot be dragged is a promise
+ * the page could not keep.
+ */
+Viewer.prototype._placeShapeHandles = function (s) {
+    var self = this;
+    if (!this.shapeHandleGroup) { return; }
+    var hs = (this.onEdit && s && !this.measuring && !this.aligning)
+        ? shapeHandles(s) : [];
+    var vi = this._vertexIndex();
+    while (this.shapeHandleEls.length < hs.length) {
+        var el = svgEl('rect', {'class': 'gt-shape-handle',
+                                width: 7, height: 7});
+        this.shapeHandleGroup.appendChild(el);
+        this.shapeHandleEls.push(el);
+    }
+    this._shapeHandlePts = hs.map(function (h, k) {
+        var q = self.sceneToScreen(h.p[0], h.p[1]);
+        var e = self.shapeHandleEls[k];
+        e.setAttribute('x', q[0] - 3.5);
+        e.setAttribute('y', q[1] - 3.5);
+        e.classList.toggle('gt-selected',
+                           h.role === 'vertex' && h.i === vi);
+        e.style.display = '';
+        return {px: q[0], py: q[1], role: h.role, i: h.i};
+    });
+    for (var k = hs.length; k < this.shapeHandleEls.length; k++) {
+        this.shapeHandleEls[k].style.display = 'none';
+    }
+};
+
+/*
+ * The grip under a screen point, or null. The same reach beyond the
+ * drawn square as the hardware handles have, and for the same reason.
+ */
+Viewer.prototype._pickShapeHandle = function (px, py) {
+    var pts = this._shapeHandlePts || [];
+    for (var i = 0; i < pts.length; i++) {
+        if (Math.abs(px - pts[i].px) <= 6 && Math.abs(py - pts[i].py) <= 6) {
+            return pts[i];
+        }
+    }
+    return null;
 };
 
 Viewer.prototype._updateOverlay = function () {
@@ -5366,6 +6258,8 @@ Viewer.prototype._updateOverlay = function () {
     // same mark shows the screw hole a dragged anchor has caught on.
     var snapPt = ((this.measuring || this.aligning) && this.snapped)
         ? this.snapped.point
+        : (this.dragShape && this.dragShape.snap)
+            ? this.dragShape.snap.point
         : (this.dragOptic && this.dragOptic.hole)
             ? this.dragOptic.hole.point : null;
     if (snapPt) {
@@ -5461,6 +6355,37 @@ Viewer.prototype._updateOverlay = function () {
 };
 
 Viewer.prototype._updateStatus = function () {
+    var sd = this.dragShape;
+    if (sd) {
+        var what = sd.shape.type + ' ' + (sd.index + 1) + ':  ';
+        var role = sd.handle ? sd.handle.role : (sd.rotate ? 'turn' : 'move');
+        var caught = sd.snap ? '   (snapped)' : '';
+        if (role === 'turn') {
+            this.statusBar.textContent = what + 'turned by  ' +
+                fmtDeg(normAngle(sd.angle)) +
+                (sd.shape.type === 'rectangle' && sd.angle !== 0
+                 ? '   (becomes an outline)' : '');
+        } else if (role === 'move') {
+            this.statusBar.textContent = what + 'by  ' +
+                fmtLen(sd.delta[0]) + ',  ' + fmtLen(sd.delta[1]) + caught;
+        } else if (role === 'corner') {
+            this.statusBar.textContent = what + fmtLen(sd.preview.width) +
+                '  \u00d7  ' + fmtLen(sd.preview.height) + caught;
+        } else if (role === 'radius') {
+            this.statusBar.textContent = what + 'radius  ' +
+                fmtLen(sd.preview.radius) + caught;
+        } else if (role === 'startangle' || role === 'stopangle') {
+            this.statusBar.textContent = what + role + '  ' +
+                fmtDeg(normAngle(sd.preview[role]));
+        } else {
+            var pp = shapeHandles(sd.preview)[sd.handle.i].p;
+            this.statusBar.textContent = what +
+                (role === 'vertex' ? 'vertex ' + (sd.handle.i + 1) + '  '
+                                   : 'end  ') +
+                fmtLen(pp[0]) + ',  ' + fmtLen(pp[1]) + caught;
+        }
+        return;
+    }
     var s = this.dragSource;
     if (s) {
         this.statusBar.textContent = s.rotate
@@ -5624,6 +6549,7 @@ Viewer.prototype.setScene = function (scene) {
     this.dragSource = null;
     this.dragMech = null;
     this.dragMechResize = null;
+    this.dragShape = null;
     // An aim is answered by the scene that comes back, and a scene
     // arriving for any other reason is a layout that may not hold the
     // element being aimed at all.

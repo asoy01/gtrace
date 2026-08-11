@@ -149,6 +149,121 @@ def _shape_bbox_points(s):
 
 #}}}
 
+#{{{ Turning a shape
+
+def turned_shape(s, angle, offset=(0.0, 0.0)):
+    '''
+    A copy of one shape turned about the origin and carried.
+
+    The shape itself is never touched: a new primitive comes back,
+    with the same thickness.
+
+    A ``Rectangle`` survives as a ``Rectangle`` only while the turn is
+    nothing at all. It is defined by a corner, a width and a height,
+    with its sides along the axes, so there is no such thing as a
+    turned one - what comes back instead is the closed polyline of its
+    four corners, which is also what a DXF would have had to write.
+
+    Parameters
+    ----------
+    s : gtrace.draw shape
+        The shape to turn.
+    angle : float
+        How far to turn it, counterclockwise, in radians.
+    offset : array-like, optional
+        Where to carry it afterwards. Default the origin.
+
+    Returns
+    -------
+    A new shape, of the same class except for a turned rectangle.
+
+    Raises
+    ------
+    UnknownShapeError
+        If the shape is of a kind this does not know.
+    '''
+    ca = np.cos(angle)
+    sa = np.sin(angle)
+    R = np.array([[ca, -sa], [sa, ca]])
+    off = np.asarray(offset, dtype='float64')
+
+    def carry(p):
+        return np.asarray(p, dtype='float64') @ R.T + off
+
+    if isinstance(s, draw.Line):
+        return draw.Line(carry(s.start), carry(s.stop),
+                         thickness=s.thickness)
+    if isinstance(s, draw.PolyLine):
+        pts = carry(np.column_stack([s.x, s.y]))
+        return draw.PolyLine(x=pts[:, 0], y=pts[:, 1],
+                             thickness=s.thickness)
+    if isinstance(s, draw.Rectangle):
+        p = np.asarray(s.point, dtype='float64')
+        if angle == 0.0:
+            return draw.Rectangle(carry(p), s.width, s.height,
+                                  thickness=s.thickness)
+        # The first corner again at the end: an open polyline of four
+        # would be a rectangle with a side missing.
+        corners = np.array([p, p + [s.width, 0.0],
+                            p + [s.width, s.height], p + [0.0, s.height],
+                            p])
+        pts = carry(corners)
+        return draw.PolyLine(x=pts[:, 0], y=pts[:, 1],
+                             thickness=s.thickness)
+    if isinstance(s, draw.Circle):
+        return draw.Circle(carry(s.center), s.radius, thickness=s.thickness)
+    if isinstance(s, draw.Arc):
+        return draw.Arc(carry(s.center), s.radius,
+                        s.startangle + angle, s.stopangle + angle,
+                        thickness=s.thickness)
+    if isinstance(s, draw.Text):
+        return draw.Text(s.text, carry(s.point), height=s.height,
+                         rotation=s.rotation + angle)
+    raise UnknownShapeError(
+        'Shape not supported: %s' % type(s).__name__)
+
+def rotate_shape(s, angle, pivot=(0.0, 0.0)):
+    '''
+    A copy of one shape turned about a point.
+
+    Turning about a point is turning about the origin and carrying
+    the result back, which is why this and the pose of a body are the
+    same arithmetic. A turned rectangle comes back as the closed
+    polyline of its corners - see :func:`turned_shape`.
+
+    Parameters
+    ----------
+    s : gtrace.draw shape
+    angle : float
+        Counterclockwise, in radians.
+    pivot : array-like, optional
+        The point to turn about. Default the local origin.
+
+    Returns
+    -------
+    A new shape.
+    '''
+    ca = np.cos(angle)
+    sa = np.sin(angle)
+    R = np.array([[ca, -sa], [sa, ca]])
+    pv = np.asarray(pivot, dtype='float64')
+    return turned_shape(s, angle, pv - R @ pv)
+
+def shape_centre(s):
+    '''
+    The middle of the box a shape occupies, in its own coordinates.
+
+    What a shape is turned about when nothing else is said: it is the
+    point the editor already draws a box around, so a turn about it is
+    the one turn that can be seen coming.
+    '''
+    pts = np.asarray(_shape_bbox_points(s), dtype='float64')
+    if not len(pts):
+        return np.zeros(2)
+    return (pts.min(axis=0) + pts.max(axis=0)) / 2.0
+
+#}}}
+
 #{{{ Mechanics
 
 class Mechanics(object):
@@ -484,37 +599,7 @@ class Mechanics(object):
         return out
 
     def _world_shape(self, s):
-        if isinstance(s, draw.Line):
-            return draw.Line(self.to_world(s.start), self.to_world(s.stop),
-                             thickness=s.thickness)
-        if isinstance(s, draw.PolyLine):
-            pts = self.to_world(np.column_stack([s.x, s.y]))
-            return draw.PolyLine(x=pts[:, 0], y=pts[:, 1],
-                                 thickness=s.thickness)
-        if isinstance(s, draw.Rectangle):
-            p = np.asarray(s.point, dtype='float64')
-            if self.rotationAngle == 0.0:
-                return draw.Rectangle(self.to_world(p), s.width, s.height,
-                                      thickness=s.thickness)
-            corners = np.array([p, p + [s.width, 0.0],
-                                p + [s.width, s.height], p + [0.0, s.height],
-                                p])
-            pts = self.to_world(corners)
-            return draw.PolyLine(x=pts[:, 0], y=pts[:, 1],
-                                 thickness=s.thickness)
-        if isinstance(s, draw.Circle):
-            return draw.Circle(self.to_world(s.center), s.radius,
-                               thickness=s.thickness)
-        if isinstance(s, draw.Arc):
-            return draw.Arc(self.to_world(s.center), s.radius,
-                            s.startangle + self.rotationAngle,
-                            s.stopangle + self.rotationAngle,
-                            thickness=s.thickness)
-        if isinstance(s, draw.Text):
-            return draw.Text(s.text, self.to_world(s.point), height=s.height,
-                             rotation=s.rotation + self.rotationAngle)
-        raise UnknownShapeError(
-            'Shape not supported: %s' % type(s).__name__)
+        return turned_shape(s, self.rotationAngle, self.center)
 
     def draw(self, cv, drawName=False):
         '''
