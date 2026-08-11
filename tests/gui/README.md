@@ -49,6 +49,9 @@ counts it as skipped rather than passed.
 
 | `verify_align_browser.py` | Headless browser: aiming an optics by places. Every angle the page sends is fed to `apply_edit` and checked **geometrically rather than against the formula the page used** - after a two-point aim the front face normal is parallel to the line between those places, after a three-point aim it makes the same angle with both arms, which is the law of reflection. Also that the click order picks between a line's two normals (the same two places the other way about turn the element right round), that aiming turns about the anchor and moves nothing, the quarter turns, the preview, and what the tool refuses: the same place twice, Escape, a drag mid-aim, and measuring at the same time |
 
+| `verify_editor.py` | The shape editor behind `Mechanics.edit()`: the scene it draws (local frame, origin as a snap point, no beams or optics), add / set / copy / reorder / remove through the protocol, and what it refuses - a radius on a rectangle, a change of kind, a size of none or less, an infinity, an index that is not there. Also that it edits the body **by reference**, so a layout holding it draws the new shapes and keeps the attachment and pose; that undo refills the very list; and that saving to the library carries the builder parameters along |
+| `verify_editor_browser.py` | Headless browser: the side bar the editor swaps in - shape buttons, the shape list, the numbers of whichever is picked, the library panel - and that a layout scene still gets all of its own. Every row and button is checked by the message it sends, fed to a real `ShapeEditor`, so the panel's millimetres are checked against the model's metres |
+
 `tests/test_gtrace.py` (the DXF renderer) and
 `tests/test_beam_propagation.py` (the propagation convention) are run
 too, since the viewer rests on both.

@@ -621,6 +621,34 @@ class Mechanics(object):
         '''
         return bool(self.params and self.params.get('kind') in _RESIZABLE)
 
+    def edit(self, height=None, **kwargs):
+        '''
+        Open a shape editor on this body, in a notebook.
+
+        The editor works in the local frame - the one the shapes are
+        written in, with the origin marked, since the origin is what
+        comes to sit at the host's substrate centre - and edits this
+        body by reference: a layout already holding it draws the new
+        shapes at its next draw.
+
+        Returns the widget, so a cell ending in ``mt.edit()`` shows
+        it. ``ShapeEditor`` itself, for driving without a browser, is
+        in ``gtrace.draw.viewer.editor``.
+
+        Parameters
+        ----------
+        height : int or None, optional
+            Height of the editor in pixels, as for a layout widget.
+        **kwargs
+            Passed to the widget.
+
+        Returns
+        -------
+        widget : anywidget.AnyWidget
+        '''
+        from gtrace.draw.viewer.editor import ShapeEditor
+        return ShapeEditor(self).widget(height=height, **kwargs)
+
     def copy(self):
         '''
         A new Mechanics with the same pose and a copy of the shape

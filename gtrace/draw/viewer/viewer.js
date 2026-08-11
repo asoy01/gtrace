@@ -354,6 +354,148 @@ var ALIGN_ITEMS = [
 ];
 
 /*
+ * The shapes a part can be drawn from, as the editor offers them.
+ * The labels are the button row; the type is what an add message
+ * names, and what shape_from_dict builds on the Python side.
+ */
+var SHAPE_KINDS = [
+    {type: 'rectangle', label: '+ Rect'},
+    {type: 'circle', label: '+ Circle'},
+    {type: 'line', label: '+ Line'},
+    {type: 'polyline', label: '+ Poly'},
+    {type: 'arc', label: '+ Arc'},
+    {type: 'text', label: '+ Text'}
+];
+
+/*
+ * The rows the panel shows for each kind of shape, and how each row
+ * maps to the serialized shape a message carries.
+ *
+ * Lengths are in millimetres and angles in degrees, as everywhere
+ * else a part is dimensioned; the shape itself is in metres and
+ * radians, like the rest of gtrace.
+ */
+var SHAPE_FIELDS = {
+    rectangle: [
+        {key: 'x', label: 'Corner x', unit: 'mm'},
+        {key: 'y', label: 'Corner y', unit: 'mm'},
+        {key: 'width', label: 'Width', unit: 'mm'},
+        {key: 'height', label: 'Height', unit: 'mm'}
+    ],
+    circle: [
+        {key: 'cx', label: 'Center x', unit: 'mm'},
+        {key: 'cy', label: 'Center y', unit: 'mm'},
+        {key: 'radius', label: 'Radius', unit: 'mm'}
+    ],
+    line: [
+        {key: 'x1', label: 'From x', unit: 'mm'},
+        {key: 'y1', label: 'From y', unit: 'mm'},
+        {key: 'x2', label: 'To x', unit: 'mm'},
+        {key: 'y2', label: 'To y', unit: 'mm'}
+    ],
+    arc: [
+        {key: 'cx', label: 'Center x', unit: 'mm'},
+        {key: 'cy', label: 'Center y', unit: 'mm'},
+        {key: 'radius', label: 'Radius', unit: 'mm'},
+        {key: 'startangle', label: 'From', unit: '°'},
+        {key: 'stopangle', label: 'To', unit: '°'}
+    ],
+    text: [
+        {key: 'text', label: 'Text', text: true},
+        {key: 'x', label: 'At x', unit: 'mm'},
+        {key: 'y', label: 'At y', unit: 'mm'},
+        {key: 'height', label: 'Size', unit: 'mm'},
+        {key: 'rotation', label: 'Angle', unit: '°'}
+    ],
+    polyline: [
+        {key: 'points', label: 'Vertices', readonly: true}
+    ]
+};
+
+/*
+ * What a row of a shape panel reads, from the serialized shape.
+ */
+function shapeFieldValue(s, key) {
+    switch (key) {
+    case 'x': return (s.point ? s.point[0] : 0) / MM;
+    case 'y': return (s.point ? s.point[1] : 0) / MM;
+    case 'cx': return (s.center ? s.center[0] : 0) / MM;
+    case 'cy': return (s.center ? s.center[1] : 0) / MM;
+    case 'x1': return (s.start ? s.start[0] : 0) / MM;
+    case 'y1': return (s.start ? s.start[1] : 0) / MM;
+    case 'x2': return (s.stop ? s.stop[0] : 0) / MM;
+    case 'y2': return (s.stop ? s.stop[1] : 0) / MM;
+    case 'width': return s.width / MM;
+    case 'height': return s.height / MM;
+    case 'radius': return s.radius / MM;
+    case 'startangle': return normAngle(s.startangle) * DEG;
+    case 'stopangle': return normAngle(s.stopangle) * DEG;
+    case 'rotation': return normAngle(s.rotation) * DEG;
+    case 'text': return s.text;
+    case 'points': return (s.x || []).length + ' points';
+    default: return s[key];
+    }
+}
+
+/*
+ * The attributes a row sets, as the serialized shape spells them.
+ * The pairs that make a point are sent whole, since that is what the
+ * shape carries - the other half comes from the shape on show.
+ */
+function shapeFieldAttrs(s, key, value) {
+    var attrs = {};
+    switch (key) {
+    case 'x': attrs.point = [value * MM, s.point[1]]; break;
+    case 'y': attrs.point = [s.point[0], value * MM]; break;
+    case 'cx': attrs.center = [value * MM, s.center[1]]; break;
+    case 'cy': attrs.center = [s.center[0], value * MM]; break;
+    case 'x1': attrs.start = [value * MM, s.start[1]]; break;
+    case 'y1': attrs.start = [s.start[0], value * MM]; break;
+    case 'x2': attrs.stop = [value * MM, s.stop[1]]; break;
+    case 'y2': attrs.stop = [s.stop[0], value * MM]; break;
+    case 'width':
+    case 'height':
+    case 'radius': attrs[key] = value * MM; break;
+    case 'startangle':
+    case 'stopangle':
+    case 'rotation': attrs[key] = value / DEG; break;
+    case 'text': attrs.text = value; break;
+    default: attrs[key] = value;
+    }
+    return attrs;
+}
+
+/*
+ * The corners of the box a serialized shape occupies, for the mark
+ * that shows which one the panel is editing. An arc is bounded by its
+ * whole circle, as it is everywhere else in gtrace: looser than the
+ * arc, never smaller.
+ */
+function shapeBounds(s) {
+    var xs = [], ys = [], i;
+    switch (s.type) {
+    case 'line': xs = [s.start[0], s.stop[0]]; ys = [s.start[1], s.stop[1]];
+        break;
+    case 'polyline': xs = s.x.slice(); ys = s.y.slice(); break;
+    case 'rectangle':
+        xs = [s.point[0], s.point[0] + s.width];
+        ys = [s.point[1], s.point[1] + s.height];
+        break;
+    case 'circle':
+    case 'arc':
+        xs = [s.center[0] - s.radius, s.center[0] + s.radius];
+        ys = [s.center[1] - s.radius, s.center[1] + s.radius];
+        break;
+    case 'text': xs = [s.point[0]]; ys = [s.point[1]]; break;
+    default: return null;
+    }
+    if (!xs.length) { return null; }
+    var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs);
+    var miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
+    return [[minx, miny], [maxx, miny], [maxx, maxy], [minx, maxy]];
+}
+
+/*
  * Where a point goes when the body it belongs to is turned by da
  * about a pivot. What the outline preview of an aim is built from,
  * since an optics turns about its anchor point and so its centre
@@ -580,6 +722,12 @@ function Viewer(container, scene, options) {
     this.aligning = null;     // {optic, want, points: [[x, y], ...]}
     this.alignPreview = null; // where the next click would land
 
+    // Editing a part: which of its shapes the panel is showing, by
+    // index into scene.shapes. An index is a place in the list rather
+    // than a thing, so it is re-read against every scene.
+    this.selectedShape = null;
+    this._shapeFieldsKind = null;
+
     VIEWERS.push(this);
     this._build();
     this._renderScene();
@@ -647,7 +795,26 @@ Viewer.prototype._build = function () {
     // it is a line not spent on the readout.
     var head = htmlEl('div', 'gt-head');
 
-    if (this.opts.onEdit) {
+    // Editing a part rather than looking at a bench: the buttons put
+    // shapes down instead of optics, and the panels below deal in
+    // shapes. Everything the two have in common - zoom, pan, undo,
+    // layers - is the same code either way.
+    var editing = !!this.scene.editor;
+
+    if (editing && this.opts.onEdit) {
+        var shapeRow = htmlEl('div', 'gt-btnrow');
+        SHAPE_KINDS.forEach(function (spec) {
+            var btn = htmlEl('button', 'gt-btn', spec.label);
+            btn.title = 'Add a ' + spec.type + ' at the origin';
+            btn.addEventListener('click', function () {
+                self.addShape(spec.type);
+            });
+            shapeRow.appendChild(btn);
+        });
+        head.appendChild(shapeRow);
+    }
+
+    if (!editing && this.opts.onEdit) {
         var addRow = htmlEl('div', 'gt-btnrow');
         this.addMenus = [];
         ADD_GROUPS.forEach(function (g) {
@@ -743,7 +910,9 @@ Viewer.prototype._build = function () {
     // Measuring needs no Python: the points to snap to are in the scene
     // and the distance between two of them is arithmetic. A viewer with
     // nowhere to send edits keeps the measurement to itself - see
-    // _addLocalDimension for what that costs.
+    // _addLocalDimension for what that costs. It is offered while
+    // editing a part too: how far one hole is from another is exactly
+    // what a part is drawn from.
     this.measureBtn = htmlEl('button', 'gt-btn', 'Measure');
     this.measureBtn.title = 'Measure between two points, then place '
         + 'the dimension line';
@@ -754,8 +923,9 @@ Viewer.prototype._build = function () {
 
     // Aiming the selected optics. A menu, since it offers four ways
     // of saying the same kind of thing, and only where there is a
-    // Python to send the turn to.
-    if (this.opts.onEdit) {
+    // Python to send the turn to. Nothing to aim in a part: its
+    // shapes are written in the frame, not turned in it.
+    if (this.opts.onEdit && !editing) {
         this.addMenus = this.addMenus || [];
         var awrap = htmlEl('div', 'gt-add');
         this.alignBtn = htmlEl('button', 'gt-btn gt-addbtn', 'Align');
@@ -807,18 +977,25 @@ Viewer.prototype._build = function () {
     this.dimBody = htmlEl('div', 'gt-props');
     this.sourceBody = htmlEl('div', 'gt-props');
     this.mechBody = htmlEl('div', 'gt-props');
+    this.shapeBody = htmlEl('div', 'gt-props');
     rpanel.appendChild(this.readoutBody);
     rpanel.appendChild(this.opticBody);
     rpanel.appendChild(this.dimBody);
     rpanel.appendChild(this.sourceBody);
     rpanel.appendChild(this.mechBody);
+    rpanel.appendChild(this.shapeBody);
     side.appendChild(rpanel);
     this._buildReadout();
     this._buildOpticPanel();
     this._buildDimPanel();
     this._buildSourcePanel();
     this._buildMechPanel();
-    this._showPanel('beam');
+    if (editing) {
+        this._buildShapePanel();
+        this._showPanel('shape');
+    } else {
+        this._showPanel('beam');
+    }
 
     // Two file panels, kept apart because they deal in two different
     // things. The layout is the model - saving it and loading it back
@@ -828,7 +1005,40 @@ Viewer.prototype._build = function () {
     //
     // Both are written by Python: the page has no business touching the
     // disk.
-    if (this.onEdit) {
+    // Putting the part on the library shelf: the same register_model
+    // any cell would call, with the name and the line of description
+    // it takes. The part itself is the user's object and is already
+    // being edited in place; this is only what gives other layouts a
+    // way to ask for one.
+    if (this.onEdit && editing) {
+        var mpanel = htmlEl('div', 'gt-panel');
+        mpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Model library'));
+        var mbody = htmlEl('div', 'gt-file');
+        this.modelInput = htmlEl('input', 'gt-input gt-input-text');
+        this.modelInput.type = 'text';
+        this.modelInput.spellcheck = false;
+        this.modelInput.value = (this.scene.editor
+                                 && this.scene.editor.model_name) || '';
+        this.modelInput.title = 'The name other layouts ask for this part by';
+        mbody.appendChild(this.modelInput);
+        this.modelDesc = htmlEl('input', 'gt-input gt-input-text');
+        this.modelDesc.type = 'text';
+        this.modelDesc.spellcheck = false;
+        this.modelDesc.placeholder = 'one line, for the menu';
+        mbody.appendChild(this.modelDesc);
+        var mrow = htmlEl('div', 'gt-filebuttons');
+        var saveModelBtn = htmlEl('button', 'gt-btn', 'Save to library');
+        saveModelBtn.title = 'Register these shapes under that name';
+        saveModelBtn.addEventListener('click', function () {
+            self.saveModel();
+        });
+        mrow.appendChild(saveModelBtn);
+        mbody.appendChild(mrow);
+        mpanel.appendChild(mbody);
+        side.appendChild(mpanel);
+    }
+
+    if (this.onEdit && !editing) {
         var layoutPath = this.opts.layoutPath || 'layout.json';
 
         var fpanel = htmlEl('div', 'gt-panel');
@@ -880,8 +1090,9 @@ Viewer.prototype._build = function () {
     }
 
     // Display panel. These change how Python draws the scene, so they
-    // exist only when there is a Python to ask.
-    if (this.onEdit) {
+    // exist only when there is a Python to ask - and only where there
+    // are beams for them to be about.
+    if (this.onEdit && !editing) {
         var dpanel = htmlEl('div', 'gt-panel');
         dpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Beam width'));
         var dbody = htmlEl('div', 'gt-display');
@@ -935,7 +1146,19 @@ Viewer.prototype._build = function () {
     var hpanel = htmlEl('div', 'gt-panel gt-help');
     hpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Controls'));
     var ul = htmlEl('ul');
-    var rows = [['Wheel', 'zoom at cursor'],
+    var rows = editing
+        ? [['Wheel', 'zoom at cursor'],
+           ['Drag', 'pan'],
+           ['Click a shape in the list', 'edit its numbers'],
+           ['+ Rect / + Circle / …', 'put one down at the origin'],
+           ['Copy', 'a second one, just beside it'],
+           ['Remove', 'take it away'],
+           ['↑ / ↓', 'draw it earlier or later'],
+           ['Measure, or m', 'measure between two points'],
+           ['f', 'fit to view'],
+           ['Undo, or Ctrl + Z', 'put the last edit back'],
+           ['Save to library', 'register the part under a name']]
+        : [['Wheel', 'zoom at cursor'],
                 ['Drag', 'pan'],
                 ['Move over a beam', 'live readout'],
                 ['Click', 'pin the readout'],
@@ -946,7 +1169,7 @@ Viewer.prototype._build = function () {
                 ['f', 'fit to view'],
                 ['Measure, or m', 'measure between two points'],
                 ['Esc', 'clear selection']];
-    if (this.opts.onEdit) {
+    if (this.opts.onEdit && !editing) {
         rows.push(['Drag an optics or a laser', 'move it'],
                   ['Drag near a screw hole', 'land the anchor on it '
                    + '(Alt rides free)'],
@@ -1759,6 +1982,207 @@ Viewer.prototype._buildMechPanel = function () {
 };
 
 /*
+ * The shape panel: the list of what the part is drawn from, and the
+ * numbers of whichever one is selected.
+ *
+ * The list is the part - the order is the order they are drawn in -
+ * so it is where a shape is picked, moved earlier or later, copied
+ * and taken away. The rows below it are rebuilt whenever the
+ * selection changes kind, since a circle and a rectangle have
+ * nothing in common to keep.
+ */
+Viewer.prototype._buildShapePanel = function () {
+    var self = this;
+
+    this.shapeList = htmlEl('div', 'gt-shapelist');
+    this.shapeBody.appendChild(this.shapeList);
+
+    this.shapeRows = htmlEl('div', 'gt-shaperows');
+    this.shapeBody.appendChild(this.shapeRows);
+
+    if (this.onEdit) {
+        var foot = htmlEl('div', 'gt-props-foot');
+        [['Copy', 'Add a second one just beside it',
+          function () { self.duplicateShape(); }],
+         ['↑', 'Draw it earlier, under the others',
+          function () { self.moveShape(-1); }],
+         ['↓', 'Draw it later, over the others',
+          function () { self.moveShape(1); }],
+         ['Remove', 'Take this shape out of the part',
+          function () { self.removeShape(); }]
+        ].forEach(function (spec, i) {
+            var btn = htmlEl('button',
+                             i === 3 ? 'gt-btn gt-btn-danger' : 'gt-btn',
+                             spec[0]);
+            btn.title = spec[1];
+            btn.addEventListener('click', spec[2]);
+            foot.appendChild(btn);
+        });
+        this.shapeBody.appendChild(foot);
+    }
+    this._refreshShapePanel();
+};
+
+/*
+ * The shapes of the part being edited, or an empty list.
+ */
+Viewer.prototype._shapes = function () {
+    return this.scene.shapes || [];
+};
+
+Viewer.prototype._selectedShape = function () {
+    var shapes = this._shapes();
+    if (this.selectedShape === null || this.selectedShape === undefined) {
+        return null;
+    }
+    return shapes[this.selectedShape] || null;
+};
+
+Viewer.prototype._selectShape = function (index) {
+    this.selectedShape = index;
+    this._refreshShapePanel();
+    this._updateOverlay();
+};
+
+Viewer.prototype._refreshShapePanel = function () {
+    var self = this;
+    if (!this.shapeList) { return; }
+    var shapes = this._shapes();
+
+    // The list. Rebuilt outright: it is a dozen rows at most, and an
+    // index means a place rather than a thing, so keeping rows across
+    // an edit would only invite them to point at the wrong shape.
+    this.shapeList.textContent = '';
+    if (!shapes.length) {
+        this.shapeList.appendChild(
+            htmlEl('div', 'gt-note', 'No shapes yet - add one above.'));
+    }
+    shapes.forEach(function (s, i) {
+        var row = htmlEl('button', 'gt-shaperow', (i + 1) + '.  ' + s.type);
+        row.classList.toggle('gt-selected', i === self.selectedShape);
+        row.addEventListener('click', function () { self._selectShape(i); });
+        self.shapeList.appendChild(row);
+    });
+
+    // The numbers. A new table whenever the kind changes, since the
+    // rows themselves are different.
+    var s = this._selectedShape();
+    var kind = s ? s.type : null;
+    if (kind !== this._shapeFieldsKind) {
+        this.shapeRows.textContent = '';
+        this.shapeFields = null;
+        this._shapeFieldsKind = kind;
+        if (kind && SHAPE_FIELDS[kind]) {
+            var built = buildFieldTable(
+                SHAPE_FIELDS[kind], !!this.onEdit,
+                function (key, el) { self._commitShapeField(key, el); },
+                function () { self._refreshShapePanel(); });
+            this.shapeFields = built.fields;
+            this.shapeRows.appendChild(built.table);
+        }
+    }
+    if (this.shapeFields) {
+        refreshFieldTable(this.shapeFields, SHAPE_FIELDS[kind],
+                          s ? function (key) {
+                              return shapeFieldValue(s, key);
+                          } : null);
+    }
+};
+
+Viewer.prototype._commitShapeField = function (key, input) {
+    var s = this._selectedShape();
+    if (!s || !this.onEdit) { return; }
+    var field = null;
+    (SHAPE_FIELDS[s.type] || []).forEach(function (f) {
+        if (f.key === key) { field = f; }
+    });
+
+    var value;
+    if (field && field.text) {
+        value = String(input.value);
+        if (!value.trim()) { this._refreshShapePanel(); return; }
+    } else {
+        value = parseField(input.value);
+        // Every number a shape takes is finite: a drawing with an
+        // infinity in it takes the whole view with it the first time
+        // anything is framed.
+        if (typeof value !== 'number' || !isFinite(value)) {
+            this._refreshShapePanel();
+            return;
+        }
+        if (value === shapeFieldValue(s, key)) { return; }
+    }
+    this.onEdit({op: 'set_shape', index: this.selectedShape,
+                 attrs: shapeFieldAttrs(s, key, value)});
+};
+
+/*
+ * Put a new shape down at the origin, and select it: what was just
+ * asked for is what the panel should be showing.
+ */
+Viewer.prototype.addShape = function (type) {
+    if (!this.onEdit) { return null; }
+    var msg = {op: 'add_shape', type: type};
+    this.selectedShape = this._shapes().length;
+    this.onEdit(msg);
+    return msg;
+};
+
+Viewer.prototype.removeShape = function () {
+    var s = this._selectedShape();
+    if (!s || !this.onEdit) { return null; }
+    var msg = {op: 'remove_shape', index: this.selectedShape};
+    // The list closes up, so the selection follows what is left.
+    if (this.selectedShape >= this._shapes().length - 1) {
+        this.selectedShape = this._shapes().length - 2;
+    }
+    if (this.selectedShape < 0) { this.selectedShape = null; }
+    this.onEdit(msg);
+    return msg;
+};
+
+Viewer.prototype.duplicateShape = function () {
+    var s = this._selectedShape();
+    if (!s || !this.onEdit) { return null; }
+    var msg = {op: 'duplicate_shape', index: this.selectedShape};
+    // The copy lands just after the original, and is what the panel
+    // then shows: it is the one about to be moved somewhere.
+    this.selectedShape = this.selectedShape + 1;
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Draw this shape earlier or later than its neighbours - which is
+ * what puts one over another where they overlap.
+ */
+Viewer.prototype.moveShape = function (by) {
+    var s = this._selectedShape();
+    if (!s || !this.onEdit) { return null; }
+    var to = this.selectedShape + by;
+    if (to < 0 || to >= this._shapes().length) { return null; }
+    var msg = {op: 'move_shape', index: this.selectedShape, to: to};
+    this.selectedShape = to;
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Register the part under the name in the panel.
+ */
+Viewer.prototype.saveModel = function (name, description) {
+    if (!this.onEdit) { return null; }
+    name = (name || (this.modelInput && this.modelInput.value) || '').trim();
+    if (!name) { return null; }
+    if (description === undefined) {
+        description = (this.modelDesc && this.modelDesc.value) || '';
+    }
+    var msg = {op: 'save_model', name: name, description: description};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
  * Add an optics at the centre of the current view.
  *
  * The name is chosen here rather than by Python, so that the viewer can
@@ -2082,7 +2506,8 @@ Viewer.prototype._refreshDisplayPanel = function () {
  */
 var PANEL_TITLES = {optic: 'Optics properties', dimension: 'Dimension',
                     source: 'Source properties',
-                    mech: 'Mechanics properties', beam: 'Beam readout'};
+                    mech: 'Mechanics properties', shape: 'Shapes',
+                    beam: 'Beam readout'};
 
 Viewer.prototype._showPanel = function (kind) {
     this.panelKind = kind;
@@ -2091,6 +2516,7 @@ Viewer.prototype._showPanel = function (kind) {
     this.dimBody.style.display = kind === 'dimension' ? '' : 'none';
     this.sourceBody.style.display = kind === 'source' ? '' : 'none';
     this.mechBody.style.display = kind === 'mech' ? '' : 'none';
+    this.shapeBody.style.display = kind === 'shape' ? '' : 'none';
     this.panelTitle.textContent = PANEL_TITLES[kind] || PANEL_TITLES.beam;
     if (kind !== 'beam') { this.pinLabel.textContent = ''; }
 };
@@ -3189,6 +3615,15 @@ Viewer.prototype._renderScene = function () {
     // The outline of a mechanics: its own element, so that a hovered
     // optics and a selected breadboard can both be marked at once.
     this.mechOutline = svgEl('polygon', {'class': 'gt-optic-outline'});
+    // The origin of the part being edited, and the box round the
+    // shape the panel is showing. The origin is the point that comes
+    // to sit at the host's substrate centre, so a part is drawn
+    // around it and it has to be visible to draw around.
+    this.originMark = svgEl('path', {'class': 'gt-origin'});
+    this.originMark.style.display = 'none';
+    this.shapeMark = svgEl('polygon', {'class': 'gt-optic-outline gt-selected'});
+    this.shapeMark.style.display = 'none';
+
     // The corner handles a resizable body is cut by. Four, built once,
     // shown only while such a body is selected.
     this.mechHandles = [];
@@ -3221,6 +3656,8 @@ Viewer.prototype._renderScene = function () {
     this.pendingEls = null;
     this.overlayGroup.appendChild(this.slideMark);
     this.overlayGroup.appendChild(this.slideArrow);
+    this.overlayGroup.appendChild(this.originMark);
+    this.overlayGroup.appendChild(this.shapeMark);
     this.overlayGroup.appendChild(this.rubber);
     this.overlayGroup.appendChild(this.alignPath);
     this.overlayGroup.appendChild(this.snapMark);
@@ -4801,10 +5238,48 @@ Viewer.prototype._arrowPath = function (px, py, dirVect) {
            ' Z';
 };
 
+/*
+ * How far the arms of the origin cross reach, in screen pixels. A
+ * mark rather than a shape: it keeps its size at any zoom, since what
+ * it says is "here is zero" and that is true at every scale.
+ */
+var ORIGIN_ARM = 14;
+
+Viewer.prototype._updateEditorMarks = function () {
+    if (!this.scene.editor) {
+        this.originMark.style.display = 'none';
+        this.shapeMark.style.display = 'none';
+        return;
+    }
+    var o = this.sceneToScreen(0, 0);
+    this.originMark.setAttribute(
+        'd', 'M ' + (o[0] - ORIGIN_ARM) + ' ' + o[1] +
+             ' L ' + (o[0] + ORIGIN_ARM) + ' ' + o[1] +
+             ' M ' + o[0] + ' ' + (o[1] - ORIGIN_ARM) +
+             ' L ' + o[0] + ' ' + (o[1] + ORIGIN_ARM));
+    this.originMark.style.display = '';
+
+    var s = this._selectedShape();
+    var box = s ? shapeBounds(s) : null;
+    if (!box) {
+        this.shapeMark.style.display = 'none';
+        return;
+    }
+    var self = this;
+    this.shapeMark.setAttribute('points', box.map(function (p) {
+        var q = self.sceneToScreen(p[0], p[1]);
+        return q[0] + ',' + q[1];
+    }).join(' '));
+    this.shapeMark.style.display = '';
+};
+
 Viewer.prototype._updateOverlay = function () {
     // Set while an aim is being taken; see the aiming block below and
     // the outline that reads it.
     var alignOutline = null;
+
+    // The origin of the part, and the box round the shape on show.
+    this._updateEditorMarks();
 
     // The lasers stand where the scene says, or where a drag has them.
     // Done here rather than in _applyTransform so that every path which
@@ -5173,6 +5648,26 @@ Viewer.prototype.setScene = function (scene) {
     this._refreshHardwareMenu();
     this._refreshUndo();
     this._setReadout(null);
+
+    // Editing a part: the selection is an index, and the list it
+    // indexes has just been replaced. Anything past the end - the
+    // shape that was removed, or an undone add - falls back to
+    // nothing selected.
+    if (this.scene.editor) {
+        if (this.selectedShape !== null
+                && this.selectedShape >= this._shapes().length) {
+            this.selectedShape = this._shapes().length
+                ? this._shapes().length - 1 : null;
+        }
+        this._refreshShapePanel();
+        this._showPanel('shape');
+        if (this.modelInput && this.scene.editor.model_name
+                && document.activeElement !== this.modelInput) {
+            this.modelInput.value = this.scene.editor.model_name;
+        }
+        this._applyTransform();
+        return;
+    }
 
     // A scene arriving after an edit describes the same optics, so keep
     // the selection and show the values Python came back with. Getting

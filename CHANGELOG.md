@@ -13,6 +13,34 @@ across them.
 
 ### Added
 
+- **A shape editor for the hardware**, behind `Mechanics.edit()`. A
+  part's geometry is a list of drawing primitives, and until now the
+  only way to lay one out was to write the numbers in a cell.
+  - It is not a second viewer: it is the same one, handed a scene of
+    nothing but the shapes being edited, drawn in the local frame
+    **with the origin marked** - the origin being the point that
+    comes to sit at the host's substrate centre when the body is
+    attached, so seeing it is most of what makes a part right. Zoom,
+    pan, undo, measuring and the layer panel come along because they
+    were never about optics in the first place.
+  - The side bar swaps: buttons that put a rectangle, circle, line,
+    polyline, arc or text down at the origin; a list of the shapes in
+    the order they are drawn, which is where one is picked, copied,
+    moved earlier or later and taken away; the numbers of whichever
+    is picked, in millimetres and degrees; and one button that
+    registers the part in the model library under a name.
+  - It edits the `Mechanics` **by reference**, like everything else
+    in gtrace, so a body already registered in a layout is redrawn
+    there at the layout's next draw - attachment, pose and builder
+    parameters all untouched.
+  - `gtrace.draw.viewer.editor.ShapeEditor` is the model behind it,
+    drivable without a browser. A shape is edited by taking it apart
+    into the dict `shape_to_dict` writes, changing what the message
+    names and building it again, so a value that describes no shape
+    is refused by the constructor and leaves the shape that was there
+    untouched. What the constructors do not catch - a size of none or
+    less, a coordinate at infinity - is refused on the way out.
+
 - **Aiming an optics by places** - an `Align` menu, and the keys
   behind it. A drag puts an element approximately anywhere and
   Ctrl-drag squares it onto a beam that already exists; what was
@@ -154,8 +182,9 @@ across them.
   changes nothing.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (271 checks), `verify_mech_browser.py` (72) and
-  `verify_align_browser.py` (34). The suite is 22 files and 4215
+- `verify_mechanics.py` (271 checks), `verify_mech_browser.py` (72),
+  `verify_align_browser.py` (34), `verify_editor.py` (77) and
+  `verify_editor_browser.py` (32). The suite is 24 files and 4324
   checks.
 
 ### Fixed

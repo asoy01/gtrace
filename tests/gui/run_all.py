@@ -63,6 +63,10 @@ SUITES = [
      'headless browser: picking hardware by its area, and editing its pose'),
     ('verify_align_browser.py',
      'headless browser: aiming an optics by places, and the quarter turn'),
+    ('verify_editor.py',
+     'the shape editor: the protocol behind Mechanics.edit(), and what it refuses'),
+    ('verify_editor_browser.py',
+     'headless browser: the editor side bar, and the messages its rows send'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in

@@ -199,7 +199,10 @@ def _build_class():
                                  'assign to .scene directly instead.')
             if kwargs:
                 self._draw_kwargs = dict(kwargs)
-            self._layout.beams = None
+            # Force the re-trace. A model with no beams to invalidate -
+            # the shape editor is one - simply has nothing to do here.
+            if hasattr(self._layout, 'beams'):
+                self._layout.beams = None
             self.scene = self._layout.scene_dict(**self._draw_kwargs)
             return self
 
