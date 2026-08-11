@@ -323,6 +323,82 @@ function addableType(type) {
 }
 
 /*
+ * Ways of aiming the selected optics.
+ *
+ * A drag can put an element approximately anywhere, and Ctrl-drag
+ * squares it onto a beam that already exists. What is left is the
+ * angles a bench is laid out by before there is a beam to point at:
+ * facing from one place towards another, or bisecting the corner at
+ * a place light is to be folded at - and the quarter turn that a
+ * 45 degree steering mirror is specified by.
+ *
+ * The click order carries the direction in both: the face looks
+ * towards the second place of a pair, and into the corner of a
+ * three.
+ *
+ * Aiming leaves the element where it is. Which way it faces and where
+ * it stands are two questions, and the second already has answers:
+ * Ctrl-drag, the Center rows, Along beam / Move by.
+ */
+var ALIGN_ITEMS = [
+    {label: 'Line 2 points', points: 2, key: 'a',
+     title: 'Click two points; the optics faces from the first '
+            + 'towards the second'},
+    {label: 'Bisect 3 points', points: 3, key: 'b',
+     title: 'Click from, at, to; the optics faces the bisector, '
+            + 'folding light from the first point to the last'},
+    {label: 'Turn +45°', turn: 45, key: ']',
+     title: 'Turn the optics a quarter turn counterclockwise'},
+    {label: 'Turn −45°', turn: -45, key: '[',
+     title: 'Turn the optics a quarter turn clockwise'}
+];
+
+/*
+ * Where a point goes when the body it belongs to is turned by da
+ * about a pivot. What the outline preview of an aim is built from,
+ * since an optics turns about its anchor point and so its centre
+ * travels.
+ */
+function turnAbout(p, pivot, da) {
+    var ca = Math.cos(da), sa = Math.sin(da);
+    var ox = p[0] - pivot[0], oy = p[1] - pivot[1];
+    return [pivot[0] + ox * ca - oy * sa, pivot[1] + ox * sa + oy * ca];
+}
+
+/*
+ * The angle to face along the line through two points.
+ *
+ * A line has two normals, and the click order says which: the face
+ * ends up looking from the first place towards the second. So the
+ * two places clicked the other way about turn the element right
+ * round, which is how a face is flipped - and it means the order is
+ * something to mean rather than something to ignore.
+ */
+function acrossAngle(p1, p2) {
+    return Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
+}
+
+/*
+ * The angle to face at the middle of three points: the bisector of
+ * the corner, pointing back at both of the others.
+ *
+ * That is where a mirror folding light from the first point to the
+ * last has to look, since the angle it makes with each arm is then
+ * the same - which is what the law of reflection says. Null when the
+ * three points make no corner: two of them in the same place, or all
+ * three in a line, where the bisector is not defined.
+ */
+function bisectorAngle(p1, p2, p3) {
+    var d1 = Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
+    var d2 = Math.hypot(p3[0] - p2[0], p3[1] - p2[1]);
+    if (!d1 || !d2) { return null; }
+    var ux = (p1[0] - p2[0]) / d1 + (p3[0] - p2[0]) / d2;
+    var uy = (p1[1] - p2[1]) / d1 + (p3[1] - p2[1]) / d2;
+    if (Math.hypot(ux, uy) < 1e-9) { return null; }
+    return Math.atan2(uy, ux);
+}
+
+/*
  * The laser drawn at the start of a source beam, in screen pixels.
  *
  * A source is drawn at all because nothing else in the picture says
@@ -497,6 +573,13 @@ function Viewer(container, scene, options) {
     this.dimEls = {};         // dimension name -> its SVG elements
     this.pendingEls = null;   // the SVG of the dimension being placed
 
+    // Aiming the selected optics. A mode, like measuring and for the
+    // same reason: it takes two or three clicks, and between them a
+    // click has to mean "this place" rather than whatever clicking
+    // there would otherwise have meant.
+    this.aligning = null;     // {optic, want, points: [[x, y], ...]}
+    this.alignPreview = null; // where the next click would land
+
     VIEWERS.push(this);
     this._build();
     this._renderScene();
@@ -668,6 +751,41 @@ Viewer.prototype._build = function () {
         self.toggleMeasure();
     });
     viewRow.appendChild(this.measureBtn);
+
+    // Aiming the selected optics. A menu, since it offers four ways
+    // of saying the same kind of thing, and only where there is a
+    // Python to send the turn to.
+    if (this.opts.onEdit) {
+        this.addMenus = this.addMenus || [];
+        var awrap = htmlEl('div', 'gt-add');
+        this.alignBtn = htmlEl('button', 'gt-btn gt-addbtn', 'Align');
+        var amenu = htmlEl('div', 'gt-menu');
+        amenu.style.display = 'none';
+        ALIGN_ITEMS.forEach(function (spec) {
+            var item = htmlEl('button', 'gt-menuitem', spec.label);
+            item.title = spec.title + '   (' + spec.key + ')';
+            item.addEventListener('click', function () {
+                self.closeAddMenus();
+                if (spec.turn) { self.turnSelected(spec.turn); }
+                else { self.startAlign(spec.points); }
+            });
+            amenu.appendChild(item);
+        });
+        this.alignBtn.addEventListener('click', function () {
+            var open = amenu.style.display === 'none';
+            self.closeAddMenus();
+            if (open) {
+                amenu.style.display = '';
+                self.alignBtn.classList.add('gt-open');
+            }
+        });
+        awrap.appendChild(this.alignBtn);
+        awrap.appendChild(amenu);
+        viewRow.appendChild(awrap);
+        this.addMenus.push({button: this.alignBtn, menu: amenu, wrap: awrap});
+        this._refreshAlign();
+    }
+
     var fitBtn = htmlEl('button', 'gt-btn', 'Fit');
     fitBtn.title = 'Frame the whole layout';
     fitBtn.addEventListener('click', function () { self.fit(); });
@@ -839,6 +957,9 @@ Viewer.prototype._build = function () {
                    + '(free) detaches it in place'],
                   ['Ctrl + drag', 'drop it square on a beam'],
                   ['Shift + drag', 'rotate it'],
+                  ['Align, or a', 'face from one point towards another'],
+                  ['Align, or b', 'face the bisector of three points'],
+                  ['[ and ]', 'turn it a quarter turn'],
                   ['Ctrl + click a beam', 'move the selected optics along it'],
                   ['Edit a property', 'apply it to the layout'],
                   ['+ Mirror / + Lens / + Source',
@@ -2558,6 +2679,9 @@ Viewer.prototype._measurePoint = function (x, y) {
  */
 Viewer.prototype.toggleMeasure = function (on) {
     this.measuring = on === undefined ? !this.measuring : !!on;
+    // The two tools are both modes, and a click cannot mean "measure
+    // here" and "face this way" at once.
+    if (this.measuring) { this.cancelAlign(); }
     this.measureFrom = null;
     this.measureTo = null;
     this.measureOffset = 0;
@@ -2565,7 +2689,8 @@ Viewer.prototype.toggleMeasure = function (on) {
     if (this.measureBtn) {
         this.measureBtn.classList.toggle('gt-btn-on', this.measuring);
     }
-    this.svg.classList.toggle('gt-measuring', this.measuring);
+    this.svg.classList.toggle('gt-measuring',
+                              this.measuring || !!this.aligning);
     this._updateOverlay();
     this._updateStatus();
     return this.measuring;
@@ -2865,6 +2990,109 @@ function distToSegment(x, y, a, b) {
 
 //}}}
 
+//{{{ Aiming
+
+/*
+ * Arm the aiming tool for the selected optics: the next two or three
+ * clicks name the places it is to face by.
+ *
+ * The points snap to the same marks a measurement takes - the faces
+ * and corners of the elements, the screw holes of a breadboard, the
+ * ends of the beams - which is what makes this exact rather than a
+ * steadier drag.
+ */
+Viewer.prototype.startAlign = function (points) {
+    var o = this._selectedOptic();
+    if (!o || !this.onEdit) { return null; }
+    if (this.measuring) { this.toggleMeasure(false); }
+    this.aligning = {optic: o.name, want: points, points: []};
+    this.alignPreview = null;
+    this.snapped = null;
+    this.svg.classList.add('gt-measuring');
+    this._updateOverlay();
+    this._updateStatus();
+    return this.aligning;
+};
+
+Viewer.prototype.cancelAlign = function () {
+    if (!this.aligning) { return false; }
+    this.aligning = null;
+    this.alignPreview = null;
+    this.snapped = null;
+    this.svg.classList.remove('gt-measuring');
+    this._updateOverlay();
+    this._updateStatus();
+    return true;
+};
+
+/*
+ * What the aim comes to, from the points taken so far plus wherever
+ * the cursor is. Null while there are too few points, or where the
+ * points name no answer - see bisectorAngle.
+ */
+Viewer.prototype._alignAngle = function (cursor) {
+    var al = this.aligning;
+    if (!al) { return null; }
+    var pts = cursor ? al.points.concat([cursor]) : al.points;
+    if (pts.length < al.want) { return null; }
+    if (al.want === 2) {
+        return acrossAngle(pts[0], pts[1]);
+    }
+    return bisectorAngle(pts[0], pts[1], pts[2]);
+};
+
+/*
+ * A click while aiming. The last one turns the optics and puts the
+ * tool away; a mode left armed is a mode left on.
+ */
+Viewer.prototype._onAlignClick = function (x, y) {
+    var al = this.aligning;
+    var pt = this._measurePoint(x, y);
+    var last = al.points[al.points.length - 1];
+    if (last && last[0] === pt[0] && last[1] === pt[1]) {
+        // The same place twice names no direction. Left armed, so the
+        // click can be tried again somewhere else.
+        return null;
+    }
+    al.points.push(pt);
+    if (al.points.length < al.want) {
+        this._updateOverlay();
+        this._updateStatus();
+        return null;
+    }
+    var angle = this._alignAngle(null);
+    var target = al.optic;
+    this.cancelAlign();
+    if (angle === null) { return null; }
+    var msg = {op: 'rotate', target: target, normAngleHR: angle};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * Turn the selected optics by so many degrees from where it faces
+ * now - the quarter turn a steering mirror is specified by.
+ */
+Viewer.prototype.turnSelected = function (deg) {
+    var o = this._selectedOptic();
+    if (!o || !this.onEdit) { return null; }
+    var msg = {op: 'rotate', target: o.name,
+               normAngleHR: (o.normAngleHR || 0) + deg / DEG};
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * There is nothing to aim while nothing is selected.
+ */
+Viewer.prototype._refreshAlign = function () {
+    if (this.alignBtn) {
+        this.alignBtn.disabled = !this._selectedOptic();
+    }
+};
+
+//}}}
+
 //{{{ Scene rendering
 
 /*
@@ -2984,12 +3212,17 @@ Viewer.prototype._renderScene = function () {
     // would take.
     this.rubber = svgEl('line', {'class': 'gt-rubber'});
     this.snapMark = svgEl('circle', {'class': 'gt-snap', r: 5});
+    // The places an aim has been given so far, joined to the cursor.
+    // A polyline rather than a line: bisecting takes three points, so
+    // there are two arms to show.
+    this.alignPath = svgEl('polyline', {'class': 'gt-rubber'});
     // The preview of the dimension being placed lives in this group
     // too, so it goes with it and has to be built again.
     this.pendingEls = null;
     this.overlayGroup.appendChild(this.slideMark);
     this.overlayGroup.appendChild(this.slideArrow);
     this.overlayGroup.appendChild(this.rubber);
+    this.overlayGroup.appendChild(this.alignPath);
     this.overlayGroup.appendChild(this.snapMark);
     this.overlayGroup.appendChild(this.mechOutline);
     for (var hj = 0; hj < this.mechHandles.length; hj++) {
@@ -3005,6 +3238,7 @@ Viewer.prototype._renderScene = function () {
     this.slideMark.style.display = 'none';
     this.slideArrow.style.display = 'none';
     this.rubber.style.display = 'none';
+    this.alignPath.style.display = 'none';
     this.snapMark.style.display = 'none';
 };
 
@@ -3523,7 +3757,7 @@ Viewer.prototype._bindEvents = function () {
 
         // A resize handle first: it is UI chrome drawn on top of the
         // picture, and only exists while a resizable body is selected.
-        if (self.onEdit && !self.measuring) {
+        if (self.onEdit && !self.measuring && !self.aligning) {
             var hidx = self._pickMechHandle(px, py);
             if (hidx >= 0 && self._selectedMech()) {
                 self._beginMechResize(self._selectedMech(), hidx);
@@ -3548,7 +3782,7 @@ Viewer.prototype._bindEvents = function () {
         // The laser is tested before the optics, in the same order the
         // click pipeline uses, so that a press and a click never take
         // hold of different things.
-        var grabbable = self.onEdit && !self.measuring
+        var grabbable = self.onEdit && !self.measuring && !self.aligning
             && !self._pickDimension(pt[0], pt[1]);
         var s = grabbable ? self._pickSource(px, py) : null;
         var o = (grabbable && !s) ? self._pickOptic(pt[0], pt[1]) : null;
@@ -3731,6 +3965,15 @@ Viewer.prototype._bindEvents = function () {
         if ((ev.key === 'm' || ev.key === 'M') && !ev.ctrlKey && !ev.metaKey) {
             self.toggleMeasure();
         }
+        // Aiming the selected optics: the two ways of naming an angle
+        // by places, and the quarter turn. See ALIGN_ITEMS, which
+        // carries the same keys into the menu's tooltips.
+        if (!ev.ctrlKey && !ev.metaKey) {
+            if (ev.key === 'a' || ev.key === 'A') { self.startAlign(2); }
+            if (ev.key === 'b' || ev.key === 'B') { self.startAlign(3); }
+            if (ev.key === ']') { self.turnSelected(45); }
+            if (ev.key === '[') { self.turnSelected(-45); }
+        }
         if (ev.key === 'Escape') {
             // An open menu is the innermost thing Escape can close, so
             // it goes first and the selection is left alone.
@@ -3739,6 +3982,10 @@ Viewer.prototype._bindEvents = function () {
             });
             self.closeAddMenus();
             if (wasOpen) { return; }
+            // An aim half taken is the next innermost thing to let go
+            // of, and letting go of it should not also clear the
+            // selection it was being taken for.
+            if (self.cancelAlign()) { return; }
             if (self.measuring) { self.toggleMeasure(false); }
             self.pinned = null;
             self.selectedOptic = null;
@@ -4276,6 +4523,19 @@ Viewer.prototype._onHover = function (px, py) {
     var pt = this.screenToScene(px, py);
     this.cursor = pt;
 
+    // While aiming, as while measuring, the question is only where
+    // the next click lands - and what the optics would then face.
+    if (this.aligning) {
+        this.alignPreview = this._measurePoint(pt[0], pt[1]);
+        this.hoverOptic = null;
+        this.hoverSource = null;
+        this.hoverMech = null;
+        this.hover = null;
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
+
     // While measuring, nothing under the cursor is being pointed at: the
     // question is only where the next click lands. For the first two
     // that is the nearest marked point if there is one; for the third it
@@ -4353,6 +4613,11 @@ Viewer.prototype._updateOpticOutline = function (o, center, angle) {
 
 Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     var pt = this.screenToScene(px, py);
+
+    if (this.aligning) {
+        this._onAlignClick(pt[0], pt[1]);
+        return;
+    }
 
     if (this.measuring) {
         this._onMeasureClick(pt[0], pt[1]);
@@ -4537,6 +4802,10 @@ Viewer.prototype._arrowPath = function (px, py, dirVect) {
 };
 
 Viewer.prototype._updateOverlay = function () {
+    // Set while an aim is being taken; see the aiming block below and
+    // the outline that reads it.
+    var alignOutline = null;
+
     // The lasers stand where the scene says, or where a drag has them.
     // Done here rather than in _applyTransform so that every path which
     // changes what is selected or hovered brings them along.
@@ -4578,11 +4847,50 @@ Viewer.prototype._updateOverlay = function () {
             this.rubber.style.display = 'none';
         }
     }
+    // The places an aim has been given, joined up to the cursor, and
+    // the optics outlined as it would face. Both are the whole of what
+    // makes the tool answerable: the angle is arithmetic on points the
+    // user cannot otherwise see the effect of.
+    if (this.aligning) {
+        var apts = this.aligning.points.slice();
+        if (this.alignPreview) { apts.push(this.alignPreview); }
+        if (apts.length > 1) {
+            var self2 = this;
+            this.alignPath.setAttribute('points', apts.map(function (p) {
+                var s = self2.sceneToScreen(p[0], p[1]);
+                return s[0] + ',' + s[1];
+            }).join(' '));
+            this.alignPath.style.display = '';
+        } else {
+            this.alignPath.style.display = 'none';
+        }
+        var ao = this._selectedOptic();
+        var aangle = this._alignAngle(this.alignPreview);
+        if (ao && aangle !== null) {
+            // Turning is about the anchor point, so the centre
+            // travels; the preview has to travel with it or it would
+            // promise a place the element will not land in. Kept for
+            // the outline below, which is drawn in one place so that
+            // a drag, an aim and a plain selection cannot each set it
+            // and the last one win.
+            var apivot = opticAnchorPoint(ao);
+            alignOutline = {
+                optic: ao,
+                centre: turnAbout(ao.center || ao.HRcenter, apivot,
+                                  aangle - (ao.normAngleHR || 0)),
+                angle: aangle
+            };
+        }
+    } else {
+        this.alignPath.style.display = 'none';
+    }
+
     // Where the next click would land, when that is a marked point
     // rather than the cursor. Without it the tool is guesswork: the
     // snap is invisible until the measurement is already made. The
     // same mark shows the screw hole a dragged anchor has caught on.
-    var snapPt = (this.measuring && this.snapped) ? this.snapped.point
+    var snapPt = ((this.measuring || this.aligning) && this.snapped)
+        ? this.snapped.point
         : (this.dragOptic && this.dragOptic.hole)
             ? this.dragOptic.hole.point : null;
     if (snapPt) {
@@ -4597,6 +4905,9 @@ Viewer.prototype._updateOverlay = function () {
     if (this.dragOptic) {
         this._updateOpticOutline(this.dragOptic.optic, this.dragOptic.center,
                                  this.dragOptic.angle);
+    } else if (alignOutline) {
+        this._updateOpticOutline(alignOutline.optic, alignOutline.centre,
+                                 alignOutline.angle);
     } else {
         // The selected optics stays outlined so that the panel and the
         // drawing agree on what is being looked at.
@@ -4653,6 +4964,9 @@ Viewer.prototype._updateOverlay = function () {
         this.slideArrow.style.display = 'none';
     }
 
+    // Whether there is anything to aim can change with any click.
+    this._refreshAlign();
+
     var hit = this.pinned || this.hover;
     if (!hit) { this._showMarker(false); return; }
     var b = hit.beam;
@@ -4704,6 +5018,25 @@ Viewer.prototype._updateStatus = function () {
                   fmtLen(d.center[1]) +
                   (d.hole ? '   on ' + d.hole.label : '');
         }
+        return;
+    }
+    if (this.aligning) {
+        var al = this.aligning;
+        var awhere = this.snapped ? this.snapped.label
+            : (this.cursor ? fmtLen(this.cursor[0]) + ',  '
+                             + fmtLen(this.cursor[1]) : '');
+        var ordinal = ['first', 'second', 'third'][al.points.length]
+            || 'next';
+        var aangle2 = this._alignAngle(this.alignPreview);
+        var ao2 = this._selectedOptic();
+        this.statusBar.textContent =
+            'Align ' + al.optic + ':  click the ' + ordinal + ' point' +
+            (awhere ? '     at  ' + awhere : '') +
+            (aangle2 === null ? ''
+             : '     → ' + fmtDeg(normAngle(aangle2)) +
+               (ao2 ? '   (was ' + fmtDeg(normAngle(ao2.normAngleHR || 0))
+                      + ')' : '')) +
+            '     (Esc to cancel)';
         return;
     }
     if (this.measuring) {
@@ -4816,6 +5149,11 @@ Viewer.prototype.setScene = function (scene) {
     this.dragSource = null;
     this.dragMech = null;
     this.dragMechResize = null;
+    // An aim is answered by the scene that comes back, and a scene
+    // arriving for any other reason is a layout that may not hold the
+    // element being aimed at all.
+    this.aligning = null;
+    this.alignPreview = null;
     this.cycle = 0;
     this.lastClick = null;
     this.labels = [];

@@ -61,6 +61,8 @@ SUITES = [
      'mechanics: the hardware the trace never sees, and the protocol reaching it'),
     ('verify_mech_browser.py',
      'headless browser: picking hardware by its area, and editing its pose'),
+    ('verify_align_browser.py',
+     'headless browser: aiming an optics by places, and the quarter turn'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in

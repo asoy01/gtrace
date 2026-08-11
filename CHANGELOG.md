@@ -13,6 +13,29 @@ across them.
 
 ### Added
 
+- **Aiming an optics by places** - an `Align` menu, and the keys
+  behind it. A drag puts an element approximately anywhere and
+  Ctrl-drag squares it onto a beam that already exists; what was
+  missing is the angles a bench is laid out by *before* there is a
+  beam to point at.
+  - **Line 2 points** (`a`): the face ends up square across
+    the line between two places, looking from the first towards the
+    second. A line has two normals, and the click order says which -
+    so clicking the two places the other way about turns the element
+    right round, which is how a face is flipped.
+  - **Bisect 3 points** (`b`): from, at, to. The face takes the
+    bisector of the corner, which is where a mirror folding light
+    from the first place to the last has to look.
+  - **Turn ±45°** (`]` and `[`): the quarter turn a steering mirror
+    is specified by, from wherever it faces now.
+  - The places snap to the same marks a measurement takes - faces,
+    corners, screw holes, beam ends - which is what makes this exact
+    rather than a steadier drag. The arm to the cursor and the
+    outline the optics would take are previewed as it is taken.
+  - Aiming turns and does not move: which way an element faces and
+    where it stands are two questions, and the second already has
+    answers (Ctrl-drag, the Center rows, Along beam / Move by).
+
 - **`Mechanics`: hardware on the layout** (`gtrace.mechanics`). A named
   body - a breadboard, a mirror mount, the housing of a beam dump -
   that is drawn, saved and edited like everything else and that the
@@ -131,8 +154,9 @@ across them.
   changes nothing.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (271 checks) and `verify_mech_browser.py` (72).
-  The suite is 21 files and 4181 checks.
+- `verify_mechanics.py` (271 checks), `verify_mech_browser.py` (72) and
+  `verify_align_browser.py` (34). The suite is 22 files and 4215
+  checks.
 
 ### Fixed
 

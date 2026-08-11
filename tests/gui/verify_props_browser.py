@@ -1123,7 +1123,7 @@ check('  while Escape with no menu open still clears it',
 check('and nothing was added by any of it', mn['sentThroughout'] == 0,
       str(mn['sentThroughout']))
 check('what acts on it or on the view on the second',
-      res['headRows'][1] == ['Undo', 'Redo', 'Measure', 'Fit'],
+      res['headRows'][1] == ['Undo', 'Redo', 'Measure', 'Align', 'Fit'],
       str(res['headRows'][1]))
 # No heading. In a notebook the layout is already labelled by the cell
 # that made it, and a written page carries its name in the browser tab;
