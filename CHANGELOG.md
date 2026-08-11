@@ -121,10 +121,18 @@ across them.
   `BB4530`, `BB6045`, `MOUNT-25`, `MOUNT-50`, `HOLDER-25` at 30 x 10
   mm, `HOLDER-50` at 56 x 12.7 mm); further vendor models are yours
   to register from measured footprints.
+- **The library saves and loads.** `save_models(path, names=None)`
+  writes the shelf - or the named part of it - to a JSON file
+  carrying exactly what the registry holds, and `load_models(path)`
+  merges a file back in, name by name with the file winning: the
+  same rule `register_model` already has, so a library built out of
+  several files is one call per file. A load checks everything
+  before merging anything - a file with one unreadable shape in it
+  changes nothing.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (261 checks) and `verify_mech_browser.py` (72).
-  The suite is 21 files and 4171 checks.
+- `verify_mechanics.py` (271 checks) and `verify_mech_browser.py` (72).
+  The suite is 21 files and 4181 checks.
 
 ### Fixed
 

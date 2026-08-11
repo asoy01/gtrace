@@ -24,6 +24,8 @@ disagree.
 
 #{{{ Import modules
 
+import json
+
 import numpy as np
 
 import gtrace.draw as draw
@@ -1009,6 +1011,128 @@ def from_model(model, **kwargs):
     kwargs.setdefault('layer', d['layer'])
     return Mechanics(shapes=[shape_from_dict(s) for s in d['shapes']],
                      model=str(model), params=d.get('params'), **kwargs)
+
+def save_models(filename, names=None):
+    '''
+    Write library models to a JSON file.
+
+    The file carries exactly what the registry holds - the serialized
+    shapes, the layer, the description and the builder parameters -
+    under a single 'models' object, so a saved library is the same
+    data a saved layout embeds and load_models() can take it back
+    without a conversion in between.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the file to write.
+    names : sequence of str or None, optional
+        Which models to save. None - the default - saves the whole
+        library, the built-in stock included: they are values like any
+        other, and loading them back changes nothing.
+
+    Returns
+    -------
+    filename : str
+
+    Raises
+    ------
+    KeyError
+        If a name in ``names`` is not in the library.
+    '''
+    if names is None:
+        picked = dict(_MODEL_REGISTRY)
+    else:
+        picked = {}
+        for n in names:
+            d = _MODEL_REGISTRY.get(str(n))
+            if d is None:
+                raise KeyError('No model named %r in the library. '
+                               'mechanics.models() lists what there is.'
+                               % (n,))
+            picked[str(n)] = d
+    payload = {'models': dict(
+        (k, {'shapes': [dict(s) for s in v['shapes']],
+             'layer': str(v['layer']),
+             'description': str(v.get('description', '')),
+             'params': (None if v.get('params') is None
+                        else dict(v['params']))})
+        for k, v in picked.items())}
+    with open(filename, 'w') as f:
+        json.dump(payload, f, indent=1)
+    return filename
+
+def load_models(filename):
+    '''
+    Merge the models of a JSON file into the library.
+
+    Name by name, the file wins - exactly the rule register_model
+    already has, since loading a definition is one more way of
+    registering it. Models the file does not mention are left alone,
+    so building a library out of several files is just calling this
+    once per file.
+
+    Everything is checked before anything is merged: a file with one
+    unreadable shape in it changes nothing, rather than leaving the
+    library half updated.
+
+    Parameters
+    ----------
+    filename : str
+        A file written by save_models().
+
+    Returns
+    -------
+    list of str
+        The names that were merged, in the file's order.
+
+    Raises
+    ------
+    ValueError
+        If the file is not a model library, or an entry of it does
+        not describe one.
+    '''
+    with open(filename, 'r') as f:
+        data = json.load(f)
+    models_in = data.get('models') if isinstance(data, dict) else None
+    if not isinstance(models_in, dict):
+        raise ValueError("%s is not a model library file gtrace can read "
+                         "(no 'models' object in it)." % filename)
+
+    staged = {}
+    for name, d in models_in.items():
+        if not isinstance(d, dict):
+            raise ValueError('Model %r of %s is not a definition.'
+                             % (name, filename))
+        try:
+            # Through the shape constructors and back: what comes out
+            # is both validated and normalized, so a hand-edited file
+            # either loads cleanly or refuses loudly here - not on the
+            # first scene built from it.
+            shapes = [shape_to_dict(shape_from_dict(s))
+                      for s in d.get('shapes', [])]
+        except UnknownShapeError as e:
+            raise ValueError('Model %r of %s: %s' % (name, filename, e))
+        except (KeyError, TypeError, ValueError, IndexError) as e:
+            raise ValueError('Model %r of %s has a malformed shape '
+                             '(%s: %s).' % (name, filename,
+                                            type(e).__name__, e))
+        layer = d.get('layer', DEFAULT_LAYER)
+        if not isinstance(layer, str) or not layer.strip():
+            raise ValueError('Model %r of %s has no usable layer: %r.'
+                             % (name, filename, layer))
+        params = d.get('params')
+        if params is not None and not isinstance(params, dict):
+            raise ValueError('Model %r of %s has malformed parameters: %r.'
+                             % (name, filename, params))
+        staged[str(name)] = {
+            'shapes': shapes,
+            'layer': str(layer),
+            'description': str(d.get('description', '')),
+            'params': None if params is None else dict(params)}
+
+    _MODEL_REGISTRY.update(staged)
+    return list(staged)
 
 # The generic stock: a few breadboards and mounts under names that say
 # what they are and no more. Registered through the same door a user's

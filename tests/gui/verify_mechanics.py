@@ -46,7 +46,8 @@ from gtrace.mechanics import (Mechanics, point_in_polygon, DEFAULT_LAYER,
                               LAYER_COLOR, breadboard, mirror_mount,
                               mirror_mount_2in, lens_holder,
                               register_model, models, model_shapes,
-                              from_model)
+                              model_params, from_model,
+                              save_models, load_models)
 from gtrace.unit import *
 
 npass = 0
@@ -962,6 +963,83 @@ c1d = [m for m in full['mechanics'] if m['name'] == 'C1'][0]
 check('a relinked body saves the new shapes, by value',
       abs(c1d['shapes'][0]['width'] - 0.04) < 1e-12
       and c1d['model'] == 'TEST-CLAMP')
+
+
+print('--- the library saves, and merges back file by file ---')
+
+lib_all = os.path.join(WORK, 'mech_models_all.json')
+save_models(lib_all)
+with open(lib_all, encoding='utf-8') as f:
+    on_disk = json.load(f)
+check('save_models writes the whole shelf, stock included',
+      'BB3030' in on_disk['models'] and 'TEST-CLAMP' in on_disk['models'])
+check('  as the same data the registry holds',
+      on_disk['models']['TEST-CLAMP']['shapes']
+      == [shape_to_dict(s) for s in model_shapes('TEST-CLAMP')])
+
+lib_a = os.path.join(WORK, 'mech_models_a.json')
+register_model('TEST-FILE-X', [draw.Circle([0, 0], 0.011)], 'X, version A')
+register_model('TEST-FILE-Y', [draw.Circle([0, 0], 0.012)], 'only in A')
+save_models(lib_a, names=['TEST-FILE-X', 'TEST-FILE-Y'])
+with open(lib_a, encoding='utf-8') as f:
+    check('a subset saves only what was named',
+          sorted(json.load(f)['models']) == ['TEST-FILE-X', 'TEST-FILE-Y'])
+try:
+    save_models(lib_a, names=['NO-SUCH-MODEL'])
+    check('a name not on the shelf is refused', False)
+except KeyError as e:
+    check('a name not on the shelf is refused', True, '(%s)' % str(e)[:40])
+
+lib_b = os.path.join(WORK, 'mech_models_b.json')
+register_model('TEST-FILE-X', [draw.Circle([0, 0], 0.021)], 'X, version B')
+register_model('TEST-FILE-Z', [draw.Circle([0, 0], 0.022)], 'only in B')
+save_models(lib_b, names=['TEST-FILE-X', 'TEST-FILE-Z'])
+
+# Wind the registry back to something older than either file, then
+# merge the two files over it in order.
+register_model('TEST-FILE-X', [draw.Circle([0, 0], 0.001)], 'stale')
+check('loading a file merges its models in',
+      load_models(lib_a) == ['TEST-FILE-X', 'TEST-FILE-Y']
+      and abs(model_shapes('TEST-FILE-X')[0].radius - 0.011) < 1e-15)
+check('and a second file wins name by name, leaving the rest',
+      load_models(lib_b) == ['TEST-FILE-X', 'TEST-FILE-Z']
+      and abs(model_shapes('TEST-FILE-X')[0].radius - 0.021) < 1e-15
+      and abs(model_shapes('TEST-FILE-Y')[0].radius - 0.012) < 1e-15
+      and models()['TEST-FILE-X'] == 'X, version B')
+
+lib_bb = os.path.join(WORK, 'mech_models_bb.json')
+save_models(lib_bb, names=['BB3030'])
+register_model('BB3030', [draw.Rectangle([-0.15, -0.15], 0.3, 0.3)],
+               'flattened for the test')
+load_models(lib_bb)
+check('the builder parameters survive the round trip',
+      model_params('BB3030') is not None
+      and from_model('BB3030', name='rt').resizable)
+
+before_reg = json.dumps(sorted(models()))
+lib_bad = os.path.join(WORK, 'mech_models_bad.json')
+with open(lib_bad, 'w', encoding='utf-8') as f:
+    json.dump({'models': {'GOOD': {'shapes': [
+                   {'type': 'circle', 'center': [0, 0], 'radius': 0.01,
+                    'thickness': 0}], 'layer': 'hardware'},
+               'BAD': {'shapes': [{'type': 'blob'}]}}}, f)
+try:
+    load_models(lib_bad)
+    check('a file with one bad shape is refused whole', False)
+except ValueError as e:
+    check('a file with one bad shape is refused whole', True,
+          '(%s)' % str(e)[:60])
+check('  and merges nothing of it',
+      json.dumps(sorted(models())) == before_reg and 'GOOD' not in models())
+
+with open(lib_bad, 'w', encoding='utf-8') as f:
+    json.dump({'layouts': []}, f)
+try:
+    load_models(lib_bad)
+    check('a file that is not a library is refused', False)
+except ValueError as e:
+    check('a file that is not a library is refused', True,
+          '(%s)' % str(e)[:50])
 
 
 print('--- resize: a parametric body is re-drilled, not scaled ---')
