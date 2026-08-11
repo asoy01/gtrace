@@ -13,7 +13,7 @@ across them.
 
 ### Added
 
-- **A shape editor for the hardware**, behind `Mechanics.edit()`. A
+- **A shape editor for the bodies**, behind `Mechanics.edit()`. A
   part's geometry is a list of drawing primitives, and until now the
   only way to lay one out was to write the numbers in a cell.
   - It is not a second viewer: it is the same one, handed a scene of
@@ -98,7 +98,17 @@ across them.
     where it stands are two questions, and the second already has
     answers (Ctrl-drag, the Center rows, Along beam / Move by).
 
-- **`Mechanics`: hardware on the layout** (`gtrace.mechanics`). A named
+- **The word is "mechanics", not "hardware".** Mounts and holders are
+  optomechanics, but what a layout carries is not always optical - the
+  wall of a vacuum tank, a bench, a beam dump housing - so the general
+  word is the right one, and one word is better than two. The class was
+  always `Mechanics`; the button is now **`+ Mechanics`**, the layer is
+  `mechanics`, and an unnamed body is `P1`, `P2`, ... for part. Nothing
+  of this has been released, so nothing is carried forward: a layout
+  saved before the change keeps whatever layer name it was written
+  with.
+
+- **`Mechanics`: the bodies on a bench** (`gtrace.mechanics`). A named
   body - a breadboard, a mirror mount, the housing of a beam dump -
   that is drawn, saved and edited like everything else and that the
   trace never sees. Anything that is to stop light is still an
@@ -110,7 +120,7 @@ across them.
     from it, so moving the body is a change of two numbers.
   - Registered with `OpticalLayout.add_mechanics()`, saved by value in
     the layout file (with an optional `model` name as a label), drawn
-    on a `hardware` layer of its own - which the viewer and any CAD
+    on a `mechanics` layer of its own - which the viewer and any CAD
     reading the DXF can switch off as one thing - and picked in the
     viewer by point-in-polygon on its outline, after everything else:
     a beam, an optics or a mount lying on a breadboard wins the click
@@ -119,11 +129,11 @@ across them.
     angle, rename, remove); dragging a *selected* mechanics moves it
     and Shift-dragging turns it. An unselected one is not grabbed - a
     breadboard can cover most of the bench, and a drag across it
-    should pan the view. Hardware covered by an optics - a mount is
+    should pan the view. A body covered by an optics - a mount is
     covered completely by its own mirror - takes the last turn of the
     repeated-click walk that already steps from an element into the
     beams under it.
-  - **`+ Hardware`** adds a model from the library at the centre of
+  - **`+ Mechanics`** adds a model from the library at the centre of
     the view; the menu is filled from a `mechlib` scene channel, so
     it lists whatever the library holds when the scene was built.
   - **The attachment is edited from the panel.** The Attached to row
@@ -152,8 +162,8 @@ across them.
     its anchor point on the nearest hole when it comes close (a small
     reach, well under the grid pitch; hold Alt to ride free). The
     holes are where a bench actually puts things.
-  - Hardware names are drawn only when the new `drawMechanicsNames`
-    option asks (off by default): the hardware is background, and a
+  - Body names are drawn only when the new `drawMechanicsNames`
+    option asks (off by default): a body is background, and a
     name across a breadboard labels what nobody needed named.
   - Editing a mechanics does not invalidate the trace: the picture
     changes, the beams did not move.
@@ -170,14 +180,14 @@ across them.
     `attach()` with no offset seats the body at its designed position
     (`keep_pose=True` pins it where it stands instead). A saved
     layout carries the host's *name* and the offset - no pose - and
-    loading joins the two back up; removing an optics with hardware
-    attached is refused until the hardware is detached or removed.
+    loading joins the two back up; removing an optics with a body
+    attached is refused until the body is detached or removed.
   - Edit operations: `add` with `type: 'Mechanics'` (shapes arrive
     serialized, as the layout file carries them), `move` (`center`),
     `rotate` (`rotationAngle`), `set`, `remove`, `rename`. The scene
     gains a `mechanics` channel; corners and centre join the snap
-    points, so the measuring tool reaches the hardware.
-- **A model library for hardware**, in `gtrace.mechanics`. The
+    points, so the measuring tool reaches the bodies.
+- **A model library for the parts**, in `gtrace.mechanics`. The
   definitions are data - the same serialized shapes a saved layout
   carries - under one name each: `register_model(name, source)` puts a
   shape you settled on into the library by value, `models()` lists
@@ -310,10 +320,10 @@ across them.
   half of the workflow - build and align in ordinary Python, then
   register and look - and DXF closes the notebook rather than carrying
   it. The version that led with DXF is in the repository's history.
-- **The reference pages cover the hardware.** `layout.rst` gains
+- **The reference pages cover the mechanics.** `layout.rst` gains
   Mechanics: the bodies themselves, attaching one to an optics, the
   model library, the messages that reach them and the shape editor's
-  own protocol. `viewer.rst` gains how hardware is picked and dragged,
+  own protocol. `viewer.rst` gains how a body is picked and dragged,
   the corner handles, screw-hole snapping, aiming by places, and the
   shape editor. Two figures are new - a bench with its mounts, and a
   part open in the editor - and `docs/make_viewer_figures.py` now

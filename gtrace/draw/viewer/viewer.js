@@ -1043,7 +1043,7 @@ function Viewer(container, scene, options) {
     this.sourceEls = [];
     this.sourceFallback = null;
 
-    // The mechanics - the hardware the trace never sees. Their shapes
+    // The mechanics - the bodies the trace never sees. Their shapes
     // are in the canvas like the substrates of the optics; this is the
     // selection state their outlines and panel work from.
     this.selectedMech = null;
@@ -1226,14 +1226,14 @@ Viewer.prototype._build = function () {
             self.addMenus.push({button: btn, menu: menu, wrap: wrap});
         });
 
-        // The hardware, behind one more button of the same row. Its
+        // The mechanics, behind one more button of the same row. Its
         // variants are not classes but library models, and the library
         // rides in the scene - so the menu is filled by
-        // _refreshHardwareMenu, and refilled whenever a new scene
+        // _refreshMechMenu, and refilled whenever a new scene
         // brings a new library.
         var hwrap = htmlEl('div', 'gt-add');
-        var hbtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Hardware');
-        hbtn.title = 'Add hardware from the model library at the centre '
+        var hbtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Mechanics');
+        hbtn.title = 'Add a part from the model library at the centre '
             + 'of the view';
         var hmenu = htmlEl('div', 'gt-menu');
         hmenu.style.display = 'none';
@@ -1249,8 +1249,8 @@ Viewer.prototype._build = function () {
         hwrap.appendChild(hmenu);
         addRow.appendChild(hwrap);
         self.addMenus.push({button: hbtn, menu: hmenu, wrap: hwrap});
-        this.hardwareMenu = {button: hbtn, menu: hmenu, wrap: hwrap};
-        this._refreshHardwareMenu();
+        this.mechMenu = {button: hbtn, menu: hmenu, wrap: hwrap};
+        this._refreshMechMenu();
 
         head.appendChild(addRow);
     }
@@ -1520,10 +1520,10 @@ Viewer.prototype._build = function () {
                 ['Drag', 'pan'],
                 ['Move over a beam', 'live readout'],
                 ['Click', 'pin the readout'],
-                ['Click again', 'cycle overlapping beams and hardware'],
+                ['Click again', 'cycle overlapping beams and bodies'],
                 ['Click an optics', 'show its properties'],
                 ['Click a laser', 'show the source it stands for'],
-                ['Click hardware', 'show its pose'],
+                ['Click a body', 'show its pose'],
                 ['f', 'fit to view'],
                 ['Measure, or m', 'measure between two points'],
                 ['Esc', 'clear selection']];
@@ -1548,9 +1548,9 @@ Viewer.prototype._build = function () {
         rows.push(['Drag an optics or a laser', 'move it'],
                   ['Drag near a screw hole', 'land the anchor on it '
                    + '(Alt rides free)'],
-                  ['Drag selected hardware', 'move it'],
+                  ['Drag a selected body', 'move it'],
                   ['Drag a corner handle', 'cut a breadboard to size'],
-                  ['+ Hardware', 'add a part from the model library'],
+                  ['+ Mechanics', 'add a part from the model library'],
                   ['Attached to', 'seat a mount on an optics; '
                    + '(free) detaches it in place'],
                   ['Ctrl + drag', 'drop it square on a beam'],
@@ -1987,7 +1987,7 @@ var MECH_FIELDS = [
     {key: 'cy', label: 'Center y', unit: 'm'},
     {key: 'angle', label: 'Angle', unit: '°'},
     // Only a parametric body - a breadboard - has a size to set; the
-    // rows hide themselves for hardware drawn by hand, whose shapes
+    // rows hide themselves for a body drawn by hand, whose shapes
     // are all anyone knows about it. In millimetres, like every other
     // dimension of a part.
     {key: 'width', label: 'Width', unit: 'mm', optional: true},
@@ -2335,7 +2335,7 @@ Viewer.prototype._buildSourcePanel = function () {
 };
 
 /*
- * The mechanics panel. The same rows again, over the hardware.
+ * The mechanics panel. The same rows again, over the bodies.
  */
 Viewer.prototype._buildMechPanel = function () {
     var self = this;
@@ -2734,13 +2734,13 @@ Viewer.prototype.addMirror = function (params) {
 };
 
 /*
- * Fill the + Hardware menu from the library the scene carries. The
+ * Fill the + Mechanics menu from the library the scene carries. The
  * shapes stay on the Python side; the menu deals in names, and the
  * layout builds the body when one is chosen.
  */
-Viewer.prototype._refreshHardwareMenu = function () {
+Viewer.prototype._refreshMechMenu = function () {
     var self = this;
-    var hm = this.hardwareMenu;
+    var hm = this.mechMenu;
     if (!hm) { return; }
     var lib = this.scene.mechlib || [];
     hm.wrap.style.display = lib.length ? '' : 'none';
@@ -2750,7 +2750,7 @@ Viewer.prototype._refreshHardwareMenu = function () {
         item.title = entry.description || '';
         item.addEventListener('click', function () {
             self.closeAddMenus();
-            self.addHardware(entry.name);
+            self.addMechanics(entry.name);
         });
         hm.menu.appendChild(item);
     });
@@ -2761,7 +2761,7 @@ Viewer.prototype._refreshHardwareMenu = function () {
  * chosen here, like a new optics' name, so the viewer can select what
  * it asked for as soon as the scene comes back.
  */
-Viewer.prototype.addHardware = function (model) {
+Viewer.prototype.addMechanics = function (model) {
     if (!this.onEdit) { return null; }
     var name = this._freshOpticName('H');
     var msg = {op: 'add', type: 'Mechanics', name: name,
@@ -4762,7 +4762,7 @@ Viewer.prototype._bindEvents = function () {
         // A mechanics is grabbed only while it is the selection. A
         // breadboard can cover most of the bench, and a press on it
         // usually means "pan the view" - so the first click selects,
-        // and only then does dragging move the hardware. An attached
+        // and only then does dragging move the body. An attached
         // body is never grabbed: it goes where its host goes, and its
         // host is right there to be dragged.
         var h = (grabbable && !s && !o && self.selectedMech)
@@ -4898,7 +4898,7 @@ Viewer.prototype._bindEvents = function () {
             var rm = self.svg.getBoundingClientRect();
             if (moved < 4) {
                 // A grab that went nowhere is a click on the selected
-                // hardware, which keeps it selected. Let the click
+                // body, which keeps it selected. Let the click
                 // pipeline say so, as it does for the others.
                 self.dragMech = null;
                 self._onClick(ev.clientX - rm.left, ev.clientY - rm.top,
@@ -5571,7 +5571,7 @@ Viewer.prototype._shapesVisible = function () {
  * and the outline wins: it is the more deliberate aim of the two, and
  * a small shape drawn over a large one has nothing else to be reached
  * by. Between two enclosing shapes the smaller wins, as it does for
- * the hardware on a bench and for the same reason.
+ * the bodies on a bench and for the same reason.
  */
 Viewer.prototype._pickShapes = function (x, y, tol) {
     if (!this._shapesVisible()) { return []; }
@@ -5605,7 +5605,7 @@ Viewer.prototype._pickShape = function (x, y) {
  * against - a plate laid on the centre line, a hole put on a corner,
  * a slot centred on a side. The shape being dragged is left out, or it
  * would catch on itself and never move. Alt says to take the cursor
- * at its word instead, as it does when hardware is dragged over a
+ * at its word instead, as it does when a body is dragged over a
  * grid of holes.
  */
 Viewer.prototype._shapeSnap = function (pts, except, free) {
@@ -5764,7 +5764,7 @@ Viewer.prototype._onHover = function (px, py) {
     }
     this.measurePreview = null;
 
-    // Editing a part: there are no optics, beams or hardware to point
+    // Editing a part: there are no optics, beams or bodies to point
     // at - only the shapes, and of those only the one on show can be
     // taken hold of. The rest are selected first, as a breadboard is,
     // so that a press anywhere else still pans the view.
@@ -5792,7 +5792,7 @@ Viewer.prototype._onHover = function (px, py) {
     this.hoverSource = this._pickSource(px, py);
     this.hoverOptic = this.hoverSource ? null
         : this._pickOptic(pt[0], pt[1]);
-    // The hardware comes last, as it does in the click order: it is
+    // The mechanics come last, as they do in the click order: they are
     // the largest thing in the picture, and everything else stands on
     // or in front of it.
     this.hoverMech = (this.hoverSource || this.hoverOptic) ? null
@@ -5852,7 +5852,7 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
 
     // Editing a part: the shapes are the whole of what there is to
     // click on. Clicking the same place again steps down through the
-    // ones that overlap, as it does for beams and for hardware, and
+    // ones that overlap, as it does for beams and for bodies, and
     // clicking away from them all lets go of the selection.
     if (this.scene.editor) {
         var shits = this._pickShapes(pt[0], pt[1], SHAPE_PICK / this.scale);
@@ -5916,7 +5916,7 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     // bundle of beams under it and back around, exactly as repeated
     // clicks already walk a bundle of overlapping beams.
     //
-    // The hardware under the element takes the last turn of that walk.
+    // The body under the element takes the last turn of that walk.
     // It has to be in the cycle: a mount stands where its mirror
     // stands, so the mirror's own pick circle covers it entirely, and
     // there is no spot to click that reaches the mount any other way.
@@ -5970,7 +5970,7 @@ Viewer.prototype._onClick = function (px, py, pickBeamFor) {
         }
     }
 
-    // The hardware is picked after everything else, as the largest
+    // The mechanics are picked after everything else, as the largest
     // thing in the picture: a beam crossing a breadboard would be
     // unreachable the other way round, and the board is still there to
     // be clicked anywhere its beams are not.
@@ -6153,7 +6153,7 @@ Viewer.prototype._placeShapeHandles = function (s) {
 
 /*
  * The grip under a screen point, or null. The same reach beyond the
- * drawn square as the hardware handles have, and for the same reason.
+ * drawn square as a body's handles have, and for the same reason.
  */
 Viewer.prototype._pickShapeHandle = function (px, py) {
     var pts = this._shapeHandlePts || [];
@@ -6283,7 +6283,7 @@ Viewer.prototype._updateOverlay = function () {
         this._updateOpticOutline(this.hoverOptic || this._selectedOptic());
     }
 
-    // The hardware outline, by the same rules on its own element -
+    // The body outline, by the same rules on its own element -
     // or, mid-resize, the rectangle being cut. The corner handles
     // stand on the selected resizable body, and follow the preview.
     if (this.dragMechResize) {
@@ -6571,7 +6571,7 @@ Viewer.prototype.setScene = function (scene) {
     this._renderScene();
     this._refreshDisplayPanel();
     this._refreshRulesPanel();
-    this._refreshHardwareMenu();
+    this._refreshMechMenu();
     this._refreshUndo();
     this._setReadout(null);
 

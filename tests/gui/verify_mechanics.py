@@ -1,5 +1,5 @@
 '''
-Mechanics: the hardware the trace never sees, and everything the layout
+Mechanics: the bodies the trace never see, and everything the layout
 does with it.
 
 A Mechanics is a named body - a breadboard, a mount, a housing - whose
@@ -237,7 +237,7 @@ board = Mechanics(shapes=[draw.Rectangle([-0.15, -0.1], 0.3, 0.2),
                           draw.Circle([0.0, 0.0], 0.003)],
                   center=[0.4, 0.0], name='BB1')
 board.draw(cv)
-check('the hardware layer appears', DEFAULT_LAYER in cv.layers)
+check('the mechanics layer appears', DEFAULT_LAYER in cv.layers)
 check('  with its own colour',
       cv.layers[DEFAULT_LAYER].color == LAYER_COLOR)
 check('  carrying the shapes',
@@ -322,7 +322,7 @@ check('UnknownShapeError is an Exception',
 print('--- mechanics serialization ---')
 
 m = Mechanics(shapes=SHAPES, center=[0.3, -0.2], rotationAngle=0.25,
-              name='BB1', layer='hardware', model='MB3045/M')
+              name='BB1', layer='mechanics', model='MB3045/M')
 d = mechanics_to_dict(m)
 check('the dict is strict JSON', json.dumps(d) is not None)
 check('it says what it is', d['type'] == 'Mechanics' and d['name'] == 'BB1')
@@ -335,7 +335,7 @@ check('the round trip returns the same body',
 
 r2 = mechanics_from_dict({'name': 'bare'})
 check('a minimal dict fills the defaults',
-      r2.layer == 'hardware' and r2.model is None and r2.shapes == []
+      r2.layer == 'mechanics' and r2.model is None and r2.shapes == []
       and close(r2.center, [0, 0]) and r2.rotationAngle == 0.0)
 
 
@@ -372,10 +372,10 @@ except ValueError:
     check('and an optics cannot take a mechanics name', True)
 
 check('unique_mechanics_name walks the whole namespace',
-      L.unique_mechanics_name() == 'H1')
-L.add_mechanics(Mechanics(name='H1'))
-check('  and moves on when taken', L.unique_mechanics_name() == 'H2')
-L.remove_mechanics('H1')
+      L.unique_mechanics_name() == 'P1')
+L.add_mechanics(Mechanics(name='P1'))
+check('  and moves on when taken', L.unique_mechanics_name() == 'P2')
+L.remove_mechanics('P1')
 
 
 print('--- the scene ---')
@@ -387,12 +387,12 @@ check('the mechanics channel is there', len(scene['mechanics']) == 1)
 mch = scene['mechanics'][0]
 check('it carries the pose and the labels',
       mch['name'] == 'BB1' and mch['type'] == 'Mechanics'
-      and mch['layer'] == 'hardware' and mch['model'] is None
+      and mch['layer'] == 'mechanics' and mch['model'] is None
       and close(mch['center'], [0.3, 0.0]) and mch['rotationAngle'] == 0.0)
 check('and the outline the model computes',
       close(mch['outline'], L.get_mechanics('BB1').outline()))
 
-check('the canvas carries the hardware layer',
+check('the canvas carries the mechanics layer',
       any(ly['name'] == DEFAULT_LAYER and len(ly['shapes']) == 1
           for ly in scene['canvas']['layers']))
 
@@ -441,14 +441,14 @@ L.apply_edit({'op': 'add', 'type': 'Mechanics',
                          'shapes': [{'type': 'circle', 'center': [0, 0],
                                      'radius': 0.02, 'thickness': 0}],
                          'layer': 'posts', 'model': 'P-2'}})
-check('add without a name picks one', L._is_mechanics('H1'))
-h1 = L.get_mechanics('H1')
+check('add without a name picks one', L._is_mechanics('P1'))
+h1 = L.get_mechanics('P1')
 check('  with the parameters given',
       h1.layer == 'posts' and h1.model == 'P-2'
       and isinstance(h1.shapes[0], draw.Circle))
 
-L.apply_edit({'op': 'remove', 'target': 'H1'})
-check('remove takes it out', not L._is_mechanics('H1'))
+L.apply_edit({'op': 'remove', 'target': 'P1'})
+check('remove takes it out', not L._is_mechanics('P1'))
 
 refused(L, {'op': 'set', 'target': 'Board', 'attrs': {'shapes': []}},
         'setting the shapes')
@@ -479,10 +479,10 @@ refused(L, {'op': 'add', 'type': 'Mechanics', 'params': {'f': 0.5}},
         'a parameter a mechanics does not take')
 refused(L, {'op': 'align', 'target': 'Board', 'beam': 'b0',
             'beam_index': 0, 'point': [0.1, 0.0]},
-        'aligning hardware to a beam')
+        'aligning a body to a beam')
 refused(L, {'op': 'slide', 'target': 'Board', 'beam': 'b0',
             'beam_index': 0, 'distance': 0.05},
-        'sliding hardware along a beam')
+        'sliding a body along a beam')
 
 
 print('--- undo and redo keep identity ---')
@@ -589,9 +589,9 @@ mt.attach(M1, keep_pose=True)
 
 try:
     mt.attach(Mechanics(name='other'))
-    check('hardware cannot stand on hardware', False)
+    check('a body cannot stand on a body', False)
 except ValueError as e:
-    check('hardware cannot stand on hardware', True, '(%s)' % str(e)[:40])
+    check('a body cannot stand on a body', True, '(%s)' % str(e)[:40])
 try:
     Mechanics(name='x').attach(object())
     check('nor on something with no pose', False)
@@ -656,9 +656,9 @@ refused(L, {'op': 'set', 'target': 'BB1',
 refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'b0'}},
         'attaching to a source')
 refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'BB1'}},
-        'attaching to hardware')
+        'attaching to another body')
 refused(L, {'op': 'remove', 'target': 'M1'},
-        'removing an optics with hardware attached')
+        'removing an optics with a body attached')
 
 L.apply_edit({'op': 'set', 'target': 'BB1',
               'attrs': {'offset': [0.05, 0.0], 'offset_angle': 0.1}})
@@ -1021,7 +1021,7 @@ lib_bad = os.path.join(WORK, 'mech_models_bad.json')
 with open(lib_bad, 'w', encoding='utf-8') as f:
     json.dump({'models': {'GOOD': {'shapes': [
                    {'type': 'circle', 'center': [0, 0], 'radius': 0.01,
-                    'thickness': 0}], 'layer': 'hardware'},
+                    'thickness': 0}], 'layer': 'mechanics'},
                'BAD': {'shapes': [{'type': 'blob'}]}}}, f)
 try:
     load_models(lib_bad)
@@ -1118,16 +1118,16 @@ check('the scene says which bodies resize, and at what size',
 print('--- adding from the library, and the mechlib channel ---')
 
 L = fresh()
-L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'H1',
+L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'P1',
               'params': {'model': 'MOUNT-25', 'attached_to': 'M1'}})
-h1 = L.get_mechanics('H1')
+h1 = L.get_mechanics('P1')
 check('an add naming a model takes its shapes off the shelf',
       h1.model == 'MOUNT-25' and len(h1.shapes) == 8
       and h1.attached_to is L.get_optics('M1'))
-L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'H2',
+L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'P2',
               'params': {'model': 'BB3030', 'center': [1.0, 1.0]}})
 check('  and a board from the shelf still resizes',
-      L.get_mechanics('H2').resizable)
+      L.get_mechanics('P2').resizable)
 refused(L, {'op': 'add', 'type': 'Mechanics',
             'params': {'model': 'NO-SUCH'}}, 'a model not in the library')
 

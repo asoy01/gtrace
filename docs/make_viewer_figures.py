@@ -10,7 +10,7 @@ whenever the viewer's appearance changes, so that the tutorial does not
 end up describing a version of the interface that no longer exists.
 
 The layouts are the ones the tutorial builds - the three mirrors it
-opens with, and the small bench it puts hardware on - so the pictures
+opens with, and the small bench it stands in mounts - so the pictures
 and the text agree. The last figure is of the shape editor, which is
 the same front end handed a part instead of a bench.
 '''
@@ -90,7 +90,7 @@ def make_layout():
 
 def make_bench():
     '''
-    The small bench the tutorial puts hardware on: a lens and two
+    The small bench the tutorial stands in mounts: a lens and two
     steering mirrors on a breadboard, each in a mount of its own.
     '''
     L1 = opt.Lens(f=250 * mm, center=[0.28, 0.0], normAngleHR=np.pi,
@@ -303,7 +303,7 @@ FIGURES = [
                                button: 0, bubbles: true, cancelable: true}));
     });
 '''),
-    ('viewer_hardware.png', 'bench', '''
+    ('viewer_mechanics.png', 'bench', '''
     /* The mount under the first steering mirror, selected so that the
        panel shows what an attached body is: a host to stand on and an
        offset from it, with the pose greyed out because it is derived

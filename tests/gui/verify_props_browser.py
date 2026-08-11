@@ -1092,7 +1092,7 @@ check('the buttons are on two rows', len(res['headRows']) == 2,
       str(res['headRows']))
 check('what adds to the layout on the first',
       res['headRows'][0] == ['+ Mirror', '+ Lens', '+ Source',
-                             '+ Hardware'],
+                             '+ Mechanics'],
       str(res['headRows'][0]))
 # One control per kind of thing, with the variants of a kind behind it.
 # Five buttons apiece read as five unrelated things - a cylindrical

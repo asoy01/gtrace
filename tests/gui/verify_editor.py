@@ -92,7 +92,7 @@ scene = ed.scene_dict()
 check('the scene is strict JSON', json.dumps(scene) is not None)
 check('it says it is an editor, and what of',
       scene['editor']['name'] == 'P1'
-      and scene['editor']['layer'] == 'hardware',
+      and scene['editor']['layer'] == 'mechanics',
       json.dumps(scene['editor']))
 check('the shapes are listed with the index a message names them by',
       [s['index'] for s in scene['shapes']] == [0, 1]
@@ -109,7 +109,7 @@ rect = [s for s in scene['canvas']['layers'][0]['shapes']
 check('drawn in the local frame, not where the body stands',
       np.allclose(rect['point'], [-0.02, -0.01]))
 
-check('no beams, optics or hardware in it',
+check('no beams, optics or bodies in it',
       scene['beams'] == [] and scene['optics'] == []
       and scene['mechanics'] == [])
 kinds = set(p['kind'] for p in scene['snap'])
@@ -405,7 +405,7 @@ n0 = len(L.scene_dict()['canvas']['layers'][-1]['shapes'])
 ed.apply_edit({'op': 'add_shape', 'type': 'circle'})
 layers = dict((ly['name'], ly) for ly in L.scene_dict()['canvas']['layers'])
 check('a shape added in the editor is in the layout at its next draw',
-      len(layers['hardware']['shapes']) == len(mt.shapes))
+      len(layers['mechanics']['shapes']) == len(mt.shapes))
 check('  and the body is still attached, still where it was',
       mt.attached_to is L.get_optics('M1')
       and np.allclose(mt.center, L.get_optics('M1').center))

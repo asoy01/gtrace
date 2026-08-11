@@ -34,7 +34,8 @@ import numpy as np
 
 import gtrace.optcomp as optcomp
 from gtrace.beam import GaussianBeam
-from gtrace.mechanics import (Mechanics, from_model as mechanics_from_model,
+from gtrace.mechanics import (Mechanics, DEFAULT_LAYER as MECHANICS_LAYER,
+                              from_model as mechanics_from_model,
                               models as mechanics_models,
                               model_shapes as mechanics_model_shapes,
                               model_params as mechanics_model_params)
@@ -310,8 +311,8 @@ DRAW_OPTIONS = {
     #: Whether to annotate each optics with its name. On, since optics
     #: carry no other label.
     'drawOpticsNames': True,
-    #: Whether to annotate each mechanics with its name. Off: the
-    #: hardware is background to the optics, and a breadboard with its
+    #: Whether to annotate each mechanics with its name. Off: a
+    #: body is background to the optics, and a breadboard with its
     #: name across it labels the one thing on the bench nobody needed
     #: named. The panel says what was clicked either way.
     'drawMechanicsNames': False,
@@ -841,7 +842,7 @@ def mechanics_from_dict(d):
         return Mechanics(shapes=[shape_from_dict(s)
                                  for s in d.get('shapes', [])],
                          name=d['name'],
-                         layer=d.get('layer', 'hardware'),
+                         layer=d.get('layer', MECHANICS_LAYER),
                          model=d.get('model', None),
                          attached_to=str(d['attached_to']),
                          offset=d.get('offset', [0.0, 0.0]),
@@ -852,7 +853,7 @@ def mechanics_from_dict(d):
                      center=d.get('center', [0.0, 0.0]),
                      rotationAngle=d.get('rotationAngle', 0.0),
                      name=d['name'],
-                     layer=d.get('layer', 'hardware'),
+                     layer=d.get('layer', MECHANICS_LAYER),
                      model=d.get('model', None),
                      params=d.get('params'))
 
@@ -1504,7 +1505,7 @@ class OpticalLayout(object):
         '''
         Remove the optics with the given name from the layout.
 
-        An optics with hardware attached is refused: the mounts would
+        An optics with a body attached is refused: the mounts would
         be left standing on something no longer there, with a pose
         derived from a ghost. Detaching them - which leaves each one
         exactly where it stands - or removing them first says what is
@@ -1605,10 +1606,10 @@ class OpticalLayout(object):
         '''
         return self.unique_optics_name(prefix)
 
-    def unique_mechanics_name(self, prefix='H'):
+    def unique_mechanics_name(self, prefix='P'):
         '''
         Return a name of the form prefix + number that nothing in the
-        layout uses. The same namespace again; H for hardware, since M
+        layout uses. The same namespace again; P for part, since M
         already means a mirror.
         '''
         return self.unique_optics_name(prefix)
@@ -2039,7 +2040,7 @@ class OpticalLayout(object):
                     raise EditError("No optics named %r in the layout."
                                     % (name,))
                 except ValueError as e:
-                    # An optics with hardware attached; the message
+                    # An optics with a body attached; the message
                     # already says what to do about it.
                     raise EditError(str(e))
 
@@ -2740,11 +2741,11 @@ class OpticalLayout(object):
 
         drawAllOptics(canvas, self.optics, drawName=opt['drawOpticsNames'])
 
-        # The hardware, on its own layer, so that CAD - and the layer
-        # panel of the viewer - can switch it off as one thing. Its
-        # names have an option of their own, off by default: the
-        # hardware is background, and a name across a breadboard
-        # labels what nobody needed named.
+        # The mechanics, on their own layer, so that CAD - and the
+        # layer panel of the viewer - can switch them off as one
+        # thing. Their names have an option of their own, off by
+        # default: a body is background, and a name across a
+        # breadboard labels what nobody needed named.
         for m in self.mechanics:
             m.draw(canvas, drawName=opt['drawMechanicsNames'])
 
@@ -2806,11 +2807,11 @@ class OpticalLayout(object):
         # there like any other - and a front end that cannot tell them
         # apart can neither draw the laser nor offer to edit it.
         scene['sources'] = self.sources_dict()
-        # The hardware. Its shapes are already in the canvas, drawn on
-        # their own layer; this channel is what lets a front end point
-        # at a body - pick it by its outline, and edit its pose.
+        # The mechanics. Their shapes are already in the canvas, drawn
+        # on their own layer; this channel is what lets a front end
+        # point at a body - pick it by its outline, and edit its pose.
         scene['mechanics'] = self.mechanics_dict()
-        # What the hardware library has on its shelf, so a front end
+        # What the model library has on its shelf, so a front end
         # can offer to add one. Names and descriptions only: the
         # shapes stay on the Python side, which builds the body when
         # asked.

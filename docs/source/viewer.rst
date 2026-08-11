@@ -112,7 +112,7 @@ Editing
 
 In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements and sources can be added, removed and renamed, and distances can be measured off the drawing (``Measure``).
 
-There is one add button per kind of thing — ``+ Mirror``, ``+ Lens``, ``+ Source``, ``+ Hardware`` — and the two that have variants open on the choice between them, spherical or cylindrical. A cylindrical mirror is a mirror; offered as a button of its own it read as an unrelated fifth thing, and five of them wrapped in a side bar this narrow. ``+ Hardware`` opens on the model library instead, which is a list rather than a pair.
+There is one add button per kind of thing — ``+ Mirror``, ``+ Lens``, ``+ Source``, ``+ Mechanics`` — and the two that have variants open on the choice between them, spherical or cylindrical. A cylindrical mirror is a mirror; offered as a button of its own it read as an unrelated fifth thing, and five of them wrapped in a side bar this narrow. ``+ Mechanics`` opens on the model library instead, which is a list rather than a pair.
 
 Each edit is applied to the registered object, the layout is re-traced, and the new scene is pushed back into the view — keeping your current zoom, pan and layer visibility, so the picture does not jump underneath you.
 
@@ -227,14 +227,14 @@ A focal length the blank cannot be ground to is refused, with the reason shown i
 
 The **Anchor** row says which point the element is held by — **HR center**, the apex of the front face, or **substrate center**, the middle of the glass. It is the point that stays put when a curvature changes and the point the element turns about. A mirror pins its HR face, so that sweeping a telescope's radii does not walk the beam spot off it; a lens pins its middle, since the beam goes through. See :ref:`changing-a-curvature` for what this moves.
 
-.. _hardware-in-the-viewer:
+.. _mechanics-in-the-viewer:
 
-Hardware
-^^^^^^^^^
+Mechanics
+^^^^^^^^^^
 
-Bodies drawn on the ``hardware`` layer — breadboards, mounts, clamps — are picked, dragged and edited like anything else, with two differences that come from what they are.
+Bodies drawn on the ``mechanics`` layer — breadboards, mounts, clamps, the wall of a vacuum tank — are picked, dragged and edited like anything else, with two differences that come from what they are.
 
-**They are picked last.** A breadboard covers most of a bench, so a click lands on the beam or the element in front of it first, and only reaches the board where nothing else is. Where several bodies overlap the smallest wins, so a mount standing on a board is not shadowed by it. A mount hidden entirely under its own mirror is reached by clicking the same place again: the cycle that steps from an element down through the beams under it ends on the hardware.
+**They are picked last.** A breadboard covers most of a bench, so a click lands on the beam or the element in front of it first, and only reaches the board where nothing else is. Where several bodies overlap the smallest wins, so a mount standing on a board is not shadowed by it. A mount hidden entirely under its own mirror is reached by clicking the same place again: the cycle that steps from an element down through the beams under it ends on the body.
 
 **They are dragged only once selected.** A press on an unselected board means "pan the view" far more often than it means "move the bench", so the first click selects and only then does dragging move it. An attached body is never dragged at all — it goes where its host goes, and its host is right there to be dragged.
 
@@ -244,7 +244,7 @@ A body with a size — a breadboard, or anything else built with parameters — 
 
 The properties panel of an attached body shows what it is attached to, and its pose greyed out — those numbers are derived from the host, so there is nothing there to type into. **Attached to** is a menu of the elements: choosing one seats the body at its model's own place, and ``(free)`` cuts it loose where it stands. **Offset x/y** and **Offset angle** are the deliberate departure from that place.
 
-Names are not drawn for hardware. A bench has more of it than it has optics, and a picture labelled with three mounts and a board says less than one that is not; ``drawMechanicsNames=True`` puts them back.
+Names are not drawn for a body. A bench has more of them than it has optics, and a picture labelled with three mounts and a board says less than one that is not; ``drawMechanicsNames=True`` puts them back.
 
 .. _the-shape-editor:
 

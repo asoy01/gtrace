@@ -78,12 +78,12 @@ __status__ = "Beta"
 
 #: The layer a Mechanics is drawn on unless told otherwise. A layer of
 #: its own, because a layer is exactly the mechanism CAD offers for
-#: something you want to be able to switch off: the hardware can be
+#: something you want to be able to switch off: the bodies can be
 #: hidden without touching the optics or the beams.
-DEFAULT_LAYER = 'hardware'
+DEFAULT_LAYER = 'mechanics'
 
-#: Color of that layer: a grey, so the hardware reads as background to
-#: the beams and optics rather than competing with them.
+#: Color of that layer: a grey, so a body reads as background to the
+#: beams and optics rather than competing with them.
 LAYER_COLOR = (110, 110, 110)
 
 #}}}
@@ -300,7 +300,7 @@ class Mechanics(object):
     shapes : list of gtrace.draw.Shape
         The geometry, in local coordinates.
     layer : str
-        The layer the body is drawn on. Defaults to 'hardware'.
+        The layer the body is drawn on. Defaults to 'mechanics'.
     model : str or None
         The catalogue model the shapes came from, if any. A label, not
         a reference: the shapes saved with a layout are the truth, and
@@ -320,7 +320,7 @@ class Mechanics(object):
     '''
 
     def __init__(self, shapes=None, center=None, rotationAngle=None,
-                 name='Hardware', layer=DEFAULT_LAYER, model=None,
+                 name='Mechanics', layer=DEFAULT_LAYER, model=None,
                  attached_to=None, offset=None, offset_angle=0.0,
                  params=None):
         self.name = name
@@ -432,8 +432,8 @@ class Mechanics(object):
         ----------
         host : gtrace.optcomp.Optics
             The optics to stand on. Only an optics: a chain of
-            hardware standing on hardware is a graph to walk and a
-            cycle to forbid, and nothing on a bench has needed it.
+            bodies standing on bodies is a graph to walk and a cycle
+            to forbid, and nothing on a bench has needed it.
         offset : array-like or None, optional
             Where the local origin stands in the host's frame (its
             substrate centre, x along the HR normal). None - the

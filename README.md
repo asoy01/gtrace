@@ -64,7 +64,7 @@ Run the cells from the top. The viewer appears in the cell output, which
 is the part that wants `anywidget`; everything else works without it. The
 notebook writes its results next to itself — `tutorial_viewer.html`,
 `tutorial_layout.json` and `tutorial_layout.dxf` from the last chapter,
-and `bench_parts.json` from the section on hardware.
+and `bench_parts.json` from the section on mechanics.
 
 To read it rather than run it:
 <https://gtrace.readthedocs.io/en/latest/tutorial.html>.

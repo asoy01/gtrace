@@ -1,5 +1,5 @@
 '''
-The hardware in a real browser: that a breadboard can be picked by its
+The mechanics in a real browser: that a breadboard can be picked by its
 area and only by its area, that everything else wins the click over it,
 and that its pose is edited the way the others are - panel, drag,
 Shift-drag - with every message fed back to Python and compared.
@@ -15,7 +15,7 @@ wins, for the same reason.
 The second is that a mechanics is grabbed only while it is selected.
 A breadboard can cover most of the bench, and a press on it usually
 means "pan the view"; so the first click selects, and only then does a
-drag move the hardware. The check drags an unselected board and
+drag move the body. The check drags an unselected board and
 requires the view to move and the board to stay.
 '''
 
@@ -224,10 +224,10 @@ var EDITABLE = __EDITABLE__;
         out.clickOff = panel();
 
         // --- a hidden layer is unpickable ---
-        v.setLayerVisible('hardware', false);
+        v.setLayerVisible('mechanics', false);
         clickAt(screenOf(BOARD_PT));
         out.clickHidden = panel();
-        v.setLayerVisible('hardware', true);
+        v.setLayerVisible('mechanics', true);
 
         // --- panning is not moving ---
         // The board is not selected: a drag across it pans the view and
@@ -338,11 +338,11 @@ var EDITABLE = __EDITABLE__;
             out.editOffset = sent[before] || null;
         }
 
-        // --- hardware under an element, reached by cycling ---
+        // --- a body under an element, reached by cycling ---
         // The board runs under M1, and M1's pick circle wins the
         // click; a mount with no offset is in exactly this position,
         // covered completely by its own mirror. Clicking the same
-        // spot again walks element -> beams -> hardware, so the board
+        // spot again walks element -> beams -> body, so the board
         // has to turn up within one lap.
         clickAt(screenOf(OFF_PT));
         var reached = null;
@@ -358,7 +358,7 @@ var EDITABLE = __EDITABLE__;
         out.cycleWraps = panel();
 
         // --- the model library menu ---
-        var hm = v.hardwareMenu;
+        var hm = v.mechMenu;
         out.hwMenu = {
             shown: !!hm && hm.wrap.style.display !== 'none',
             items: hm ? Array.prototype.map.call(
@@ -495,14 +495,14 @@ check('an optics standing on the board wins over it',
       json.dumps(res['clickOptic']))
 check('a click off everything lets go of the board',
       res['clickOff']['beamShown'] and not res['clickOff']['selectedMech'])
-check('a hidden hardware layer is unpickable',
+check('a hidden mechanics layer is unpickable',
       not res['clickHidden']['selectedMech']
       and res['clickHidden']['beamShown'], json.dumps(res['clickHidden']))
 
 print('--- the panel ---')
 f = res['boardFields']
 check('name, type and layer', f['name'] == 'Board'
-      and f['type'] == 'Mechanics' and f['layer'] == 'hardware',
+      and f['type'] == 'Mechanics' and f['layer'] == 'mechanics',
       json.dumps({k: f[k] for k in ['name', 'type', 'layer']}))
 check('the pose in metres and degrees',
       abs(float(f['cx']) - board['center'][0]) < 1e-12
@@ -677,8 +677,8 @@ if eo:
           str(list(clamp_m.center)))
     layout.apply_edit({'op': 'undo'})
 
-print('--- hardware under an element, reached by cycling ---')
-check('clicking the same spot again reaches the hardware under M1',
+print('--- a body under an element, reached by cycling ---')
+check('clicking the same spot again reaches the body under M1',
       res['cycleToMech'] and res['cycleToMech']['mech'] == 'Board',
       json.dumps(res['cycleToMech']))
 check('and the next click wraps back to the mirror',
@@ -687,7 +687,7 @@ check('and the next click wraps back to the mirror',
       json.dumps(res['cycleWraps']))
 
 print('--- the model library menu ---')
-check('+ Hardware lists exactly the library shelf',
+check('+ Mechanics lists exactly the library shelf',
       res['hwMenu']['shown']
       and set(res['hwMenu']['items'])
           == set(e['name'] for e in scene['mechlib']),
@@ -771,7 +771,7 @@ if res is None:
     print('  FAIL  no output')
     sys.exit(1)
 check('ran without exception', res['error'] is None, str(res['error'])[:500])
-check('a click still shows the hardware',
+check('a click still shows the body',
       res['clickBoard']['mechShown']
       and res['clickBoard']['selectedMech'] == 'Board')
 f = res['boardFields']
@@ -781,7 +781,7 @@ check('the clamp still names its host',
       res['clampFields']['attached'] == 'M1'
       and res['clampFields']['attached_shown'])
 check('no Remove on offer', not res['removeShown'])
-check('no hardware menu either', not res['hwMenu']['shown'])
+check('no model menu either', not res['hwMenu']['shown'])
 check('and no resize handles',
       all(not h['shown'] for h in res['handles']))
 check('nothing was ever sent', res['sent'] == [], str(res['sent'][:2]))

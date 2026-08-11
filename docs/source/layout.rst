@@ -244,8 +244,8 @@ What a dimension comes to is worked out afresh every time the scene is built, ne
 
 The question behind that is :py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>`, which asks the optics itself rather than describing its faces a second time. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when it is approached from outside, so from inside a substrate it finds nothing at all — and that is the whole of the test. Ends lying exactly on a face count as inside, since that is where such a measurement is usually taken from.
 
-Hardware
----------
+Mechanics
+----------
 
 A bench is not only light. What holds the optics takes up room, bumps into things and has to be bolted somewhere, so a layout carries that too. A :py:class:`Mechanics<gtrace.mechanics.Mechanics>` is a named body of drawing primitives that the trace never sees:
 
@@ -261,7 +261,7 @@ A bench is not only light. What holds the optics takes up room, bumps into thing
 
 The shapes are in the body's **own** coordinates and the pose carries them onto the bench: ``center`` is where the local origin lands, ``rotationAngle`` how far the body is turned about it. The shapes never change when the body moves, which is what lets one drawing serve every copy of a part; :py:meth:`world_shapes<gtrace.mechanics.Mechanics.world_shapes>` is where they are, and it builds new primitives rather than moving the ones you hold.
 
-A body is drawn, picked, measured, saved and exported like anything else, and it is invisible to the beams — adding, moving or editing one does not invalidate a trace. It goes on the ``hardware`` layer by default, so a DXF or the viewer's layer panel can take all of it out of the way at once. What a click lands on is decided by :py:meth:`contains<gtrace.mechanics.Mechanics.contains>`, a point-in-polygon test against the body's :py:meth:`outline<gtrace.mechanics.Mechanics.outline>`; of several bodies under one point the smallest wins, so a mount standing on a breadboard is not shadowed by it.
+A body is drawn, picked, measured, saved and exported like anything else, and it is invisible to the beams — adding, moving or editing one does not invalidate a trace. It goes on the ``mechanics`` layer by default, so a DXF or the viewer's layer panel can take all of it out of the way at once. What a click lands on is decided by :py:meth:`contains<gtrace.mechanics.Mechanics.contains>`, a point-in-polygon test against the body's :py:meth:`outline<gtrace.mechanics.Mechanics.outline>`; of several bodies under one point the smallest wins, so a mount standing on a breadboard is not shadowed by it.
 
 Attached to an optics
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -314,8 +314,8 @@ The stock models are generic on purpose — ``BB3030``, ``MOUNT-25``, ``HOLDER-5
 
 A body built by one of these keeps the parameters it was built from, in ``params``, which is what makes it resizable: :py:meth:`resize<gtrace.mechanics.Mechanics.resize>` re-drills a breadboard at the new size rather than scaling it, so the holes keep their diameter and their pitch.
 
-Editing hardware from a front end
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Editing a body from a front end
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The same operations reach a body, with its own whitelist (``EDITABLE_MECHANICS_ATTRS``: ``center``, ``rotationAngle``, ``attached_to``, ``offset``, ``offset_angle``, ``width`` and ``height``):
 
@@ -356,15 +356,15 @@ The editor holds the ``Mechanics`` **by reference**, like everything else here, 
 Scene channels for a front end
 -------------------------------
 
-:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds eight entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` — the points of the optics a front end may snap a measurement to — ``sources`` and ``rules``, and ``mechanics`` and ``mechlib`` for the hardware.
+:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds eight entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` — the points of the optics a front end may snap a measurement to — ``sources`` and ``rules``, and ``mechanics`` and ``mechlib`` for the bodies.
 
 ``sources`` is what says which of the beams the user put there. Nothing else can: a source is traced from a *copy* of itself, so its own beam sits in ``beams`` looking exactly like the ones the trace made from it. Each entry carries where the laser stands, which way it fires, and the light it emits — including the waist, worked out on this side rather than stored, for the same reason a dimension's length is. ``rules`` carries the tracing rules, which are not a property of any element but decide how much of the picture there is.
 
 Each dimension carries a ``line``, the two ends its line lands on once the offset is applied, so that only one place has an opinion about which side the offset goes.
 
-``mechanics`` carries each body's pose, what it is attached to, and the outline a front end picks it by — worked out here, since it is the same polygon :py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against and there is no reason for a browser to have a second opinion about it. ``mechlib`` is the model library as names and descriptions, which is what the ``+ Hardware`` menu is; the shapes stay on this side until one is chosen.
+``mechanics`` carries each body's pose, what it is attached to, and the outline a front end picks it by — worked out here, since it is the same polygon :py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against and there is no reason for a browser to have a second opinion about it. ``mechlib`` is the model library as names and descriptions, which is what the ``+ Mechanics`` menu is; the shapes stay on this side until one is chosen.
 
-``snap`` carries the four corners of each substrate, the apex of each face and the middle, and the centre of every screw hole in the hardware. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
+``snap`` carries the four corners of each substrate, the apex of each face and the middle, and the centre of every screw hole a body carries. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
 
 Undo and redo
 --------------

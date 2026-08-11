@@ -239,7 +239,7 @@
     stroke-dasharray: none;
 }
 
-/* Corner handles of the selected, resizable hardware: dragging one
+/* Corner handles of the selected, resizable body: dragging one
    cuts a breadboard to a new size (Python re-drills the grid). The
    blue of a selection, filled white so they read as grips. */
 .gt-mech-handle {
@@ -734,8 +734,8 @@
 }
 
 /* The grips of the shape on show: a corner of a rectangle, a point on
-   a circle, a vertex of an outline. The white-on-blue of the hardware
-   handles, since they are the same gesture on a smaller thing - and
+   a circle, a vertex of an outline. The white-on-blue of the corner
+   handles of a body, since they are the same gesture on a smaller thing - and
    filled solid for the vertex the panel is showing, which is the one
    the numbers below answer for. */
 .gt-shape-handle {
