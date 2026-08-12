@@ -264,6 +264,49 @@ def shape_centre(s):
 
 #}}}
 
+#{{{ The frame a body attaches to
+
+def host_pose(host):
+    '''
+    Where a host stands and which way it is turned.
+
+    An optics is turned by the normal of its HR face and a body by its
+    own angle. That is the only difference between standing on a mirror
+    and standing on a pedestal, so it is written down once here rather
+    than at each of the three places that attach, derive and detach.
+
+    Parameters
+    ----------
+    host : gtrace.optcomp.Optics or Mechanics
+
+    Returns
+    -------
+    (numpy.ndarray, float)
+        The host's centre, and its angle in radians.
+
+    Raises
+    ------
+    ValueError
+        If the object has no pose to attach to.
+    '''
+    if isinstance(host, Mechanics):
+        return (np.asarray(host.center, dtype='float64'),
+                float(host.rotationAngle))
+    if hasattr(host, 'center') and hasattr(host, 'normAngleHR'):
+        return (np.asarray(host.center, dtype='float64'),
+                float(host.normAngleHR))
+    raise ValueError('%r has no pose to attach to.' % (host,))
+
+def _turn(p, angle):
+    '''
+    A local vector carried into a frame turned by angle.
+    '''
+    ca, sa = np.cos(angle), np.sin(angle)
+    p = np.asarray(p, dtype='float64')
+    return np.array([p[0] * ca - p[1] * sa, p[0] * sa + p[1] * ca])
+
+#}}}
+
 #{{{ Mechanics
 
 class Mechanics(object):
@@ -322,7 +365,8 @@ class Mechanics(object):
     def __init__(self, shapes=None, center=None, rotationAngle=None,
                  name='Mechanics', layer=DEFAULT_LAYER, model=None,
                  attached_to=None, offset=None, offset_angle=0.0,
-                 params=None):
+                 params=None, points=None, attach_point=None,
+                 fix_rotation=True):
         self.name = name
         self.shapes = list(shapes) if shapes is not None else []
         self.layer = str(layer)
@@ -335,6 +379,33 @@ class Mechanics(object):
         #: None for a body drawn by hand, which has no parameters to
         #: rebuild from.
         self.params = None if params is None else dict(params)
+
+        #: Named points of the part, in local coordinates: the screw
+        #: hole under a mount, the axis of a pedestal, the bore of a
+        #: clamping fork. A drag settles on them and a measurement
+        #: reaches them, and they are what one part is stood on
+        #: another by - so they are a property of the part rather than
+        #: of the layout, and travel with the model.
+        self.points = {}
+        for k, v in (points or {}).items():
+            self.points[str(k)] = np.array(v, dtype='float64')
+
+        #: Which point of this body is pinned to the host, in local
+        #: coordinates. The origin by default, which is the convention
+        #: every mount is drawn to; a pedestal clamped by a fork is
+        #: pinned by the bore the fork closes around instead, and that
+        #: is also the point it turns about.
+        self.attach_point = (np.zeros(2) if attach_point is None
+                             else np.array(attach_point, dtype='float64'))
+
+        #: Whether the turn relative to the host is frozen. True - the
+        #: default - is a mount bolted to its mirror: it faces where
+        #: the host faces and there is nothing to edit. False is a
+        #: clamping fork, which may be swung about the point it is
+        #: pinned by. Either way the body turns *with* the host: what
+        #: this decides is who may change the relative angle, not how
+        #: the pose is derived.
+        self.fix_rotation = bool(fix_rotation)
 
         #: The host object, or None. A name given instead is kept in
         #: _attach_name until a layout resolves it; the pose refuses to
@@ -381,13 +452,13 @@ class Mechanics(object):
         self._require_link()
         if self.attached_to is None:
             return self._center
-        host = self.attached_to
-        a = float(host.normAngleHR)
-        ca, sa = np.cos(a), np.sin(a)
-        off = self.offset
-        return (np.asarray(host.center, dtype='float64')
-                + np.array([off[0] * ca - off[1] * sa,
-                            off[0] * sa + off[1] * ca]))
+        hc, ha = host_pose(self.attached_to)
+        # The attach point lands at the offset, in the host's frame;
+        # the local origin is wherever that leaves it. With the
+        # default attach point of [0, 0] the second term vanishes and
+        # this is the rule every mount was already drawn to.
+        return (hc + _turn(self.offset, ha)
+                - _turn(self.attach_point, ha + self.offset_angle))
 
     @center.setter
     def center(self, value):
@@ -402,18 +473,27 @@ class Mechanics(object):
         self._require_link()
         if self.attached_to is None:
             return self._rotationAngle
-        return float(self.attached_to.normAngleHR) + self.offset_angle
+        return host_pose(self.attached_to)[1] + self.offset_angle
 
     @rotationAngle.setter
     def rotationAngle(self, value):
         if self.attached_to is not None or self._attach_name is not None:
-            raise ValueError(
-                "'%s' is attached: it turns as its host turns. Detach it "
-                'first, or change the offset angle.' % self.name)
+            if self.fix_rotation:
+                raise ValueError(
+                    "'%s' is attached with its turn fixed: it faces where "
+                    "its host faces. Set fix_rotation=False to swing it, "
+                    'or detach it.' % self.name)
+            # Free to swing, about the point it is pinned by: the
+            # relative angle is the thing that is really being set,
+            # and the position follows from it.
+            self._require_link()
+            self.offset_angle = (float(value)
+                                 - host_pose(self.attached_to)[1])
+            return
         self._rotationAngle = float(value)
 
     def attach(self, host, offset=None, offset_angle=None,
-               keep_pose=False):
+               keep_pose=None, attach_point=None, fix_rotation=None):
         '''
         Stand this body on an optics. From here on its pose is derived
         from the host's - move the mirror and the mount comes along,
@@ -430,32 +510,57 @@ class Mechanics(object):
 
         Parameters
         ----------
-        host : gtrace.optcomp.Optics
-            The optics to stand on. Only an optics: a chain of
-            bodies standing on bodies is a graph to walk and a cycle
-            to forbid, and nothing on a bench has needed it.
+        host : gtrace.optcomp.Optics or Mechanics
+            What to stand on. A body may stand on another body - a
+            pedestal on a mount, a fork on a pedestal - and the chain
+            follows the optics at the root of it. A cycle is refused.
         offset : array-like or None, optional
             Where the local origin stands in the host's frame (its
             substrate centre, x along the HR normal). None - the
             default - is ``[0, 0]``: the designed position.
         offset_angle : float or None, optional
             The turn relative to the host. None is 0: squarely on it.
-        keep_pose : bool, optional
+        keep_pose : bool or None, optional
             Derive the offset and the angle from where the body stands
             now instead, so that attaching changes what moves it and
-            not where it is. For pinning something that was placed by
-            eye; offset and offset_angle must be left None with it.
+            not where it is; offset and offset_angle must be left None
+            with it. None - the default - decides by the host: a body
+            standing on an **optics** goes to the model's designed
+            place, since a mount's position on its mirror is unique
+            and drawn into the shapes; a body standing on another
+            **body** keeps where it is, since which hole of a mount a
+            pedestal sits in is a choice made on the bench and not by
+            the library.
+        attach_point : array-like or None, optional
+            Which point of this body is pinned, in local coordinates.
+            None keeps whatever it already had (the origin, unless
+            something else was said). This is also the point the body
+            turns about when its turn is free.
+        fix_rotation : bool or None, optional
+            Whether the turn relative to the host is frozen. None
+            keeps the current setting.
 
         Returns
         -------
         self : Mechanics
+
+        Raises
+        ------
+        ValueError
+            If the host has no pose, or if standing on it would make a
+            cycle.
         '''
-        if isinstance(host, Mechanics):
-            raise ValueError(
-                'A mechanics attaches to an optics, not to another '
-                'mechanics: the attachment is one-way by design.')
-        if not (hasattr(host, 'center') and hasattr(host, 'normAngleHR')):
-            raise ValueError('%r has no pose to attach to.' % (host,))
+        hc, ha = host_pose(host)
+        self._refuse_cycle(host)
+        if attach_point is not None:
+            self.attach_point = np.array(attach_point, dtype='float64')
+        if fix_rotation is not None:
+            self.fix_rotation = bool(fix_rotation)
+        if keep_pose is None:
+            # An offset given explicitly is an answer to the same
+            # question, and the explicit one wins.
+            keep_pose = (isinstance(host, Mechanics)
+                         and offset is None and offset_angle is None)
 
         if keep_pose:
             if offset is not None or offset_angle is not None:
@@ -465,11 +570,10 @@ class Mechanics(object):
                     'question.')
             # The current world pose, read before the switch. It works
             # whether the body is free or already attached to
-            # something else.
-            ha = float(host.normAngleHR)
-            d = self.center - np.asarray(host.center, dtype='float64')
-            ca, sa = np.cos(-ha), np.sin(-ha)
-            offset = [d[0] * ca - d[1] * sa, d[0] * sa + d[1] * ca]
+            # something else. What is pinned is the attach point, so
+            # that is the point whose place is kept.
+            here = self.center + _turn(self.attach_point, self.rotationAngle)
+            offset = _turn(here - hc, -ha)
             offset_angle = self.rotationAngle - ha
         else:
             if offset is None:
@@ -482,6 +586,46 @@ class Mechanics(object):
         self.offset = np.array(offset, dtype='float64')
         self.offset_angle = float(offset_angle)
         return self
+
+    def _refuse_cycle(self, host):
+        '''
+        Refuse standing on something that already stands on this body.
+
+        A cycle would make the pose derive from itself, and since it
+        is derived on every read that is not a wrong answer but an
+        unbounded one.
+        '''
+        seen = host
+        while isinstance(seen, Mechanics):
+            if seen is self:
+                raise ValueError(
+                    "'%s' cannot stand on '%s': it already holds it up."
+                    % (self.name, getattr(host, 'name', host)))
+            seen = seen.attached_to
+
+    def hosts(self):
+        '''
+        What this body stands on, nearest first, ending at the optics
+        the chain hangs from. Empty for a free body.
+        '''
+        out = []
+        h = self.attached_to
+        while h is not None:
+            out.append(h)
+            h = getattr(h, 'attached_to', None) if isinstance(h, Mechanics) \
+                else None
+        return out
+
+    def world_points(self):
+        '''
+        The named points of this part, where they stand on the bench.
+
+        Returns
+        -------
+        dict
+            name -> numpy array of shape (2,).
+        '''
+        return dict((k, self.to_world(v)) for k, v in self.points.items())
 
     def detach(self):
         '''
@@ -673,6 +817,12 @@ class Mechanics(object):
         drawn by hand has no parameters, and is refused - its shapes
         are all anyone knows about it.
 
+        A round body has one size, not two. Either name sets its
+        diameter, and a message that gives both is taken at its word:
+        two that disagree are refused rather than resolved by picking
+        one, since a round board asked to be 300 by 400 is a
+        misunderstanding and not a size.
+
         Parameters
         ----------
         width, height : float or None, optional
@@ -688,6 +838,15 @@ class Mechanics(object):
                 "'%s' is not a resizable body: it was drawn by hand, so "
                 'edit its shapes instead.' % self.name)
         p = dict(self.params)
+        if kind in _ROUND:
+            if (width is not None and height is not None
+                    and float(width) != float(height)):
+                raise ValueError(
+                    "'%s' is round, so it has one size: %g and %g cannot "
+                    'both be it.' % (self.name, width, height))
+            if width is None:
+                width = height
+            height = width
         if width is not None:
             p['width'] = float(width)
         if height is not None:
@@ -702,9 +861,18 @@ class Mechanics(object):
     @property
     def resizable(self):
         '''
-        Whether resize() knows how to rebuild this body.
+        How resize() can rebuild this body, or None.
+
+        ``'round'`` for a body with one size - a round board is cut to
+        a diameter - and ``'box'`` for one with two. A front end needs
+        the difference: the rows it offers are Diameter or Width and
+        Height, and a corner dragged on a disc has no opposite corner
+        to hold still.
         '''
-        return bool(self.params and self.params.get('kind') in _RESIZABLE)
+        kind = self.params.get('kind') if self.params else None
+        if kind not in _RESIZABLE:
+            return None
+        return 'round' if kind in _ROUND else 'box'
 
     def edit(self, height=None, **kwargs):
         '''
@@ -742,22 +910,19 @@ class Mechanics(object):
         and the clipboard-of-the-future need. An attached body copies
         as attached, standing on the same host.
         '''
+        common = dict(shapes=list(self.shapes), name=self.name,
+                      layer=self.layer, model=self.model,
+                      params=self.params, points=self.points,
+                      attach_point=self.attach_point.copy(),
+                      fix_rotation=self.fix_rotation)
         if self.attached_to is not None or self._attach_name is not None:
-            m = Mechanics(shapes=list(self.shapes),
-                          name=self.name, layer=self.layer, model=self.model,
-                          attached_to=(self.attached_to
-                                       if self.attached_to is not None
-                                       else self._attach_name),
-                          offset=self.offset.copy(),
-                          offset_angle=self.offset_angle,
-                          params=self.params)
-            return m
-        m = Mechanics(shapes=list(self.shapes),
-                      center=self._center.copy(),
-                      rotationAngle=self._rotationAngle,
-                      name=self.name, layer=self.layer, model=self.model,
-                      params=self.params)
-        return m
+            return Mechanics(attached_to=(self.attached_to
+                                          if self.attached_to is not None
+                                          else self._attach_name),
+                             offset=self.offset.copy(),
+                             offset_angle=self.offset_angle, **common)
+        return Mechanics(center=self._center.copy(),
+                         rotationAngle=self._rotationAngle, **common)
 
 #}}}
 
@@ -834,18 +999,96 @@ def _breadboard_shapes(p):
                                            y0 + j * pitch], r))
     return shapes
 
+def round_breadboard(diameter, pitch=0.025, hole_diameter=0.006,
+                     margin=None, holes=True, **kwargs):
+    '''
+    A round breadboard: a disc with the same grid of mounting holes,
+    its local origin at the centre.
+
+    A vacuum tank is round, and so is the board that goes in the
+    bottom of it. The grid is the one a rectangular board is drilled
+    with - symmetric about the centre, on the pitch - and the edge
+    decides which of those holes exist: a hole is drilled where it
+    lies a margin in from the rim, and left out where it does not, so
+    the outermost rows come out shorter towards the edge the way a
+    real disc is drilled.
+
+    Parameters
+    ----------
+    diameter : float
+        Across the disc, in metres.
+    pitch : float, optional
+        Hole spacing. Defaults to 25 mm, as on a rectangular board.
+    hole_diameter : float, optional
+        Diameter of a hole. Defaults to 6 mm.
+    margin : float or None, optional
+        How far in from the rim a hole must be to be drilled. None -
+        the default - is half a pitch, which is the rectangular
+        board's rule read round.
+    holes : bool, optional
+        Whether to draw the grid at all.
+    **kwargs
+        Passed to Mechanics: name, center, rotationAngle, layer,
+        attached_to and the rest.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    # Width and height rather than a diameter of its own: a body's
+    # size is one thing, asked for in one place - the scene, the
+    # panel, resize() - and a round board is a body whose two sides
+    # are the same. resize() is what keeps them so.
+    params = {'kind': 'round_breadboard',
+              'width': float(diameter), 'height': float(diameter),
+              'pitch': float(pitch),
+              'hole_diameter': float(hole_diameter),
+              'margin': None if margin is None else float(margin),
+              'holes': bool(holes)}
+    return Mechanics(shapes=_round_breadboard_shapes(params), params=params,
+                     **kwargs)
+
+def _round_breadboard_shapes(p):
+    '''
+    The shapes of a round breadboard, from its parameters. The rim,
+    and the holes of the same grid that fall inside it.
+    '''
+    radius = p['width'] / 2.0
+    pitch = p['pitch']
+    shapes = [draw.Circle([0.0, 0.0], radius)]
+    m = pitch / 2.0 if p['margin'] is None else p['margin']
+    reach = radius - m
+    if p['holes'] and reach > 0:
+        r = p['hole_diameter'] / 2.0
+        # The grid is the same one a rectangular board carries -
+        # symmetric about the centre, on the pitch - and the rim only
+        # decides which of its holes are there.
+        n = int(np.floor(reach / pitch + 1e-9))
+        for i in range(-n, n + 1):
+            for j in range(-n, n + 1):
+                x, y = i * pitch, j * pitch
+                if np.hypot(x, y) <= reach + 1e-9:
+                    shapes.append(draw.Circle([x, y], r))
+    return shapes
+
 #: The parametric kinds resize() can rebuild, and how. A mount is
 #: deliberately not here: what its width means to the plate and the
 #: knobs is not a corner-drag's to decide.
-_RESIZABLE = {'breadboard': _breadboard_shapes}
+_RESIZABLE = {'breadboard': _breadboard_shapes,
+              'round_breadboard': _round_breadboard_shapes}
+
+#: The kinds that have one size rather than two, because they are
+#: round. A drag on one of these sets a diameter, and a pair of sizes
+#: that disagree is refused rather than resolved by picking one.
+_ROUND = frozenset(['round_breadboard'])
 
 def mirror_mount(scale=1.0, knobs=True, **kwargs):
     '''
     A one-inch kinematic mirror mount seen from above, drawn after a
-    Polaris-style footprint: the front plate the optic sits in, the
+    Polaris KA1 style footprint: the front plate the optic sits in, the
     back plate across the adjustment gap with the two adjuster tips
-    showing in it, and the two adjuster knobs on their stems out of
-    the back.
+    showing in it, the two adjuster knobs on their stems out of the
+    back, and the hole it is bolted down through.
 
     The local origin is the substrate centre of the mounted optic -
     the point marked on the drawing this is taken from - which sits
@@ -860,6 +1103,8 @@ def mirror_mount(scale=1.0, knobs=True, **kwargs):
     - back plate 12.7 deep
     - knobs 15.2 x 8.6 on 6.4-wide, 7.6-long stems, on the adjuster
       lines
+    - the post hole, 4 across, 13.5 behind the origin - the point
+      named 'post', which is also where the circle is drawn
 
     Parameters
     ----------
@@ -877,6 +1122,7 @@ def mirror_mount(scale=1.0, knobs=True, **kwargs):
     Mechanics
     '''
     u = 0.001 * float(scale)
+    kwargs.setdefault('points', {'post': [_MOUNT_POST_X * u, 0.0]})
     shapes = _mount_shapes(u, knobs,
                            front_w=45.7, front_d=7.0, gap=3.2,
                            back_w=45.7, back_d=12.7,
@@ -903,7 +1149,9 @@ def mirror_mount_2in(scale=1.0, knobs=True, **kwargs):
     The drawing's optic pocket is 10.3 deep, so a standard 12.7 thick
     two-inch optic seated against the stop centres 3.95 behind the
     front face - which is where ``attached_to`` with no offset puts
-    the host's substrate centre.
+    the host's substrate centre. The post hole is drawn as the
+    one-inch mount's is: 4 across, 13.5 behind the origin, at the
+    point named 'post'.
 
     Parameters
     ----------
@@ -919,6 +1167,7 @@ def mirror_mount_2in(scale=1.0, knobs=True, **kwargs):
     Mechanics
     '''
     u = 0.001 * float(scale)
+    kwargs.setdefault('points', {'post': [_MOUNT_POST_X * u, 0.0]})
     shapes = _mount_shapes(u, knobs,
                            front_w=68.6, front_d=7.0, gap=3.2,
                            back_w=69.9, back_d=12.7,
@@ -955,6 +1204,165 @@ def lens_holder(length=0.030, thickness=0.010, **kwargs):
                                  thickness, length))
     return Mechanics(shapes=shapes, **kwargs)
 
+def pedestal(post_diameter=0.0254, base_diameter=0.0318,
+             relief_diameter=0.0102, bore_diameter=0.0044, **kwargs):
+    '''
+    A pedestal pillar post seen from above: concentric circles.
+
+    A pedestal is what a mount is bolted to and what a clamping fork
+    holds down, so it is the middle of a stack rather than either end
+    of one. Its named point is ``'axis'``, at the local origin: the
+    tapped hole a mount screws into from above, the post a fork closes
+    around, and the point the whole thing turns about.
+
+    The dimensions default to Thorlabs' RS05P8E drawing - a 1 inch
+    post on a 1.25 inch base, with the relief cut and the #8-32
+    tapped hole - since that is the pedestal the design was drawn
+    against. Measure yours and pass the numbers if it differs.
+
+    Parameters
+    ----------
+    post_diameter : float, optional
+        The pillar, in metres. Defaults to 25.4 mm.
+    base_diameter : float, optional
+        The flange a clamping fork bears on. Defaults to 31.8 mm.
+    relief_diameter : float, optional
+        The relief cut around the tapped hole. Defaults to 10.2 mm;
+        zero leaves it out.
+    bore_diameter : float, optional
+        The tapped hole through the middle. Defaults to 4.4 mm, which
+        is a #8-32 thread.
+    **kwargs
+        Passed to Mechanics.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    shapes = [draw.Circle([0.0, 0.0], base_diameter / 2.0),
+              draw.Circle([0.0, 0.0], post_diameter / 2.0)]
+    if relief_diameter:
+        shapes.append(draw.Circle([0.0, 0.0], relief_diameter / 2.0))
+    if bore_diameter:
+        shapes.append(draw.Circle([0.0, 0.0], bore_diameter / 2.0))
+    kwargs.setdefault('points', {'axis': [0.0, 0.0]})
+    kwargs.setdefault('params', {'kind': 'pedestal',
+                                 'post_diameter': post_diameter,
+                                 'base_diameter': base_diameter,
+                                 'relief_diameter': relief_diameter,
+                                 'bore_diameter': bore_diameter})
+    return Mechanics(shapes=shapes, **kwargs)
+
+def clamping_fork(bore_diameter=0.0260, length=0.0738, width=0.0363,
+                  tail_width=0.0234, tip_ahead=0.0038, slot_span=0.0315,
+                  slot_width=0.0070, slot_near=0.0268, **kwargs):
+    '''
+    A clamping fork seen from above: the U that closes on a pedestal,
+    the tapering shank, and the slot its screw goes through.
+
+    The origin is the **bore centre** - the point that comes to sit on
+    the pedestal it holds - and that is its named point, ``'bore'``.
+    The shank runs from there along -x, so a fork attached with no
+    turn of its own lies behind the post it clamps. ``'screw'`` is the
+    middle of the slot, which is where the bolt into the bench
+    roughly goes.
+
+    The smooth waist of the real part is drawn as a straight taper and
+    two arcs: this is a drawing of what the part occupies, not a
+    reproduction of it. The dimensions default to Thorlabs' CF125
+    drawing.
+
+    Parameters
+    ----------
+    bore_diameter : float, optional
+        The U that closes on the post. Defaults to 26.0 mm, which
+        takes a 25 mm pedestal.
+    length : float, optional
+        Prong tips to tail, in metres. Defaults to 73.8 mm.
+    width : float, optional
+        Across the prongs. Defaults to 36.3 mm.
+    tail_width : float, optional
+        Across the rounded tail. Defaults to 23.4 mm.
+    tip_ahead : float, optional
+        From the bore centre to the prong tips, along the fork.
+        Defaults to 3.8 mm. Less than the bore radius, or the U does
+        not close on anything.
+    slot_span : float, optional
+        Between the two ends of the slot, centre to centre. Defaults
+        to 31.5 mm.
+    slot_width : float, optional
+        Across the slot. Defaults to 7 mm, which passes a 1/4-20 cap
+        screw.
+    slot_near : float, optional
+        From the bore centre to the near end of the slot. Defaults to
+        26.8 mm.
+    **kwargs
+        Passed to Mechanics.
+
+    Returns
+    -------
+    Mechanics
+    '''
+    r = bore_diameter / 2.0
+    half = width / 2.0
+    tail_half = tail_width / 2.0
+    # The prong tips stand a little beyond the bore centre, so the U
+    # wraps more than half of the post - which is what makes it a fork
+    # rather than a hook - and they meet the bore where the circle has
+    # got that far along.
+    tip = tip_ahead
+    edge = np.sqrt(max(r * r - tip * tip, 0.0))
+    tail = tip - length
+    waist = tail + tail_half
+
+    shapes = []
+    # The U, from one prong tip round the back to the other.
+    a = np.arctan2(edge, tip)
+    shapes.append(draw.Arc([0.0, 0.0], r, a, 2 * np.pi - a))
+    # The outline, in two runs: the tail is an arc, and one polyline
+    # through it would draw a chord straight across it.
+    shapes.append(draw.PolyLine(x=[tip, tip, waist],
+                                y=[edge, half, tail_half]))
+    shapes.append(draw.PolyLine(x=[waist, tip, tip],
+                                y=[-tail_half, -half, -edge]))
+    # The rounded tail.
+    shapes.append(draw.Arc([waist, 0.0], tail_half,
+                           np.pi / 2.0, 3 * np.pi / 2.0))
+    # The slot, as two caps and two sides.
+    near, far = -slot_near, -slot_near - slot_span
+    sr = slot_width / 2.0
+    shapes.append(draw.Arc([near, 0.0], sr, -np.pi / 2.0, np.pi / 2.0))
+    shapes.append(draw.Arc([far, 0.0], sr, np.pi / 2.0, 3 * np.pi / 2.0))
+    shapes.append(draw.Line([near, sr], [far, sr]))
+    shapes.append(draw.Line([near, -sr], [far, -sr]))
+
+    kwargs.setdefault('points', {'bore': [0.0, 0.0],
+                                 'screw': [(near + far) / 2.0, 0.0]})
+    kwargs.setdefault('params', {'kind': 'clamping_fork',
+                                 'bore_diameter': bore_diameter,
+                                 'length': length, 'width': width,
+                                 'tail_width': tail_width,
+                                 'tip_ahead': tip_ahead,
+                                 'slot_span': slot_span,
+                                 'slot_width': slot_width,
+                                 'slot_near': slot_near})
+    return Mechanics(shapes=shapes, **kwargs)
+
+#: Where the post hole of a kinematic mount sits, in millimetres
+#: behind the optic it holds, along the face normal. A mount is bolted
+#: to its pedestal from underneath, so the hole is in no top view at
+#: all - what is drawn from a top view is where it is. Measured on the
+#: bench: 13.5 mm behind the substrate centre, on the axis, in the
+#: back plate. Pass ``points={'post': [x, y]}`` to a builder to say
+#: otherwise.
+_MOUNT_POST_X = -13.5
+
+#: How wide that hole is drawn, in millimetres. A tapped hole seen
+#: through the plate above it: the drawing says a mount is bolted
+#: down there, which is part of what a top view of a bench is read
+#: for.
+_MOUNT_POST_D = 4.0
+
 def _mount_shapes(u, knobs, front_w, front_d, gap, back_w, back_d,
                   face_ahead, tip_span, tip_r, stem_d, stem_w,
                   knob_d, knob_w):
@@ -967,7 +1375,9 @@ def _mount_shapes(u, knobs, front_w, front_d, gap, back_w, back_d,
     face stands ``face_ahead`` of the origin; the plates stack
     backwards from it, the adjuster tips bulge out of the back plate
     into the gap on the two lines ``tip_span`` either side of the
-    centre, and the knobs hang off their stems out of the back.
+    centre, and the knobs hang off their stems out of the back. The
+    hole the mount is bolted down through is drawn last, over the
+    plate it is bored in.
     '''
     front_hi = face_ahead * u
     front_lo = front_hi - front_d * u
@@ -994,6 +1404,11 @@ def _mount_shapes(u, knobs, front_w, front_d, gap, back_w, back_d,
                                          stem_d * u, stem_w * u))
             shapes.append(draw.Rectangle([knob_lo, cy - knob_w * u / 2],
                                          knob_d * u, knob_w * u))
+    # The post hole, at the point the mount names 'post'. Last, so it
+    # is drawn over the back plate it goes through rather than under
+    # it.
+    shapes.append(draw.Circle([_MOUNT_POST_X * u, 0.0],
+                              _MOUNT_POST_D * u / 2))
     return shapes
 
 #}}}
@@ -1042,14 +1457,22 @@ def register_model(name, source, description=''):
         shapes = source.shapes
         layer = source.layer
         params = None if source.params is None else dict(source.params)
+        points = source.points
     else:
         shapes = list(source)
         layer = DEFAULT_LAYER
         params = None
+        points = {}
     _MODEL_REGISTRY[str(name)] = {
         'shapes': [shape_to_dict(s) for s in shapes],
         'layer': str(layer),
         'description': str(description),
+        # The named points of the part - the hole a pedestal screws
+        # into, the bore a fork closes on. They are what one part is
+        # stood on another by, so they belong to the model rather than
+        # to the body that happens to be built from it.
+        'points': dict((str(k), [float(v[0]), float(v[1])])
+                       for k, v in points.items()),
         # Carried so that a body built from the model keeps whatever
         # the source knew about itself - a breadboard from the library
         # is still a breadboard, and still resizes.
@@ -1077,6 +1500,22 @@ def model_shapes(name):
         raise KeyError('No model named %r in the library. '
                        'mechanics.models() lists what there is.' % (name,))
     return [shape_from_dict(s) for s in d['shapes']]
+
+def model_points(name):
+    '''
+    The named points of a registered model, in local coordinates.
+
+    Raises
+    ------
+    KeyError
+        If the library has no such model.
+    '''
+    d = _MODEL_REGISTRY.get(str(name))
+    if d is None:
+        raise KeyError('No model named %r in the library. '
+                       'mechanics.models() lists what there is.' % (name,))
+    return dict((k, np.array(v, dtype='float64'))
+                for k, v in (d.get('points') or {}).items())
 
 def model_params(name):
     '''
@@ -1122,6 +1561,7 @@ def from_model(model, **kwargs):
         raise KeyError('No model named %r in the library. '
                        'mechanics.models() lists what there is.' % (model,))
     kwargs.setdefault('layer', d['layer'])
+    kwargs.setdefault('points', d.get('points') or {})
     return Mechanics(shapes=[shape_from_dict(s) for s in d['shapes']],
                      model=str(model), params=d.get('params'), **kwargs)
 
@@ -1168,6 +1608,8 @@ def save_models(filename, names=None):
         (k, {'shapes': [dict(s) for s in v['shapes']],
              'layer': str(v['layer']),
              'description': str(v.get('description', '')),
+             'points': dict((str(pk), [float(pv[0]), float(pv[1])])
+                            for pk, pv in (v.get('points') or {}).items()),
              'params': (None if v.get('params') is None
                         else dict(v['params']))})
         for k, v in picked.items())}
@@ -1234,6 +1676,16 @@ def load_models(filename):
         if not isinstance(layer, str) or not layer.strip():
             raise ValueError('Model %r of %s has no usable layer: %r.'
                              % (name, filename, layer))
+        points = d.get('points') or {}
+        if not isinstance(points, dict):
+            raise ValueError('Model %r of %s has malformed points: %r.'
+                             % (name, filename, points))
+        try:
+            points = dict((str(k), [float(v[0]), float(v[1])])
+                          for k, v in points.items())
+        except (TypeError, ValueError, IndexError, KeyError):
+            raise ValueError('Model %r of %s has a point that is not '
+                             '[x, y].' % (name, filename))
         params = d.get('params')
         if params is not None and not isinstance(params, dict):
             raise ValueError('Model %r of %s has malformed parameters: %r.'
@@ -1242,6 +1694,7 @@ def load_models(filename):
             'shapes': shapes,
             'layer': str(layer),
             'description': str(d.get('description', '')),
+            'points': points,
             'params': None if params is None else dict(params)}
 
     _MODEL_REGISTRY.update(staged)
@@ -1256,12 +1709,20 @@ register_model('BB4530', breadboard(0.45, 0.30),
                '450 x 300 mm breadboard, 25 mm grid')
 register_model('BB6045', breadboard(0.60, 0.45),
                '600 x 450 mm breadboard, 25 mm grid')
+register_model('BBR30', round_breadboard(0.30),
+               '300 mm round breadboard, 25 mm grid')
+register_model('BBR45', round_breadboard(0.45),
+               '450 mm round breadboard, 25 mm grid')
 register_model('MOUNT-25', mirror_mount(),
                'kinematic mount for a 1 inch optic')
 register_model('MOUNT-50', mirror_mount_2in(),
                'kinematic mount for a 2 inch optic (KA2A footprint)')
 register_model('HOLDER-25', lens_holder(length=0.030, thickness=0.010),
                'lens holder for a 1 inch optic, 30 x 10 mm')
+register_model('PEDESTAL-25', pedestal(),
+               '1 inch pedestal post, 31.8 mm base (RS05P8E footprint)')
+register_model('FORK-125', clamping_fork(),
+               'clamping fork for a 1 inch pedestal (CF125 footprint)')
 register_model('HOLDER-50', lens_holder(length=0.056, thickness=0.0127),
                'lens holder for a 2 inch optic, 56 x 12.7 mm')
 

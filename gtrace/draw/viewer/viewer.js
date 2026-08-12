@@ -418,6 +418,17 @@ var SHAPE_FIELDS = {
 };
 
 /*
+ * The rows a named point shows. A name and a place, which is the
+ * whole of what a named point is: it is not drawn, so it has no size
+ * and no thickness to speak of.
+ */
+var POINT_FIELDS = [
+    {key: 'name', label: 'Name', text: true},
+    {key: 'px', label: 'x', unit: 'mm'},
+    {key: 'py', label: 'y', unit: 'mm'}
+];
+
+/*
  * What a row of a shape panel reads, from the serialized shape.
  */
 function shapeFieldValue(s, key) {
@@ -1089,6 +1100,12 @@ function Viewer(container, scene, options) {
     // mousedown hit test).
     this.dragShape = null;
     this._shapeHandlePts = null;
+    // Which named point the panel is showing, and one being dragged.
+    // An index into scene.points, which is a place in a list: a name
+    // is what is being edited, so it cannot also be the handle.
+    this.selectedPoint = null;
+    this.dragPoint = null;
+    this._pointMarkPts = null;
 
     VIEWERS.push(this);
     this._build();
@@ -1372,6 +1389,22 @@ Viewer.prototype._build = function () {
     // it takes. The part itself is the user's object and is already
     // being edited in place; this is only what gives other layouts a
     // way to ask for one.
+    // The points the part names for itself: the hole a mount is
+    // bolted down through, the axis of a pedestal, the bore of a
+    // fork. A panel of its own rather than rows under the shapes,
+    // because a named point belongs to the part and not to any one
+    // shape - it is often nowhere near the drawing of the feature it
+    // stands for, since a hole bored from underneath is in no top
+    // view at all.
+    if (editing) {
+        var ppanel = htmlEl('div', 'gt-panel');
+        ppanel.appendChild(htmlEl('div', 'gt-panel-title', 'Named points'));
+        this.pointBody = htmlEl('div', 'gt-props');
+        ppanel.appendChild(this.pointBody);
+        side.appendChild(ppanel);
+        this._buildPointPanel();
+    }
+
     if (this.onEdit && editing) {
         var mpanel = htmlEl('div', 'gt-panel');
         mpanel.appendChild(htmlEl('div', 'gt-panel-title', 'Model library'));
@@ -1862,16 +1895,187 @@ function fmtField(v) {
 }
 
 /*
+ * The units a value may be typed in, as [kind, how much of the SI unit
+ * of that kind one of them is].
+ *
+ * A row is labelled with the unit it is read in - millimetres for the
+ * size of a part, metres for a place on the bench - and a value typed
+ * with a unit of its own is converted into that row's unit. So 1[in]
+ * in a millimetre row is 25.4. The kinds are what makes that
+ * answerable: a length typed into an angle converts to nothing, and
+ * is refused rather than quietly taken as a bare number.
+ *
+ * This is a convenience of the input box, not physics: what the model
+ * holds is metres and radians either way, and the row already knew
+ * how to get there. The names are lower-cased before they are looked
+ * up, so IN and in are the same unit.
+ */
+var INPUT_UNITS = {
+    m: ['length', 1],
+    cm: ['length', 1e-2],
+    mm: ['length', 1e-3],
+    um: ['length', 1e-6],
+    'µm': ['length', 1e-6],
+    nm: ['length', 1e-9],
+    in: ['length', 0.0254],
+    inch: ['length', 0.0254],
+    mil: ['length', 2.54e-5],
+    ft: ['length', 0.3048],
+    rad: ['angle', 1],
+    mrad: ['angle', 1e-3],
+    urad: ['angle', 1e-6],
+    deg: ['angle', Math.PI / 180],
+    '°': ['angle', Math.PI / 180],
+    w: ['power', 1],
+    mw: ['power', 1e-3],
+    uw: ['power', 1e-6],
+    kw: ['power', 1e3]
+};
+
+/*
+ * What a row's own unit is, or null for a row that has none - an
+ * order, a refractive index, a threshold. A row with no unit takes no
+ * unit: there is nothing to convert into.
+ */
+function fieldUnit(unit) {
+    if (!unit) { return null; }
+    return INPUT_UNITS[String(unit).toLowerCase()] || null;
+}
+
+/*
+ * Work out what was typed into a row: a number, or arithmetic on
+ * numbers.
+ *
+ * A bench measurement is usually arrived at rather than known - two
+ * inches is 2*25.4, a quarter of the way along is 300/4 - so the row
+ * takes the sum as well as the answer. Brackets, the four operations
+ * and a leading minus, which is the whole of what a row is asked to
+ * work out; a number may carry a unit of its own in [square
+ * brackets], and so may a bracketed group.
+ *
+ * Nothing here is evaluated as code. The text is parsed character by
+ * character, so a row is a calculator and not a way into the page.
+ *
+ * Returns NaN for anything that is not an expression, which is what
+ * every caller already turns away.
+ */
+function evalField(text, unit) {
+    var pos = 0, bad = false;
+    var own = fieldUnit(unit);
+    var NUMBER = /^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:e[+-]?[0-9]+)?/;
+
+    function skip() {
+        while (pos < text.length && text.charAt(pos) === ' ') { pos++; }
+    }
+    function take(c) {
+        skip();
+        if (text.charAt(pos) === c) { pos++; return true; }
+        return false;
+    }
+
+    // The unit written after a value, as the factor that carries it
+    // into the row's own unit. Nothing written is a value already in
+    // the row's unit, which is what a row without units always was.
+    function factor() {
+        skip();
+        if (text.charAt(pos) !== '[') { return 1; }
+        var end = text.indexOf(']', pos);
+        if (end < 0) { bad = true; return 1; }
+        var named = INPUT_UNITS[text.slice(pos + 1, end).trim()];
+        pos = end + 1;
+        if (!named || !own || named[0] !== own[0]) { bad = true; return 1; }
+        return named[1] / own[1];
+    }
+
+    function primary() {
+        skip();
+        if (take('(')) {
+            var inner = expr();
+            if (!take(')')) { bad = true; }
+            return inner * factor();
+        }
+        var m = NUMBER.exec(text.slice(pos));
+        if (!m) { bad = true; return NaN; }
+        pos += m[0].length;
+        return Number(m[0]) * factor();
+    }
+
+    function unary() {
+        if (take('-')) { return -unary(); }
+        if (take('+')) { return unary(); }
+        return primary();
+    }
+
+    function term() {
+        var v = unary();
+        for (;;) {
+            if (take('*')) { v *= unary(); }
+            else if (take('/')) { v /= unary(); }
+            else { return v; }
+        }
+    }
+
+    function expr() {
+        var v = term();
+        for (;;) {
+            if (take('+')) { v += term(); }
+            else if (take('-')) { v -= term(); }
+            else { return v; }
+        }
+    }
+
+    var value = expr();
+    skip();
+    // Anything left over is text that meant something the row cannot
+    // work out, and a row that guessed would be worse than one that
+    // refused.
+    return (bad || pos < text.length) ? NaN : value;
+}
+
+/*
+ * What a span between two points comes to: the straight line, and the
+ * two components. A bench is built on axes, so the number wanted is
+ * as often one of the components as the distance between the points.
+ */
+function spanText(a, b) {
+    return fmtLen(Math.hypot(b[0] - a[0], b[1] - a[1])) +
+        '   (Δx ' + fmtLen(b[0] - a[0]) +
+        ',  Δy ' + fmtLen(b[1] - a[1]) + ')';
+}
+
+/*
+ * What a numeric row says when the cursor rests on it. A row that
+ * takes arithmetic and units is worth nothing if nobody knows it
+ * does, and this is the only place a panel has to say so.
+ */
+var CALC_HINT = 'A number, a sum (2*25.4), '
+    + 'or a value with a unit of its own (1[in])';
+
+/*
+ * The unit of one row of a field table, by key. The tables are the
+ * one description of what a row is read in, so a commit asks them
+ * rather than repeating it.
+ */
+function fieldSpecUnit(fields, key) {
+    for (var i = 0; i < fields.length; i++) {
+        if (fields[i].key === key) { return fields[i].unit; }
+    }
+    return null;
+}
+
+/*
  * Parse a field. Returns NaN for anything unusable, and null for the
  * spellings that mean "leave it to the layout".
+ *
+ * ``unit`` is the row's own unit, which is what a unit written in the
+ * text is converted into; a row without one takes bare numbers only.
  */
-function parseField(s) {
+function parseField(s, unit) {
     var t = String(s).trim().toLowerCase();
     if (t === 'inf' || t === 'infinity' || t === '∞') { return Infinity; }
     if (t === '-inf' || t === '-infinity' || t === '-∞') { return -Infinity; }
     if (t === '' || t === 'auto' || t === 'none' || t === '-') { return null; }
-    var v = Number(t);
-    return isNaN(v) ? NaN : v;
+    return evalField(t, unit);
 }
 
 /*
@@ -1980,6 +2184,12 @@ var MECH_FIELDS = [
     // model's designed position is the default, and these move the
     // body off it deliberately. In millimetres and degrees, like the
     // other adjustments.
+    // Whether the turn relative to the host is frozen. A mount
+    // bolted to its mirror faces where the mirror faces and there is
+    // nothing to say; a clamping fork swings about the post it holds,
+    // and this is what lets it. Shown only while attached.
+    {key: 'fix_rotation', label: 'Fix rotation', bool: true,
+     optional: true},
     {key: 'ox', label: 'Offset x', unit: 'mm', optional: true},
     {key: 'oy', label: 'Offset y', unit: 'mm', optional: true},
     {key: 'oangle', label: 'Offset angle', unit: '°', optional: true},
@@ -1992,12 +2202,18 @@ var MECH_FIELDS = [
     // dimension of a part.
     {key: 'width', label: 'Width', unit: 'mm', optional: true},
     {key: 'height', label: 'Height', unit: 'mm', optional: true},
+    // A round board has one size, so it gets one row instead of the
+    // two. The three rows are exclusive: whichever pair does not
+    // apply hides itself, as every optional row here does.
+    {key: 'diameter', label: 'Diameter', unit: 'mm', optional: true},
     {key: 'layer', label: 'Layer', readonly: true}
 ];
 
 function mechFieldValue(m, key) {
     switch (key) {
     case 'type': return 'Mechanics';
+    case 'fix_rotation':
+        return m.attached_to ? !!m.fix_rotation : null;
     case 'model': return m.model === null ? undefined : m.model;
     case 'attached':
         return m.attached_to === null || m.attached_to === undefined
@@ -2014,8 +2230,12 @@ function mechFieldValue(m, key) {
             ? undefined : normAngle(m.offset_angle) * DEG;
     case 'width':
     case 'height':
-        return m[key] === null || m[key] === undefined
-            ? undefined : m[key] / MM;
+        // A round body is cut to a diameter, and says so in the one
+        // row below rather than in two that would have to agree.
+        return (m.resizable === 'round' || m[key] === null
+                || m[key] === undefined) ? undefined : m[key] / MM;
+    case 'diameter':
+        return m.resizable === 'round' ? m.width / MM : undefined;
     default: return m[key];
     }
 }
@@ -2024,6 +2244,10 @@ function mechFieldValue(m, key) {
  * The edit message that sets one field of a mechanics.
  */
 function mechFieldMessage(m, key, value) {
+    if (key === 'fix_rotation') {
+        return {op: 'set', target: m.name,
+                attrs: {fix_rotation: !!value}};
+    }
     switch (key) {
     case 'cx':
         return {op: 'move', target: m.name, center: [value, m.center[1]]};
@@ -2047,6 +2271,11 @@ function mechFieldMessage(m, key, value) {
         var size = {};
         size[key] = value * MM;
         return {op: 'set', target: m.name, attrs: size};
+    case 'diameter':
+        // One number, sent as the size it is: a round body's two
+        // sides are the same, and Python refuses a pair that is not.
+        return {op: 'set', target: m.name,
+                attrs: {width: value * MM, height: value * MM}};
     }
     var attrs = {};
     attrs[key] = value;
@@ -2102,6 +2331,13 @@ var DIM_FIELDS = [
     {key: 'offset', label: 'Line offset', unit: 'mm'},
     {group: 'Measurement'},
     {key: 'length', label: 'Distance', readonly: true},
+    // The two components as well as the span. A bench is built on
+    // axes - a mount goes 300 along and 75 across - so the number
+    // wanted is often one of these rather than the straight line
+    // between the points. Signed from the first point to the second,
+    // which is the way Direction reads too.
+    {key: 'dx', label: 'Δx', readonly: true},
+    {key: 'dy', label: 'Δy', readonly: true},
     {key: 'angle', label: 'Direction', readonly: true},
     // Only when the span runs inside a substrate, which is the one case
     // where an optical distance is a distance of anything. The rows hide
@@ -2138,6 +2374,7 @@ Viewer.prototype._buildDimPanel = function () {
             var input = htmlEl('input', 'gt-input');
             input.type = 'text';
             if (f.text) { input.className += ' gt-input-text'; }
+            else { input.title = CALC_HINT; }
             input.spellcheck = false;
             input.addEventListener('change', function () {
                 self._commitDimField(f.key, input);
@@ -2235,6 +2472,7 @@ function buildFieldTable(fields, editable, commit, revert) {
             var input = htmlEl('input', 'gt-input');
             input.type = 'text';
             if (f.text) { input.className += ' gt-input-text'; }
+            else { input.title = CALC_HINT; }
             input.spellcheck = false;
             input.addEventListener('change', function () {
                 commit(f.key, input);
@@ -2304,12 +2542,47 @@ Viewer.prototype._buildOpticPanel = function () {
 
     if (this.onEdit) {
         var foot = htmlEl('div', 'gt-props-foot');
+        var copyBtn = htmlEl('button', 'gt-btn', 'Copy');
+        copyBtn.title = 'Add a second one, with its mounts';
+        copyBtn.addEventListener('click', function () { self.copySelected(); });
+        foot.appendChild(copyBtn);
         var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
         delBtn.title = 'Remove this optics from the layout';
         delBtn.addEventListener('click', function () { self.removeSelected(); });
         foot.appendChild(delBtn);
         this.opticBody.appendChild(foot);
     }
+};
+
+/*
+ * Add a second one of the selected element, with the stack standing
+ * on it: the mount bolted to it, the pedestal under the mount, the
+ * fork over the pedestal. That is the whole point of the button -
+ * one of a pair of steering mirrors is not one element, it is the
+ * element and everything built under it.
+ *
+ * Where the copy goes and what the bodies are called are Python's to
+ * say: an offset that clears the element is a question about the
+ * element's own size, and a body's name is one the browser has no
+ * list of rules for. Only the element's own name is chosen here, so
+ * that the selection can follow it without waiting for a reply.
+ */
+Viewer.prototype.copySelected = function () {
+    if (!this.onEdit || this.panelKind !== 'optic' || !this.selectedOptic) {
+        return null;
+    }
+    // The name without its trailing number, so a copy of 'M1' is
+    // offered 'M2' rather than a name from the far end of the list.
+    var name = this._freshOpticName(
+        String(this.selectedOptic).replace(/[0-9]+$/, '') || 'M');
+    var msg = {op: 'copy', target: this.selectedOptic, name: name};
+    // Optimistic, as an add is: the scene that comes back has it, and
+    // the selection resolves the name then.
+    this.selectedOptic = name;
+    this.selectedSource = null;
+    this.selectedMech = null;
+    this.onEdit(msg);
+    return msg;
 };
 
 /*
@@ -2584,7 +2857,7 @@ Viewer.prototype._commitShapeField = function (key, input) {
     // constructor on the other side takes.
     if (key === 'vx' || key === 'vy') {
         var vi = this._vertexIndex();
-        var vv = parseField(input.value);
+        var vv = parseField(input.value, 'mm');
         if (vi === null || typeof vv !== 'number' || !isFinite(vv)) {
             this._refreshShapePanel();
             return;
@@ -2606,7 +2879,7 @@ Viewer.prototype._commitShapeField = function (key, input) {
         value = String(input.value);
         if (!value.trim()) { this._refreshShapePanel(); return; }
     } else {
-        value = parseField(input.value);
+        value = parseField(input.value, field && field.unit);
         // Every number a shape takes is finite: a drawing with an
         // infinity in it takes the whole view with it the first time
         // anything is framed.
@@ -2684,6 +2957,181 @@ Viewer.prototype.saveModel = function (name, description) {
     var msg = {op: 'save_model', name: name, description: description};
     this.onEdit(msg);
     return msg;
+};
+
+/*
+ * The named points panel: the list of what the part names for
+ * itself, and the name and place of whichever one is selected.
+ *
+ * There is no index that survives a rename, so every gesture here -
+ * typing a name, typing a number, dragging the mark, adding one,
+ * taking one away - sends the whole list back. One message is one
+ * step of undo, which is what a drag should be, and Python builds the
+ * dict from it in one go.
+ */
+Viewer.prototype._buildPointPanel = function () {
+    var self = this;
+
+    this.pointList = htmlEl('div', 'gt-pointlist');
+    this.pointBody.appendChild(this.pointList);
+
+    var built = buildFieldTable(
+        POINT_FIELDS, !!this.onEdit,
+        function (key, el) { self._commitPointField(key, el); },
+        function () { self._refreshPointPanel(); });
+    this.pointFields = built.fields;
+    this.pointBody.appendChild(built.table);
+
+    if (this.onEdit) {
+        var foot = htmlEl('div', 'gt-props-foot');
+        [['+ Point', 'Name a point of this part, at the origin',
+          function () { self.addPoint(); }],
+         ['\u2212 Point', 'Take this named point away',
+          function () { self.removePoint(); }]
+        ].forEach(function (spec, i) {
+            var btn = htmlEl('button',
+                             i === 1 ? 'gt-btn gt-btn-danger' : 'gt-btn',
+                             spec[0]);
+            btn.title = spec[1];
+            btn.addEventListener('click', spec[2]);
+            foot.appendChild(btn);
+        });
+        this.pointRemoveBtn = foot.childNodes[1];
+        this.pointBody.appendChild(foot);
+    }
+    this._refreshPointPanel();
+};
+
+/*
+ * The named points of the part being edited, or an empty list.
+ */
+Viewer.prototype._points = function () {
+    return this.scene.points || [];
+};
+
+Viewer.prototype._selectedPoint = function () {
+    var pts = this._points();
+    if (this.selectedPoint === null || this.selectedPoint === undefined) {
+        return null;
+    }
+    return pts[this.selectedPoint] || null;
+};
+
+Viewer.prototype._selectPoint = function (index) {
+    this.selectedPoint = index;
+    this._refreshPointPanel();
+    this._updateOverlay();
+};
+
+Viewer.prototype._refreshPointPanel = function () {
+    var self = this;
+    if (!this.pointList) { return; }
+    var pts = this._points();
+
+    this.pointList.textContent = '';
+    if (!pts.length) {
+        this.pointList.appendChild(
+            htmlEl('div', 'gt-note',
+                   this.onEdit ? 'No named points - add one below.'
+                               : 'No named points.'));
+    }
+    pts.forEach(function (q, i) {
+        var row = htmlEl('button', 'gt-pointrow', q.name);
+        row.classList.toggle('gt-selected', i === self.selectedPoint);
+        row.addEventListener('click', function () { self._selectPoint(i); });
+        self.pointList.appendChild(row);
+    });
+
+    var q = this._selectedPoint();
+    refreshFieldTable(this.pointFields, POINT_FIELDS,
+                      q ? function (key) {
+                          return self._pointFieldValue(q, key);
+                      } : null);
+    if (this.pointRemoveBtn) { this.pointRemoveBtn.disabled = !q; }
+};
+
+Viewer.prototype._pointFieldValue = function (q, key) {
+    if (key === 'name') { return q.name; }
+    return (key === 'px' ? q.point[0] : q.point[1]) / MM;
+};
+
+/*
+ * The list as it stands, ready to be changed and sent back.
+ */
+Viewer.prototype._pointEntries = function () {
+    return this._points().map(function (q) {
+        return {name: q.name, point: [q.point[0], q.point[1]]};
+    });
+};
+
+Viewer.prototype._sendPoints = function (entries) {
+    if (!this.onEdit) { return null; }
+    var msg = {op: 'set_points', points: entries};
+    this.onEdit(msg);
+    return msg;
+};
+
+Viewer.prototype._commitPointField = function (key, input) {
+    var q = this._selectedPoint();
+    if (!q || !this.onEdit) { return; }
+    var entries = this._pointEntries();
+    var i = this.selectedPoint;
+
+    if (key === 'name') {
+        var name = String(input.value).trim();
+        // A name that is not a name, or one another point already
+        // answers to, would be refused on the other side; the row
+        // goes back to what the part says rather than asking.
+        var taken = entries.some(function (e, k) {
+            return k !== i && e.name === name;
+        });
+        if (!name || taken || name === q.name) {
+            this._refreshPointPanel();
+            return;
+        }
+        entries[i].name = name;
+        this._sendPoints(entries);
+        return;
+    }
+
+    var v = parseField(input.value, 'mm');
+    if (typeof v !== 'number' || !isFinite(v)) {
+        this._refreshPointPanel();
+        return;
+    }
+    if (v === this._pointFieldValue(q, key)) { return; }
+    entries[i].point[key === 'px' ? 0 : 1] = v * MM;
+    this._sendPoints(entries);
+};
+
+/*
+ * Name a point at the origin, and take hold of it.
+ *
+ * At the origin because that is the one place every part has, and
+ * because a point put anywhere else would be a guess about what it
+ * is for. The name is a placeholder to be typed over - the ones that
+ * matter are 'post', 'axis', 'bore', and no viewer can guess which.
+ */
+Viewer.prototype.addPoint = function () {
+    if (!this.onEdit) { return null; }
+    var entries = this._pointEntries();
+    var name = 'point', n = 1;
+    while (entries.some(function (e) { return e.name === name; })) {
+        n += 1;
+        name = 'point ' + n;
+    }
+    entries.push({name: name, point: [0.0, 0.0]});
+    this.selectedPoint = entries.length - 1;
+    return this._sendPoints(entries);
+};
+
+Viewer.prototype.removePoint = function () {
+    if (!this.onEdit || this._selectedPoint() === null) { return null; }
+    var entries = this._pointEntries();
+    entries.splice(this.selectedPoint, 1);
+    this.selectedPoint = entries.length
+        ? Math.min(this.selectedPoint, entries.length - 1) : null;
+    return this._sendPoints(entries);
 };
 
 /*
@@ -2980,7 +3428,7 @@ Viewer.prototype._refreshRulesPanel = function () {
 Viewer.prototype._commitRuleField = function (key, input) {
     var r = this.scene.rules;
     if (!r || !this.onEdit) { return; }
-    var value = parseField(input.value);
+    var value = parseField(input.value, fieldSpecUnit(RULE_FIELDS, key));
     if (typeof value !== 'number' || !isFinite(value)) {
         this._refreshRulesPanel();
         return;
@@ -3231,7 +3679,7 @@ Viewer.prototype._commitSourceField = function (key, input) {
         return;
     }
 
-    var value = parseField(input.value);
+    var value = parseField(input.value, fieldSpecUnit(SOURCE_FIELDS, key));
     // Every number a source takes is finite. An infinite waist or
     // wavelength would not survive the trip - JSON has no infinity, and
     // what arrives on the Python side is a null the model cannot use -
@@ -3279,6 +3727,16 @@ Viewer.prototype._refreshMechPanel = function () {
                 opt.value = o.name;
                 af.el.appendChild(opt);
             });
+            // And the other bodies: a pedestal stands on a mount, a
+            // fork on a pedestal. Not this one - nothing stands on
+            // itself - and not what already stands on it, which
+            // Python refuses as a circle either way.
+            (this.scene.mechanics || []).forEach(function (b) {
+                if (!m || b.name === m.name) { return; }
+                var opt = htmlEl('option', null, b.name);
+                opt.value = b.name;
+                af.el.appendChild(opt);
+            });
             af.el.value = host;
             af.el.title = host
                 ? 'Standing on ' + host + ' - pick (free) to detach it '
@@ -3295,14 +3753,21 @@ Viewer.prototype._refreshMechPanel = function () {
     // host put it, and refuse the keyboard rather than letting a value
     // be typed only for Python to turn it down.
     var attached = !!(m && m.attached_to);
+    // Except its turn, when that is free: a fork clamped on a post
+    // swings about the post, and the Angle row is how it is said
+    // exactly.
+    var swings = attached && m.fix_rotation === false;
     var self = this;
     ['cx', 'cy', 'angle'].forEach(function (key) {
         var f = self.mechFields[key];
         if (!f || !f.editable) { return; }
-        f.el.disabled = attached;
-        f.el.title = attached
-            ? 'Attached to ' + m.attached_to + ' - move the optics instead'
-            : '';
+        var frozen = attached && !(key === 'angle' && swings);
+        f.el.disabled = frozen;
+        f.el.title = frozen
+            ? 'Attached to ' + m.attached_to + ' - move the host instead'
+            : (key === 'angle' && swings
+               ? 'Free to swing about where it is held'
+               : '');
     });
 };
 
@@ -3342,7 +3807,7 @@ Viewer.prototype._commitMechField = function (key, input) {
         return;
     }
 
-    var value = parseField(input.value);
+    var value = parseField(input.value, fieldSpecUnit(MECH_FIELDS, key));
     // Every number a mechanics takes is finite: a pose has no
     // 'infinity' and no 'leave it to the layout'.
     if (typeof value !== 'number' || !isFinite(value)) {
@@ -3390,7 +3855,7 @@ Viewer.prototype._commitOpticField = function (key, input) {
     // to zero whether or not the move is accepted, so that leaning on
     // Enter does not walk the element down the bench.
     if (key === 'slide_by') {
-        var by = parseField(input.value);
+        var by = parseField(input.value, 'mm');
         input.value = '0';
         if (typeof by === 'number' && isFinite(by)) { this.slideSelected(by); }
         return;
@@ -3417,7 +3882,7 @@ Viewer.prototype._commitOpticField = function (key, input) {
         return;
     }
 
-    var value = parseField(input.value);
+    var value = parseField(input.value, field && field.unit);
     var unusable = (typeof value === 'number' && isNaN(value))
         || (value === null && !(field && field.nullable))
         // An infinity would not survive the trip: JSON has none, and
@@ -3846,6 +4311,8 @@ Viewer.prototype._refreshDimPanel = function () {
                   p2x: d.p2[0], p2y: d.p2[1],
                   offset: (d.offset || 0) / MM,
                   length: fmtLen(d.length),
+                  dx: fmtLen(d.p2[0] - d.p1[0]),
+                  dy: fmtLen(d.p2[1] - d.p1[1]),
                   angle: fmtDeg(Math.atan2(d.p2[1] - d.p1[1],
                                            d.p2[0] - d.p1[0])),
                   inside: d.inside,
@@ -3885,7 +4352,7 @@ Viewer.prototype._commitDimField = function (key, input) {
         return;
     }
 
-    var value = parseField(input.value);
+    var value = parseField(input.value, fieldSpecUnit(DIM_FIELDS, key));
     if (typeof value !== 'number' || !isFinite(value)) {
         this._refreshDimPanel();
         return;
@@ -4136,6 +4603,13 @@ Viewer.prototype._renderScene = function () {
     this.shapeHandleGroup = svgEl('g');
     this.shapeHandleEls = [];
     this._shapeHandlePts = null;
+    // The points the part names for itself, each with its name beside
+    // it. Marks rather than shapes - they keep their size at any zoom,
+    // as the origin does, since what they say is "this place is
+    // called that" and a place has no size of its own.
+    this.pointMarkGroup = svgEl('g');
+    this.pointMarkEls = [];
+    this._pointMarkPts = null;
 
     // The corner handles a resizable body is cut by. Four, built once,
     // shown only while such a body is selected.
@@ -4178,6 +4652,7 @@ Viewer.prototype._renderScene = function () {
     for (var hj = 0; hj < this.mechHandles.length; hj++) {
         this.overlayGroup.appendChild(this.mechHandles[hj]);
     }
+    this.overlayGroup.appendChild(this.pointMarkGroup);
     this.overlayGroup.appendChild(this.shapeHandleGroup);
     this.sceneGroup.appendChild(this.shapePreview);
     this.overlayGroup.appendChild(this.outline);
@@ -4713,8 +5188,17 @@ Viewer.prototype._bindEvents = function () {
         if (self.scene.editor) {
             if (self.onEdit && !self.measuring && !self.aligning) {
                 var grip = self._pickShapeHandle(px, py);
-                var pick = grip ? null : self._pickShape(pt[0], pt[1]);
-                if (grip) {
+                // A named point comes before the shapes and after the
+                // grips: it is a small mark that an area would
+                // otherwise shadow, and a grip is chrome the user put
+                // there by selecting the shape it belongs to.
+                var pmark = grip ? null : self._pickPointMark(px, py);
+                var pick = (grip || pmark) ? null
+                                           : self._pickShape(pt[0], pt[1]);
+                if (pmark) {
+                    self._beginPointDrag(pmark.index, pt);
+                    ev.preventDefault();
+                } else if (grip) {
                     self._beginShapeDrag(self.selectedShape, pt, grip);
                     ev.preventDefault();
                 } else if (pick && pick.index === self.selectedShape) {
@@ -4767,7 +5251,12 @@ Viewer.prototype._bindEvents = function () {
         // host is right there to be dragged.
         var h = (grabbable && !s && !o && self.selectedMech)
             ? self._pickMech(pt[0], pt[1]) : null;
-        if (h && (h.name !== self.selectedMech || h.attached_to)) {
+        // Only the selection is grabbed, and an attached body only to
+        // swing it - and only when its turn is free. Everything else
+        // about where it stands is its host's.
+        if (h && h.name !== self.selectedMech) { h = null; }
+        if (h && h.attached_to
+                && !(ev.shiftKey && h.fix_rotation === false)) {
             h = null;
         }
         if (s) {
@@ -4794,6 +5283,14 @@ Viewer.prototype._bindEvents = function () {
                 self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
             return;
         }
+        if (self.dragPoint) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updatePointDrag(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
+                ev.altKey);
+            return;
+        }
         if (self.dragShape) {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
@@ -4806,7 +5303,8 @@ Viewer.prototype._bindEvents = function () {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
             self._updateSourceDrag(
-                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
+                ev.altKey);
             return;
         }
         if (self.dragOptic) {
@@ -4821,7 +5319,8 @@ Viewer.prototype._bindEvents = function () {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
             self._updateMechDrag(
-                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
+                ev.altKey);
             return;
         }
         if (dragging) {
@@ -4846,6 +5345,23 @@ Viewer.prototype._bindEvents = function () {
             self._updateMechResize(
                 self.screenToScene(ev.clientX - rz.left, ev.clientY - rz.top));
             self._endMechResize(moved >= 4);
+            return;
+        }
+        if (self.dragPoint) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            // A grab that went nowhere picked the point out, which
+            // _beginPointDrag has already done.
+            if (moved >= 4) {
+                var rq = self.svg.getBoundingClientRect();
+                self._updatePointDrag(
+                    self.screenToScene(ev.clientX - rq.left,
+                                       ev.clientY - rq.top),
+                    ev.altKey);
+                self._endPointDrag(true);
+            } else {
+                self._endPointDrag(false);
+            }
             return;
         }
         if (self.dragShape) {
@@ -4888,7 +5404,8 @@ Viewer.prototype._bindEvents = function () {
             // moment of release, rather than from the last movement
             // event, which may have been a pixel or two short.
             self._updateSourceDrag(
-                self.screenToScene(ev.clientX - rs.left, ev.clientY - rs.top));
+                self.screenToScene(ev.clientX - rs.left, ev.clientY - rs.top),
+                ev.altKey);
             self._endSourceDrag();
             return;
         }
@@ -4906,7 +5423,8 @@ Viewer.prototype._bindEvents = function () {
                 return;
             }
             self._updateMechDrag(
-                self.screenToScene(ev.clientX - rm.left, ev.clientY - rm.top));
+                self.screenToScene(ev.clientX - rm.left, ev.clientY - rm.top),
+                ev.altKey);
             self._endMechDrag();
             return;
         }
@@ -5172,12 +5690,13 @@ Viewer.prototype._beginSourceDrag = function (source, scenePt, rotate) {
         // turning follows the cursor instead of jumping to it.
         grabAngle: Math.atan2(scenePt[1] - p[1], scenePt[0] - p[0]),
         pos: [p[0], p[1]],
-        angle: source.dirAngle || 0
+        angle: source.dirAngle || 0,
+        hole: null
     };
     this._updateOverlay();
 };
 
-Viewer.prototype._updateSourceDrag = function (scenePt) {
+Viewer.prototype._updateSourceDrag = function (scenePt, free) {
     var d = this.dragSource;
     if (!d) { return; }
     if (d.rotate) {
@@ -5189,6 +5708,14 @@ Viewer.prototype._updateSourceDrag = function (scenePt) {
     } else {
         d.pos = [d.pos0[0] + scenePt[0] - d.grab[0],
                  d.pos0[1] + scenePt[1] - d.grab[1]];
+        // Riding over a screw hole, the point the light leaves from
+        // lands on it exactly - the same nudge a dragged element gets
+        // at its anchor, and the same Alt to ride free. A laser is
+        // bolted to the bench like anything else, and the point it is
+        // held by here is the one the model keeps fixed when it is
+        // turned, so it is the one worth landing on a hole.
+        d.hole = free ? null : this._nearestHole(d.pos[0], d.pos[1]);
+        if (d.hole) { d.pos = [d.hole.point[0], d.hole.point[1]]; }
     }
     this._updateOverlay();
     this._updateStatus();
@@ -5215,35 +5742,102 @@ Viewer.prototype._endSourceDrag = function () {
  */
 Viewer.prototype._beginMechDrag = function (mech, scenePt, rotate) {
     // Belt and braces: the mousedown handler already refuses these.
-    if (mech.attached_to) { return; }
+    if (mech.attached_to && !(rotate && mech.fix_rotation === false)) {
+        return;
+    }
     var c = mech.center;
+    var a0 = mech.rotationAngle || 0;
+    // What it turns about: the point it is held by, when it is held
+    // by one - a fork swings about the post in its bore, not about
+    // the middle of its own drawing.
+    var ap = mech.attach_point || [0, 0];
+    var pivot = mech.attached_to
+        ? turnAbout([c[0] + ap[0], c[1] + ap[1]], c, a0)
+        : [c[0], c[1]];
     this.dragMech = {
         mech: mech,
         rotate: !!rotate,
         grab: scenePt,
         center0: [c[0], c[1]],
-        angle0: mech.rotationAngle || 0,
-        grabAngle: Math.atan2(scenePt[1] - c[1], scenePt[0] - c[0]),
+        angle0: a0,
+        pivot: pivot,
+        snap: null,
+        grabAngle: Math.atan2(scenePt[1] - pivot[1], scenePt[0] - pivot[0]),
         center: [c[0], c[1]],
-        angle: mech.rotationAngle || 0
+        angle: a0
     };
     this._updateOverlay();
 };
 
-Viewer.prototype._updateMechDrag = function (scenePt) {
+Viewer.prototype._updateMechDrag = function (scenePt, free) {
     var d = this.dragMech;
     if (!d) { return; }
     if (d.rotate) {
-        var a = Math.atan2(scenePt[1] - d.center0[1],
-                           scenePt[0] - d.center0[0]);
+        var a = Math.atan2(scenePt[1] - d.pivot[1],
+                           scenePt[0] - d.pivot[0]);
         d.angle = d.angle0 + (a - d.grabAngle);
+        // An attached body turns about the point it is held by, so
+        // the centre travels: the preview has to travel with it or it
+        // would promise a place the body will not land in.
+        d.center = _turnAboutPivot(d.center0, d.pivot, d.angle - d.angle0);
     } else {
         d.center = [d.center0[0] + scenePt[0] - d.grab[0],
                     d.center0[1] + scenePt[1] - d.grab[1]];
+        // The marked points of the bench: a mount goes on a screw
+        // hole, a pedestal into the hole of a mount, a fork onto the
+        // post it clamps. Alt takes the cursor at its word.
+        d.snap = this._mechSnap(d.mech,
+                                [d.center[0] - d.center0[0],
+                                 d.center[1] - d.center0[1]], free);
+        if (d.snap) {
+            d.center = [d.center[0] + d.snap.dx, d.center[1] + d.snap.dy];
+        }
     }
     this._updateOverlay();
     this._updateStatus();
 };
+
+/*
+ * Where a body being dragged settles: the marked point of another
+ * body or optics nearest one of its own, once the drag has carried
+ * it.
+ *
+ * The points are the ones Python already publishes for measuring -
+ * the corners and centres of every body, the screw holes it draws,
+ * and the points a part names for itself, like the bore of a fork or
+ * the hole a pedestal screws into. That is what makes "drop the
+ * pedestal on the mount" land exactly rather than nearly.
+ */
+Viewer.prototype._mechSnap = function (mech, delta, free) {
+    if (free) { return null; }
+    var reach = Math.min(SNAP_RADIUS / this.scale, HOLE_SNAP_MAX);
+    var mine = [], theirs = [];
+    (this.scene.snap || []).forEach(function (s) {
+        if (s.optic === mech.name) { mine.push(s); } else { theirs.push(s); }
+    });
+    var best = null, bestD = reach;
+    mine.forEach(function (a) {
+        var x = a.point[0] + delta[0], y = a.point[1] + delta[1];
+        theirs.forEach(function (b) {
+            var dd = Math.hypot(x - b.point[0], y - b.point[1]);
+            if (dd < bestD - SNAP_TIE) {
+                best = {point: b.point, label: b.label,
+                        dx: b.point[0] - x, dy: b.point[1] - y};
+                bestD = dd;
+            }
+        });
+    });
+    return best;
+};
+
+/*
+ * A point carried round a pivot. The same arithmetic as turnAbout,
+ * spelled for a body whose pivot is where it is held rather than
+ * where its middle is.
+ */
+function _turnAboutPivot(p, pivot, da) {
+    return turnAbout(p, pivot, da);
+}
 
 Viewer.prototype._endMechDrag = function () {
     var d = this.dragMech;
@@ -5479,6 +6073,11 @@ Viewer.prototype._pickMechHandle = function (px, py) {
  * put - that is what dragging a corner of anything means - and on
  * release Python re-drills the board at the new size, which is why
  * this is not a scale: the holes keep their diameter and their pitch.
+ *
+ * A round body has no opposite corner to hold still, so its centre
+ * stays where it is and the drag sets a diameter: the handles stand
+ * on the square the disc is inscribed in, and that square follows the
+ * cursor. One size, since a disc has one.
  */
 var MECH_MIN_SIZE = 0.01;
 
@@ -5487,6 +6086,7 @@ Viewer.prototype._beginMechResize = function (mech, corner) {
     var a = mech.rotationAngle || 0;
     this.dragMechResize = {
         mech: mech,
+        round: mech.resizable === 'round',
         angle: a,
         center: [mech.center[0], mech.center[1]],
         width: mech.width,
@@ -5509,6 +6109,17 @@ Viewer.prototype._updateMechResize = function (scenePt) {
     // absolute values.
     var u = rot(scenePt, -r.angle);
     var f = rot(r.fixed, -r.angle);
+    if (r.round) {
+        // The square the disc is inscribed in, centred where it
+        // already is: the far side of the cursor from the centre is
+        // the half-size, and the corner is where two of those meet.
+        var c = rot(r.center, -r.angle);
+        var d = 2 * Math.max(Math.abs(u[0] - c[0]), Math.abs(u[1] - c[1]));
+        r.width = r.height = Math.max(MECH_MIN_SIZE, d);
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
     var w = Math.max(MECH_MIN_SIZE, Math.abs(u[0] - f[0]));
     var h = Math.max(MECH_MIN_SIZE, Math.abs(u[1] - f[1]));
     // The centre is half a size from the fixed corner, towards the
@@ -5530,9 +6141,11 @@ Viewer.prototype._endMechResize = function (commit) {
     this._updateOverlay();
     // A press on a handle that never moved decided nothing.
     if (!commit || !this.onEdit) { return; }
-    this.onEdit({op: 'set', target: r.mech.name,
-                 attrs: {width: r.width, height: r.height,
-                         center: r.center}});
+    // A round body did not move: its centre is what the drag held
+    // still, so saying so again would be a message about nothing.
+    var attrs = {width: r.width, height: r.height};
+    if (!r.round) { attrs.center = r.center; }
+    this.onEdit({op: 'set', target: r.mech.name, attrs: attrs});
 };
 
 /*
@@ -5600,20 +6213,26 @@ Viewer.prototype._pickShape = function (x, y) {
  * Where a drag settles: the marked point nearest any of the points it
  * is carrying, or nothing if none is near enough.
  *
- * The marks are the origin and the points of the other shapes, the
- * middle of their edges included: that is what a part is drawn
- * against - a plate laid on the centre line, a hole put on a corner,
- * a slot centred on a side. The shape being dragged is left out, or it
- * would catch on itself and never move. Alt says to take the cursor
- * at its word instead, as it does when a body is dragged over a
- * grid of holes.
+ * The marks are the origin, the points of the other shapes with the
+ * middle of their edges included, and the points the part names for
+ * itself: that is what a part is drawn against - a plate laid on the
+ * centre line, a hole put on a corner, a slot centred on a side, a
+ * bracket lined up on the post hole. The shape being dragged is left
+ * out, or it would catch on itself and never move, and so is the
+ * named point being dragged, for the same reason. Alt says to take
+ * the cursor at its word instead, as it does when a body is dragged
+ * over a grid of holes.
  */
 Viewer.prototype._shapeSnap = function (pts, except, free) {
     if (free) { return null; }
+    var held = this.dragPoint ? this.dragPoint.index : -1;
     var targets = [[0.0, 0.0]];
     this._shapes().forEach(function (s, i) {
         if (i === except) { return; }
         shapeSnapPoints(s).forEach(function (q) { targets.push(q); });
+    });
+    this._points().forEach(function (q, i) {
+        if (i !== held) { targets.push([q.point[0], q.point[1]]); }
     });
     var best = null, bestD = SNAP_RADIUS / this.scale;
     pts.forEach(function (p) {
@@ -5770,8 +6389,9 @@ Viewer.prototype._onHover = function (px, py) {
     // so that a press anywhere else still pans the view.
     if (this.scene.editor) {
         var sgrip = this.onEdit ? this._pickShapeHandle(px, py) : null;
-        var sp = sgrip ? null : this._pickShape(pt[0], pt[1]);
-        var sgrab = !!this.onEdit && (!!sgrip
+        var spt = (this.onEdit && !sgrip) ? this._pickPointMark(px, py) : null;
+        var sp = (sgrip || spt) ? null : this._pickShape(pt[0], pt[1]);
+        var sgrab = !!this.onEdit && (!!sgrip || !!spt
                                       || (sp && sp.index === this.selectedShape));
         this.svg.classList.toggle('gt-over-optic', !!sgrab);
         this.svg.classList.toggle('gt-over-pickable', !sgrab && !!sp);
@@ -6062,6 +6682,7 @@ Viewer.prototype._updateEditorMarks = function () {
         this.shapeMark.style.display = 'none';
         if (this.shapePreview) { this.shapePreview.textContent = ''; }
         this._placeShapeHandles(null);
+        this._placePointMarks();
         return;
     }
     var o = this.sceneToScreen(0, 0);
@@ -6071,6 +6692,7 @@ Viewer.prototype._updateEditorMarks = function () {
              ' M ' + o[0] + ' ' + (o[1] - ORIGIN_ARM) +
              ' L ' + o[0] + ' ' + (o[1] + ORIGIN_ARM));
     this.originMark.style.display = '';
+    this._placePointMarks();
 
     // A drag shows the shape where it would land, and the box and the
     // grips go with it: they are what is being aimed, so leaving them
@@ -6149,6 +6771,103 @@ Viewer.prototype._placeShapeHandles = function (s) {
     for (var k = hs.length; k < this.shapeHandleEls.length; k++) {
         this.shapeHandleEls[k].style.display = 'none';
     }
+};
+
+/*
+ * Stand the named points of the part where they are, each with its
+ * name beside it, and remember where for the mousedown hit test.
+ *
+ * The one being dragged is drawn where it would land rather than
+ * where it stands, as a dragged shape is: what is being aimed is the
+ * answer, and the place it came from has already been left.
+ */
+Viewer.prototype._placePointMarks = function () {
+    var self = this;
+    if (!this.pointMarkGroup) { return; }
+    var pts = this.scene.editor ? this._points() : [];
+    var d = this.dragPoint;
+    while (this.pointMarkEls.length < pts.length) {
+        var g = svgEl('g');
+        var ring = svgEl('circle', {'class': 'gt-point-mark', r: 4.5});
+        var label = svgEl('text', {'class': 'gt-point-label'});
+        g.appendChild(ring);
+        g.appendChild(label);
+        this.pointMarkGroup.appendChild(g);
+        this.pointMarkEls.push({g: g, ring: ring, label: label});
+    }
+    this._pointMarkPts = pts.map(function (q, k) {
+        var at = (d && d.index === k) ? d.at : q.point;
+        var p = self.sceneToScreen(at[0], at[1]);
+        var e = self.pointMarkEls[k];
+        e.ring.setAttribute('cx', p[0]);
+        e.ring.setAttribute('cy', p[1]);
+        e.ring.classList.toggle('gt-selected', k === self.selectedPoint);
+        e.label.setAttribute('x', p[0] + 8);
+        e.label.setAttribute('y', p[1] - 7);
+        e.label.textContent = q.name;
+        e.g.style.display = '';
+        return {px: p[0], py: p[1], index: k};
+    });
+    for (var k = pts.length; k < this.pointMarkEls.length; k++) {
+        this.pointMarkEls[k].g.style.display = 'none';
+    }
+};
+
+/*
+ * The named point under a screen point, or null. The same reach a
+ * grip has: they are the same gesture on the same scale.
+ */
+Viewer.prototype._pickPointMark = function (px, py) {
+    var pts = this._pointMarkPts || [];
+    for (var i = 0; i < pts.length; i++) {
+        if (Math.abs(px - pts[i].px) <= 6 && Math.abs(py - pts[i].py) <= 6) {
+            return pts[i];
+        }
+    }
+    return null;
+};
+
+Viewer.prototype._beginPointDrag = function (index, scenePt) {
+    var q = this._points()[index];
+    if (!q) { return; }
+    // Taking hold of one is also how it is picked out, so the rows
+    // below say what the mark in the drawing is holding.
+    if (index !== this.selectedPoint) { this._selectPoint(index); }
+    this.dragPoint = {index: index, name: q.name,
+                      from: [q.point[0], q.point[1]],
+                      at: [q.point[0], q.point[1]],
+                      grab: scenePt, snap: null};
+    this._updateOverlay();
+};
+
+/*
+ * Where a dragged point would land: the cursor, or the mark it has
+ * caught on. Every point of every shape is a target, the origin
+ * included - a hole is bored on a centre line, a post hole in the
+ * middle of a plate - and no shape is left out, since the point being
+ * dragged is not one of them and cannot catch on itself. Alt takes
+ * the cursor at its word.
+ */
+Viewer.prototype._updatePointDrag = function (scenePt, free) {
+    var d = this.dragPoint;
+    if (!d) { return; }
+    d.snap = this._shapeSnap([scenePt], null, free);
+    d.at = d.snap ? [d.snap.point[0], d.snap.point[1]]
+                  : [scenePt[0], scenePt[1]];
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endPointDrag = function (commit) {
+    var d = this.dragPoint;
+    this.dragPoint = null;
+    if (!d) { return null; }
+    this._updateOverlay();
+    if (!commit || !this.onEdit) { return null; }
+    var entries = this._pointEntries();
+    if (!entries[d.index]) { return null; }
+    entries[d.index].point = [d.at[0], d.at[1]];
+    return this._sendPoints(entries);
 };
 
 /*
@@ -6258,10 +6977,16 @@ Viewer.prototype._updateOverlay = function () {
     // same mark shows the screw hole a dragged anchor has caught on.
     var snapPt = ((this.measuring || this.aligning) && this.snapped)
         ? this.snapped.point
+        : (this.dragPoint && this.dragPoint.snap)
+            ? this.dragPoint.snap.point
         : (this.dragShape && this.dragShape.snap)
             ? this.dragShape.snap.point
+        : (this.dragMech && this.dragMech.snap)
+            ? this.dragMech.snap.point
         : (this.dragOptic && this.dragOptic.hole)
-            ? this.dragOptic.hole.point : null;
+            ? this.dragOptic.hole.point
+        : (this.dragSource && this.dragSource.hole)
+            ? this.dragSource.hole.point : null;
     if (snapPt) {
         var s = this.sceneToScreen(snapPt[0], snapPt[1]);
         this.snapMark.setAttribute('cx', s[0]);
@@ -6355,6 +7080,24 @@ Viewer.prototype._updateOverlay = function () {
 };
 
 Viewer.prototype._updateStatus = function () {
+    // A body being cut to a new size. One number for a round one,
+    // which is what makes it clear that the drag is not stretching
+    // a disc into an oval.
+    var mr = this.dragMechResize;
+    if (mr) {
+        this.statusBar.textContent = mr.mech.name + ':  ' +
+            (mr.round
+                ? '⌀ ' + fmtLen(mr.width)
+                : fmtLen(mr.width) + '  ×  ' + fmtLen(mr.height));
+        return;
+    }
+    var pd = this.dragPoint;
+    if (pd) {
+        this.statusBar.textContent = pd.name + ':  ' +
+            fmtLen(pd.at[0]) + ',  ' + fmtLen(pd.at[1]) +
+            (pd.snap ? '   (snapped)' : '');
+        return;
+    }
     var sd = this.dragShape;
     if (sd) {
         var what = sd.shape.type + ' ' + (sd.index + 1) + ':  ';
@@ -6392,7 +7135,8 @@ Viewer.prototype._updateStatus = function () {
             ? s.source.name + ':  ' + fmtDeg(normAngle(s.angle)) +
               '   (was ' + fmtDeg(normAngle(s.angle0)) + ')'
             : s.source.name + ':  ' + fmtLen(s.pos[0]) + ',  ' +
-              fmtLen(s.pos[1]);
+              fmtLen(s.pos[1]) +
+              (s.hole ? '   on ' + s.hole.label : '');
         return;
     }
     var h = this.dragMech;
@@ -6401,7 +7145,8 @@ Viewer.prototype._updateStatus = function () {
             ? h.mech.name + ':  ' + fmtDeg(normAngle(h.angle)) +
               '   (was ' + fmtDeg(normAngle(h.angle0)) + ')'
             : h.mech.name + ':  ' + fmtLen(h.center[0]) + ',  ' +
-              fmtLen(h.center[1]);
+              fmtLen(h.center[1]) +
+              (h.snap ? '   on ' + h.snap.label : '');
         return;
     }
     var d = this.dragOptic;
@@ -6448,16 +7193,13 @@ Viewer.prototype._updateStatus = function () {
             // The last click places the line rather than measuring
             // anything, so the distance is settled and shown as such.
             this.statusBar.textContent =
-                'Measure:  ' + fmtLen(Math.hypot(
-                    this.measureTo[0] - this.measureFrom[0],
-                    this.measureTo[1] - this.measureFrom[1])) +
+                'Measure:  ' + spanText(this.measureFrom, this.measureTo) +
                 '     place the line:  offset ' +
                 fmtLen(this.measureOffset || 0) + tail;
         } else if (this.measureFrom) {
             var to = this.measurePreview || this.cursor || this.measureFrom;
             this.statusBar.textContent =
-                'Measure:  ' + fmtLen(Math.hypot(to[0] - this.measureFrom[0],
-                                                 to[1] - this.measureFrom[1])) +
+                'Measure:  ' + spanText(this.measureFrom, to) +
                 '     to  ' + where + tail;
         } else {
             this.statusBar.textContent =
@@ -6585,7 +7327,13 @@ Viewer.prototype.setScene = function (scene) {
             this.selectedShape = this._shapes().length
                 ? this._shapes().length - 1 : null;
         }
+        if (this.selectedPoint !== null
+                && this.selectedPoint >= this._points().length) {
+            this.selectedPoint = this._points().length
+                ? this._points().length - 1 : null;
+        }
         this._refreshShapePanel();
+        this._refreshPointPanel();
         this._showPanel('shape');
         if (this.modelInput && this.scene.editor.model_name
                 && document.activeElement !== this.modelInput) {
@@ -6648,6 +7396,11 @@ var GTraceViewer = {
     Viewer: Viewer,
     beamParamsAt: beamParamsAt,
     projectOnBeam: projectOnBeam,
+    // What a panel row makes of what was typed into it. Exported so
+    // that it can be checked on its own, without a browser: it is
+    // arithmetic, and arithmetic is worth hammering.
+    parseField: parseField,
+    INPUT_UNITS: INPUT_UNITS,
     // What an embedder may not make the viewer shorter than, whether by
     // dragging the grip or by working a height out for itself. Exported
     // so that the widget does not carry a second copy of the number.

@@ -63,7 +63,8 @@ def make_part():
                 draw.PolyLine([0.03, 0.05, 0.04], [0.0, 0.0, 0.02]),
                 draw.Line([-0.05, 0.03], [-0.02, 0.03]),
                 draw.Arc([0.0, -0.04], 0.01, 0.0, np.pi)],
-        center=[0.3, 0.1], name='P1')
+        center=[0.3, 0.1], name='P1',
+        points={'post': [-0.04, -0.03], 'inner': [-0.012, -0.006]})
 
 RECT, CIRCLE, POLY, LINE, ARC = range(5)
 
@@ -342,6 +343,57 @@ var SCENE = __SCENE__;
                                                {key: '[', bubbles: true}));
         out.quarterBack = last();
 
+        // --- the points a part names for itself ---
+        function clientOfPoint(k) {
+            var r = rect();
+            var q = v._pointMarkPts[k];
+            return [q.px + r.left, q.py + r.top];
+        }
+        clickAt(screenOf([0.0, 0.05]));
+
+        // Taking hold of a mark picks it out, and the rows follow.
+        before = sent.length;
+        mouse(v.svg, 'mousedown', clientOfPoint(0)[0], clientOfPoint(0)[1]);
+        mouse(window, 'mouseup', clientOfPoint(0)[0], clientOfPoint(0)[1]);
+        out.pickPointMark = {selected: v.selectedPoint,
+                             n: sent.length - before,
+                             name: v.pointFields.name.el.value};
+
+        // Carried somewhere free, with Alt: the cursor means what it
+        // says, so it lands where it was let go.
+        before = sent.length;
+        dragFromTo(clientOfPoint(0), screenOf([-0.045, -0.05]), FREE);
+        out.dragPoint = {msg: last(), n: sent.length - before};
+
+        // Let go near the origin, without Alt: it settles on it, and
+        // the mark says so while the drag is on.
+        before = sent.length;
+        var pnear = screenOf([0.0006, -0.0005]);
+        mouse(v.svg, 'mousedown', clientOfPoint(0)[0], clientOfPoint(0)[1]);
+        mouse(window, 'mousemove', pnear[0], pnear[1]);
+        out.pointSnapMarked = v.snapMark.style.display !== 'none';
+        out.pointStatus = v.statusBar.textContent;
+        mouse(window, 'mouseup', pnear[0], pnear[1]);
+        out.pointSnapped = last();
+
+        // And onto a corner of the rectangle, which is a place a part
+        // is drawn against like any other.
+        before = sent.length;
+        dragFromTo(clientOfPoint(0), screenOf([-0.0195, -0.0104]));
+        out.pointToCorner = last();
+
+        // A mark lying over a shape is taken first: it is the small
+        // thing, and the rectangle is still there to be clicked
+        // anywhere else. The rectangle is selected first, so that it
+        // would have been dragged had the mark not won.
+        clickAt(screenOf([-0.018, 0.008]));
+        out.rectPickedFirst = v.selectedShape;
+        before = sent.length;
+        dragFromTo(clientOfPoint(1), screenOf([-0.03, -0.02]), FREE);
+        out.pointOverShape = {msg: last(), n: sent.length - before,
+                              shape: v.selectedShape,
+                              point: v.selectedPoint};
+
         out.sent = sent;
     } catch (e) {
         out.error = String(e && e.stack || e);
@@ -593,12 +645,59 @@ if qt['msg']:
           and r1.x[0] == r1.x[-1] and r1.y[0] == r1.y[-1],
           type(r1).__name__)
 
+print('--- carrying the points a part names for itself ---')
+pk = res['pickPointMark']
+check('taking hold of a mark picks it out, and decides nothing',
+      pk['selected'] == 0 and pk['n'] == 0 and pk['name'] == 'post',
+      json.dumps(pk))
+dp = res['dragPoint']
+check('carrying one sends the whole list, once',
+      dp['n'] == 1 and dp['msg'] and dp['msg']['op'] == 'set_points'
+      and [q['name'] for q in dp['msg']['points']] == ['post', 'inner'],
+      json.dumps(dp['msg']))
+if dp['msg']:
+    check('  and Python puts it where it was let go',
+          np.allclose(applied(dp['msg']).points['post'], [-0.045, -0.05],
+                      atol=2e-4)
+          and np.allclose(applied(dp['msg']).points['inner'],
+                          part.points['inner']),
+          str(np.round(applied(dp['msg']).points['post'], 5).tolist()))
+check('let go near the origin it settles on it exactly',
+      res['pointSnapped']
+      and np.allclose(applied(res['pointSnapped']).points['post'],
+                      [0.0, 0.0], atol=1e-15),
+      json.dumps(res['pointSnapped']))
+check('  and the mark says so while the drag is on',
+      res['pointSnapMarked'])
+check('  as does the status bar, by name',
+      res['pointStatus'].startswith('post:')
+      and 'snapped' in res['pointStatus'], res['pointStatus'])
+check('a corner of a shape catches it too',
+      res['pointToCorner']
+      and np.allclose(applied(res['pointToCorner']).points['post'],
+                      [-0.02, -0.01], atol=1e-15),
+      json.dumps(res['pointToCorner']))
+pv = res['pointOverShape']
+check('a mark over a selected shape is taken before the shape',
+      res['rectPickedFirst'] == RECT and pv['n'] == 1
+      and pv['msg'] and pv['msg']['op'] == 'set_points'
+      and pv['point'] == 1 and pv['shape'] == RECT, json.dumps(pv))
+if pv['msg'] and pv['msg']['op'] == 'set_points':
+    moved = applied(pv['msg'])
+    check('  so the point moves and the rectangle does not',
+          np.allclose(moved.points['inner'], [-0.03, -0.02], atol=2e-4)
+          and np.allclose(moved.shapes[RECT].point,
+                          part.shapes[RECT].point),
+          str(np.round(moved.points['inner'], 5).tolist()))
+
 print('--- what the whole session sent ---')
 ops = set(m.get('op') for m in res['sent'])
-check('nothing but set_shape and rotate_shape ever left the page',
-      ops == {'set_shape', 'rotate_shape'}, json.dumps(sorted(ops)))
-check('every message names a shape the part has',
-      all(0 <= m['index'] < len(part.shapes) for m in res['sent']),
+check('nothing but set_shape, rotate_shape and set_points left the page',
+      ops == {'set_shape', 'rotate_shape', 'set_points'},
+      json.dumps(sorted(ops)))
+check('every message names a shape the part has, or its points',
+      all(0 <= m['index'] < len(part.shapes) for m in res['sent']
+          if m.get('op') != 'set_points'),
       str(len(res['sent'])) + ' messages')
 
 print()

@@ -389,6 +389,114 @@ check('a builder part keeps its parameters through the editor',
       and from_model('TEST-EDITED-BOARD', name='x').resizable)
 
 
+print('--- the points a part names for itself ---')
+
+# The points are the part's, not the editor's, so an editor opened on
+# a mount finds the post hole its builder put there.
+ped = ShapeEditor(mirror_mount(name='MT'))
+pts = ped.scene_dict()['points']
+check('the scene carries the named points', len(pts) == 1
+      and pts[0]['name'] == 'post' and pts[0]['index'] == 0,
+      json.dumps(pts))
+check('  in metres, as the body keeps them',
+      abs(pts[0]['point'][0] - float(mirror_mount().points['post'][0]))
+      < 1e-15)
+check('  and they join the points a drag or a measurement settles on',
+      [q['label'] for q in ped.scene_dict()['snap']
+       if q['kind'] == 'point'] == ['post'])
+
+ped.apply_edit({'op': 'set_points',
+                'points': [{'name': 'post', 'point': [-0.0135, 0.0]},
+                           {'name': 'toe', 'point': [0.008, 0.002]}]})
+check('a point is moved, and another named, by one message',
+      sorted(ped.mechanics.points) == ['post', 'toe']
+      and np.allclose(ped.mechanics.points['post'], [-0.0135, 0.0])
+      and np.allclose(ped.mechanics.points['toe'], [0.008, 0.002]))
+check('  and the list keeps the order it arrived in',
+      [q['name'] for q in ped.scene_dict()['points']] == ['post', 'toe'])
+
+# Renaming is what the whole list is sent for: there is no index that
+# survives it, so 'post' becoming 'stud' is the same message as any
+# other change.
+ped.apply_edit({'op': 'set_points',
+                'points': [{'name': 'stud', 'point': [-0.0135, 0.0]},
+                           {'name': 'toe', 'point': [0.008, 0.002]}]})
+check('renaming one is the same message',
+      sorted(ped.mechanics.points) == ['stud', 'toe'])
+ped.apply_edit({'op': 'set_points', 'points': []})
+check('and so is taking them all away', ped.mechanics.points == {})
+
+ped.apply_edit({'op': 'undo'})
+check('undo puts the named points back',
+      sorted(ped.mechanics.points) == ['stud', 'toe'])
+ped.apply_edit({'op': 'undo'})
+check('  one step at a time', sorted(ped.mechanics.points) == ['post', 'toe'])
+ped.apply_edit({'op': 'redo'})
+check('redo steps forward again',
+      sorted(ped.mechanics.points) == ['stud', 'toe'])
+
+# The body is the user's object, so the dict it holds is refilled
+# rather than swapped for another one.
+held = ped.mechanics.points
+ped.apply_edit({'op': 'set_points',
+                'points': [{'name': 'a', 'point': [0.0, 0.0]}]})
+check('the body keeps the very dict it had',
+      ped.mechanics.points is held and list(held) == ['a'])
+ped.apply_edit({'op': 'undo'})
+check('  through an undo as well',
+      ped.mechanics.points is held and sorted(held) == ['stud', 'toe'])
+
+# A shape edit does not disturb them, and a point edit does not
+# disturb the shapes: they are two lists on one body.
+nshapes = len(ped.shapes)
+ped.apply_edit({'op': 'set_points',
+                'points': [{'name': 'stud', 'point': [-0.014, 0.0]}]})
+check('naming a point leaves the shapes alone', len(ped.shapes) == nshapes)
+ped.apply_edit({'op': 'add_shape', 'type': 'circle'})
+check('  and drawing a shape leaves the points alone',
+      list(ped.mechanics.points) == ['stud'])
+ped.apply_edit({'op': 'undo'})
+check('  each undoing only what it did',
+      len(ped.shapes) == nshapes and list(ped.mechanics.points) == ['stud'])
+
+def refused_points(ed, points, why):
+    before = json.dumps(ed.points_dict())
+    try:
+        ed.apply_edit({'op': 'set_points', 'points': points})
+    except EditError as e:
+        check('refuses %s' % why, True, '(%s)' % str(e)[:60])
+    except Exception as e:
+        check('refuses %s' % why, False,
+              '(raised %s instead)' % type(e).__name__)
+        return
+    else:
+        check('refuses %s' % why, False, '(it went through)')
+        return
+    check('  and leaves the named points alone',
+          json.dumps(ed.points_dict()) == before)
+
+refused_points(ped, [{'name': 'a', 'point': [0, 0]},
+                     {'name': 'a', 'point': [1, 1]}],
+               'two points of the same name')
+refused_points(ped, [{'name': '', 'point': [0, 0]}], 'a point with no name')
+refused_points(ped, [{'name': '  ', 'point': [0, 0]}], 'a name of spaces')
+refused_points(ped, [{'name': 7, 'point': [0, 0]}],
+               'a name that is not a string')
+refused_points(ped, [{'name': 'a', 'point': [0, float('inf')]}],
+               'a point at infinity')
+refused_points(ped, [{'name': 'a', 'point': [0, 0, 0]}],
+               'a point of three numbers')
+refused_points(ped, [{'name': 'a', 'point': 'over there'}],
+               'a point that is not a place')
+refused_points(ped, [{'name': 'a'}], 'a point with nowhere to be')
+refused_points(ped, ['a'], 'an entry that is not a dict')
+refused_points(ped, {'a': [0, 0]}, 'a dict where a list belongs')
+check('the name is taken without the space around it',
+      (ped.apply_edit({'op': 'set_points',
+                       'points': [{'name': '  post ', 'point': [0, 0]}]})
+       and list(ped.mechanics.points) == ['post']))
+
+
 print('--- the editor and a layout share the body ---')
 
 L = OpticalLayout(name='ed', rules=TraceRules(order=2,

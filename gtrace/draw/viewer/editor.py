@@ -216,6 +216,7 @@ class ShapeEditor(object):
             'model_name': str(self.model_name),
             'layer': str(self.mechanics.layer)}
         scene['shapes'] = self.shapes_dict()
+        scene['points'] = self.points_dict()
         return scene
 
     def shapes_dict(self):
@@ -234,6 +235,21 @@ class ShapeEditor(object):
             d['index'] = i
             out.append(d)
         return out
+
+    def points_dict(self):
+        '''
+        The points the part names for itself, each with the index an
+        edit message names it by.
+
+        A list, where the body keeps a dict: a panel needs a row to
+        stay where it is while its name is being typed, and a name
+        that is being typed is halfway to something else. So the
+        index is the place in the list and the name is a value like
+        any other - which is what lets one be renamed at all.
+        '''
+        return [{'name': str(k), 'point': [float(v[0]), float(v[1])],
+                 'index': i}
+                for i, (k, v) in enumerate(self.mechanics.points.items())]
 
     def snap_points(self):
         '''
@@ -254,6 +270,14 @@ class ShapeEditor(object):
                                'label': '%s %d %s'
                                         % (shape_to_dict(s)['type'], i + 1,
                                            kind)})
+        # The points the part names for itself. Last, as they are on
+        # a bench: a corner of a plate is where the drawing happens to
+        # go, and a named point is what the part is stood on something
+        # by, so the label says which one.
+        for name in sorted(self.mechanics.points):
+            p = self.mechanics.points[name]
+            points.append({'point': [float(p[0]), float(p[1])],
+                           'kind': 'point', 'optic': '', 'label': name})
         return points
 
 #}}}
@@ -272,6 +296,8 @@ class ShapeEditor(object):
             {'op': 'move_shape',      'index': 2, 'to': 0}
             {'op': 'rotate_shape',    'index': 2, 'angle': 0.7854,
                                       'pivot': [0.0, 0.0]}
+            {'op': 'set_points',      'points': [{'name': 'post',
+                                                  'point': [-0.0135, 0.0]}]}
             {'op': 'save_model',      'name': 'MY-PART',
                                       'description': 'one line'}
             {'op': 'undo'}
@@ -290,6 +316,14 @@ class ShapeEditor(object):
         corners. The angle is in radians, counterclockwise; ``pivot``
         defaults to the middle of the shape's bounding box, which is
         the box a front end draws around it.
+
+        The named points are set as a whole list rather than one at a
+        time. There is no index that survives a rename - a point is
+        known by its name, and a name is the thing being edited - so
+        every gesture that touches them, adding one, moving one,
+        renaming one, taking one away, arrives as the list they leave
+        behind. One message is also one step of undo, which is what a
+        drag of a point should be.
 
         Raises
         ------
@@ -395,6 +429,13 @@ class ShapeEditor(object):
                 shape_to_dict(rotate_shape(self.shapes[i], angle, pivot)))
             return self
 
+        if op == 'set_points':
+            # Built whole first, then the body's own dict is refilled
+            # rather than replaced - the same care the shapes are
+            # restored with, and for the same reason.
+            self._fill_points(self._points(msg.get('points')))
+            return self
+
         if op == 'save_model':
             name = msg.get('name')
             if not isinstance(name, str) or not name.strip():
@@ -423,6 +464,42 @@ class ShapeEditor(object):
             raise EditError('There is no shape %d; the part has %d.'
                             % (i, len(self.shapes)))
         return i
+
+    def _points(self, entries):
+        '''
+        The named points of a part from a message, or an EditError.
+
+        Built whole before anything is put in place, so a list with
+        one bad entry in it leaves the part with the points it had.
+        '''
+        if not isinstance(entries, list):
+            raise EditError('The named points are a list of '
+                            "{'name': ..., 'point': [x, y]}, not %r."
+                            % (entries,))
+        out = {}
+        for e in entries:
+            if not isinstance(e, dict):
+                raise EditError('A named point is a dict with a name and a '
+                                'point in it, not %r.' % (e,))
+            name = e.get('name')
+            if not isinstance(name, str) or not name.strip():
+                raise EditError('A point needs a name to be known by, and '
+                                '%r is not one.' % (name,))
+            name = name.strip()
+            if name in out:
+                raise EditError('Two points cannot both be called %r: a '
+                                'part is stood on one of them by name.'
+                                % (name,))
+            try:
+                p = np.asarray(e.get('point'), dtype='float64').reshape(2)
+            except (TypeError, ValueError):
+                raise EditError('The point %r is at an [x, y], not %r.'
+                                % (name, e.get('point')))
+            if not np.all(np.isfinite(p)):
+                raise EditError('The point %r cannot be put at %r.'
+                                % (name, e.get('point')))
+            out[name] = p
+        return out
 
     def _build(self, d):
         '''
@@ -480,12 +557,25 @@ class ShapeEditor(object):
 #{{{ Undo
 
     def _snapshot(self):
-        return [shape_to_dict(s) for s in self.shapes]
+        return {'shapes': [shape_to_dict(s) for s in self.shapes],
+                'points': self.points_dict()}
 
     def _restore(self, snapshot):
         # The body's own list is refilled rather than replaced: it is
         # the user's object, and a layout may be holding it.
-        self.shapes[:] = [shape_from_dict(d) for d in snapshot]
+        self.shapes[:] = [shape_from_dict(d)
+                          for d in snapshot['shapes']]
+        self._fill_points(
+            dict((e['name'], np.array(e['point'], dtype='float64'))
+                 for e in snapshot['points']))
+        return self
+
+    def _fill_points(self, points):
+        '''
+        Put these named points in the body's own dict, in this order.
+        '''
+        self.mechanics.points.clear()
+        self.mechanics.points.update(points)
         return self
 
     def undo(self):

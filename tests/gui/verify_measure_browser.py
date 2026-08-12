@@ -223,6 +223,24 @@ var EDITABLE = __EDITABLE__;
                              marked: el.querySelector('.gt-dims .gt-dim')
                                  .classList.contains('gt-selected')};
 
+        // What the panel makes of the span: the straight line and the
+        // two components, which is what a bench is actually built on.
+        out.spanRows = {dx: v.dimFields.dx.el.textContent,
+                        dy: v.dimFields.dy.el.textContent};
+
+        // The two rows here are read in different units - an end is
+        // a place on the bench in metres, the offset is an adjustment
+        // in millimetres - so the same text has to land differently.
+        var nu = sent.length;
+        v.dimFields.p1x.el.value = '1[in]';
+        v.dimFields.p1x.el.dispatchEvent(new Event('change', {bubbles: true}));
+        out.typedEnd = sent[sent.length - 1];
+        v.dimFields.offset.el.value = '1[in]';
+        v.dimFields.offset.el.dispatchEvent(
+            new Event('change', {bubbles: true}));
+        out.typedOffset = sent[sent.length - 1];
+        sent.length = nu;
+
         // Editing an end sends a set naming that end only.
         var nEdit = sent.length;
         v.dimFields.p2x.el.value = '0.9';
@@ -595,6 +613,29 @@ check('the distance', a['fields']['length'].endswith('mm'),
       a['fields']['length'])
 check('the direction', a['fields']['angle'].endswith('deg')
       or '°' in a['fields']['angle'], a['fields']['angle'])
+# The two components as well as the span: a mount goes 300 along and
+# 75 across, and that is the pair of numbers wanted, not the diagonal.
+_LEN_UNITS = {'m': 1.0, 'mm': 1e-3, 'um': 1e-6, 'µm': 1e-6,
+              'nm': 1e-9, 'km': 1e3, 'cm': 1e-2}
+
+def as_metres(text):
+    '''
+    A length the panel wrote, back in metres. The row is written to
+    five figures, so what is checked is the number and its unit, not
+    the digits that were dropped to write it.
+    '''
+    num, unit = text.split()
+    return float(num) * _LEN_UNITS[unit]
+
+sp = res['spanRows']
+want_dx = float(L1.ARcenter[0]) - float(L1.HRcenter[0])
+want_dy = float(L1.ARcenter[1]) - float(L1.HRcenter[1])
+check('and the two components of it, signed from the first end',
+      abs(as_metres(sp['dx']) - want_dx) < 1e-4 * abs(want_dx),
+      '%s (want %g)' % (sp['dx'], want_dx))
+check('  with the across component as small as the span is straight',
+      abs(as_metres(sp['dy']) - want_dy) < 1e-9,
+      '%s (want %g)' % (sp['dy'], want_dy))
 check('which optics the span is inside', a['fields']['inside'] == 'L1',
       a['fields']['inside'])
 check('and the optical distance', a['opticalShown'] and a['insideShown'],
@@ -817,6 +858,16 @@ check('and puts the line square off the span by that much',
       abs(float(np.linalg.norm(a - made.p1)) - abs(made.offset)) < 1e-15
       and abs(float(np.dot(a - made.p1, made.p2 - made.p1))) < 1e-15,
       str(list(a)))
+
+print('--- the rows know which unit they are read in ---')
+te = res['typedEnd']
+check('1[in] in a metre row is 0.0254 m',
+      te and te['op'] == 'set' and abs(te['attrs']['p1'][0] - 0.0254) < 1e-12,
+      json.dumps(te))
+to = res['typedOffset']
+check('and 1[in] in the millimetre row beside it is 25.4 mm',
+      to and to['op'] == 'set'
+      and abs(to['attrs']['offset'] - 0.0254) < 1e-12, json.dumps(to))
 
 print('--- read-only viewer ---')
 errs, res = run(False)

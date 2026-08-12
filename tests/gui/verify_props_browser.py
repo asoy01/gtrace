@@ -1008,6 +1008,42 @@ var LENS = __LENS__;
                 mode: v.displayControls.width_mode.value
             };
         }
+        // --- a row is a calculator, and knows its own unit ---
+        // The parser itself is checked on its own in verify_input.js;
+        // what wants checking here is that each row hands it the unit
+        // it is labelled with. A wrong unit here would land a value
+        // a thousand times off without saying anything.
+        if (EDITABLE) {
+            out.typed = {};
+            // Whatever the checks above left on show, these rows are
+            // the element's, so the element is what has to be up.
+            v._selectOptic(v.scene.optics[0]);
+            var nt = sent.length;
+            setField('diameter', '2*25.4');
+            out.typed.timesMm = sent[sent.length - 1];
+            setField('diameter', '1[in]');
+            out.typed.inchMm = sent[sent.length - 1];
+            setField('cx', '1[in]');
+            out.typed.inchM = sent[sent.length - 1];
+            setField('angle', '45+45');
+            out.typed.sumDeg = sent[sent.length - 1];
+            setField('angle', '1[rad]');
+            out.typed.radDeg = sent[sent.length - 1];
+            // A unit of the wrong kind, and one in a row that has
+            // none: both go nowhere, and the row goes back to what
+            // the model holds.
+            var nBad = sent.length;
+            setField('diameter', '1[rad]');
+            setField('n', '1[in]');
+            out.typed.refused = sent.length - nBad;
+            out.typed.putBack = fields().diameter;
+            // Dropped again: what follows this in Python is a replay
+            // of the session onto a real layout, and these were
+            // typed to see what the rows make of them rather than to
+            // move anything.
+            sent.length = nt;
+        }
+
     } catch (e) {
         out.error = String((e && e.stack) || e);
     }
@@ -1947,6 +1983,33 @@ lay.apply_edit({'op': 'undo'})
 check('and a round trip leaves the layout as it was',
       abs(float(o.diameter) - 0.2) < 1e-15
       and lay.scene_dict()['optics'][0] == back, str(float(o.diameter)))
+
+print('--- a row is a calculator, and knows its own unit ---')
+ty = res.get('typed')
+if ty is None:
+    check('rows take arithmetic', False, 'no output')
+else:
+    check('2*25.4 in a millimetre row is 50.8 mm',
+          ty['timesMm'] and ty['timesMm']['op'] == 'set'
+          and abs(ty['timesMm']['attrs']['diameter'] - 0.0508) < 1e-12,
+          json.dumps(ty['timesMm']))
+    check('1[in] in the same row is 25.4 mm',
+          ty['inchMm'] and abs(ty['inchMm']['attrs']['diameter'] - 0.0254)
+          < 1e-12, json.dumps(ty['inchMm']))
+    check('1[in] in a metre row is 0.0254 m, not 0.0254 mm',
+          ty['inchM'] and abs(ty['inchM']['center'][0] - 0.0254) < 1e-12,
+          json.dumps(ty['inchM']))
+    check('45+45 in a degree row is a right angle in radians',
+          ty['sumDeg'] and abs(ty['sumDeg']['normAngleHR'] - np.pi/2) < 1e-12,
+          json.dumps(ty['sumDeg']))
+    check('1[rad] in a degree row is one radian, not one degree',
+          ty['radDeg'] and abs(ty['radDeg']['normAngleHR'] - 1.0) < 1e-12,
+          json.dumps(ty['radDeg']))
+    check('a unit of the wrong kind sends nothing, in either direction',
+          ty['refused'] == 0, str(ty['refused']))
+    check('  and the row goes back to what the model holds',
+          abs(float(ty['putBack']) - float(scene['optics'][0]['diameter'])/mm)
+          < 1e-9, str(ty['putBack']))
 
 print('--- read-only viewer ---')
 errs, res = run(False)

@@ -37,6 +37,8 @@ SUITES = [
      'renderHTML: self-containment, the embedded scene, every entry point'),
     ('verify_stage1.js',
      'viewer.js physics against gtrace, over every beam of a traced system'),
+    ('verify_input.js',
+     'what a panel row makes of what is typed into it: arithmetic and units'),
     ('verify_browser.py',
      'headless browser: the DOM the viewer builds, and the real HTML file'),
     ('verify_interact.py',

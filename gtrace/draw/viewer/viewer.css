@@ -791,6 +791,59 @@
 
 .gt-shapelist .gt-note { padding: 2px 1px; }
 
+/* The points a part names for itself. The same list as the shapes -
+   it is the same gesture on the same kind of thing - and shorter,
+   since a part has a couple of them where it has a dozen shapes. */
+.gt-pointlist {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 6px 8px 2px;
+}
+
+.gt-pointrow {
+    padding: 3px 7px;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    color: #1f2328;
+    background: #f6f8fa;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.gt-pointrow:hover { background: #eceff3; }
+
+.gt-pointrow.gt-selected {
+    background: #e8effa;
+    border-color: #2f5fa8;
+}
+
+.gt-pointlist .gt-note { padding: 2px 1px; }
+
+/* A named point in the drawing, and the name beside it. The amber of
+   the origin cross, because they are the same kind of thing: places
+   the part is stood on something by, the origin being the one every
+   part has. Filled for the one the rows below answer for. */
+.gt-point-mark {
+    fill: #fff;
+    stroke: #b45309;
+    stroke-width: 1.6;
+    cursor: move;
+}
+
+.gt-point-mark.gt-selected { fill: #b45309; }
+
+.gt-point-label {
+    fill: #b45309;
+    font: 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+    pointer-events: none;
+    user-select: none;
+}
+
 /* ----------------------------------------------------------------- help */
 
 .gt-help ul {

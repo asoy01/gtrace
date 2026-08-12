@@ -468,6 +468,11 @@ MECHANICS_TYPE = 'Mechanics'
 EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle',
                                       'attached_to', 'offset',
                                       'offset_angle',
+                                      # Whether the turn relative to
+                                      # the host may be changed: a
+                                      # clamping fork swings, a mount
+                                      # bolted to its mirror does not.
+                                      'fix_rotation',
                                       # Only a parametric body has a
                                       # size to set; Mechanics.resize
                                       # says so when it refuses.
@@ -481,7 +486,8 @@ _MECHANICS_POSE_ATTRS = frozenset(['center', 'rotationAngle'])
 CREATABLE_MECHANICS_PARAMS = frozenset(['center', 'rotationAngle',
                                         'shapes', 'layer', 'model',
                                         'attached_to', 'offset',
-                                        'offset_angle'])
+                                        'offset_angle', 'points',
+                                        'attach_point', 'fix_rotation'])
 
 #: How many edits back undo can go. A snapshot is the serialized
 #: layout, so the cost is a few tens of kilobytes each for a system of
@@ -819,11 +825,21 @@ def mechanics_to_dict(m):
         # keeps a saved breadboard resizable. The shapes above are
         # still the drawing; the parameters only say how to redo it.
         d['params'] = dict(m.params)
+    if m.points:
+        # The named points of the part: what it is stood on another
+        # part by, and what a drag settles on.
+        d['points'] = dict((str(k), [float(v[0]), float(v[1])])
+                           for k, v in m.points.items())
     host = m.attached_to.name if m.attached_to is not None else m._attach_name
     if host is not None:
         d['attached_to'] = str(host)
         d['offset'] = [float(x) for x in np.asarray(m.offset)]
         d['offset_angle'] = float(m.offset_angle)
+        # Which point of the body is pinned there, and whether the
+        # turn is frozen. Both are about the joint rather than about
+        # the part, so they are written with the attachment.
+        d['attach_point'] = [float(x) for x in np.asarray(m.attach_point)]
+        d['fix_rotation'] = bool(m.fix_rotation)
     else:
         d['center'] = [float(x) for x in np.asarray(m.center)]
         d['rotationAngle'] = float(m.rotationAngle)
@@ -847,7 +863,10 @@ def mechanics_from_dict(d):
                          attached_to=str(d['attached_to']),
                          offset=d.get('offset', [0.0, 0.0]),
                          offset_angle=d.get('offset_angle', 0.0),
-                         params=d.get('params'))
+                         params=d.get('params'),
+                         points=d.get('points'),
+                         attach_point=d.get('attach_point'),
+                         fix_rotation=d.get('fix_rotation', True))
     return Mechanics(shapes=[shape_from_dict(s)
                              for s in d.get('shapes', [])],
                      center=d.get('center', [0.0, 0.0]),
@@ -855,7 +874,10 @@ def mechanics_from_dict(d):
                      name=d['name'],
                      layer=d.get('layer', MECHANICS_LAYER),
                      model=d.get('model', None),
-                     params=d.get('params'))
+                     params=d.get('params'),
+                     points=d.get('points'),
+                     attach_point=d.get('attach_point'),
+                     fix_rotation=d.get('fix_rotation', True))
 
 def _update_mechanics(m, d):
     '''
@@ -867,6 +889,14 @@ def _update_mechanics(m, d):
     name is left pending for the layout to resolve against its own
     optics - see OpticalLayout._link_mechanics.
     '''
+    if 'points' in d:
+        m.points = dict((str(k), np.array(v, dtype='float64'))
+                        for k, v in (d['points'] or {}).items())
+    if 'attach_point' in d:
+        m.attach_point = np.array(d.get('attach_point') or [0.0, 0.0],
+                                  dtype='float64')
+    if 'fix_rotation' in d:
+        m.fix_rotation = bool(d['fix_rotation'])
     if d.get('attached_to') is not None:
         m.attached_to = None
         m._attach_name = str(d['attached_to'])
@@ -889,6 +919,45 @@ def _update_mechanics(m, d):
         # them: a file with none was saved from a body that had none.
         m.params = (None if d.get('params') is None
                     else dict(d['params']))
+
+#: How near two named points have to be, in metres, to count as the
+#: same point when a body is stood on another. A screw hole is a few
+#: millimetres across and the snap that put the part there works to a
+#: fraction of that, so this is generous without ever picking a point
+#: the user did not mean.
+SHARED_POINT_TOL = 0.002
+
+def _shared_point(m, host):
+    '''
+    The point of ``m`` that already coincides with a point of the host,
+    in ``m``'s local coordinates, or None.
+
+    This is what makes "snap it into place, then attach it" mean what
+    it looks like: the pedestal was dropped onto a hole, so the hole is
+    what it is pinned by, and a fork clamped on a post turns about the
+    post rather than about its own origin. Nothing near enough leaves
+    the attach point alone, which is the local origin unless something
+    else said otherwise.
+    '''
+    if not m.points:
+        return None
+    targets = []
+    if isinstance(host, Mechanics):
+        targets.extend(host.world_points().values())
+        # The holes it draws count too: a pedestal goes into one of
+        # them, and a breadboard names none of them individually.
+        targets.extend(host.to_world(np.asarray(s.center, dtype='float64'))
+                       for s in host.shapes if isinstance(s, draw.Circle))
+    else:
+        targets.append(np.asarray(host.center, dtype='float64'))
+    best, best_d = None, SHARED_POINT_TOL
+    for name, local in m.points.items():
+        here = m.to_world(local)
+        for t in targets:
+            d = float(np.hypot(here[0] - t[0], here[1] - t[1]))
+            if d < best_d:
+                best, best_d = local, d
+    return None if best is None else np.array(best, dtype='float64')
 
 def mechanics_scene_dict(m):
     '''
@@ -923,11 +992,24 @@ def mechanics_scene_dict(m):
                        else [float(m.offset[0]), float(m.offset[1])]),
             'offset_angle': (None if m.attached_to is None
                              else float(m.offset_angle)),
-            # Whether the body can be cut to a new size, and the size
-            # it stands at: what the resize handles and the Width and
-            # Height rows work from. Absent for a hand-drawn body,
-            # whose rows hide themselves.
-            'resizable': bool(m.resizable),
+            # Whether the relative turn may be changed - what decides
+            # whether the Angle row and Shift-drag are offered - and
+            # which point of the body is pinned, which is what such a
+            # turn goes about.
+            'fix_rotation': bool(m.fix_rotation),
+            'attach_point': [float(m.attach_point[0]),
+                             float(m.attach_point[1])],
+            # The named points of the part, where they stand on the
+            # bench: what a drag settles on and what one part is stood
+            # on another by.
+            'points': dict((str(k), [float(v[0]), float(v[1])])
+                           for k, v in m.world_points().items()),
+            # How the body can be cut to a new size, and the size it
+            # stands at: what the resize handles and the size rows
+            # work from. Null for a hand-drawn body, whose rows hide
+            # themselves; 'round' for one with a single size, which
+            # is a diameter, and 'box' for one with two.
+            'resizable': m.resizable,
             'width': (float(m.params['width']) if m.resizable else None),
             'height': (float(m.params['height']) if m.resizable else None),
             'outline': [[float(p[0]), float(p[1])] for p in outline]}
@@ -943,6 +1025,13 @@ def mechanics_snap_points(m):
     are marked 'hole', which is the kind the drag snap listens for;
     knobs and other decorative circles ride along, which costs a snap
     point that is still a real feature of the drawing.
+
+    The points the part names for itself come before them, because
+    two marks at one place are the same point as far as snapping goes
+    and the first of them wins: a mount's post hole is both a circle
+    in the drawing and the point it is stood on its pedestal by, and
+    'MT post' says more than 'MT hole'. The same rule, for the same
+    reason, as an optics winning over the beam that ends on it.
     '''
     points = []
     for i, c in enumerate(m.outline()):
@@ -952,6 +1041,16 @@ def mechanics_snap_points(m):
     points.append({'point': [float(m.center[0]), float(m.center[1])],
                    'optic': str(m.name), 'kind': 'centre',
                    'label': '%s centre' % m.name})
+    # The points the part names for itself - the hole a pedestal
+    # screws into, the bore a fork closes on, the hole a mount is
+    # bolted down through. A circle in the drawing is a feature that
+    # happens to be round; these are the ones the part is stood on
+    # something by, so they are named and they are offered first.
+    for name in sorted(m.points):
+        p = m.to_world(m.points[name])
+        points.append({'point': [float(p[0]), float(p[1])],
+                       'optic': str(m.name), 'kind': 'point',
+                       'label': '%s %s' % (m.name, name)})
     for s in m.shapes:
         if isinstance(s, draw.Circle):
             p = m.to_world(np.asarray(s.center, dtype='float64'))
@@ -1359,8 +1458,7 @@ class OpticalLayout(object):
             for d in dimensions:
                 self.add_dimension(d)
         if mechanics is not None:
-            for m in mechanics:
-                self.add_mechanics(m)
+            self._add_mechanics_in_order(mechanics)
 
 #{{{ Registration
 
@@ -1394,20 +1492,49 @@ class OpticalLayout(object):
         be unique within the layout.
 
         A body attached by name (built as ``Mechanics(attached_to='M1')``
-        or loaded from a file) is joined to the registered optics of
-        that name here; a name nothing answers to is refused, since a
-        body with an unreadable pose is not something to hold.
+        or loaded from a file) is joined here to the optics **or body**
+        of that name; a name nothing answers to is refused, since a
+        body with an unreadable pose is not something to hold. A host
+        must therefore be registered before what stands on it - which
+        is what the constructor and the loader arrange for a list that
+        arrives in any order.
         '''
         self._check_name_free(m.name)
         if m._attach_name is not None:
-            try:
-                m.attach(self.get_optics(m._attach_name),
-                         offset=m.offset, offset_angle=m.offset_angle)
-            except KeyError:
+            host = self._attachment_host(m._attach_name)
+            if host is None:
                 raise ValueError(
-                    "'%s' is attached to '%s', and no optics of that name "
+                    "'%s' is attached to '%s', and nothing of that name "
                     'is registered.' % (m.name, m._attach_name))
+            m.attach(host, offset=m.offset, offset_angle=m.offset_angle)
         self.mechanics.append(m)
+
+    def _add_mechanics_in_order(self, bodies):
+        '''
+        Register a list of bodies, hosts before what stands on them.
+
+        A body may stand on another body, and a list - a constructor
+        argument, a file - carries them in whatever order it happens
+        to. Rather than make the caller sort them, each pass registers
+        everything whose host is already in; a pass that registers
+        nothing means what is left names a host that does not exist or
+        stands in a circle, and add_mechanics says which.
+        '''
+        left = list(bodies)
+        while left:
+            wait = []
+            for m in left:
+                if (m._attach_name is not None
+                        and self._attachment_host(m._attach_name) is None
+                        and any(b.name == m._attach_name for b in left)):
+                    wait.append(m)
+                    continue
+                self.add_mechanics(m)
+            if len(wait) == len(left):
+                raise ValueError(
+                    'The attachments of %s stand on each other in a '
+                    'circle.' % ', '.join(sorted(repr(m.name) for m in wait)))
+            left = wait
 
     def relink_mechanics(self, names=None):
         '''
@@ -1458,23 +1585,51 @@ class OpticalLayout(object):
 
     def _link_mechanics(self):
         '''
-        Resolve every attachment left pending by name against the
-        registered optics.
+        Resolve every attachment left pending by name, against the
+        optics and the other bodies of this layout.
 
         Loading and restoring build the bodies before the joins can be
         made - the host is another entry of the same file or snapshot -
         so the names are kept until everything is in place and then
-        resolved here, in one pass, after the optics list is settled.
+        resolved here, after both lists are settled. A host may itself
+        be a body waiting for its own host, so this resolves what it
+        can and goes round again; what is left after a pass that
+        changed nothing is a cycle, which is refused rather than left
+        to be discovered by a pose deriving from itself.
         '''
-        for m in self.mechanics:
-            if m._attach_name is not None:
-                try:
-                    m.attach(self.get_optics(m._attach_name),
-                             offset=m.offset, offset_angle=m.offset_angle)
-                except KeyError:
+        pending = [m for m in self.mechanics if m._attach_name is not None]
+        while pending:
+            left = []
+            for m in pending:
+                host = self._attachment_host(m._attach_name)
+                if host is None:
                     raise ValueError(
-                        "'%s' is attached to '%s', and no optics of that "
+                        "'%s' is attached to '%s', and nothing of that "
                         'name is in the layout.' % (m.name, m._attach_name))
+                if isinstance(host, Mechanics) and host._attach_name is not None:
+                    left.append(m)
+                    continue
+                m.attach(host, offset=m.offset, offset_angle=m.offset_angle)
+            if len(left) == len(pending):
+                raise ValueError(
+                    'The attachments of %s stand on each other in a '
+                    'circle.' % ', '.join(sorted(repr(m.name) for m in left)))
+            pending = left
+
+    def _attachment_host(self, name):
+        '''
+        The optics or body of that name, or None. A body may stand on
+        either, and the four kinds share one namespace, so this is one
+        lookup rather than two tried in an order that would have to be
+        remembered.
+        '''
+        for o in self.optics:
+            if o.name == name:
+                return o
+        for m in self.mechanics:
+            if m.name == name:
+                return m
+        return None
 
     def _check_name_free(self, name):
         '''
@@ -1512,15 +1667,99 @@ class OpticalLayout(object):
         actually meant.
         '''
         target = self.get_optics(name)
-        attached = [m.name for m in self.mechanics
-                    if m.attached_to is target]
-        if attached:
-            raise ValueError(
-                "Cannot remove '%s': %s attached to it. Detach or remove "
-                '%s first.'
-                % (name, ' and '.join("'%s'" % n for n in attached),
-                   'it' if len(attached) == 1 else 'them'))
+        self._refuse_if_held(target)
         self.optics.remove(target)
+
+    def copy_optics(self, name, newname=None, offset=None):
+        '''
+        Add a second one of an element, with everything standing on it.
+
+        A mount is bolted to its mirror, a pedestal to the mount and a
+        fork to the pedestal, and none of that is worth building twice
+        for the second mirror of a pair. So the whole stack comes
+        along: every body attached to the element, and every body
+        attached to those, each pinned to the copy exactly as its
+        original is pinned to the original.
+
+        The copies are made through the same dicts a saved layout is
+        written with, so what is copied is what would have been saved -
+        by value, with nothing shared with the original. Only the poses
+        of the bodies are not copied, because they were never stored:
+        each one derives its own from the copy it now stands on.
+
+        Parameters
+        ----------
+        name : str
+            The element to copy.
+        newname : str or None, optional
+            What to call the copy. None takes the original's name
+            without its trailing number and finds the first free one:
+            copying 'M1' offers 'M2'.
+        offset : sequence of 2 floats or None, optional
+            How far to put the copy from the original, in metres. None
+            is the element's own diameter, along both axes - far
+            enough that the copy does not sit inside what it was made
+            from, near enough that it is plainly the same thing moved.
+
+        Returns
+        -------
+        gtrace.optcomp.Optics
+            The copy, already registered.
+        '''
+        target = self.get_optics(name)
+        if offset is None:
+            d = float(target.diameter)
+            offset = [d, d]
+        given = offset
+        try:
+            offset = np.asarray(offset, dtype='float64').reshape(2)
+        except (TypeError, ValueError):
+            raise ValueError('A copy is offset by an [x, y], not %r.'
+                             % (given,))
+        if not np.all(np.isfinite(offset)):
+            raise ValueError('A copy cannot be offset by %r.' % (given,))
+
+        d = optic_to_dict(target)
+        d['name'] = (self._copy_name(target.name) if newname is None
+                     else newname)
+        d['HRcenter'] = [d['HRcenter'][0] + offset[0],
+                         d['HRcenter'][1] + offset[1]]
+        copy = optic_from_dict(d)
+        self.add_optics(copy)
+
+        # The stack, hosts before what stands on them: a body is
+        # joined to its host by name when it is registered, so the
+        # copy of the host has to be there already.
+        renamed = {target.name: copy.name}
+        for body in self._standing_on(target):
+            bd = mechanics_to_dict(body)
+            bd['name'] = self._copy_name(body.name)
+            bd['attached_to'] = renamed[body.attached_to.name]
+            self.add_mechanics(mechanics_from_dict(bd))
+            renamed[body.name] = bd['name']
+        return copy
+
+    def _standing_on(self, host):
+        '''
+        Every body attached to this, and to those, hosts first.
+        '''
+        out = []
+        front = [host]
+        while front:
+            standing = [m for m in self.mechanics
+                        if m.attached_to in front and m not in out]
+            out.extend(standing)
+            front = standing
+        return out
+
+    def _copy_name(self, name):
+        '''
+        A free name for a copy of this one: the name without its
+        trailing number, and the first number that name leaves free.
+        So a copy of 'M1' is 'M2', and a copy of 'Post' is 'Post1'.
+        '''
+        prefix = str(name).rstrip('0123456789')
+        return self.unique_optics_name(prefix or 'M')
 
     def remove_source(self, name):
         '''
@@ -1537,8 +1776,27 @@ class OpticalLayout(object):
     def remove_mechanics(self, name):
         '''
         Remove the mechanics with the given name from the layout.
+
+        A body with something standing on it is refused, for the same
+        reason an optics is: what stands on it would be left deriving
+        a pose from a ghost.
         '''
-        self.mechanics.remove(self.get_mechanics(name))
+        target = self.get_mechanics(name)
+        self._refuse_if_held(target)
+        self.mechanics.remove(target)
+
+    def _refuse_if_held(self, target):
+        '''
+        Refuse to take away something other bodies are standing on.
+        '''
+        attached = [m.name for m in self.mechanics
+                    if m.attached_to is target]
+        if attached:
+            raise ValueError(
+                "Cannot remove '%s': %s attached to it. Detach or remove "
+                '%s first.'
+                % (target.name, ' and '.join("'%s'" % n for n in attached),
+                   'it' if len(attached) == 1 else 'them'))
 
     def get_optics(self, name):
         '''
@@ -1674,6 +1932,8 @@ class OpticalLayout(object):
                              'attrs': {'waist_size_x': 0.0003,
                                        'waist_pos_x': 0.05}}
             {'op': 'remove', 'target': 'M4'}
+            {'op': 'copy',   'target': 'M1', 'name': 'M2',
+                             'offset': [0.05, 0.05]}
             {'op': 'align',  'target': 'L1', 'beam': 'b0',
                              'beam_index': 0, 'point': [0.4, 0.02]}
             {'op': 'slide',  'target': 'L1', 'beam': 'b0',
@@ -2019,13 +2279,37 @@ class OpticalLayout(object):
                 except ValueError as e:
                     raise EditError(str(e))
 
+        elif op == 'copy':
+            # Only an optics, and deliberately: what makes this worth
+            # having is that the stack standing on it comes along, and
+            # a stack stands on an optics at its root. A body on its
+            # own is one call to the model library away.
+            name = msg.get('target')
+            if not self._is_optics(name):
+                raise EditError('Only an element is copied with what '
+                                'stands on it; %r is not one.' % (name,))
+            newname = msg.get('name')
+            if newname is not None and (not isinstance(newname, str)
+                                        or not newname.strip()):
+                raise EditError('A name must be a non-empty string, not %r.'
+                                % (newname,))
+            try:
+                self.copy_optics(name, newname, msg.get('offset'))
+            except ValueError as e:
+                raise EditError(str(e))
+
         elif op == 'remove':
             name = msg.get('target')
             if self._is_dimension(name):
                 self.remove_dimension(name)
                 return self
             if self._is_mechanics(name):
-                self.remove_mechanics(name)
+                # A body with something standing on it says so, in the
+                # same voice a held optics does.
+                try:
+                    self.remove_mechanics(name)
+                except ValueError as e:
+                    raise EditError(str(e))
                 return self
             if self._is_source(name):
                 # Taking the last source out leaves a layout with
@@ -2144,6 +2428,12 @@ class OpticalLayout(object):
         '''
         return any(m.name == name for m in self.mechanics)
 
+    def _is_optics(self, name):
+        '''
+        Whether a target name belongs to a registered optics.
+        '''
+        return any(o.name == name for o in self.optics)
+
     def _resolve_target(self, name):
         '''
         The optics, source, dimension or mechanics a message names.
@@ -2207,13 +2497,21 @@ class OpticalLayout(object):
                                          and not detaching)
 
         pose = {k: attrs[k] for k in _MECHANICS_POSE_ATTRS if k in attrs}
-        if pose and will_be_attached:
+        # A body whose turn is free may still be turned while attached
+        # - that is what freeing it means - and it turns about the
+        # point it is held by. Everything else about where it stands
+        # is the host's.
+        will_fix = bool(attrs.get('fix_rotation', m.fix_rotation))
+        swinging = (will_be_attached and not will_fix
+                    and set(pose) == {'rotationAngle'})
+        if pose and will_be_attached and not swinging:
             host = (attrs['attached_to'] if attaching
                     else m.attached_to.name)
             raise EditError(
                 "'%s' is attached to '%s': it goes where its host goes. "
-                "Move the optics, change the offset, or detach it first "
-                "(set attached_to to null)." % (m.name, host))
+                'Move the host, change the offset, free its turn '
+                '(fix_rotation false) or detach it first (set '
+                'attached_to to null).' % (m.name, host))
         offs = {k: attrs[k] for k in ('offset', 'offset_angle')
                 if k in attrs}
         if offs and not will_be_attached:
@@ -2226,13 +2524,15 @@ class OpticalLayout(object):
         if attaching:
             name = attrs['attached_to']
             if not isinstance(name, str):
-                raise EditError("'attached_to' is an optics name or null, "
-                                'not %r.' % (name,))
-            try:
-                new_host = self.get_optics(name)
-            except KeyError:
-                raise EditError("Cannot attach '%s' to %r: no optics of "
-                                'that name in the layout.' % (m.name, name))
+                raise EditError("'attached_to' is the name of an optics or "
+                                'of another body, or null, not %r.'
+                                % (name,))
+            new_host = self._attachment_host(name)
+            if new_host is None:
+                raise EditError("Cannot attach '%s' to %r: nothing of that "
+                                'name in the layout.' % (m.name, name))
+            if new_host is m:
+                raise EditError("'%s' cannot stand on itself." % m.name)
         if 'offset' in offs:
             offs['offset'] = _as_point(offs['offset'], 'offset')
         if 'offset_angle' in offs:
@@ -2254,12 +2554,30 @@ class OpticalLayout(object):
         if detaching:
             m.detach()
         elif attaching:
-            # At the model's designed position, unless the message
-            # says where on the host to stand instead.
-            m.attach(new_host, offset=offs.pop('offset', None),
-                     offset_angle=offs.pop('offset_angle', None))
+            # Where on the host it stands: the model's designed
+            # position for a body on an optics, and where it already
+            # is for a body on another body - see Mechanics.attach.
+            # The point that is pinned is the one the two already
+            # have in common, so that a part dropped onto a hole
+            # afterwards turns about that hole.
+            try:
+                m.attach(new_host, offset=offs.pop('offset', None),
+                         offset_angle=offs.pop('offset_angle', None),
+                         attach_point=_shared_point(m, new_host))
+            except ValueError as e:
+                raise EditError(str(e))
+        if 'fix_rotation' in attrs:
+            if not isinstance(attrs['fix_rotation'], bool):
+                raise EditError("'fix_rotation' is true or false, not %r."
+                                % (attrs['fix_rotation'],))
+            m.fix_rotation = attrs['fix_rotation']
         if size:
-            m.resize(**size)
+            # A round body has one size, and says so itself when it
+            # is handed two that disagree.
+            try:
+                m.resize(**size)
+            except ValueError as e:
+                raise EditError(str(e))
         for key, value in sorted(offs.items()):
             setattr(m, key, value)
         for key, value in sorted(pose.items()):

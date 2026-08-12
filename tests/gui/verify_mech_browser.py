@@ -36,7 +36,8 @@ import gtrace.draw as draw
 import gtrace.optcomp as opt
 from gtrace.draw.viewer import viewer_css
 from gtrace.layout import OpticalLayout, TraceRules, q_from_waist
-from gtrace.mechanics import Mechanics, breadboard
+from gtrace.mechanics import (Mechanics, breadboard, round_breadboard,
+                              pedestal, clamping_fork)
 from gtrace.unit import *
 
 SP = WORK
@@ -79,8 +80,19 @@ def make_layout():
     # the beam, and clear of the mirror's own pick circle.
     clamp = Mechanics(shapes=[draw.Rectangle([-0.01, -0.01], 0.02, 0.02)],
                       name='Clamp', attached_to=M1, offset=[0.0, -0.09])
+    # A pedestal standing clear of everything, to be dropped onto a
+    # screw hole, and a fork standing on the pedestal with its turn
+    # free, to be swung about it.
+    # A round board off on its own: a tank is round, and so is what
+    # goes in the bottom of it. Clear of the beam and of everything
+    # else, so that a click on it is a click on it.
+    tank = round_breadboard(0.30, name='Tank', center=[0.0, -0.5])
+    post = pedestal(name='Post', center=[0.15, 0.15])
+    fork = clamping_fork(name='Fork', attached_to=post,
+                         fix_rotation=False)
     return OpticalLayout(optics=[M1], sources=[b0],
-                         mechanics=[board, mount, clamp],
+                         mechanics=[board, mount, clamp, post, fork,
+                                    tank],
                          rules=TraceRules(order=2, power_threshold=1e-4))
 
 layout = make_layout()
@@ -179,6 +191,14 @@ var EDITABLE = __EDITABLE__;
             return v.mechOutline.getAttribute('points').split(' ')
                 .map(function (p) { return p.split(',').map(Number); });
         }
+        function button(text) {
+            var found = null;
+            Array.prototype.forEach.call(
+                el.querySelectorAll('button'), function (b) {
+                    if (b.textContent === text) { found = b; }
+                });
+            return found;
+        }
         function clickAt(p, opts) {
             mouse(v.svg, 'mousedown', p[0], p[1], opts);
             mouse(window, 'mouseup', p[0], p[1], opts);
@@ -242,7 +262,9 @@ var EDITABLE = __EDITABLE__;
         clickAt(screenOf(BOARD_PT));
         var before = sent.length;
         a = screenOf(BOARD_PT);
-        dragFromTo(a, [a[0] + 50, a[1] + 30]);
+        // Alt: a plain drag settles on whatever marked point it comes
+        // near, which is the check below rather than this one.
+        dragFromTo(a, [a[0] + 50, a[1] + 30], {altKey: true});
         out.dragMove = {msg: sent[before] || null,
                         n: sent.length - before,
                         scale: v.scale};
@@ -281,6 +303,55 @@ var EDITABLE = __EDITABLE__;
         out.removeShown = !!foot;
         if (foot) { foot.click(); }
         out.remove = {msg: sent[before] || null, panel: panel()};
+
+        // --- placing a body on a marked point ---
+        // The pedestal dropped near a screw hole of the board: a
+        // plain drag settles on it exactly, and Alt takes the cursor
+        // at its word instead.
+        var POST_PT = [0.15, 0.15];
+        // Whichever hole of the board lies nearest the pedestal: the
+        // grid is the board's business, not this check's.
+        var hole = null, holeD = 1e9;
+        (SCENE.snap || []).forEach(function (s) {
+            if (s.kind !== 'hole' || s.optic !== 'Board') { return; }
+            var dd = Math.hypot(s.point[0] - 0.16, s.point[1] - 0.16);
+            if (dd < holeD) { hole = s.point; holeD = dd; }
+        });
+        out.hole = hole || null;
+        if (hole) {
+            clickAt(screenOf(POST_PT));
+            before = sent.length;
+            // A few pixels short of the hole, so that only the snap
+            // can land it there.
+            var near = v.screenToScene(0, 0);
+            var to = screenOf([hole[0] - 0.004, hole[1] - 0.003]);
+            dragFromTo(screenOf(POST_PT), to);
+            out.postSnap = {msg: sent[before] || null,
+                            n: sent.length - before};
+            before = sent.length;
+            dragFromTo(screenOf(POST_PT), to, {altKey: true});
+            out.postFree = sent[before] || null;
+        }
+
+        // --- swinging a body whose turn is free ---
+        var FORK_PT = [0.15 - 0.03, 0.15];
+        clickAt(screenOf(FORK_PT));
+        out.clickFork = {panel: panel(), fields: fields()};
+        before = sent.length;
+        var f0 = screenOf(FORK_PT);
+        dragFromTo(f0, [f0[0], f0[1] - 60], {shiftKey: true});
+        out.forkSwing = {msg: sent[before] || null, n: sent.length - before};
+        // With its turn fixed, the same gesture pans instead.
+        before = sent.length;
+        var cy1 = v.cy;
+        v.scene.mechanics.forEach(function (m) {
+            if (m.name === 'Fork') { m.fix_rotation = true; }
+        });
+        dragFromTo(f0, [f0[0], f0[1] - 60], {shiftKey: true});
+        out.forkFixed = {n: sent.length - before, panned: v.cy !== cy1};
+        v.scene.mechanics.forEach(function (m) {
+            if (m.name === 'Fork') { m.fix_rotation = false; }
+        });
 
         // --- Escape lets go ---
         clickAt(screenOf(BOARD_PT));
@@ -390,12 +461,40 @@ var EDITABLE = __EDITABLE__;
         out.mountHandles = v.mechHandles.some(function (elh) {
             return elh.style.display !== 'none';
         });
+        // A round board is cut to one number, so it offers one row.
+        clickAt(screenOf([0.0, -0.5]));
+        out.sizeRows.tank = fields();
+        out.tankPicked = v.selectedMech;
 
         // --- dragging a corner cuts the board to size ---
         clickAt(screenOf(BOARD_PT));
         before = sent.length;
         dragFromTo(screenOf([0.6, 0.2]), screenOf([0.75, 0.25]));
         out.resize = {msg: sent[before] || null, n: sent.length - before};
+
+        // The same gesture on a round one: the centre stays where it
+        // is - a disc has no opposite corner to hold - and the drag
+        // sets one size rather than two.
+        clickAt(screenOf([0.0, -0.5]));
+        before = sent.length;
+        var rh = v.mechHandles[2], rr = rect();
+        var rfrom = [Number(rh.getAttribute('x')) + 3.5 + rr.left,
+                     Number(rh.getAttribute('y')) + 3.5 + rr.top];
+        var rto = screenOf([0.20, -0.30]);
+        mouse(v.svg, 'mousedown', rfrom[0], rfrom[1]);
+        mouse(window, 'mousemove', rto[0], rto[1]);
+        out.roundStatus = v.statusBar.textContent;
+        mouse(window, 'mouseup', rto[0], rto[1]);
+        out.roundResize = {msg: sent[before] || null,
+                           n: sent.length - before};
+        // The rows follow the same rule: one number, sent as the size
+        // it is.
+        clickAt(screenOf([0.0, -0.5]));
+        before = sent.length;
+        v.mechFields.diameter.el.value = '400';
+        v.mechFields.diameter.el.dispatchEvent(
+            new Event('change', {bubbles: true}));
+        out.roundRow = sent[before] || null;
 
         // --- the screw holes catch a dragged anchor ---
         // Zoomed in first: the hole reach is capped in metres, and the
@@ -426,6 +525,59 @@ var EDITABLE = __EDITABLE__;
                    screenOf([m1c[0] + hdelta[0], m1c[1] + hdelta[1]]),
                    {altKey: true});
         out.holeFree = {msg: sent[before] || null};
+
+        // A laser is bolted down like anything else, so the point its
+        // light leaves from catches on the holes too. Held by the
+        // box behind that point rather than by the point itself, so
+        // that what lands on the hole is the model's own place and
+        // not the cursor.
+        var lp = SCENE.sources[0].pos;
+        var lhole = null, lbest = Infinity;
+        holes.forEach(function (p) {
+            var dd = Math.hypot(p.point[0] - lp[0], p.point[1] - lp[1]);
+            if (dd < lbest) { lbest = dd; lhole = p; }
+        });
+        out.srcHole = lhole.point;
+        var ldelta = [lhole.point[0] + 0.0012 - lp[0],
+                      lhole.point[1] - 0.0007 - lp[1]];
+        var lgrab = screenOf(lp);
+        lgrab = [lgrab[0] - 12, lgrab[1]];
+        var lto = screenOf([lp[0] + ldelta[0], lp[1] + ldelta[1]]);
+        lto = [lto[0] - 12, lto[1]];
+        before = sent.length;
+        mouse(v.svg, 'mousedown', lgrab[0], lgrab[1]);
+        mouse(window, 'mousemove', lto[0], lto[1]);
+        out.srcSnapMarked = v.snapMark.style.display !== 'none';
+        out.srcStatus = v.statusBar.textContent;
+        mouse(window, 'mouseup', lto[0], lto[1]);
+        out.srcSnap = {msg: sent[before] || null, n: sent.length - before};
+        before = sent.length;
+        mouse(v.svg, 'mousedown', lgrab[0], lgrab[1], {altKey: true});
+        mouse(window, 'mousemove', lto[0], lto[1], {altKey: true});
+        mouse(window, 'mouseup', lto[0], lto[1], {altKey: true});
+        out.srcFree = {msg: sent[before] || null};
+
+        // --- Copy takes the element and what stands on it ---
+        // The panel has to be showing an element: the button belongs
+        // to it, and a body or a laser has no stack to bring along.
+        clickAt(screenOf(m1c));
+        out.copyPanel = v.panelKind;
+        out.copyButtons = Array.prototype.map.call(
+            v.opticBody.querySelectorAll('.gt-props-foot button'),
+            function (b) { return b.textContent; });
+        if (EDITABLE) {
+            before = sent.length;
+            button('Copy').click();
+            out.copy = {msg: sent[before] || null, n: sent.length - before,
+                        selected: v.selectedOptic};
+            // A body selected instead: the optics panel is not on
+            // show, so the button is not the one that answers.
+            clickAt(screenOf(BOARD_PT));
+            before = sent.length;
+            out.copyOnBody = {kind: v.panelKind,
+                              msg: v.copySelected(),
+                              n: sent.length - before};
+        }
 
         out.sent = sent;
     } catch (e) {
@@ -470,7 +622,9 @@ check('ran without exception', res['error'] is None, str(res['error'])[:500])
 board = scene['mechanics'][0]
 
 print('--- the pick order ---')
-check('the scene carries all three mechanics', res['mechCount'] == 3)
+check('the scene carries every body: a board, a mount, a clamp, '
+      'a post, a fork and a round board',
+      res['mechCount'] == 6, str(res['mechCount']))
 p = res['clickBoard']
 check('a click on the empty board selects it',
       p['mechShown'] and p['selectedMech'] == 'Board'
@@ -616,9 +770,55 @@ check('a drag on it pans and sends nothing',
       and res['clampDrag']['selected'] == 'Clamp',
       json.dumps(res['clampDrag']))
 
+print('--- placing a body on a marked point ---')
+check('the board offers a screw hole to aim at',
+      res['hole'] is not None
+      and any(np.allclose(sp['point'], res['hole'])
+              for sp in layout.snap_points() if sp['kind'] == 'hole'),
+      json.dumps(res['hole']))
+ps = res.get('postSnap') or {}
+check('a dragged body settles on it exactly',
+      ps.get('n') == 1 and ps.get('msg')
+      and np.allclose(ps['msg']['center'], res['hole'], atol=1e-12),
+      json.dumps(ps.get('msg')))
+if ps.get('msg'):
+    layout.apply_edit(ps['msg'])
+    check('  and Python stands it there',
+          np.allclose(layout.get_mechanics('Post').center, res['hole'],
+                      atol=1e-12))
+    check('  which is what the pedestal names its axis',
+          np.allclose(layout.get_mechanics('Post').world_points()['axis'],
+                      res['hole'], atol=1e-12))
+pf = res.get('postFree')
+check('Alt rides free of the marks',
+      pf and not np.allclose(pf['center'], res['hole'], atol=1e-6),
+      json.dumps(pf))
+
+print('--- swinging a body whose turn is free ---')
+ck = res['clickFork']
+check('the fork panel says what it stands on and that it may turn',
+      ck['panel']['selectedMech'] == 'Fork'
+      and ck['fields'].get('attached') == 'Post', json.dumps(ck['fields']))
+fs = res['forkSwing']
+check('Shift + drag on it sends one rotate',
+      fs['n'] == 1 and fs['msg'] and fs['msg']['op'] == 'rotate'
+      and fs['msg']['target'] == 'Fork', json.dumps(fs['msg']))
+if fs['msg']:
+    post0 = np.array(layout.get_mechanics('Post').center)
+    layout.apply_edit(fs['msg'])
+    fork = layout.get_mechanics('Fork')
+    check('  which Python turns about the post it is held by',
+          np.allclose(fork.world_points()['bore'], post0, atol=1e-12)
+          and abs(fork.rotationAngle - fs['msg']['rotationAngle']) < 1e-12)
+ff = res['forkFixed']
+check('with its turn fixed the same gesture pans instead',
+      ff['n'] == 0 and ff['panned'], json.dumps(ff))
+
 print('--- the attachment is edited from the panel ---')
-check('the choices are free, and every optics',
-      res['attachOptions'] == ['', 'M1'], json.dumps(res['attachOptions']))
+check('the choices are free, every optics and every other body',
+      res['attachOptions'] == ['', 'M1', 'Board', 'Clamp', 'Post', 'Fork',
+                               'Tank'],
+      json.dumps(res['attachOptions']))
 at = res['attach']
 check('picking an optics sends the attachment',
       at['msg'] and at['msg']['op'] == 'set'
@@ -712,7 +912,17 @@ check('the board shows its size in millimetres',
       and abs(float(bf['height']) - 400) < 1e-9,
       json.dumps({'w': bf['width'], 'h': bf['height']}))
 check('a hand-drawn body has no size rows',
-      not mf['width_shown'] and not mf['height_shown'])
+      not mf['width_shown'] and not mf['height_shown']
+      and not mf['diameter_shown'])
+tf = res['sizeRows']['tank']
+check('a round board offers one size row instead of two',
+      res['tankPicked'] == 'Tank'
+      and tf['diameter_shown']
+      and not tf['width_shown'] and not tf['height_shown']
+      and abs(float(tf['diameter']) - 300) < 1e-9,
+      json.dumps({'d': tf['diameter'], 'w': tf['width_shown']}))
+check('  and the rectangular one offers the two and not the one',
+      not bf['diameter_shown'])
 check('four handles stand on the corners',
       all(h['shown'] and h['dx'] < 1e-6 and h['dy'] < 1e-6
           for h in res['handles']), json.dumps(res['handles']))
@@ -743,6 +953,33 @@ if rz['msg']:
           '(%d -> %d holes)' % (n0, n1))
     layout.apply_edit({'op': 'undo'})
 
+print('--- and a round one is cut to a diameter ---')
+rr = res['roundResize']
+check('one set message per corner drag on it too',
+      rr['n'] == 1 and rr['msg'] and rr['msg']['op'] == 'set'
+      and rr['msg']['target'] == 'Tank', json.dumps(rr['msg']))
+if rr['msg']:
+    at = rr['msg']['attrs']
+    check('  carrying one size, the same on both names',
+          at['width'] == at['height'], json.dumps(at))
+    check('  and no centre: a disc is cut about where it stands',
+          'center' not in at, json.dumps(sorted(at)))
+    check('  roughly the disc that was dragged',
+          abs(at['width'] - 0.40) < 0.02, str(at['width']))
+    layout.apply_edit(rr['msg'])
+    check('  which Python re-drills at that diameter',
+          abs(layout.get_mechanics('Tank').params['width'] - at['width'])
+          < 1e-12
+          and np.allclose(layout.get_mechanics('Tank').center, [0.0, -0.5]))
+    layout.apply_edit({'op': 'undo'})
+check('the status bar says the one size, not two',
+      '⌀' in res['roundStatus'] and '×' not in res['roundStatus'],
+      res['roundStatus'])
+rw = res['roundRow']
+check('the Diameter row sends the size on both names',
+      rw and rw['op'] == 'set' and abs(rw['attrs']['width'] - 0.40) < 1e-12
+      and rw['attrs']['width'] == rw['attrs']['height'], json.dumps(rw))
+
 print('--- the screw holes catch a dragged anchor ---')
 check('the scene has a grid to snap to', res['holeCount'] >= 384,
       str(res['holeCount']))
@@ -764,6 +1001,65 @@ check('Alt rides free of the grid',
                      hf['msg']['center'][1] - hs['msg']['center'][1]) > 1e-6,
       json.dumps(hf['msg']))
 
+ss = res['srcSnap']
+check('a dragged laser sends one move of where its light leaves from',
+      ss['n'] == 1 and ss['msg'] and ss['msg']['op'] == 'move'
+      and ss['msg']['target'] == 'b0', json.dumps(ss['msg']))
+if ss['msg']:
+    check('  landing that point exactly on the hole',
+          np.allclose(ss['msg']['pos'], res['srcHole'], atol=1e-9),
+          '(%s vs %s)' % (ss['msg']['pos'], res['srcHole']))
+    layout.apply_edit(ss['msg'])
+    check('  which is where Python puts the laser',
+          np.allclose(layout.get_source('b0').pos, res['srcHole'],
+                      atol=1e-9))
+    layout.apply_edit({'op': 'undo'})
+check('  and the mark and the bar say so while the drag is on',
+      res['srcSnapMarked'] and 'Board hole' in res['srcStatus'],
+      res['srcStatus'])
+sf = res['srcFree']
+check('Alt rides the laser free of the grid too',
+      sf['msg'] and ss['msg']
+      and math.hypot(sf['msg']['pos'][0] - ss['msg']['pos'][0],
+                     sf['msg']['pos'][1] - ss['msg']['pos'][1]) > 1e-6,
+      json.dumps(sf['msg']))
+
+print('--- copying an element ---')
+check('the optics panel offers Copy beside Remove',
+      res['copyPanel'] == 'optic'
+      and res['copyButtons'] == ['Copy', 'Remove'],
+      json.dumps(res['copyButtons']))
+cp = res['copy']
+check('Copy asks for one, under the next free name',
+      cp['n'] == 1 and cp['msg'] and cp['msg']['op'] == 'copy'
+      and cp['msg']['target'] == 'M1' and cp['msg']['name'] == 'M2',
+      json.dumps(cp['msg']))
+check('  and the selection follows the copy', cp['selected'] == 'M2')
+if cp['msg']:
+    was = [m.name for m in layout.mechanics]
+    layout.apply_edit(cp['msg'])
+    now = [m.name for m in layout.mechanics]
+    # Only the clamp stands on M1 here - the mount of this fixture is
+    # free on purpose, so that the attach gesture has something to
+    # attach - and only what stands on it is copied.
+    check('  which Python builds with what stands on it',
+          layout._is_optics('M2')
+          and [n for n in now if n not in was] == ['Clamp1'],
+          json.dumps(now))
+    check('  pinned to the copy rather than to the original',
+          layout.get_mechanics('Clamp1').attached_to
+          is layout.get_optics('M2')
+          and np.allclose(layout.get_mechanics('Clamp1').offset,
+                          layout.get_mechanics('Clamp').offset))
+    layout.apply_edit({'op': 'undo'})
+    check('  and one undo takes the copy and its bodies back',
+          not layout._is_optics('M2')
+          and [m.name for m in layout.mechanics] == was)
+check('Copy belongs to the optics panel alone',
+      res['copyOnBody']['kind'] == 'mech'
+      and res['copyOnBody']['msg'] is None
+      and res['copyOnBody']['n'] == 0, json.dumps(res['copyOnBody']))
+
 print('--- read-only viewer ---')
 errs, res = run(False)
 check('no console error', errs == [], '\n        '.join(errs[:3]))
@@ -781,6 +1077,8 @@ check('the clamp still names its host',
       res['clampFields']['attached'] == 'M1'
       and res['clampFields']['attached_shown'])
 check('no Remove on offer', not res['removeShown'])
+check('  and no Copy either', res['copyButtons'] == [],
+      json.dumps(res['copyButtons']))
 check('no model menu either', not res['hwMenu']['shown'])
 check('and no resize handles',
       all(not h['shown'] for h in res['handles']))

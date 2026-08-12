@@ -114,6 +114,10 @@ In the notebook widget the loop runs both ways. Clicking an element opens a prop
 
 There is one add button per kind of thing — ``+ Mirror``, ``+ Lens``, ``+ Source``, ``+ Mechanics`` — and the two that have variants open on the choice between them, spherical or cylindrical. A cylindrical mirror is a mirror; offered as a button of its own it read as an unrelated fifth thing, and five of them wrapped in a side bar this narrow. ``+ Mechanics`` opens on the model library instead, which is a list rather than a pair.
 
+**A numeric row is a calculator.** A bench measurement is usually arrived at rather than known, so a row takes the sum as well as the answer: ``2*25.4`` is 50.8, ``300/4`` is 75. Brackets, the four operations and a leading minus are the whole of it, and nothing is evaluated as code — the text is parsed, so a row is a calculator and not a way into the page.
+
+A value may also carry **a unit of its own, in square brackets**, and it converts into the unit the row is labelled with: ``1[in]`` in a millimetre row is 25.4, in a metre row 0.0254. Lengths are ``m``, ``cm``, ``mm``, ``um``, ``nm``, ``in``, ``mil`` and ``ft``; angles ``rad``, ``mrad`` and ``deg``; power ``W``, ``mW``, ``uW`` and ``kW``. The unit converts the number it follows, and everything after that is ordinary arithmetic in the row's own unit, so ``1[in]+2`` in a millimetre row is 27.4. A unit of the wrong kind is refused rather than quietly taken as a bare number — a length typed into an angle converts to nothing — and so is any unit at all in a row that has none of its own, such as an order or a refractive index. A refused entry sends nothing and the row goes back to what the model holds.
+
 Each edit is applied to the registered object, the layout is re-traced, and the new scene is pushed back into the view — keeping your current zoom, pan and layer visibility, so the picture does not jump underneath you.
 
 An element turns about the point it is held by, which is what its **Anchor** names: a mirror swings about the apex of its HR face, so that turning it does not walk the beam spot off it, and a lens about the middle of its substrate. The outline that follows the cursor is drawn about that point too, so what you are shown while dragging is where the element ends up. The model itself turns the same way — assigning ``normAngleHR`` in a cell pivots the anchor point too; see :ref:`changing-a-curvature`.
@@ -236,13 +240,21 @@ Bodies drawn on the ``mechanics`` layer — breadboards, mounts, clamps, the wal
 
 **They are picked last.** A breadboard covers most of a bench, so a click lands on the beam or the element in front of it first, and only reaches the board where nothing else is. Where several bodies overlap the smallest wins, so a mount standing on a board is not shadowed by it. A mount hidden entirely under its own mirror is reached by clicking the same place again: the cycle that steps from an element down through the beams under it ends on the body.
 
-**They are dragged only once selected.** A press on an unselected board means "pan the view" far more often than it means "move the bench", so the first click selects and only then does dragging move it. An attached body is never dragged at all — it goes where its host goes, and its host is right there to be dragged.
+**They are dragged only once selected.** A press on an unselected board means "pan the view" far more often than it means "move the bench", so the first click selects and only then does dragging move it. An attached body is not dragged either — it goes where its host goes — unless its turn is free, and then Shift-drag swings it about the point it is held by.
+
+**A drag settles on the marked points.** Everything a measurement can snap to is something a part can be placed on: the screw holes of a breadboard, the corners and centres of the other bodies, and the points a part names for itself — the hole under a mount, the axis of a pedestal, the bore of a fork. Drop a pedestal near the hole under a mount and it lands on it exactly; Alt takes the cursor at its word instead. The status bar names what it caught on.
 
 A body with a size — a breadboard, or anything else built with parameters — carries four corner handles while it is selected. Dragging one cuts it to a new size, with the opposite corner fixed; Python re-drills the hole grid rather than scaling it, so the holes keep their diameter and their pitch.
 
-**Screw holes are snap points.** An element dragged near one lands its anchor point exactly on it, which is what a bench actually offers: optics go on the grid. Alt suppresses that. The measuring tool and Align take the holes as marked points too.
+**A round board is cut to a diameter.** A vacuum tank is round and so is the board in the bottom of it, and such a body has one size rather than two: the panel offers a single **Diameter** row instead of Width and Height, and a dragged corner sets that one number. Its centre stays where it is, since a disc has no opposite corner to hold still, and the handles stand on the square it is inscribed in — that square follows the cursor.
 
-The properties panel of an attached body shows what it is attached to, and its pose greyed out — those numbers are derived from the host, so there is nothing there to type into. **Attached to** is a menu of the elements: choosing one seats the body at its model's own place, and ``(free)`` cuts it loose where it stands. **Offset x/y** and **Offset angle** are the deliberate departure from that place.
+**Copy** in the element panel adds a second one of it, with everything standing on it — the mount, the pedestal under the mount, the fork over the pedestal — each pinned to the copy as its original is pinned to the original. The copy stands its own diameter away and is selected, so it can be dragged straight to where it belongs. See :ref:`mechanics` for what is and is not copied.
+
+**Screw holes are snap points.** An element dragged near one lands its anchor point exactly on it, which is what a bench actually offers: optics go on the grid. A laser does the same, landing the point its light leaves from on the hole — a laser is bolted down like anything else, and that point is the one the model keeps fixed when the beam is turned. Alt suppresses that. The measuring tool and Align take the holes as marked points too.
+
+The properties panel of an attached body shows what it is attached to, and its pose greyed out — those numbers are derived from the host, so there is nothing there to type into. **Attached to** is a menu of the elements **and of the other bodies**: a bench stacks, so a mount goes on a pedestal and a pedestal is held by a fork. Choosing an optics seats the body at its model's own place; choosing a body keeps where it already is, which is where the snap put it. ``(free)`` cuts it loose where it stands. **Offset x/y** and **Offset angle** are the deliberate departure from that place.
+
+**Fix rotation** decides whether the body may be turned while it is held. Off, the ``Angle`` row and Shift-drag swing it about the point it is pinned by — a fork about its post — and it still turns with the host, since a stack that came apart when the mirror was aimed would not be a stack.
 
 Names are not drawn for a body. A bench has more of them than it has optics, and a picture labelled with three mounts and a board says less than one that is not; ``drawMechanicsNames=True`` puts them back.
 
@@ -266,7 +278,15 @@ The side bar swaps: buttons that put a rectangle, circle, line, polyline, arc or
 
 A shape is also worked on in the drawing. A click picks it — by its outline, or by what it encloses, the smallest winning, and the same place clicked again steps down through what overlaps. The picked shape is carried by dragging it and stands on grips, one grip to one number: the four corners of a rectangle with the opposite one staying put, a point on the rim of a circle for its radius, the two ends of a line, where an arc starts, stops and how far out it runs, and one grip per vertex of an outline. Shift-drag turns it about the middle of its box, and ``[`` and ``]`` turn it 45° at a time.
 
-A drag settles on the marked points — the origin, and the corners, centres, vertices and edge midpoints of the other shapes — unless Alt says to take the cursor at its word. A polyline is edited vertex by vertex: the rows work on the one the grips pick out, and **+ Vertex** and **− Vertex** put a corner in halfway along to the next one or take the one in hand out.
+A drag settles on the marked points — the origin, the corners, centres, vertices and edge midpoints of the other shapes, and the named points below — unless Alt says to take the cursor at its word. A polyline is edited vertex by vertex: the rows work on the one the grips pick out, and **+ Vertex** and **− Vertex** put a corner in halfway along to the next one or take the one in hand out.
+
+**Named points** have a panel of their own. These are the points the part names for itself — ``'post'`` for the hole a mount is bolted down through, ``'axis'`` for a pedestal, ``'bore'`` for a fork — and they are what one part is stood on another by, so they belong to the part rather than to any one shape. Each is drawn as a small ring with its name beside it, in the amber of the origin cross, since the origin is the one every part already has.
+
+Pick one from the list, or click its ring, and the rows give its **Name** and its place in millimetres. Drag the ring to carry it, settling on the same marked points a shape does, with Alt to take the cursor at its word. A ring is picked ahead of the shapes under it — it is a small mark and a shape is an area, still there to be clicked anywhere else — but behind the grips of the shape on show, which are chrome you put there by selecting it. **+ Point** names one at the origin under a placeholder to be typed over; **− Point** takes the picked one away.
+
+This is how a point no drawing shows gets placed at all. A mount is bolted to its pedestal from underneath, so its post hole is in no top view — where it is still belongs in one, which is why ``mirror_mount()`` both names the point and draws a circle at it, but the two are separate things: the circle is a drawing, and the name is what a part is stood on.
+
+Names are how a part is stood on something, so two points cannot share one and a point cannot go unnamed. Renaming, moving, adding and removing all send the list as it is left, which makes each one step of undo.
 
 Every gesture commits as one message, so it is one step of undo and goes through the same constructor a typed row does. **A turned rectangle becomes an outline** — a ``Rectangle`` has its sides along the axes and no turned form — which one undo puts back. The editor works on the body itself, by reference, so a part already registered in a layout is redrawn there as soon as the layout is drawn again.
 
@@ -302,7 +322,9 @@ The reach is in screen pixels, so it is the same to the eye however far the view
 The dimension panel
 """"""""""""""""""""
 
-Clicking a dimension line shows it in the panel: its name, both ends — which are editable, so a measurement placed by eye can be given exact coordinates afterwards — **Line offset**, which is where the line was carried to, and under **Measurement** the distance and its direction. **Remove** takes it off the layout, as it does for an element.
+Clicking a dimension line shows it in the panel: its name, both ends — which are editable, so a measurement placed by eye can be given exact coordinates afterwards — **Line offset**, which is where the line was carried to, and under **Measurement** the distance, its two components **Δx** and **Δy**, and its direction. **Remove** takes it off the layout, as it does for an element.
+
+The components are there because a bench is built on axes: a mount goes 300 along and 75 across, and that pair is as often the number wanted as the straight line between the points. They are signed from the first point to the second, the way the direction reads, and the status bar shows them alongside the distance while the measurement is being taken.
 
 **Line offset** is in millimetres, like the other rows that are an adjustment rather than a place: it is nudged until the line clears whatever it was covering. Positive is to the left of the way the two points run, and zero puts the line straight between them. It changes nothing about what was measured.
 

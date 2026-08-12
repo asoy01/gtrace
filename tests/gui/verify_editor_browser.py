@@ -51,7 +51,8 @@ def check(name, cond, detail=''):
 def make_part():
     return Mechanics(shapes=[draw.Rectangle([-0.02, -0.01], 0.04, 0.02),
                              draw.Circle([0.005, 0.0], 0.003)],
-                     center=[0.3, 0.1], name='P1')
+                     center=[0.3, 0.1], name='P1',
+                     points={'post': [-0.0135, 0.0]})
 
 part = make_part()
 editor = ShapeEditor(part)
@@ -129,6 +130,24 @@ var SCENE = __SCENE__;
             return Array.prototype.map.call(
                 el.querySelectorAll('.gt-shaperow'),
                 function (b) { return b.textContent; });
+        }
+        function pointRows() {
+            return Array.prototype.map.call(
+                el.querySelectorAll('.gt-pointrow'),
+                function (b) { return b.textContent; });
+        }
+        function pointFields() {
+            var o = {};
+            for (var k in (v.pointFields || {})) {
+                var f = v.pointFields[k];
+                o[k] = f.editable ? f.el.value : f.el.textContent;
+            }
+            return o;
+        }
+        function setPointField(key, text) {
+            var f = v.pointFields[key];
+            f.el.value = text;
+            f.el.dispatchEvent(new Event('change', {bubbles: true}));
         }
         function fields() {
             var o = {};
@@ -222,6 +241,54 @@ var SCENE = __SCENE__;
         button('Remove').click();
         out.remove = sent[before] || null;
 
+        // --- the points a part names for itself ---
+        out.pointRows = pointRows();
+        out.pointMarks = (v._pointMarkPts || []).length;
+        out.pointBefore = pointFields();
+        el.querySelectorAll('.gt-pointrow')[0].click();
+        out.pickPoint = {selected: v.selectedPoint, fields: pointFields(),
+                         marked: v.pointMarkEls[0].ring.classList
+                                  .contains('gt-selected'),
+                         label: v.pointMarkEls[0].label.textContent};
+        before = sent.length;
+        setPointField('px', '-14');
+        out.setPx = sent[before] || null;
+        before = sent.length;
+        setPointField('name', 'stud');
+        out.rename = sent[before] || null;
+        // A name that is not one goes nowhere, and the row goes back
+        // to what the part says.
+        before = sent.length;
+        setPointField('name', '   ');
+        out.blankName = {n: sent.length - before,
+                         back: v.pointFields.name.el.value};
+        before = sent.length;
+        setPointField('py', 'over there');
+        out.badPy = {n: sent.length - before,
+                     back: v.pointFields.py.el.value};
+        before = sent.length;
+        button('+ Point').click();
+        out.addPoint = {msg: sent[before] || null,
+                        selected: v.selectedPoint};
+        before = sent.length;
+        el.querySelectorAll('.gt-pointrow')[0].click();
+        button('− Point').click();
+        out.removePoint = sent[before] || null;
+
+        // --- the rows are calculators too ---
+        // Both kinds of row here hand parseField a unit: a shape row
+        // takes it from its own field, a point row is millimetres by
+        // the nature of a part. verify_input.js checks the parsing;
+        // this checks that the millimetres arrive.
+        el.querySelectorAll('.gt-shaperow')[1].click();
+        before = sent.length;
+        setField('radius', '1[in]');
+        out.shapeInch = sent[before] || null;
+        el.querySelectorAll('.gt-pointrow')[0].click();
+        before = sent.length;
+        setPointField('px', '2*25.4');
+        out.pointTimes = sent[before] || null;
+
         // --- the library ---
         v.modelInput.value = 'BROWSER-PART';
         v.modelDesc.value = 'made in the editor';
@@ -279,8 +346,10 @@ check('the first row puts shapes down',
 check('the second is what a part and a bench share',
       res['headRows'][1] == ['Undo', 'Redo', 'Measure', 'Fit'],
       json.dumps(res['headRows'][1]))
-check('the panels are the shapes, the library, the layers and the help',
-      res['panels'] == ['Shapes', 'Model library', 'Layers', 'Controls'],
+check('the panels are the shapes, the points, the library, the layers '
+      'and the help',
+      res['panels'] == ['Shapes', 'Named points', 'Model library',
+                        'Layers', 'Controls'],
       json.dumps(res['panels']))
 check('  so no optics, beams, files or tracing rules',
       not any(p in res['panels'] for p in
@@ -351,6 +420,75 @@ check('the arrows move it later and earlier',
 check('Remove takes the picked shape away',
       res['remove'] and res['remove']['op'] == 'remove_shape',
       json.dumps(res['remove']))
+
+print('--- the points a part names for itself ---')
+check('the list is what the part names',
+      res['pointRows'] == ['post'], json.dumps(res['pointRows']))
+check('  and each is marked in the drawing', res['pointMarks'] == 1)
+check('nothing picked shows nothing',
+      all(v == '' for v in res['pointBefore'].values()),
+      json.dumps(res['pointBefore']))
+pp = res['pickPoint']
+check('picking one shows its name and its place, in millimetres',
+      pp['selected'] == 0 and pp['fields']['name'] == 'post'
+      and abs(float(pp['fields']['px']) + 13.5) < 1e-9
+      and abs(float(pp['fields']['py'])) < 1e-9,
+      json.dumps(pp['fields']))
+check('  marks it in the drawing, with its name beside it',
+      pp['marked'] and pp['label'] == 'post')
+
+# Every gesture sends the whole list: there is no index that survives
+# a rename, so a place and a name arrive the same way.
+px = res['setPx']
+check('moving one sends the whole list, in metres',
+      px and px['op'] == 'set_points' and len(px['points']) == 1
+      and abs(px['points'][0]['point'][0] + 0.014) < 1e-12
+      and px['points'][0]['name'] == 'post', json.dumps(px))
+if px:
+    editor.apply_edit(px)
+    check('  which Python lands where the panel said',
+          np.allclose(part.points['post'], [-0.014, 0.0]))
+rn = res['rename']
+check('renaming one is the same message',
+      rn and rn['op'] == 'set_points'
+      and [q['name'] for q in rn['points']] == ['stud'], json.dumps(rn))
+if rn:
+    editor.apply_edit(rn)
+    check('  and the part answers to the new name',
+          sorted(part.points) == ['stud'])
+check('a blank name sends nothing, and is put back',
+      res['blankName']['n'] == 0 and res['blankName']['back'] == 'post',
+      json.dumps(res['blankName']))
+check('a place that is no number sends nothing either',
+      res['badPy']['n'] == 0 and abs(float(res['badPy']['back'])) < 1e-9,
+      json.dumps(res['badPy']))
+
+ap = res['addPoint']
+check('+ Point names one at the origin, and follows it',
+      ap['msg'] and ap['msg']['op'] == 'set_points'
+      and len(ap['msg']['points']) == 2
+      and ap['msg']['points'][1]['point'] == [0.0, 0.0]
+      and ap['selected'] == 1, json.dumps(ap))
+check('  under a name that is free to be typed over',
+      ap['msg'] and ap['msg']['points'][1]['name'] == 'point')
+rp = res['removePoint']
+check('\u2212 Point takes the picked one away',
+      rp and rp['op'] == 'set_points' and rp['points'] == [],
+      json.dumps(rp))
+if rp:
+    editor.apply_edit(rp)
+    check('  and Python is left with none', part.points == {})
+
+
+print('--- the rows are calculators too ---')
+si = res['shapeInch']
+check('1[in] in a shape row is 25.4 mm, in metres on the wire',
+      si and si['op'] == 'set_shape'
+      and abs(si['attrs']['radius'] - 0.0254) < 1e-12, json.dumps(si))
+pt = res['pointTimes']
+check('2*25.4 in a named point row is 50.8 mm',
+      pt and pt['op'] == 'set_points'
+      and abs(pt['points'][0]['point'][0] - 0.0508) < 1e-12, json.dumps(pt))
 
 print('--- the library ---')
 sm = res['saveModel']

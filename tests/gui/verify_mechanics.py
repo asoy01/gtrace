@@ -43,10 +43,12 @@ from gtrace.layout import (OpticalLayout, TraceRules, EditError,
                            mechanics_from_dict, mechanics_scene_dict,
                            mechanics_snap_points)
 from gtrace.mechanics import (Mechanics, point_in_polygon, DEFAULT_LAYER,
-                              LAYER_COLOR, breadboard, mirror_mount,
+                              LAYER_COLOR, breadboard, round_breadboard,
+                              mirror_mount,
                               mirror_mount_2in, lens_holder,
+                              pedestal, clamping_fork, host_pose,
                               register_model, models, model_shapes,
-                              model_params, from_model,
+                              model_params, model_points, from_model,
                               save_models, load_models)
 from gtrace.unit import *
 
@@ -587,11 +589,26 @@ except ValueError as e:
 mt.detach()
 mt.attach(M1, keep_pose=True)
 
+# A body may stand on another body - a pedestal on a mount, a fork on
+# a pedestal - and what is refused is a cycle, which would make a pose
+# derive from itself and, since it is derived on every read, not
+# wrongly but endlessly.
+post = Mechanics(name='post')
+post.attach(mt)
+check('a body may stand on a body', post.attached_to is mt)
 try:
-    mt.attach(Mechanics(name='other'))
-    check('a body cannot stand on a body', False)
+    mt.attach(post)
+    check('but not on what it already holds up', False)
 except ValueError as e:
-    check('a body cannot stand on a body', True, '(%s)' % str(e)[:40])
+    check('but not on what it already holds up', True,
+          '(%s)' % str(e)[:40])
+check('  and the refusal changes nothing', mt.attached_to is M1)
+try:
+    post.attach(post)
+    check('nor on itself', False)
+except ValueError:
+    check('nor on itself', True)
+post.detach()
 try:
     Mechanics(name='x').attach(object())
     check('nor on something with no pose', False)
@@ -839,10 +856,15 @@ check('the two adjuster tips show in the gap',
       and sorted(round(float(s.center[1]), 9) for s in tips)
           == [-0.016450, 0.016450]
       and all(abs(s.radius - 0.0025) < 1e-15 for s in tips))
-check('the whole drawing is eight shapes', len(mm_.shapes) == 8)
+check('the whole drawing is nine shapes', len(mm_.shapes) == 9)
+hole = [s for s in mm_.shapes if isinstance(s, draw.Circle)]
+check('the post hole is drawn where the part names it',
+      len(hole) == 1 and close(hole[0].center, mm_.points['post'])
+      and abs(hole[0].radius - 0.002) < 1e-15,
+      str(np.round(hole[0].center, 5).tolist()))
 nk = mirror_mount(knobs=False)
-check('knobs=False leaves the plates and the tips',
-      len(nk.shapes) == 4 and abs(nk.local_bbox()[0][0] + 0.0199) < 1e-12)
+check('knobs=False leaves the plates, the tips and the hole',
+      len(nk.shapes) == 5 and abs(nk.local_bbox()[0][0] + 0.0199) < 1e-12)
 lo2, hi2 = mirror_mount(scale=2.0).local_bbox()
 check('scale scales every dimension',
       close(lo2, 2 * lo, tol=1e-15) and close(hi2, 2 * hi, tol=1e-15))
@@ -868,7 +890,11 @@ tips2 = [s for s in m2.shapes if isinstance(s, draw.Arc)]
 check('the adjuster lines sit 35.6 mm apart',
       sorted(round(float(s.center[1]), 9) for s in tips2)
       == [-0.0178, 0.0178])
-check('the 2in drawing is eight shapes too', len(m2.shapes) == 8)
+check('the 2in drawing is nine shapes too', len(m2.shapes) == 9)
+hole2 = [s for s in m2.shapes if isinstance(s, draw.Circle)]
+check('  with the same post hole, bored the same way',
+      len(hole2) == 1 and close(hole2[0].center, m2.points['post'])
+      and abs(hole2[0].radius - 0.002) < 1e-15)
 
 # The lens holders: a plain rectangle wrapping its lens symmetrically,
 # so the origin is the middle of it.
@@ -1052,7 +1078,7 @@ def hole_r(m):
             if isinstance(s, draw.Circle)][0]
 
 bb = breadboard(0.30, 0.30, name='RB')
-check('a builder body knows it is resizable', bb.resizable
+check('a builder body knows how it is resizable', bb.resizable == 'box'
       and bb.params['kind'] == 'breadboard')
 r0 = hole_r(bb)
 bb.resize(0.45, 0.30)
@@ -1084,6 +1110,78 @@ check('and a save', d['params']['width'] == 0.45)
 check('and a load', mechanics_from_dict(d).resize(0.5).params['width'] == 0.5)
 d_plain = mechanics_to_dict(Mechanics(shapes=[draw.Circle([0, 0], 0.01)]))
 check('a hand-drawn body saves no parameters', 'params' not in d_plain)
+
+
+print('--- a round breadboard ---')
+
+# A tank is round, and so is the board in the bottom of it. The grid
+# is the rectangular board's; the rim decides which of its holes are
+# there.
+rb = round_breadboard(0.30, name='RBR')
+rim = [s for s in rb.shapes if isinstance(s, draw.Circle)][0]
+holes = [s for s in rb.shapes if isinstance(s, draw.Circle)][1:]
+check('the rim is the first shape, at the local origin',
+      abs(rim.radius - 0.15) < 1e-15 and close(rim.center, [0, 0]))
+check('and it is round: the box around it is square',
+      close(rb.local_bbox()[0], [-0.15, -0.15])
+      and close(rb.local_bbox()[1], [0.15, 0.15]))
+check('the holes are the same 25 mm grid, symmetric about the centre',
+      all(abs(round(float(h.center[0]) / 0.025)
+              - float(h.center[0]) / 0.025) < 1e-9
+          and abs(round(float(h.center[1]) / 0.025)
+                  - float(h.center[1]) / 0.025) < 1e-9 for h in holes)
+      and all(abs(h.radius - 0.003) < 1e-15 for h in holes))
+check('  and every one of them is a margin in from the rim',
+      holes and max(float(np.hypot(*h.center)) for h in holes)
+      <= 0.15 - 0.025 / 2 + 1e-9,
+      str(max(float(np.hypot(*h.center)) for h in holes)))
+check('  with the ones outside it left out, so the rows shorten',
+      len(holes) == 97, str(len(holes)))
+check('a hole sits at the centre, as on a rectangular board',
+      any(close(h.center, [0, 0]) for h in holes))
+check('holes=False leaves the rim alone',
+      len(round_breadboard(0.30, holes=False).shapes) == 1)
+
+check('it knows it is round', rb.resizable == 'round'
+      and rb.params['kind'] == 'round_breadboard')
+rb.resize(0.45)
+check('one number cuts it to a new size, and re-drills it',
+      rb.params['width'] == 0.45 and rb.params['height'] == 0.45
+      and len(rb.shapes) > 98,
+      '%d shapes' % len(rb.shapes))
+rb.resize(height=0.20)
+check('either name sets the one size it has',
+      rb.params['width'] == 0.20 and rb.params['height'] == 0.20)
+rb.resize(0.30, 0.30)
+check('and both together, when they agree',
+      rb.params['width'] == 0.30 and rb.params['height'] == 0.30)
+try:
+    rb.resize(0.30, 0.40)
+    check('two sizes that disagree are refused', False)
+except ValueError as e:
+    check('two sizes that disagree are refused', True,
+          '(%s)' % str(e)[:60])
+check('  and it is left as it was',
+      rb.params['width'] == 0.30 and rb.params['height'] == 0.30)
+
+check('it survives a save and a load, still round',
+      mechanics_from_dict(mechanics_to_dict(rb)).resizable == 'round')
+check('the library stocks one', 'BBR30' in models()
+      and from_model('BBR30', name='x').resizable == 'round')
+
+L = fresh()
+L.add_mechanics(round_breadboard(0.30, name='RB1', center=[0.0, 0.0]))
+rbs = [e for e in L.scene_dict()['mechanics'] if e['name'] == 'RB1'][0]
+check('the scene says how it resizes, and at what size',
+      rbs['resizable'] == 'round' and rbs['width'] == 0.30
+      and rbs['height'] == 0.30, json.dumps(rbs['resizable']))
+L.apply_edit({'op': 'set', 'target': 'RB1',
+              'attrs': {'width': 0.40, 'height': 0.40}})
+check('the protocol cuts it to a new diameter',
+      L.get_mechanics('RB1').params['width'] == 0.40)
+refused(L, {'op': 'set', 'target': 'RB1',
+            'attrs': {'width': 0.40, 'height': 0.50}},
+        'a round board asked to be two different sizes')
 
 check('a library model built from a builder keeps them',
       from_model('BB3030', name='LB').resizable)
@@ -1122,7 +1220,7 @@ L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'P1',
               'params': {'model': 'MOUNT-25', 'attached_to': 'M1'}})
 h1 = L.get_mechanics('P1')
 check('an add naming a model takes its shapes off the shelf',
-      h1.model == 'MOUNT-25' and len(h1.shapes) == 8
+      h1.model == 'MOUNT-25' and len(h1.shapes) == 9
       and h1.attached_to is L.get_optics('M1'))
 L.apply_edit({'op': 'add', 'type': 'Mechanics', 'name': 'P2',
               'params': {'model': 'BB3030', 'center': [1.0, 1.0]}})
@@ -1163,6 +1261,276 @@ sc = L.scene_dict()
 texts = [s for ly in sc['canvas']['layers'] if ly['name'] == 'text'
          for s in ly['shapes'] if s.get('text') in ('SB', 'BB1')]
 check('  and come back when asked for', len(texts) == 2)
+
+
+print('--- named points of a part ---')
+
+pd = pedestal(name='P1')
+fk = clamping_fork(name='FK1')
+check('a pedestal names its axis', sorted(pd.points) == ['axis']
+      and close(pd.points['axis'], [0, 0]))
+check('a fork names its bore and its screw',
+      sorted(fk.points) == ['bore', 'screw']
+      and close(fk.points['bore'], [0, 0]))
+check('a mount names the hole a pedestal screws into',
+      'post' in mirror_mount().points)
+check('the pedestal is drawn to the RS05P8E drawing: 25.4 post, 31.8 base',
+      sorted(round(2 * s.radius, 4) for s in pd.shapes
+             if isinstance(s, draw.Circle)) == [0.0044, 0.0102, 0.0254,
+                                                0.0318])
+box = fk.local_bbox()
+check('the fork is drawn to the CF125 drawing: 36.3 across the prongs',
+      abs((box[1][1] - box[0][1]) - 0.0363) < 0.0002,
+      str(np.round(box[1] - box[0], 4)))
+check('  73.8 from the prong tips to the tail',
+      abs(fk.params['length'] - 0.0738) < 1e-12
+      # The box is longer than the part: an arc is bounded by the
+      # circle it lies on, and the bore is a circle the prongs only
+      # follow part of.
+      and abs((box[1][0] - box[0][0])
+              - (0.0738 + 0.0130 - 0.0038)) < 0.0002)
+check('  3.8 from the bore centre to the prong tips',
+      abs(fk.params['tip_ahead'] - 0.0038) < 1e-12
+      and all(abs(max(s.x) - 0.0038) < 1e-12 for s in fk.shapes
+              if isinstance(s, draw.PolyLine)))
+check('  and a bore that takes a 25 mm post',
+      abs(fk.params['bore_diameter'] - 0.026) < 1e-12)
+
+pd.center = [0.2, 0.1]
+pd.rotationAngle = 0.5
+check('world_points carries them onto the bench',
+      close(pd.world_points()['axis'], [0.2, 0.1]))
+
+L = fresh()
+L.add_mechanics(pedestal(name='P1', center=[0.2, 0.1]))
+marks = [s for s in L.snap_points()
+         if s['optic'] == 'P1' and s['kind'] == 'point']
+check('and a front end is offered them, named',
+      len(marks) == 1 and marks[0]['label'] == 'P1 axis'
+      and close(marks[0]['point'], [0.2, 0.1]), json.dumps(marks))
+
+# A mount's post hole is both a circle in the drawing and the point
+# it stands on its pedestal by, so two marks land on one place. A
+# front end takes the first of them, and the named one says more.
+L.add_mechanics(mirror_mount(name='MT1', attached_to=L.get_optics('M1')))
+both = [s for s in L.snap_points() if s['optic'] == 'MT1'
+        and close(s['point'],
+                  L.get_mechanics('MT1').world_points()['post'])]
+check('where a named point and a circle coincide, both are offered',
+      sorted(s['kind'] for s in both) == ['hole', 'point'],
+      json.dumps(both))
+check('  and the named one comes first, so it is the one taken',
+      both[0]['kind'] == 'point' and both[0]['label'] == 'MT1 post')
+
+register_model('PEDESTAL-TEST', pedestal(), 'a pedestal')
+check('the library carries the points of the part',
+      sorted(model_points('PEDESTAL-TEST')) == ['axis'])
+check('  and a body built from it has them',
+      sorted(from_model('PEDESTAL-TEST', name='X').points) == ['axis'])
+lib = os.path.join(WORK, 'points_lib.json')
+save_models(lib, names=['PEDESTAL-TEST'])
+register_model('PEDESTAL-TEST', [draw.Circle([0, 0], 0.001)], 'wiped')
+check('  a wiped model has none', model_points('PEDESTAL-TEST') == {})
+load_models(lib)
+check('  and loading the file brings them back',
+      sorted(model_points('PEDESTAL-TEST')) == ['axis'])
+
+
+print('--- standing one body on another ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+mt = mirror_mount(name='MT', attached_to=M1)
+L.add_mechanics(mt)
+L.add_mechanics(pedestal(name='P1', center=[0.0, 0.0]))
+L.add_mechanics(clamping_fork(name='FK1', center=[0.0, 0.0]))
+pd = L.get_mechanics('P1')
+fk = L.get_mechanics('FK1')
+
+check('host_pose reads an optics by its face and a body by its own turn',
+      close(host_pose(M1)[0], M1.center)
+      and host_pose(M1)[1] == float(M1.normAngleHR)
+      and host_pose(pd)[1] == pd.rotationAngle)
+
+# Drop the pedestal on the hole under the mount, then pin it.
+pd.center = mt.to_world(mt.points['post'])
+L.apply_edit({'op': 'set', 'target': 'P1', 'attrs': {'attached_to': 'MT'}})
+check('a body stands on a body', pd.attached_to is mt)
+check('  where it already was, since the bench chose that, not the model',
+      close(pd.center, mt.to_world(mt.points['post'])))
+check('  pinned by the point the two share',
+      close(pd.attach_point, [0, 0]))
+
+# And the fork on the pedestal, free to swing.
+fk.center = np.asarray(pd.center)
+L.apply_edit({'op': 'set', 'target': 'FK1',
+              'attrs': {'attached_to': 'P1', 'fix_rotation': False}})
+check('and a third on the second', fk.attached_to is pd
+      and [h.name for h in fk.hosts()] == ['P1', 'MT', 'M1'])
+
+axis = np.asarray(pd.center)
+L.apply_edit({'op': 'rotate', 'target': 'FK1', 'rotationAngle': 1.0})
+check('a free turn is allowed while attached',
+      abs(fk.rotationAngle - 1.0) < 1e-12)
+check('  and goes about the point it is held by',
+      close(fk.to_world(fk.points['bore']), axis))
+refused(L, {'op': 'move', 'target': 'FK1', 'center': [0.1, 0.1]},
+        'moving an attached body, free turn or not')
+L.apply_edit({'op': 'set', 'target': 'FK1', 'attrs': {'fix_rotation': True}})
+refused(L, {'op': 'rotate', 'target': 'FK1', 'rotationAngle': 0.2},
+        'turning one whose turn is fixed')
+L.apply_edit({'op': 'set', 'target': 'FK1', 'attrs': {'fix_rotation': False}})
+
+# The whole stack hangs off the optics at the root of it.
+poses = [(np.array(b.center), b.rotationAngle) for b in (mt, pd, fk)]
+M1.HRcenter = np.asarray(M1.HRcenter) + [0.05, 0.0]
+check('moving the optics carries the whole chain',
+      all(close(b.center, p[0] + [0.05, 0.0])
+          for b, p in zip((mt, pd, fk), poses)))
+before = np.asarray(pd.center)
+M1.normAngleHR = float(M1.normAngleHR) + 0.2
+check('turning it turns the chain with it',
+      all(abs(b.rotationAngle - (p[1] + 0.2)) < 1e-12
+          for b, p in zip((mt, pd, fk), poses))
+      and not close(pd.center, before))
+check('  and the fork is still on the post',
+      close(fk.to_world(fk.points['bore']), pd.center))
+
+check('a body with something on it cannot be removed',
+      not L.can_undo or True)
+for target in ('P1', 'MT', 'M1'):
+    try:
+        L.apply_edit({'op': 'remove', 'target': target})
+        check("removing '%s' is refused while held" % target, False)
+    except EditError as e:
+        check("removing '%s' is refused while held" % target, True,
+              '(%s)' % str(e)[:40])
+refused(L, {'op': 'set', 'target': 'MT', 'attrs': {'attached_to': 'FK1'}},
+        'a circle of attachments')
+refused(L, {'op': 'set', 'target': 'MT', 'attrs': {'attached_to': 'MT'}},
+        'standing on itself')
+
+path = os.path.join(WORK, 'stack.json')
+L.save(path)
+L2 = OpticalLayout.load(path)
+f2 = L2.get_mechanics('FK1')
+check('a saved chain comes back joined up',
+      [h.name for h in f2.hosts()] == ['P1', 'MT', 'M1']
+      and close(f2.center, fk.center))
+check('  with what it is pinned by and whether it may turn',
+      close(f2.attach_point, fk.attach_point)
+      and f2.fix_rotation is False)
+with open(path, encoding='utf-8') as f:
+    d = json.load(f)
+saved = dict((m['name'], m) for m in d['mechanics'])
+check('  and no pose of its own is written down',
+      'center' not in saved['FK1'] and saved['FK1']['attached_to'] == 'P1')
+
+# The order a file lists them in is not the order they can be built in.
+d['mechanics'].reverse()
+L3 = OpticalLayout.from_dict(d)
+check('a file that lists a body before its host still loads',
+      [h.name for h in L3.get_mechanics('FK1').hosts()] == ['P1', 'MT', 'M1'])
+d2 = json.loads(json.dumps(d))
+for m in d2['mechanics']:
+    if m['name'] == 'MT':
+        m['attached_to'] = 'FK1'
+try:
+    OpticalLayout.from_dict(d2)
+    check('a file whose bodies stand in a circle is refused', False)
+except ValueError as e:
+    check('a file whose bodies stand in a circle is refused', True,
+          '(%s)' % str(e)[:40])
+
+
+print('--- copying an element brings its stack along ---')
+
+L = fresh()
+M1 = L.get_optics('M1')
+mt = mirror_mount(name='MT1', attached_to=M1)
+L.add_mechanics(mt)
+L.add_mechanics(pedestal(name='P1', attached_to=mt))
+L.add_mechanics(clamping_fork(name='FK1', attached_to=L.get_mechanics('P1'),
+                              fix_rotation=False))
+L.trace()
+c = L.copy_optics('M1')
+check('the copy is the next free name off the original',
+      c.name == 'M2' and L._is_optics('M2'))
+check('  standing its own diameter away, along both axes',
+      close(c.HRcenter, np.asarray(M1.HRcenter) + M1.diameter))
+check('  and the same element otherwise',
+      abs(c.diameter - M1.diameter) < 1e-15
+      and abs(float(c.normAngleHR) - float(M1.normAngleHR)) < 1e-15
+      and abs(c.inv_ROC_HR - M1.inv_ROC_HR) < 1e-15)
+names = [m.name for m in L.mechanics]
+check('the whole stack comes with it',
+      names == ['BB1', 'MT1', 'P1', 'FK1', 'MT2', 'P2', 'FK2'],
+      json.dumps(names))
+check('  and the free-standing board is not copied with it',
+      names.count('BB1') == 1)
+chain = [h.name for h in L.get_mechanics('FK2').hosts()]
+check('  pinned to the copies, not to the originals',
+      chain == ['P2', 'MT2', 'M2'], json.dumps(chain))
+check('  so it stands beside the original, not on top of it',
+      close(L.get_mechanics('MT2').center,
+            np.asarray(mt.center) + M1.diameter))
+check('  and what was free to turn still is',
+      L.get_mechanics('FK2').fix_rotation is False
+      and L.get_mechanics('MT2').fix_rotation is True)
+
+# By value: the copy is a second body, not a second name for one.
+check('nothing is shared with the original',
+      not any(a is b for a in mt.shapes
+              for b in L.get_mechanics('MT2').shapes)
+      and L.get_mechanics('MT2').points is not mt.points
+      and close(L.get_mechanics('MT2').points['post'], mt.points['post']))
+L.get_mechanics('MT2').shapes[0].thickness = 3.0
+check('  so editing one leaves the other alone',
+      mt.shapes[0].thickness != 3.0)
+check('the model name travels, so a relink still knows what it is',
+      L.get_mechanics('MT2').model == mt.model)
+
+# Moving the copy moves its own stack and leaves the original's alone.
+was = np.array(mt.center)
+p2was = np.array(L.get_mechanics('P2').center)
+L.get_optics('M2').HRcenter = np.asarray(c.HRcenter) + [0.1, 0.0]
+check('moving the copy carries its own stack',
+      close(L.get_mechanics('P2').center, p2was + [0.1, 0.0]))
+check('  and leaves the original where it was', close(mt.center, was))
+
+L2 = fresh()
+L2.add_mechanics(mirror_mount(name='MT1', attached_to=L2.get_optics('M1')))
+L2.trace()
+L2.apply_edit({'op': 'copy', 'target': 'M1', 'name': 'M9',
+               'offset': [0.2, 0.0]})
+check('the protocol copies it too, where the message says',
+      L2._is_optics('M9')
+      and close(L2.get_optics('M9').HRcenter,
+                np.asarray(L2.get_optics('M1').HRcenter) + [0.2, 0.0])
+      and [m.name for m in L2.mechanics] == ['BB1', 'MT1', 'MT2'])
+check('  and the trace no longer stands', L2.beams is None)
+L2.apply_edit({'op': 'undo'})
+check('  and one undo takes the whole copy back',
+      not L2._is_optics('M9')
+      and [m.name for m in L2.mechanics] == ['BB1', 'MT1'])
+L2.apply_edit({'op': 'redo'})
+check('  redo puts it back, stack and all',
+      L2._is_optics('M9') and len(L2.mechanics) == 3)
+
+L3 = fresh()
+L3.add_mechanics(mirror_mount(name='MT1', attached_to=L3.get_optics('M1')))
+refused(L3, {'op': 'copy', 'target': 'MT1'},
+        'copying a body rather than an element')
+refused(L3, {'op': 'copy', 'target': 'b0'}, 'copying a source')
+refused(L3, {'op': 'copy', 'target': 'nope'}, 'copying nothing')
+refused(L3, {'op': 'copy', 'target': 'M1', 'name': '  '},
+        'a copy with a blank name')
+refused(L3, {'op': 'copy', 'target': 'M1', 'name': 'MT1'},
+        'a copy named after something already there')
+refused(L3, {'op': 'copy', 'target': 'M1', 'offset': [0.0, np.inf]},
+        'a copy put at infinity')
+refused(L3, {'op': 'copy', 'target': 'M1', 'offset': 'over there'},
+        'an offset that is not a place')
 
 
 print()

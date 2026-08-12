@@ -58,6 +58,20 @@ across them.
     `+ Vertex` puts a corner in halfway along to the next one and
     `- Vertex` takes the one in hand out. Fewer than two vertices
     draws nothing, and is refused.
+  - **The points a part names for itself are edited here too**, in a
+    panel of their own: they belong to the part rather than to any
+    one shape, and one of them is often nowhere near the drawing of
+    the feature it stands for - a mount is bolted to its pedestal
+    from underneath, so its post hole is in no top view at all. Each
+    is a ring with its name beside it, in the amber of the origin
+    cross, the origin being the one point every part already has.
+    Pick one from the list or click its ring; the rows give its name
+    and its place in millimetres; drag the ring to carry it, settling
+    on the same marked points a shape does, Alt to take the cursor at
+    its word. A ring is picked ahead of the shapes under it and
+    behind the grips of the shape on show. `+ Point` names one at the
+    origin and `- Point` takes the picked one away. They join the
+    marked points, so a shape settles on them as well.
   - It edits the `Mechanics` **by reference**, like everything else
     in gtrace, so a body already registered in a layout is redrawn
     there at the layout's next draw - attachment, pose and builder
@@ -73,7 +87,11 @@ across them.
     names and building it again, so a value that describes no shape
     is refused by the constructor and leaves the shape that was there
     untouched. What the constructors do not catch - a size of none or
-    less, a coordinate at infinity - is refused on the way out.
+    less, a coordinate at infinity - is refused on the way out. The
+    named points arrive as one `set_points` carrying the whole list,
+    since there is no index that survives a rename: a point is known
+    by its name, and the name is the thing being edited. Two points
+    cannot share one, and a point cannot go unnamed.
 
 - **Aiming an optics by places** - an `Align` menu, and the keys
   behind it. A drag puts an element approximately anywhere and
@@ -97,6 +115,143 @@ across them.
   - Aiming turns and does not move: which way an element faces and
     where it stands are two questions, and the second already has
     answers (Ctrl-drag, the Center rows, Along beam / Move by).
+
+- **`round_breadboard(diameter)`**, and `BBR30` and `BBR45` on the
+  library shelf. A vacuum tank is round and so is the board in the
+  bottom of it. The grid is the rectangular board's - symmetric about
+  the centre, on the same 25 mm pitch - and the rim decides which of
+  its holes exist: drilled where it lies a margin in from the edge,
+  left out where it does not, so the rows shorten towards the rim the
+  way a real disc is drilled.
+  - **A round body has one size, not two.** `Mechanics.resizable` now
+    says *how* a body resizes - `'box'`, `'round'` or `None` - where
+    it used to answer only whether. `resize()` takes either name as
+    the diameter and **refuses two that disagree** rather than
+    resolving them by picking one: a round board asked to be 300 by
+    400 is a misunderstanding, not a size.
+  - In the viewer the panel offers a single **Diameter** row instead
+    of Width and Height, and a dragged corner sets that one number.
+    The centre stays where it is, since a disc has no opposite corner
+    to hold still, and the handles stand on the square it is
+    inscribed in.
+
+- **A numeric panel row is a calculator, and knows its own unit.** A
+  bench measurement is usually arrived at rather than known, so a row
+  takes the sum as well as the answer: `2*25.4` is 50.8, `300/4` is
+  75. Brackets, the four operations and a leading minus, parsed
+  character by character - nothing is evaluated as code, so a row is
+  a calculator and not a way into the page.
+  - **A value may carry a unit of its own in square brackets**, and
+    it converts into the unit the row is labelled with: `1[in]` in a
+    millimetre row is 25.4, in a metre row 0.0254. Lengths `m`, `cm`,
+    `mm`, `um`, `nm`, `in`, `mil`, `ft`; angles `rad`, `mrad`, `deg`;
+    power `W`, `mW`, `uW`, `kW`. The unit converts the number it
+    follows and the rest is ordinary arithmetic in the row's unit, so
+    `1[in]+2` in a millimetre row is 27.4.
+  - A unit of the wrong kind is refused rather than quietly taken as
+    a bare number - a length typed into an angle converts to nothing
+    - and so is any unit in a row that has none of its own, such as
+    an order or a refractive index. A refused entry sends nothing and
+    the row goes back to what the model holds, as it always did.
+  - `verify_input.js` (119 checks) hammers the parser on its own
+    under Node; the browser suites check that each row hands it the
+    unit it is labelled with, which is the half that could be wrong
+    by a factor of a thousand without saying anything.
+
+- **A measurement reports its two components**, `Δx` and `Δy`, beside
+  the distance - in the dimension panel and in the status bar while
+  the measurement is being taken. A bench is built on axes: a mount
+  goes 300 along and 75 across, and that pair is as often the number
+  wanted as the straight line between the points. Signed from the
+  first point to the second, the way the direction already read.
+
+- **`copy_optics()`, and a Copy button in the element panel** - a
+  second one of an element, with the whole stack standing on it: the
+  mount bolted to it, the pedestal under the mount, the fork over the
+  pedestal, each pinned to the copy exactly as its original is pinned
+  to the original. One of a pair of steering mirrors is not one
+  element, it is the element and everything built under it, and none
+  of that is worth assembling twice. `{'op': 'copy', 'target': 'M1'}`
+  on the protocol, one step of undo.
+  - The copies are made through the same dicts a saved layout is
+    written with, so what is copied is what would have been saved -
+    by value, sharing nothing. The poses of the bodies are the one
+    thing not copied, because they were never stored: each derives
+    its own from the copy it now stands on.
+  - Without a name the copy takes the original's without its trailing
+    number and the first free one after it, so a copy of `M1` is
+    `M2`; without an offset it stands its own diameter away along
+    both axes, far enough to clear what it was made from and near
+    enough to be plainly the same thing moved.
+  - Only an element is copied this way. A stack stands on an element
+    at its root, and a body on its own is one call to the model
+    library away.
+
+- **A dragged laser settles on the screw holes**, landing the point
+  its light leaves from on the hole, as a dragged element already
+  landed its anchor. A laser is bolted to the bench like anything
+  else, and that point is the one the model keeps fixed when the beam
+  is turned, so it is the one worth landing. Alt rides free, and the
+  status bar names the hole - both as they already were for an
+  element.
+
+- **A bench stacks: a body may stand on another body.** A mount is
+  bolted to a pedestal and the pedestal is held down by a clamping
+  fork, and `attached_to` now takes either an optics or another
+  `Mechanics`. The chain follows the optics at the root of it - move
+  or turn the mirror and the whole stack comes along - and a cycle is
+  refused, since a pose deriving from itself is not wrong so much as
+  endless. `mechanics.host_pose()` is the one place that knows an
+  optics is turned by its HR normal and a body by its own angle.
+  - **Parts name their own points.** `Mechanics.points` is a dict of
+    local points a part names for itself - `'post'` for the hole under
+    a mount, `'axis'` for a pedestal, `'bore'` and `'screw'` for a
+    fork - and they travel with the model in the library. They join
+    the snap points, so a drag settles on them, a measurement reaches
+    them and Align aims by them.
+  - **A dragged body settles on them.** Everything a measurement can
+    snap to is somewhere a part can be placed: drop a pedestal near
+    the hole under a mount and it lands on it exactly. Alt takes the
+    cursor at its word, as it already did for an optics over a screw
+    hole.
+  - **`attach_point` says which point of the body is pinned**, in its
+    own coordinates. The default is the local origin, which is the
+    rule every mount was already drawn to, so nothing that existed
+    moves by a bit. Attaching through the protocol picks it up from
+    the drawing - the point already coinciding with one of the host's
+    - which is what makes "drop it on the hole, then attach it" pin it
+    by that hole, and what makes a fork swing about its post.
+  - **`fix_rotation` decides who may change the relative angle.**
+    True, the default, is a mount bolted to its mirror: it faces where
+    the mirror faces. False is a clamping fork: the **Fix rotation**
+    row and Shift-drag swing it about the point it is pinned by. Either
+    way it turns *with* the host - a stack that came apart when the
+    mirror was aimed would not be a stack.
+  - **Attached to** in the panel lists the other bodies as well as the
+    optics. Seating a body on an optics puts it at the model's own
+    place, as before; seating it on another body keeps where it is,
+    since which hole of a mount a pedestal sits in is a choice made on
+    the bench and not by the library.
+  - Removing a body something stands on is refused, as removing a held
+    optics already was. A saved layout writes the host's name, the
+    offset, the attach point and `fix_rotation`, and loading joins the
+    chain back up whatever order the file lists it in.
+
+- **`pedestal()` and `clamping_fork()`**, and `PEDESTAL-25` and
+  `FORK-125` in the library. Drawn from the published drawings of a
+  1 inch pedestal post and the small clamping fork that holds it - a
+  25.4 mm post on a 31.8 mm base, and a 73.8 mm fork with a 26 mm
+  bore, its prong tips standing 3.8 mm ahead of the bore centre -
+  with the fork's waisted outline approximated by straight tapers and
+  arcs. Both mounts gain a `'post'` point, the hole they are bolted
+  down through, measured 13.5 mm behind the substrate centre, and a
+  4 mm circle drawn there: the hole is bored from underneath and is
+  in no top view, but where it is belongs in one, since a top view of
+  a bench is read for what is bolted down where. `points=` overrides
+  the point. Where a named point and a circle land on one place, the
+  named one is offered first and so is the one a snap takes - the
+  same rule, for the same reason, as an optics winning over the beam
+  that ends on it.
 
 - **The word is "mechanics", not "hardware".** Mounts and holders are
   optomechanics, but what a layout carries is not always optical - the
@@ -226,10 +381,11 @@ across them.
   changes nothing.
 - `shape_from_dict` in `gtrace.draw.serialize`: the inverse of
   `shape_to_dict`, which loading a mechanics needs.
-- `verify_mechanics.py` (271 checks), `verify_mech_browser.py` (72),
-  `verify_align_browser.py` (34), `verify_editor.py` (77) and
-  `verify_editor_browser.py` (32). The suite is 24 files and 4324
-  checks.
+- `verify_mechanics.py` (315 checks), `verify_mech_browser.py` (81),
+  `verify_align_browser.py` (34), `verify_editor.py` (143),
+  `verify_editor_browser.py` (47) and
+  `verify_editor_drag_browser.py` (60). The suite is 25 files and
+  4518 checks.
 
 ### Fixed
 

@@ -145,7 +145,7 @@ The viewer changes a layout by sending it messages, which you can also send your
     layout.apply_edit({'op': 'set', 'target': 'PRM',
                        'attrs': {'diameter': 0.15}})
 
-The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load``, ``export``, ``undo`` and ``redo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
+The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, ``add``, ``copy``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load``, ``export``, ``undo`` and ``redo``. Every message is a plain dict, so the same protocol travels over a notebook widget's comm as over any other transport.
 
 A ``set`` may carry several attributes at once, and they are not applied in the order the message happens to list them: the anchor goes on before the curvatures it governs, and the orientation before the position that is measured from it. A message is a JSON object, whose key order is not something to rest on.
 
@@ -244,6 +244,8 @@ What a dimension comes to is worked out afresh every time the scene is built, ne
 
 The question behind that is :py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>`, which asks the optics itself rather than describing its faces a second time. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when it is approached from outside, so from inside a substrate it finds nothing at all — and that is the whole of the test. Ends lying exactly on a face count as inside, since that is where such a measurement is usually taken from.
 
+.. _mechanics:
+
 Mechanics
 ----------
 
@@ -263,7 +265,7 @@ The shapes are in the body's **own** coordinates and the pose carries them onto 
 
 A body is drawn, picked, measured, saved and exported like anything else, and it is invisible to the beams — adding, moving or editing one does not invalidate a trace. It goes on the ``mechanics`` layer by default, so a DXF or the viewer's layer panel can take all of it out of the way at once. What a click lands on is decided by :py:meth:`contains<gtrace.mechanics.Mechanics.contains>`, a point-in-polygon test against the body's :py:meth:`outline<gtrace.mechanics.Mechanics.outline>`; of several bodies under one point the smallest wins, so a mount standing on a breadboard is not shadowed by it.
 
-Attached to an optics
+Standing on something
 ^^^^^^^^^^^^^^^^^^^^^^
 
 A mirror mount is a body that stands where its mirror stands, so it has no pose of its own:
@@ -278,7 +280,26 @@ A mirror mount is a body that stands where its mirror stands, so it has no pose 
 
 Where a body sits on its host is a **coordinate convention** rather than a number: the local origin of a part is the point that comes to rest at the host's substrate centre. A mount is therefore drawn around the mirror it will hold, and needs no offset to land correctly. ``offset`` and ``offset_angle`` are there for the times you mean to sit slightly off it.
 
+**A body may stand on another body.** A bench stacks: the mount is bolted to a pedestal, the pedestal is held down by a clamping fork. ``attached_to`` takes either, the chain follows the optics at the root of it, and a cycle is refused — a pose that derived from itself would not be wrong so much as endless. :py:func:`host_pose<gtrace.mechanics.host_pose>` is the one place that knows the difference between the two kinds of host: an optics is turned by its HR normal, a body by its own angle.
+
+What differs when one body stands on another is where it is pinned. A mount is pinned by its origin, since that is the point drawn to coincide with its optic. A pedestal dropped into a hole is pinned by *that hole*, and a fork by the bore it closes on — so ``attach_point`` says which point of the body is held, in its own coordinates, and the pose derives from that:
+
+.. code-block:: text
+
+    angle  = host angle + offset_angle
+    centre = host frame(offset) - R(angle) · attach_point
+
+With the default attach point of ``[0, 0]`` the second term vanishes and this is the rule every mount was already drawn to. Attaching through the edit protocol picks it up from the drawing: the point of the body that already coincides with a point of the host is the one it is pinned by, so "drop it on the hole, then attach it" pins it by the hole.
+
+``fix_rotation`` decides who may change the relative angle. True — the default — is a mount bolted to its mirror: it faces where the host faces and there is nothing to type. False is a clamping fork, which swings about the point it is pinned by; the ``Angle`` row and Shift-drag then set it. Either way the body turns **with** the host, because a stack that came apart when the mirror was aimed would not be a stack.
+
+**Named points** are what all of this is stood on. ``points`` is a dict of local points a part names for itself — ``'post'`` for the hole under a mount, ``'axis'`` for a pedestal, ``'bore'`` and ``'screw'`` for a fork — and it travels with the model in the library. They join the snap points, so a drag settles on them, a measurement reaches them, and Align aims by them.
+
 :py:meth:`detach<gtrace.mechanics.Mechanics.detach>` bakes the derived pose in and frees the body; :py:meth:`attach<gtrace.mechanics.Mechanics.attach>` seats it on a host, at the model's own place by default, or where it already stands with ``keep_pose=True``. A layout saves the host's **name** and the offset, never the derived pose, and re-links the two when it is loaded. An optics with something attached to it cannot be removed until it is let go of.
+
+:py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` — ``{'op': 'copy', 'target': 'M1'}`` — adds a second one of an element **with the whole stack standing on it**: the mount bolted to it, the pedestal under the mount, the fork over the pedestal, each pinned to the copy exactly as its original is pinned to the original. One of a pair of steering mirrors is not one element; it is the element and everything built under it, and none of that is worth assembling twice.
+
+The copies are made through the same dicts a saved layout is written with, so what is copied is what would have been saved — by value, sharing nothing. The poses of the bodies are the one thing not copied, because they were never stored: each derives its own from the copy it now stands on. Without a name the copy takes the original's without its trailing number and the first free one after it, so a copy of ``M1`` is ``M2``; without an offset it stands its own diameter away along both axes, far enough to clear what it was made from. Only an element is copied this way — a stack stands on an element at its root, and a body on its own is one call to the model library away.
 
 The model library
 ^^^^^^^^^^^^^^^^^^
@@ -306,18 +327,25 @@ The stock models are generic on purpose — ``BB3030``, ``MOUNT-25``, ``HOLDER-5
 
 .. code-block:: python
 
-    from gtrace.mechanics import breadboard, mirror_mount, lens_holder
+    from gtrace.mechanics import (breadboard, round_breadboard,
+                                  mirror_mount, lens_holder,
+                                  pedestal, clamping_fork)
 
     breadboard(0.45, 0.30, pitch=0.025, hole_diameter=0.006)
+    round_breadboard(0.30, pitch=0.025, hole_diameter=0.006)
     mirror_mount(scale=1.0, knobs=True)
     lens_holder(length=0.030, thickness=0.010)
+    pedestal(post_diameter=0.0254, base_diameter=0.0318)
+    clamping_fork(bore_diameter=0.0260, length=0.0738)
 
-A body built by one of these keeps the parameters it was built from, in ``params``, which is what makes it resizable: :py:meth:`resize<gtrace.mechanics.Mechanics.resize>` re-drills a breadboard at the new size rather than scaling it, so the holes keep their diameter and their pitch.
+:py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` is the board that goes in the bottom of a vacuum tank. The grid is the rectangular board's — symmetric about the centre, on the same pitch — and the rim decides which of its holes exist: a hole is drilled where it lies a margin in from the edge and left out where it does not, so the rows shorten towards the rim the way a real disc is drilled.
+
+A body built by one of these keeps the parameters it was built from, in ``params``, which is what makes it resizable: :py:meth:`resize<gtrace.mechanics.Mechanics.resize>` re-drills a breadboard at the new size rather than scaling it, so the holes keep their diameter and their pitch. :py:attr:`resizable<gtrace.mechanics.Mechanics.resizable>` says how — ``'box'`` for a body with two sides, ``'round'`` for one with a single size, and ``None`` for a body drawn by hand, whose shapes are all anyone knows about it. **A round body has one size, not two:** either ``width`` or ``height`` sets its diameter, and two that disagree are refused rather than resolved by picking one.
 
 Editing a body from a front end
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The same operations reach a body, with its own whitelist (``EDITABLE_MECHANICS_ATTRS``: ``center``, ``rotationAngle``, ``attached_to``, ``offset``, ``offset_angle``, ``width`` and ``height``):
+The same operations reach a body, with its own whitelist (``EDITABLE_MECHANICS_ATTRS``: ``center``, ``rotationAngle``, ``attached_to``, ``offset``, ``offset_angle``, ``fix_rotation``, ``width`` and ``height``):
 
 .. code-block:: python
 
@@ -329,7 +357,7 @@ The same operations reach a body, with its own whitelist (``EDITABLE_MECHANICS_A
     layout.apply_edit({'op': 'set', 'target': 'BB1',
                        'attrs': {'width': 0.6, 'height': 0.45}})
 
-An ``add`` naming a ``model`` and no ``shapes`` is built from the library; one carrying ``shapes`` is built from them. ``attached_to`` takes a name or ``None``, and seating a body on a host puts it at the model's place, since where a mount belongs on a mirror is the library's business rather than the cursor's. Setting ``width`` or ``height`` goes through ``resize``, which says so when the body is not one that has a size.
+An ``add`` naming a ``model`` and no ``shapes`` is built from the library; one carrying ``shapes`` is built from them. ``attached_to`` takes the name of an optics **or of another body**, or ``None``. Seating a body on an *optics* puts it at the model's place, since where a mount belongs on a mirror is the library's business rather than the cursor's; seating it on a *body* keeps where it already is, since which hole of a mount a pedestal sits in is a choice made on the bench. Setting ``width`` or ``height`` goes through ``resize``, which says so when the body is not one that has a size. A ``rotate`` on an attached body is refused unless its turn is free.
 
 Drawing a part
 ^^^^^^^^^^^^^^^
@@ -345,11 +373,15 @@ Drawing a part
     ed.apply_edit({'op': 'set_shape', 'index': 2,
                    'attrs': {'radius': 0.004}})
     ed.apply_edit({'op': 'rotate_shape', 'index': 0, 'angle': 0.7854})
+    ed.apply_edit({'op': 'set_points',
+                   'points': [{'name': 'post', 'point': [-0.0135, 0.0]}]})
     ed.apply_edit({'op': 'undo'})
 
-The operations are ``add_shape``, ``set_shape``, ``remove_shape``, ``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``save_model``, ``undo`` and ``redo``. A shape is edited by taking it apart into the dict :py:func:`shape_to_dict<gtrace.draw.serialize.shape_to_dict>` writes, changing what the message names and building it again, so the constructors are the only rule about what a shape is; what they do not catch — a size of none or less, a coordinate at infinity, an outline of one vertex — is refused on the way out. An index is a **place in the list**, which is also the order the shapes are drawn in, so removing one renumbers those after it.
+The operations are ``add_shape``, ``set_shape``, ``remove_shape``, ``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``set_points``, ``save_model``, ``undo`` and ``redo``. A shape is edited by taking it apart into the dict :py:func:`shape_to_dict<gtrace.draw.serialize.shape_to_dict>` writes, changing what the message names and building it again, so the constructors are the only rule about what a shape is; what they do not catch — a size of none or less, a coordinate at infinity, an outline of one vertex — is refused on the way out. An index is a **place in the list**, which is also the order the shapes are drawn in, so removing one renumbers those after it.
 
 A turn is the one edit that is not a set of attributes, because what turning means differs by kind: an arc's two angles move, a text turns with its own rotation, and a ``Rectangle`` — a corner, a width and a height, with its sides along the axes — has no turned form at all and comes back as the closed polyline of its four corners. That rule is :py:func:`turned_shape<gtrace.mechanics.turned_shape>`, which is also how a turned body's rectangles reach the bench. ``pivot`` defaults to :py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the middle of the shape's bounding box.
+
+``set_points`` carries the **whole list** of named points rather than one of them, because there is no index that survives a rename: a point is known by its name, and a name is the thing being edited. So renaming one, moving one, adding one and taking one away are all the same message — which also makes each of them one step of undo. Two points cannot share a name, and a point cannot go unnamed. The scene channel is ``points``, a list of ``{'name': str, 'point': [x, y], 'index': int}``.
 
 The editor holds the ``Mechanics`` **by reference**, like everything else here, so a body already registered in a layout is redrawn there at the layout's next draw, with its attachment, pose and builder parameters untouched.
 
@@ -364,7 +396,7 @@ Each dimension carries a ``line``, the two ends its line lands on once the offse
 
 ``mechanics`` carries each body's pose, what it is attached to, and the outline a front end picks it by — worked out here, since it is the same polygon :py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against and there is no reason for a browser to have a second opinion about it. ``mechlib`` is the model library as names and descriptions, which is what the ``+ Mechanics`` menu is; the shapes stay on this side until one is chosen.
 
-``snap`` carries the four corners of each substrate, the apex of each face and the middle, and the centre of every screw hole a body carries. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
+``snap`` carries the four corners of each substrate, the apex of each face and the middle, the points a body names for itself, and the centre of every screw hole a body carries. The named points come before the holes, because two marks at one place are the same point as far as snapping goes and the first wins: a mount's post hole is both a circle in the drawing and the point it is stood on its pedestal by, and ``MT post`` says more than ``MT hole``. They come from Python because they are geometry: a corner is where the wedge and the sagitta of a curved face put it, and there is no reason for a second description of that to live in a browser. Beam ends are deliberately *not* in it — the scene already carries the ends of every beam literally, so a front end can offer those without anything being worked out twice.
 
 Undo and redo
 --------------
