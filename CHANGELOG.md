@@ -116,6 +116,29 @@ across them.
     where it stands are two questions, and the second already has
     answers (Ctrl-drag, the Center rows, Along beam / Move by).
 
+- **`beam_dump()` and `OpticalLayout.add_beam_dump()`** - two
+  absorbing faces in a V and the housing they sit in, jointed so the
+  three move as one. `angle` is the direction the light travels, so a
+  dump is aimed the way the beam runs rather than by where its mouth
+  points.
+  - The point of the V is that a black face is not perfectly black:
+    what one face sends back the other catches and sends back again,
+    so the light works its way into the wedge instead of coming out
+    the way it came. With the default 4% a beam is down to 0.16%
+    after two bounces and to a part in ten million after five. That
+    is worth tracing, which is why the faces are elements rather than
+    a shape drawn on the housing.
+  - The dimensions are a real drawing's, and three of them settle the
+    whole V - the apex 25 mm above the post hole, 50 mm faces, a 28
+    degree opening - so the face centres come out where the drawing
+    dimensions them. **The reflectivity is not from the drawing** and
+    `DUMP_REFLECTIVITY` says so: what a black absorber returns
+    depends on the glass and on the polarisation, so it is a
+    placeholder to be measured and passed.
+  - Aim it into one side of the V rather than at the apex, which is
+    where the two faces end: a ray sent exactly there hits neither,
+    on a bench as well as here.
+
 - **An element may follow another: `assemble()` and
   `disassemble()`.** Two absorbing faces in a V are one beam dump, a
   pair of steering mirrors is one periscope, and a bench is built out

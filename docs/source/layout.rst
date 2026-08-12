@@ -268,6 +268,24 @@ Placing a follower is refused, in the same words a held body already uses: it go
 
 A circle is refused, and so is a file that describes one: a pose that comes from itself is not wrong so much as endless.
 
+The beam dump
+^^^^^^^^^^^^^^
+
+:py:func:`beam_dump<gtrace.layout.beam_dump>` is what the assembly was built for — two absorbing faces in a V and the housing they sit in, jointed so the three move as one:
+
+.. code-block:: python
+
+    faces_and_box = layout.add_beam_dump(name='BD', center=[0.3, 0.0],
+                                         angle=0.0)
+
+``angle`` is **the direction the light travels**, so a dump is aimed the way the beam runs rather than by where its mouth points. The pieces come back — and are registered — hosts first.
+
+The point of the V is that a black face is not perfectly black. What one face sends back the other catches and sends back again, so the light works its way into the wedge instead of coming out the way it came: with the default 4% a beam is down to 0.16% after two bounces and to a part in ten million after five. That is worth tracing, which is why the faces are elements rather than a shape drawn on the housing.
+
+The dimensions are the drawing's, and three of them settle the whole V — the apex 25 mm above the post hole, faces 50 mm long, opening 28° — so the face centres come out where the drawing dimensions them. **The reflectivity is not from the drawing**: what a black absorber returns depends on the glass and the polarisation, so :py:data:`DUMP_REFLECTIVITY<gtrace.layout.DUMP_REFLECTIVITY>` is a placeholder to be measured and passed.
+
+Aim it into one side of the V rather than at the apex. A ray sent exactly at the apex hits neither face — that is the point where the two of them end — which is a knife edge on a bench as well as here.
+
 Mechanics
 ----------
 

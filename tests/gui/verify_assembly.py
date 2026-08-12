@@ -40,8 +40,9 @@ import gtrace.draw as draw
 import gtrace.optcomp as opt
 from gtrace.beam import GaussianBeam
 from gtrace.layout import (OpticalLayout, TraceRules, EditError,
-                           q_from_waist, optic_to_dict, optic_from_dict)
-from gtrace.mechanics import mirror_mount, breadboard
+                           q_from_waist, optic_to_dict, optic_from_dict,
+                           beam_dump, DUMP_REFLECTIVITY)
+from gtrace.mechanics import Mechanics, mirror_mount, breadboard
 from gtrace.unit import *
 
 npass = 0
@@ -377,6 +378,162 @@ check('  and the mount along with them',
       any(m.attached_to is c for m in L.mechanics))
 check('  while the original is untouched',
       L.get_optics('D2').assembled_to is L.get_optics('D1'))
+
+
+print('--- the beam dump the whole thing was for ---')
+
+# The drawing (local/BeamDump.dxf) puts the apex 25 mm above the post
+# hole, the faces 50 mm long, and the opening at 28 degrees. Those
+# three settle where the face centres go, and the drawing dimensions
+# them at 6.04805 and 0.742606 mm from the post hole - which is the
+# check that the arithmetic here is the arithmetic there.
+# angle is the way the light runs, so a beam going +y walks into a
+# dump laid out exactly as the drawing is: apex up, mouth down.
+f1, f2, box = beam_dump(name='BD', center=[0.0, 0.0], angle=np.pi / 2)
+check('the two faces come out where the drawing dimensions them',
+      close(np.array(f1.HRcenter) * 1e3, [-6.04805, 0.742606], tol=1e-4)
+      and close(np.array(f2.HRcenter) * 1e3, [6.04805, 0.742606], tol=1e-4),
+      str(np.round(np.array(f2.HRcenter) * 1e3, 5).tolist()))
+check('  50 mm long, 3 mm thick',
+      abs(f1.diameter - 0.050) < 1e-15 and abs(f1.thickness - 0.003) < 1e-15)
+# The faces are 28 degrees apart, so the normals - which look at each
+# other across the V - are 28 short of opposite.
+def apart(a, b):
+    return 180.0 - abs(np.rad2deg(float(a.normAngleHR)
+                                  - float(b.normAngleHR))) % 360.0
+
+def ends(m):
+    '''
+    The two ends of a face, from its centre and the way it lies.
+    '''
+    t = float(m.normAngleHR) + np.pi / 2
+    d = np.array([np.cos(t), np.sin(t)]) * m.diameter / 2
+    return np.array(m.HRcenter) - d, np.array(m.HRcenter) + d
+
+check('  and 28 degrees apart', abs(apart(f1, f2) - 28.0) < 1e-9,
+      str(apart(f1, f2)))
+
+check('the faces meet at the apex, 25 mm above the hole',
+      any(close(a, b, tol=1e-9) and close(a, [0.0, 0.025], tol=1e-9)
+          for a in ends(f1) for b in ends(f2)),
+      str([np.round(e * 1e3, 4).tolist() for e in ends(f1)]))
+
+check('they are absorbers: nothing through, and the bounce is no ghost',
+      f1.Trans_HR == 0.0 and f1.Refl_AR == 0.0
+      and f1.HRreflective is False
+      and abs(f1.Refl_HR - DUMP_REFLECTIVITY) < 1e-15)
+check('the three come back jointed, so the dump is one thing',
+      f2.assembled_to is f1 and box.attached_to is f1)
+check('  and the housing is a body with a post hole in it',
+      isinstance(box, Mechanics) and len(box.shapes) == 9)
+
+# Where the housing goes is the question the faces cannot answer for
+# themselves: its local origin is the post hole, which is what the
+# drawing is dimensioned from and what the dump is bolted down by.
+# Checked against the faces rather than against a number, and at
+# poses where getting it wrong shows - the bug this replaces was
+# invisible at the origin.
+def dump_apex(m1, m2):
+    '''
+    Where the two faces meet, worked out from the faces themselves.
+    '''
+    for a in ends(m1):
+        for b in ends(m2):
+            if close(a, b, tol=1e-9):
+                return a
+    return None
+
+for at, aim in (([0.0, 0.0], np.pi / 2), ([0.3, 0.1], 0.0),
+                ([-0.2, 0.4], -0.7), ([0.05, -0.3], 2.9)):
+    g1, g2, gbox = beam_dump(name='G', center=at, angle=aim)
+    check('the post hole stands where the dump was put (%s, %5.1f deg)'
+          % (at, np.rad2deg(aim)),
+          close(gbox.center, at, tol=1e-12),
+          str(np.round(np.array(gbox.center), 6).tolist()))
+    check('  and the housing agrees with the faces about the apex',
+          close(gbox.to_world([0.0, 0.025]), dump_apex(g1, g2), tol=1e-9),
+          '%s vs %s' % (np.round(np.array(gbox.to_world([0.0, 0.025])) * 1e3,
+                                 4).tolist(),
+                        np.round(dump_apex(g1, g2) * 1e3, 4).tolist()))
+
+# And it stays agreed once the dump is moved and turned, which is what
+# the joint is for.
+g1, g2, gbox = beam_dump(name='G', center=[0.3, 0.1], angle=0.0)
+LG = OpticalLayout(sources=[], name='g')
+for x in (g1, g2):
+    LG.add_optics(x)
+LG.add_mechanics(gbox)
+g1.HRcenter = np.asarray(g1.HRcenter) + [0.07, -0.03]
+g1.normAngleHR = float(g1.normAngleHR) + 0.9
+LG.draw()
+check('the housing keeps its place through a move and a turn',
+      close(gbox.to_world([0.0, 0.025]), dump_apex(g1, g2), tol=1e-9),
+      '%s vs %s' % (np.round(np.array(gbox.to_world([0.0, 0.025])) * 1e3,
+                             4).tolist(),
+                    np.round(dump_apex(g1, g2) * 1e3, 4).tolist()))
+
+# What the V is for: each bounce takes a bite, and the residue works
+# its way in rather than back out the way it came.
+b0 = GaussianBeam(pos=[0.0, 0.002], dirAngle=0.0,
+                  q0=q_from_waist(0.2*mm, 0.0, 1064*nm),
+                  wl=1064*nm, name='b0')
+L = OpticalLayout(sources=[b0], name='dump',
+                  rules=TraceRules(order=8, power_threshold=1e-8))
+pieces = L.add_beam_dump(name='BD', center=[0.3, 0.0], angle=0.0)
+L.trace()
+hits = [b for b in L.beams if b.name.startswith('BD')]
+check('a beam into the mouth is caught, and bounces more than twice',
+      len(hits) >= 3, '%d bounces' % len(hits))
+check('  each bounce taking the same bite out of it',
+      all(abs(b.P / a.P - DUMP_REFLECTIVITY) < 1e-9
+          for a, b in zip(hits, hits[1:]) if a.P > 1e-12),
+      str([round(b.P, 8) for b in hits]))
+check('  so what is left is a ten-thousandth after two',
+      abs(hits[1].P - DUMP_REFLECTIVITY ** 2) < 1e-12, str(hits[1].P))
+
+# One thing to move, which is the whole reason for the assembly.
+gap = np.array(pieces[1].HRcenter) - np.array(pieces[0].HRcenter)
+box0 = np.array(box.center) if False else np.array(pieces[2].center)
+pieces[0].HRcenter = np.asarray(pieces[0].HRcenter) + [0.05, 0.02]
+L.trace()
+check('moving the first face moves the dump',
+      close(np.array(pieces[1].HRcenter) - np.array(pieces[0].HRcenter), gap)
+      and close(np.array(pieces[2].center), box0 + [0.05, 0.02]))
+pieces[0].normAngleHR = float(pieces[0].normAngleHR) + 0.3
+L.trace()
+check('  and turning it turns the whole V',
+      abs(apart(pieces[0], pieces[1]) - 28.0) < 1e-9,
+      str(apart(pieces[0], pieces[1])))
+
+# It is aimed the way the beam runs, not by where its mouth points.
+for aim in (0.0, np.pi / 2, np.pi, -0.7):
+    src = GaussianBeam(pos=[0.0, 0.0], dirAngle=aim,
+                       q0=q_from_waist(0.2*mm, 0.0, 1064*nm),
+                       wl=1064*nm, name='b0')
+    at = 0.3 * np.array([np.cos(aim), np.sin(aim)])
+    # A hair off the apex, as a bench would aim it: the apex is where
+    # the two faces end and a ray sent exactly at it hits neither.
+    off = 0.002 * np.array([-np.sin(aim), np.cos(aim)])
+    LL = OpticalLayout(sources=[src], name='aim',
+                       rules=TraceRules(order=8, power_threshold=1e-8))
+    LL.add_beam_dump(name='BD', center=(at + off).tolist(), angle=aim)
+    LL.trace()
+    check('  aimed along %6.1f deg it still catches the beam'
+          % np.rad2deg(aim),
+          len([b for b in LL.beams if b.name.startswith('BD')]) >= 3)
+
+# A dump is copied the way anything else is.
+c = L.copy_optics(pieces[0].name)
+L.trace()
+check('a dump copies whole',
+      len([o for o in L.optics if getattr(o, 'assembled_to', None) is c]) == 1
+      and any(m.attached_to is c for m in L.mechanics))
+
+back = OpticalLayout.from_dict(L.to_dict())
+back.trace()
+check('and saves and loads whole',
+      back.get_optics('BD2').assembled_to is back.get_optics('BD1')
+      and back.get_mechanics('BDBOX').attached_to is back.get_optics('BD1'))
 
 
 print()

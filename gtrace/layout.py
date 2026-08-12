@@ -1075,6 +1075,193 @@ def _pose_host(obj):
         return obj.attached_to
     return getattr(obj, 'assembled_to', None)
 
+#: How much of the light a face of a dump sends back, as a power
+#: fraction. **A placeholder, not a measurement**: what a black
+#: absorber returns at a few degrees off normal depends on the glass
+#: and on the polarisation, and the drawing this part is taken from
+#: does not say. It is here so that beam_dump() can be called with no
+#: arguments at all; measure yours and pass it.
+DUMP_REFLECTIVITY = 0.04
+
+def beam_dump(name='BD', center=(0.0, 0.0), angle=0.0,
+              reflectivity=DUMP_REFLECTIVITY, apex=0.025,
+              face_length=0.050, face_thickness=0.003,
+              opening=None, body_diameter=0.050, top_width=0.027327,
+              width=0.047848, post_diameter=0.0045,
+              boss_diameter=0.0075, **kwargs):
+    '''
+    A V beam dump: two absorbing faces and the housing they sit in.
+
+    The point of the V is that a black face is not perfectly black.
+    What it sends back is caught by the other face and sent back
+    again, so two bounces leave a hundredth of what one leaves - and
+    the residue goes out of the mouth rather than back up the beam.
+    That is worth tracing, which is why the faces are elements rather
+    than a shape drawn on the housing.
+
+    The three come back jointed: the second face follows the first and
+    the housing is attached to it, so the dump is one thing to move.
+    Register them in the order they are returned, hosts first.
+
+    The dimensions default to the drawing in ``local/BeamDump.dxf`` -
+    a 50 mm face 3 mm thick, a 28 degree opening, and a 50 mm body
+    with its top corners cut off. Three of those numbers settle the
+    whole V: the faces run from the apex, and their centres come out
+    where the drawing dimensions them. **The reflectivity is not from
+    that drawing**; see DUMP_REFLECTIVITY.
+
+    Aim it into one side of the V rather than at the apex. A ray sent
+    exactly at the apex hits neither face - that is the point where
+    the two of them end - which is a knife edge on a bench as well as
+    here.
+
+    Parameters
+    ----------
+    name : str, optional
+        The stem the three are named from: ``BD1``, ``BD2``, ``BDBOX``
+        for the default 'BD'.
+    center : sequence of 2 floats, optional
+        Where the post hole stands, in metres.
+    angle : float, optional
+        The direction the light it is to catch travels, in radians, so
+        that a dump is aimed the way the beam runs rather than by
+        where its mouth points. 0 - the default - catches a beam
+        travelling along +x.
+    reflectivity : float, optional
+        What one face sends back, as a power fraction.
+    apex : float, optional
+        How far above the post hole the two faces meet, in metres.
+        The post hole is the origin the whole dump is laid out from -
+        the drawing is dimensioned from it, and it is the point the
+        dump is bolted down by - so it is where the housing's local
+        origin sits and where ``center`` puts it.
+    face_length : float, optional
+        Each face, in metres. Defaults to 50 mm.
+    face_thickness : float, optional
+        The substrate behind each face. Defaults to 3 mm.
+    opening : float or None, optional
+        The angle between the faces, in radians. None is 28 degrees.
+    body_diameter, top_width, width : float, optional
+        The housing: a disc of that diameter with its top corners cut
+        off by two chords, from ``top_width`` across at the top to
+        ``width`` at its widest.
+    post_diameter, boss_diameter : float, optional
+        The hole it is bolted down through, and the boss around it.
+    **kwargs
+        Passed to the two faces, so that anything an Optics takes -
+        a layer, a wedge - can be set here.
+
+    Returns
+    -------
+    list
+        ``[face1, face2, housing]``: two Mirror and one Mechanics,
+        already jointed.
+    '''
+    if opening is None:
+        opening = np.deg2rad(28.0)
+    half = float(opening) / 2.0
+    centre = np.asarray(center, dtype='float64').reshape(2)
+
+    # In the dump's own frame the mouth faces -y: the apex is above
+    # the post hole and the faces splay downwards, which is how the
+    # drawing is laid out. `angle` turns that frame so the mouth
+    # faces the way the light comes.
+    turn = float(angle) - np.pi / 2.0
+
+    def out(p):
+        return centre + _turn(np.asarray(p, dtype='float64'), turn)
+
+    faces = []
+    for i, s in enumerate((-1.0, 1.0)):
+        # From the apex, down and out. The middle of that run is the
+        # face centre, and the normal looks back into the V.
+        along = np.array([s * np.sin(half), -np.cos(half)])
+        mid = np.array([0.0, apex]) + along * face_length / 2.0
+        m = optcomp.Mirror(
+            HRcenter=out(mid).tolist(),
+            normAngleHR=(np.arctan2(along[1], along[0]) - s * np.pi / 2.0
+                         + turn),
+            diameter=float(face_length), thickness=float(face_thickness),
+            wedgeAngle=0.0,
+            Refl_HR=float(reflectivity), Trans_HR=0.0,
+            Refl_AR=0.0, Trans_AR=0.0,
+            # The reflection off a black face is the thing being
+            # traced, not a ghost of it, so it does not count against
+            # the stray order.
+            HRreflective=False,
+            name='%s%d' % (name, i + 1), **kwargs)
+        faces.append(m)
+
+    # The housing is drawn in the dump's own frame, so it stands at
+    # the dump's own pose: its local origin is the post hole, which is
+    # what the drawing is dimensioned from and what the dump is bolted
+    # down by. Placing it before it is attached is what makes the
+    # joint below the right one - a body attaches at its host's
+    # substrate centre by default, and the post hole is not that.
+    housing = Mechanics(shapes=_dump_shapes(
+        apex, face_length, face_thickness, half, body_diameter / 2.0,
+        top_width / 2.0, width / 2.0, post_diameter / 2.0,
+        boss_diameter / 2.0), name='%sBOX' % name,
+        center=centre.tolist(), rotationAngle=turn)
+
+    # One thing to move: the second face follows the first, and the
+    # housing stands on it. The housing is written in the dump's frame
+    # while a body attaches in the host's, so it is seated by the
+    # offset that carries one to the other.
+    faces[1].assembled_to = faces[0]
+    faces[1].assembly_offset = _turn(
+        np.asarray(faces[1].HRcenter) - np.asarray(faces[0].center),
+        -float(faces[0].normAngleHR))
+    faces[1].assembly_angle = (float(faces[1].normAngleHR)
+                               - float(faces[0].normAngleHR))
+    faces[1].fix_rotation = True
+    housing.attach(faces[0], keep_pose=True)
+    return faces + [housing]
+
+def _dump_shapes(apex, length, thick, half, radius, top_half, wide_half,
+                 post_r, boss_r):
+    '''
+    The housing of a beam dump, in its own frame: the post hole at the
+    origin, the mouth facing -y.
+
+    A drawing of what the part occupies and of the features a layout
+    is read for - the outline, the slots the two faces sit in, and the
+    hole it is bolted down through - rather than a reproduction of
+    every line of the machine drawing.
+    '''
+    shapes = []
+    # The rim, in the three runs the cut corners leave it in: up one
+    # side to the apex, down the other, and the whole bottom.
+    a_top = np.arctan2(np.sqrt(max(radius ** 2 - top_half ** 2, 0.0)),
+                       top_half)
+    a_wide = np.arctan2(-np.sqrt(max(radius ** 2 - wide_half ** 2, 0.0)),
+                        wide_half)
+    shapes.append(draw.Arc([0.0, 0.0], radius, np.pi - a_top, np.pi / 2))
+    shapes.append(draw.Arc([0.0, 0.0], radius, np.pi / 2, a_top))
+    shapes.append(draw.Arc([0.0, 0.0], radius, np.pi - a_wide, 2 * np.pi
+                           + a_wide))
+    # The two cut corners.
+    for s in (-1.0, 1.0):
+        shapes.append(draw.Line(
+            [s * top_half, np.sqrt(max(radius ** 2 - top_half ** 2, 0.0))],
+            [s * wide_half,
+             -np.sqrt(max(radius ** 2 - wide_half ** 2, 0.0))]))
+    # The slot each face sits in: the face itself is an element and is
+    # drawn by the optics, so what is drawn here is the pocket behind
+    # it - a face's thickness out from where the face lies.
+    for s in (-1.0, 1.0):
+        along = np.array([s * np.sin(half), -np.cos(half)])
+        back = np.array([-s * np.cos(half), -np.sin(half)]) * thick
+        tip = np.array([0.0, apex])
+        end = tip + along * length
+        shapes.append(draw.PolyLine(
+            x=[tip[0], end[0], end[0] + back[0], tip[0] + back[0], tip[0]],
+            y=[tip[1], end[1], end[1] + back[1], tip[1] + back[1], tip[1]]))
+    # The hole it is bolted down through, and the boss around it.
+    shapes.append(draw.Circle([0.0, 0.0], boss_r))
+    shapes.append(draw.Circle([0.0, 0.0], post_r))
+    return shapes
+
 def mechanics_snap_points(m):
     '''
     The points of a Mechanics worth snapping to: the four corners of
@@ -1548,6 +1735,28 @@ class OpticalLayout(object):
         '''
         self._check_name_free(m.name)
         self.optics.append(m)
+
+    def add_beam_dump(self, **kwargs):
+        """
+        Build a V beam dump and register it: two absorbing faces and
+        the housing they sit in, jointed so the three move as one.
+
+        Takes what beam_dump() takes. The pieces are registered hosts
+        first, which is the order they have to go in.
+
+        Returns
+        -------
+        list
+            The two faces and the housing, as beam_dump() returns
+            them.
+        """
+        pieces = beam_dump(**kwargs)
+        for x in pieces:
+            if isinstance(x, Mechanics):
+                self.add_mechanics(x)
+            else:
+                self.add_optics(x)
+        return pieces
 
     def assemble(self, name, host, offset=None, offset_angle=None,
                  fix_rotation=True):
