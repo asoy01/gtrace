@@ -246,6 +246,28 @@ The question behind that is :py:meth:`contains_segment<gtrace.optcomp.Optics.con
 
 .. _mechanics:
 
+Assemblies
+-----------
+
+Two absorbing faces in a V are one beam dump, a pair of steering mirrors is one periscope, and a bench is built out of such assemblies rather than out of loose elements. :py:meth:`assemble<gtrace.layout.OpticalLayout.assemble>` says so — the follower keeps its place relative to the host, and moving or turning the host carries it along:
+
+.. code-block:: python
+
+    layout.assemble('D2', 'D1')                  # keeps where it stands
+    layout.assemble('D2', 'D1', offset=[0.06, 0.0],
+                    offset_angle=deg2rad(-40))   # or at a place you name
+    layout.disassemble('D2')
+
+The offset is in the host's frame — origin at its substrate centre, x along its HR normal, the same frame a mount attaches in — and what lands there is the follower's **anchor point**, the one it is already held by. ``fix_rotation`` decides who may change the relative angle: True, the default, is a face of a dump, built at its angle; False lets the angle be edited, and the element still turns *with* its host. The host may be another element or a body.
+
+**A follower's pose is stored, not derived.** A body attached to an optics computes its pose on every read; an element cannot, because an ``Optics`` holds its pose in traits whose derived geometry — the face centres, the normals — is what the trace reads, and computing it on demand would mean rewriting that. So the joint is written into the follower **just before the layout is read**, by :py:meth:`trace<gtrace.layout.OpticalLayout.trace>`, :py:meth:`draw<gtrace.layout.OpticalLayout.draw>` and :py:meth:`snap_points<gtrace.layout.OpticalLayout.snap_points>`.
+
+That comes to the same thing as deriving it, for the same reason: there is no notification to miss, because nothing is listening. Assigning ``M1.HRcenter`` in a cell and then tracing carries the assembly along. The one thing it cannot cover is reading a follower's pose in a cell **without** tracing or drawing first — that value is the one from before the host moved. A layout with no assemblies is not touched at all.
+
+Placing a follower is refused, in the same words a held body already uses: it goes where its host goes, so ``move``, ``align``, ``slide`` and a typed pose are turned away. A pose written into one would be overwritten at the next trace, which is worse than a refusal because it would look as though it had worked. The exception is the turn of an element whose ``fix_rotation`` is False, which is read back into the joint so that the next settle keeps it. An element another one follows cannot be removed until it is let go of, and :py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` brings the followers along — the second face of a dump is part of the dump.
+
+A circle is refused, and so is a file that describes one: a pose that comes from itself is not wrong so much as endless.
+
 Mechanics
 ----------
 

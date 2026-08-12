@@ -35,6 +35,7 @@ import numpy as np
 import gtrace.optcomp as optcomp
 from gtrace.beam import GaussianBeam
 from gtrace.mechanics import (Mechanics, DEFAULT_LAYER as MECHANICS_LAYER,
+                              host_pose,
                               from_model as mechanics_from_model,
                               models as mechanics_models,
                               model_shapes as mechanics_model_shapes,
@@ -465,6 +466,21 @@ MECHANICS_TYPE = 'Mechanics'
 #: end moves the body rather than redrawing it. 'attached_to' takes an
 #: optics name, or null to detach, which bakes the derived pose in and
 #: leaves the body standing where it was.
+#: What an element's joint is made of, as an edit message spells it.
+#: Apart from the element's own attributes, because these say what it
+#: follows and how - a relation between two registered things, which
+#: only the layout can look up.
+_ASSEMBLY_ATTRS = frozenset(['assembled_to', 'assembly_offset',
+                             'assembly_angle', 'fix_rotation'])
+
+#: The attributes of an element that say where it stands. A follower
+#: takes these from what it follows, so a message that sets one is
+#: refused - the same answer, in the same words, a body attached to an
+#: optics already gives.
+_OPTIC_POSE_ATTRS = frozenset(['HRcenter', 'HRcenterC', 'center',
+                               'ARcenter', 'ARcenterC',
+                               'normAngleHR', 'normVectHR'])
+
 EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle',
                                       'attached_to', 'offset',
                                       'offset_angle',
@@ -697,6 +713,18 @@ def optic_to_dict(m):
         d['curve_direction'] = str(m.curve_direction)
     if hasattr(m, 'anchor_point'):
         d['anchor_point'] = str(m.anchor_point)
+    # What it follows, if anything: the host's name and where it sits
+    # in the host's frame. The pose above is written too, unlike a
+    # body's - it is the element's own value, which the trace reads,
+    # and settling only ever puts back what the joint says.
+    host = (m.assembled_to.name if getattr(m, 'assembled_to', None) is not None
+            else getattr(m, '_assemble_name', None))
+    if host is not None:
+        d['assembled_to'] = str(host)
+        d['assembly_offset'] = [float(x) for x
+                                in np.asarray(m.assembly_offset)]
+        d['assembly_angle'] = float(m.assembly_angle)
+        d['fix_rotation'] = bool(m.fix_rotation)
     return d
 
 def optic_from_dict(d):
@@ -748,6 +776,17 @@ def optic_from_dict(d):
     #'center' for a lens.
     if 'anchor_point' in d:
         m.anchor_point = d['anchor_point']
+    # An assembled element comes back following by name: the host is
+    # another entry of the same file, so only the layout loading both
+    # can join them up - which OpticalLayout does when it registers
+    # them. See _link_assemblies.
+    if d.get('assembled_to') is not None:
+        m.assembled_to = None
+        m._assemble_name = str(d['assembled_to'])
+        m.assembly_offset = np.array(d.get('assembly_offset', [0.0, 0.0]),
+                                     dtype='float64')
+        m.assembly_angle = float(d.get('assembly_angle', 0.0))
+        m.fix_rotation = bool(d.get('fix_rotation', True))
     return m
 
 def source_to_dict(b):
@@ -1014,6 +1053,28 @@ def mechanics_scene_dict(m):
             'height': (float(m.params['height']) if m.resizable else None),
             'outline': [[float(p[0]), float(p[1])] for p in outline]}
 
+def _turn(p, angle):
+    """
+    A point turned about the origin. The joint arithmetic of an
+    assembly, which is the same turn a body's does - written here
+    rather than reached for across modules.
+    """
+    c, s = np.cos(angle), np.sin(angle)
+    return np.array([p[0] * c - p[1] * s, p[0] * s + p[1] * c])
+
+def _pose_host(obj):
+    """
+    What an element or a body takes its pose from, or None.
+
+    A body follows what it is attached to and an element follows what
+    it is assembled to. One question with one answer, so that walking
+    a chain - to refuse a circle, or to settle in order - does not
+    have to know which kind of thing it is holding.
+    """
+    if isinstance(obj, Mechanics):
+        return obj.attached_to
+    return getattr(obj, 'assembled_to', None)
+
 def mechanics_snap_points(m):
     '''
     The points of a Mechanics worth snapping to: the four corners of
@@ -1129,7 +1190,21 @@ def _merge_by_name(registered, specs, build, update):
 def _update_optic(m, d):
     '''
     Apply a serialized optics to an existing one, in place.
+
+    The joint comes back as a pending name, as it does on a fresh
+    one: the host is another element of the same file and only the
+    layout holding both can join them up.
     '''
+    if d.get('assembled_to') is not None:
+        m.assembled_to = None
+        m._assemble_name = str(d['assembled_to'])
+        m.assembly_offset = np.array(d.get('assembly_offset', [0.0, 0.0]),
+                                     dtype='float64')
+        m.assembly_angle = float(d.get('assembly_angle', 0.0))
+        m.fix_rotation = bool(d.get('fix_rotation', True))
+    else:
+        m.assembled_to = None
+        m._assemble_name = None
     # _ATTR_ORDER puts the anchor before the curvatures it governs and
     # the orientation before the position that is measured from it. The
     # keys a serialized optics carries that are not attributes to set -
@@ -1457,6 +1532,10 @@ class OpticalLayout(object):
         if dimensions is not None:
             for d in dimensions:
                 self.add_dimension(d)
+        # An element may follow another that comes later in the list,
+        # so the joints are made once every name is registered - the
+        # same order the bodies are linked in.
+        self._link_assemblies()
         if mechanics is not None:
             self._add_mechanics_in_order(mechanics)
 
@@ -1469,6 +1548,171 @@ class OpticalLayout(object):
         '''
         self._check_name_free(m.name)
         self.optics.append(m)
+
+    def assemble(self, name, host, offset=None, offset_angle=None,
+                 fix_rotation=True):
+        '''
+        Make one element follow another: an assembly.
+
+        Two absorbing faces in a V are one beam dump, a pair of
+        steering mirrors is one periscope, and a bench is built out of
+        such assemblies rather than out of loose elements. This says
+        so: the follower keeps its place relative to the host, and
+        moving or turning the host carries it along.
+
+        Where a body attached to an optics derives its pose on every
+        read, an element cannot: an Optics holds its pose in traits
+        whose derived geometry - the face centres, the normals - is
+        what the trace reads, and a pose computed on demand would mean
+        rewriting that. So the joint is **stored** here and settled
+        just before the layout is read, which comes to the same thing:
+        see _settle_assemblies.
+
+        The follower keeps where it stands unless an offset says
+        otherwise. There is no designed position to fall back on the
+        way a mount has one - where the second face of a dump sits
+        relative to the first is the drawing of that dump, not a fact
+        about mirrors - so what is on the bench is what is meant.
+
+        Parameters
+        ----------
+        name : str or Optics
+            The element that is to follow.
+        host : str, Optics or Mechanics
+            What it follows.
+        offset : sequence of 2 floats or None, optional
+            Where its anchor point sits in the host's frame, in
+            metres. None keeps where it stands now.
+        offset_angle : float or None, optional
+            How far it is turned relative to the host, in radians.
+            None keeps the angle it stands at now.
+        fix_rotation : bool, optional
+            Whether the relative angle is frozen. True - the default -
+            is a face of a dump, which is built at its angle. False
+            lets the angle be edited, and the element still turns with
+            its host.
+
+        Returns
+        -------
+        self : OpticalLayout
+        '''
+        follower = name if not isinstance(name, str) else self.get_optics(name)
+        target = (host if not isinstance(host, str)
+                  else self._attachment_host(host))
+        if target is None:
+            raise ValueError('Nothing named %r is registered.' % (host,))
+        if target is follower:
+            raise ValueError("'%s' cannot follow itself." % follower.name)
+        seen = target
+        while seen is not None:
+            if seen is follower:
+                raise ValueError(
+                    "'%s' cannot follow '%s': it already carries it."
+                    % (follower.name, getattr(target, 'name', target)))
+            seen = _pose_host(seen)
+
+        hc, ha = host_pose(target)
+        if offset is None:
+            # Where it stands now, read in the host's frame.
+            here = np.asarray(getattr(follower, follower.anchor_point),
+                              dtype='float64')
+            offset = _turn(here - hc, -ha)
+        if offset_angle is None:
+            offset_angle = float(follower.normAngleHR) - ha
+        follower.assembled_to = target
+        follower._assemble_name = None
+        follower.assembly_offset = np.asarray(offset,
+                                              dtype='float64').reshape(2)
+        follower.assembly_angle = float(offset_angle)
+        follower.fix_rotation = bool(fix_rotation)
+        return self
+
+    def disassemble(self, name):
+        '''
+        Free an element from what it was following, leaving it exactly
+        where it stands.
+
+        Nothing has to be baked in: the pose is the element's own and
+        always was. This only stops it being written to again.
+        '''
+        follower = name if not isinstance(name, str) else self.get_optics(name)
+        follower.assembled_to = None
+        follower._assemble_name = None
+        return self
+
+    def assemblies(self):
+        '''
+        The elements that follow something, hosts before followers.
+
+        The order is what settling needs: an element whose host is
+        itself a follower has to be written after it.
+        '''
+        pending = [o for o in self.optics
+                   if getattr(o, 'assembled_to', None) is not None]
+        out = []
+        placed = set()
+        while pending:
+            ready = [o for o in pending
+                     if getattr(_pose_host(o), 'assembled_to', None) is None
+                     or id(_pose_host(o)) in placed]
+            if not ready:
+                # Only reachable from a file that describes a circle;
+                # assemble() refuses to make one.
+                raise ValueError(
+                    'The assemblies of %s stand in a circle.'
+                    % ', '.join(sorted("'%s'" % o.name for o in pending)))
+            for o in ready:
+                out.append(o)
+                placed.add(id(o))
+            pending = [o for o in pending if o not in ready]
+        return out
+
+    def _settle_assemblies(self):
+        '''
+        Write every follower's pose from the host it follows.
+
+        Called just before the layout is read - by trace(), draw() and
+        snap_points() - rather than kept up to date as things move.
+        That is what makes it as reliable as a pose derived on every
+        read: there is no notification to miss, because nothing is
+        listening. Assigning ``M1.HRcenter`` in a cell and then
+        tracing carries the assembly along.
+
+        The one thing it cannot cover is reading a follower's pose in
+        a cell without tracing or drawing first. That value is the one
+        from before the host moved.
+        '''
+        for o in self.assemblies():
+            hc, ha = host_pose(o.assembled_to)
+            # The angle first: turning an optics pivots it about its
+            # anchor point, so setting the angle and then the anchor
+            # is one rigid motion rather than two.
+            o.normAngleHR = ha + float(o.assembly_angle)
+            setattr(o, o.anchor_point,
+                    hc + _turn(np.asarray(o.assembly_offset,
+                                          dtype='float64'), ha))
+        return self
+
+    def _link_assemblies(self):
+        '''
+        Join up followers that name their host by name, as a loaded
+        file does. A name nothing answers to is refused.
+        '''
+        for o in self.optics:
+            name = getattr(o, '_assemble_name', None)
+            if name is None:
+                continue
+            target = self._attachment_host(name)
+            if target is None:
+                raise ValueError(
+                    "'%s' follows '%s', and nothing of that name is "
+                    'registered.' % (o.name, name))
+            o.assembled_to = target
+            o._assemble_name = None
+        # A file may describe a circle even though assemble() refuses
+        # to make one; asking for the order is what finds it.
+        self.assemblies()
+        return self
 
     def add_source(self, b):
         '''
@@ -1727,30 +1971,50 @@ class OpticalLayout(object):
         copy = optic_from_dict(d)
         self.add_optics(copy)
 
-        # The stack, hosts before what stands on them: a body is
-        # joined to its host by name when it is registered, so the
-        # copy of the host has to be there already.
+        # The stack, hosts before what stands on them: each is joined
+        # to its host by name, so the copy of the host has to be there
+        # already. The elements that follow the target come along too
+        # - the second face of a beam dump is part of the dump.
         renamed = {target.name: copy.name}
-        for body in self._standing_on(target):
-            bd = mechanics_to_dict(body)
-            bd['name'] = self._copy_name(body.name)
-            bd['attached_to'] = renamed[body.attached_to.name]
-            self.add_mechanics(mechanics_from_dict(bd))
-            renamed[body.name] = bd['name']
+        for thing in self._carried_by(target):
+            if isinstance(thing, Mechanics):
+                bd = mechanics_to_dict(thing)
+                bd['name'] = self._copy_name(thing.name)
+                bd['attached_to'] = renamed[thing.attached_to.name]
+                self.add_mechanics(mechanics_from_dict(bd))
+            else:
+                bd = optic_to_dict(thing)
+                bd['name'] = self._copy_name(thing.name)
+                bd['assembled_to'] = renamed[thing.assembled_to.name]
+                self.add_optics(optic_from_dict(bd))
+                self._link_assemblies()
+            renamed[thing.name] = bd['name']
         return copy
+
+    def _carried_by(self, host):
+        '''
+        Everything whose pose comes from this one, hosts first.
+
+        Bodies attached to it, elements assembled to it, and whatever
+        stands on those in turn. One walk rather than two, because a
+        pedestal under the second face of a dump is as much a part of
+        the dump as the face is.
+        '''
+        out = []
+        front = [host]
+        while front:
+            carried = [x for x in list(self.optics) + list(self.mechanics)
+                       if _pose_host(x) in front and x not in out]
+            out.extend(carried)
+            front = carried
+        return out
 
     def _standing_on(self, host):
         '''
         Every body attached to this, and to those, hosts first.
         '''
-        out = []
-        front = [host]
-        while front:
-            standing = [m for m in self.mechanics
-                        if m.attached_to in front and m not in out]
-            out.extend(standing)
-            front = standing
-        return out
+        return [m for m in self._carried_by(host)
+                if isinstance(m, Mechanics)]
 
     def _copy_name(self, name):
         '''
@@ -1787,10 +2051,13 @@ class OpticalLayout(object):
 
     def _refuse_if_held(self, target):
         '''
-        Refuse to take away something other bodies are standing on.
+        Refuse to take away something other bodies are standing on,
+        or that another element is assembled to.
         '''
         attached = [m.name for m in self.mechanics
                     if m.attached_to is target]
+        attached += [o.name for o in self.optics
+                     if getattr(o, 'assembled_to', None) is target]
         if attached:
             raise ValueError(
                 "Cannot remove '%s': %s attached to it. Detach or remove "
@@ -1888,6 +2155,10 @@ class OpticalLayout(object):
         self.beams_by_source (a dict keyed by source name), and
         self.beams is also returned.
         '''
+        # An assembled element takes its pose from what it follows,
+        # and this is where that is made true: just before the trace
+        # reads it. See _settle_assemblies.
+        self._settle_assemblies()
         self.beams = []
         self.beams_by_source = {}
         for src in self.sources:
@@ -2059,9 +2330,10 @@ class OpticalLayout(object):
         for mech, spec in zip(self.mechanics, d.get('mechanics', [])):
             mech.name = spec['name']
             _update_mechanics(mech, spec)
-        # After every name is back: an attachment is stored by the
-        # host's name, and the host may itself have just been renamed
-        # by this restore.
+        # After every name is back: a joint is stored by the host's
+        # name, and the host may itself have just been renamed by this
+        # restore.
+        self._link_assemblies()
         self._link_mechanics()
 
         self.rules = TraceRules.from_dict(d.get('rules', {}))
@@ -2211,12 +2483,22 @@ class OpticalLayout(object):
                     raise EditError("A '%s' message needs one of %s."
                                     % (op, ' or '.join(keys)))
 
+            # The joint is set apart from the element's own
+            # attributes: what it follows is a relation between two
+            # registered things, so the layout has to look the other
+            # one up.
+            joint = {k: attrs.pop(k) for k in list(attrs)
+                     if k in _ASSEMBLY_ATTRS}
+            self._refuse_assembled_pose(optics, attrs, joint)
             for key, value in _ordered(attrs):
                 if key not in EDITABLE_OPTIC_ATTRS:
                     raise EditError('%r is not an editable attribute of an '
                                     'optics.' % (key,))
                 _check_choice(key, value)
                 _set_optic_attr(optics, key, value)
+            self._reseat_free_turn(optics, attrs)
+            if joint:
+                self._set_assembly(optics, joint)
 
         elif op == 'rename':
             old = msg.get('target')
@@ -2238,12 +2520,19 @@ class OpticalLayout(object):
 
         elif op in ('align', 'slide'):
             name = msg.get('target')
+            if self._is_optics(name):
+                # Aiming and sliding are ways of placing an element,
+                # and a follower is placed by what it follows.
+                self._refuse_assembled_pose(
+                    self.get_optics(name),
+                    {'normAngleHR' if op == 'align' else 'center': None}, {})
             try:
                 optics = self.get_optics(name)
             except KeyError:
                 raise EditError("No optics named %r in the layout." % (name,))
             if op == 'align':
                 self._align_to_beam(optics, msg)
+                self._reseat_free_turn(optics, {'normAngleHR': None})
             else:
                 self._slide_along_beam(optics, msg)
 
@@ -2582,6 +2871,95 @@ class OpticalLayout(object):
             setattr(m, key, value)
         for key, value in sorted(pose.items()):
             setattr(m, key, value)
+
+    def _reseat_free_turn(self, optics, attrs):
+        '''
+        Read a turn of a free-turning follower back into its joint.
+
+        The angle a follower stands at is written from the joint at
+        every settle, so turning one by writing the angle alone would
+        last until the next trace and no longer. What the turn means
+        is the relative angle, and this is where the one becomes the
+        other - the same translation a body's rotationAngle setter
+        makes for a clamping fork.
+        '''
+        if getattr(optics, 'assembled_to', None) is None:
+            return
+        if bool(getattr(optics, 'fix_rotation', True)):
+            return
+        if not any(k in attrs for k in ('normAngleHR', 'normVectHR')):
+            return
+        optics.assembly_angle = (float(optics.normAngleHR)
+                                 - host_pose(optics.assembled_to)[1])
+
+    def _refuse_assembled_pose(self, optics, attrs, joint):
+        '''
+        Refuse to place an element that follows another.
+
+        A follower goes where its host goes, and a pose typed into it
+        would be written over at the next trace - which is worse than
+        a refusal, because it would look as though it had worked. The
+        exception is the turn of an element whose relative angle is
+        free, which is the one thing that is genuinely still its own.
+
+        Nothing is refused when the same message is letting it go:
+        setting a pose and detaching in one breath is how an element
+        is freed to somewhere.
+        '''
+        if getattr(optics, 'assembled_to', None) is None:
+            return
+        if 'assembled_to' in joint and joint['assembled_to'] is None:
+            return
+        pose = [k for k in attrs if k in _OPTIC_POSE_ATTRS]
+        if not pose:
+            return
+        turning = set(pose) <= {'normAngleHR', 'normVectHR'}
+        if turning and not bool(getattr(optics, 'fix_rotation', True)):
+            return
+        raise EditError(
+            "'%s' follows '%s': it goes where its host goes. Move the "
+            'host, change the offset, free its turn (fix_rotation '
+            'false) or let it go first (set assembled_to to null).'
+            % (optics.name, optics.assembled_to.name))
+
+    def _set_assembly(self, optics, joint):
+        '''
+        Apply the joint part of a 'set' message to an element.
+        '''
+        if 'assembled_to' in joint:
+            host = joint['assembled_to']
+            if host is None:
+                self.disassemble(optics)
+            else:
+                if not isinstance(host, str):
+                    raise EditError("'assembled_to' is the name of an "
+                                    'element or of a body, or null, not %r.'
+                                    % (host,))
+                try:
+                    self.assemble(optics, host,
+                                  offset=joint.get('assembly_offset'),
+                                  offset_angle=joint.get('assembly_angle'),
+                                  fix_rotation=joint.get('fix_rotation', True))
+                except ValueError as e:
+                    raise EditError(str(e))
+                return
+        if getattr(optics, 'assembled_to', None) is None:
+            if set(joint) - {'assembled_to'}:
+                raise EditError(
+                    "'%s' follows nothing, so it has no offset. Set its "
+                    'pose instead.' % optics.name)
+            return
+        if 'assembly_offset' in joint:
+            optics.assembly_offset = _as_point(joint['assembly_offset'],
+                                               'assembly_offset')
+        if 'assembly_angle' in joint:
+            optics.assembly_angle = _as_distance(joint['assembly_angle'],
+                                                 'assembly_angle')
+        if 'fix_rotation' in joint:
+            if not isinstance(joint['fix_rotation'], bool):
+                raise EditError("'fix_rotation' is true or false, not %r."
+                                % (joint['fix_rotation'],))
+            optics.fix_rotation = joint['fix_rotation']
 
     def _mechanics_from_message(self, msg):
         '''
@@ -3029,6 +3407,9 @@ class OpticalLayout(object):
         '''
         opt = self.resolve_draw_options(**options)
 
+        # Before anything is read off the elements, including by a
+        # trace that may not be about to run.
+        self._settle_assemblies()
         if self.beams is None:
             self.trace()
 
@@ -3196,6 +3577,9 @@ class OpticalLayout(object):
         anything being worked out twice. See optic_snap_points for what
         each optics contributes.
         '''
+        # The third of the three places a layout is read from, and so
+        # the third that settles the assemblies first.
+        self._settle_assemblies()
         points = []
         for o in self.optics:
             points.extend(optic_snap_points(o))
@@ -3534,7 +3918,9 @@ class OpticalLayout(object):
                                         mechanics_from_dict,
                                         _update_mechanics)
         # The merges are done and the optics list is settled, so the
-        # attachments stored by name can be joined to their hosts.
+        # joints stored by name can be joined to their hosts. The
+        # elements first: a body may stand on one of them.
+        self._link_assemblies()
         self._link_mechanics()
         self.rules = TraceRules.from_dict(d.get('rules', {}))
         self.draw_options = dict(d.get('draw_options', {}))

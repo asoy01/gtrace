@@ -505,6 +505,25 @@ class Mirror(Optics):
     #transmit, so Lens turns it off.
     draw_HR_marker = True
 
+    #What this element follows, if anything: the other element or the
+    #body it is assembled to, where its anchor point sits in that
+    #host's frame, how far it is turned relative to it, and whether
+    #that relative angle is frozen. Two faces of a beam dump in a V
+    #are one assembly, and so is a periscope.
+    #
+    #Plain attributes rather than traits, and never read by the optics
+    #itself: the pose written here is the element's own, and an
+    #assembly is a relation between two registered things, so it is
+    #OpticalLayout that makes and keeps it - see assemble() and
+    #_settle_assemblies(). They are declared here so that an element
+    #can be asked what it follows without knowing whether it follows
+    #anything.
+    assembled_to = None
+    assembly_offset = None
+    assembly_angle = 0.0
+    fix_rotation = True
+    _assemble_name = None
+
 
 #}}}
 

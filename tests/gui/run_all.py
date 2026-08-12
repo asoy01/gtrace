@@ -63,6 +63,8 @@ SUITES = [
      'mechanics: the bodies the trace never sees, and the protocol reaching it'),
     ('verify_mech_browser.py',
      'headless browser: picking a body by its area, and editing its pose'),
+    ('verify_assembly.py',
+     'one element following another: the joint, the settle, what it refuses'),
     ('verify_align_browser.py',
      'headless browser: aiming an optics by places, and the quarter turn'),
     ('verify_editor.py',

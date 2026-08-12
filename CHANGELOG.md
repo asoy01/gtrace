@@ -116,6 +116,38 @@ across them.
     where it stands are two questions, and the second already has
     answers (Ctrl-drag, the Center rows, Along beam / Move by).
 
+- **An element may follow another: `assemble()` and
+  `disassemble()`.** Two absorbing faces in a V are one beam dump, a
+  pair of steering mirrors is one periscope, and a bench is built out
+  of such assemblies rather than out of loose elements. The follower
+  keeps its place relative to the host, and moving or turning the
+  host carries it along; the host may be another element or a body.
+  The joint is the one a body already uses - an offset in the host's
+  frame, a relative angle, and `fix_rotation` to say who may change
+  it - and what lands at the offset is the follower's own anchor
+  point.
+  - **A follower's pose is stored, not derived, and settled just
+    before the layout is read** - by `trace()`, `draw()` and
+    `snap_points()`. An `Optics` holds its pose in traits whose
+    derived geometry is what the trace reads, so a pose computed on
+    demand would have meant rewriting that. Settling comes to the
+    same thing for the same reason: there is no notification to miss,
+    because nothing is listening. Assigning `M1.HRcenter` in a cell
+    and then tracing carries the assembly along. What it cannot cover
+    is reading a follower's pose without tracing or drawing first.
+    A layout with no assemblies is not touched at all.
+  - Placing a follower is refused in the same words a held body
+    already uses, since a pose typed into one would be written over
+    at the next trace - which is worse than a refusal, because it
+    would look as though it had worked. `move`, `align`, `slide` and
+    a typed pose are turned away; the turn of an element whose
+    `fix_rotation` is false goes through and is read back into the
+    joint. An element another follows cannot be removed until it is
+    let go of, `copy_optics()` brings the followers along, and a
+    circle is refused - in a call and in a loaded file.
+  - `verify_assembly.py` (58 checks). The KAGRA path is untouched:
+    with nothing to settle, nothing is written.
+
 - **`round_breadboard(diameter)`**, and `BBR30` and `BBR45` on the
   library shelf. A vacuum tank is round and so is the board in the
   bottom of it. The grid is the rectangular board's - symmetric about
