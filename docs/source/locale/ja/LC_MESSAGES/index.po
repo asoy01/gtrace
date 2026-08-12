@@ -3,7 +3,19 @@
 # This file is distributed under the same license as the gtrace package.
 #
 msgid ""
-msgstr "Project-Id-Version: gtrace \nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2026-08-09 20:24+0900\nPO-Revision-Date: 2026-08-09 21:00+0900\nLast-Translator: Yoichi Aso\nLanguage: ja\nLanguage-Team: ja\nPlural-Forms: nplurals=1; plural=0;\nMIME-Version: 1.0\nContent-Type: text/plain; charset=utf-8\nContent-Transfer-Encoding: 8bit\nGenerated-By: Babel 2.18.0\n"
+msgstr ""
+"Project-Id-Version: gtrace \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-09 20:24+0900\n"
+"PO-Revision-Date: 2026-08-09 21:00+0900\n"
+"Last-Translator: Yoichi Aso\n"
+"Language: ja\n"
+"Language-Team: ja\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: ../../source/index.rst:9
 msgid "Contents:"
@@ -19,12 +31,13 @@ msgstr "索引と表"
 
 #: ../../source/index.rst:23
 msgid ":ref:`genindex`"
-msgstr ""
+msgstr ":ref:`genindex`"
 
 #: ../../source/index.rst:24
 msgid ":ref:`modindex`"
-msgstr ""
+msgstr ":ref:`modindex`"
 
 #: ../../source/index.rst:25
 msgid ":ref:`search`"
-msgstr ""
+msgstr ":ref:`search`"
+
