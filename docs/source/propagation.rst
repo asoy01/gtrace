@@ -45,7 +45,7 @@ Every beam carries a counter, ``stray_order``. The source starts at zero, and th
 
 So a ghost pays one order per round trip inside a substrate, counted at its AR bounce, and one more if it leaves through the HR; leaving through the AR is free, since transmitting is what an AR face is for. In a lens, whose faces are both meant to transmit, a bounce off either face counts.
 
-A branch of the trace is dropped as soon as its counter exceeds ``order`` or its power falls below ``power_threshold``, whichever comes first: the one bounds how *deep* a ghost may be, the other how *faint*. The counter is reset when a beam leaves an element and flies off to the next one, so ``order`` limits how far the ghosts of one element are unfolded, not how many elements a beam may cross. The ``stray_order`` on a returned beam is its count from the last element it met.
+A branch of the trace is dropped as soon as its counter exceeds ``order`` or its power falls below ``power_threshold``, whichever comes first: the one bounds how *deep* a ghost may be, the other how *faint*. ``order`` is a budget for the ghosts a call may **make**, not a test the arriving beam has to pass — a reflection off a face meant to reflect makes none, so an already-stray beam bounces off a mirror however deep it has got, and leaves at the order it arrived at. The counter is reset when a beam leaves an element and flies off to the next one, so ``order`` limits how far the ghosts of one element are unfolded, not how many elements a beam may cross. The ``stray_order`` on a returned beam is its count from the last element it met.
 
 Which face is meant for what is said by two flags on the optics, both named from the HR side:
 

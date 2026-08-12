@@ -479,6 +479,33 @@ across them.
 
 ### Fixed
 
+- **A mirror would not reflect a beam that was already stray.**
+  **Changed results.** `hitFromHR` capped its first, external
+  reflection with `stray_order <= order`, so a ghost arriving at a
+  face *meant* to reflect produced nothing unless the caller asked
+  for an order at least as high as the order the beam already
+  carried. At the default `order=0` a mirror simply did not reflect
+  a ghost.
+  - That cap came in with `HRreflective` in 0.4.0, alongside the
+    increment that makes a reflection off a lens face count as stray.
+    The increment is right; the cap was not. `order` is a budget for
+    the ghosts a call may *make*, not a test the arriving beam has to
+    pass, and a face meant to reflect makes none - the beam leaves at
+    the order it arrived at. A face not meant to reflect does make
+    one, and that is still counted and still capped.
+  - It was invisible in a trace, which resets the stray order as a
+    beam travels from one element to the next, so every check passed.
+    It was fatal to code calling `hitFromHR` directly: **both KAGRA
+    layout notebooks stopped running** - `OMC-Layout-O4` in four
+    cells and `KAGRA-OptLayout-Main` in fifteen, all
+    `KeyError: 'r1'`. Both run again, and against the tree from
+    before `HRreflective` the only differences left are the ghost
+    powers that release deliberately corrected.
+  - `verify_stray.py` (33 checks) is new and is about this: what a
+    stray order is, what `order` caps, and the difference between a
+    ghost made and a ghost met. Nothing covered it before, which is
+    how the cap got in.
+
 - `gtrace.draw.serialize.UnknownShapeError` derived from
   `BaseException`, so it sailed through every `except Exception`
   between the serializer and the user - including the one that shows a

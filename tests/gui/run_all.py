@@ -31,6 +31,8 @@ SUITES = [
      'CyMirror: one plane focused, the other left alone, against Siegman'),
     ('verify_cylens.py',
      'CyLens: the focal length ordered lands in one plane, the other is a window'),
+    ('verify_stray.py',
+     'what a stray order is and what order caps: ghosts made, not ghosts met'),
     ('verify_dimensions.py',
      'substrate corners, what a span runs inside, and the dimension model'),
     ('verify_stage1.py',

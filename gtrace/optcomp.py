@@ -1100,9 +1100,17 @@ class Mirror(Optics):
         #Reflected beam
         beam_r1 = beam_on_HR.copy()
         beam_r1.P = beam_r1.P * self.Refl_HR
-        if not self.HRreflective:
+        #A face meant to reflect makes no ghost here: the reflection is
+        #what the face is for, so the beam leaves at the stray order it
+        #arrived at and `order` - which counts ghost generations - has
+        #nothing to say about it. An already-stray beam reflects off a
+        #mirror like any other. A face not meant to reflect does make a
+        #ghost, and that one is counted and capped.
+        ghost = not self.HRreflective
+        if ghost:
             beam_r1.stray_order = beam_r1.stray_order+1
-        if beam_r1.P > threshold and beam_r1.stray_order <= order:
+        if beam_r1.P > threshold and not (ghost
+                                          and beam_r1.stray_order > order):
             beam_r1.dirAngle = reflAngle
             beam_r1.ABCDTrans(Mrx, Mry)
             beam_r1.departSurfAngle = localNormAngle
@@ -2418,9 +2426,17 @@ class CyMirror(Mirror):
         #Reflected beam
         beam_r1 = beam_on_HR.copy()
         beam_r1.P = beam_r1.P * self.Refl_HR
-        if not self.HRreflective:
+        #A face meant to reflect makes no ghost here: the reflection is
+        #what the face is for, so the beam leaves at the stray order it
+        #arrived at and `order` - which counts ghost generations - has
+        #nothing to say about it. An already-stray beam reflects off a
+        #mirror like any other. A face not meant to reflect does make a
+        #ghost, and that one is counted and capped.
+        ghost = not self.HRreflective
+        if ghost:
             beam_r1.stray_order = beam_r1.stray_order+1
-        if beam_r1.P > threshold and beam_r1.stray_order <= order:
+        if beam_r1.P > threshold and not (ghost
+                                          and beam_r1.stray_order > order):
             beam_r1.dirAngle = reflAngle
             beam_r1.ABCDTrans(Mrx, Mry)
             beam_r1.departSurfAngle = localNormAngle
