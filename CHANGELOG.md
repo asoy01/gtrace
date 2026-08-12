@@ -643,7 +643,19 @@ across them.
   needs in order to predict what the code will do. Where a rule was
   buried in an aside it is now a paragraph of its own. No behaviour,
   number, code sample, class reference or link changed, and the
-  Japanese translation has not followed yet.
+  Japanese translation follows in the entry below.
+- **The Japanese documentation is retranslated, page by page.** All 637
+  messages across the nine `.po` files, not only the ones the rewrite
+  above made fuzzy. The old text had been produced one message at a
+  time, which is how a `.po` file presents itself, and it read that
+  way: paragraphs that were individually defensible and collectively
+  incoherent, with the English em dashes carried across into a
+  language that does not use them that way. Each page is now read
+  whole before any of its messages are written. Terminology is
+  consistent across the nine files, and the GUI's own labels stay in
+  English so that a reader can find the row. Both languages build with
+  no warnings, and the rendered pages are checked for the inline
+  markup that Japanese reST silently fails to recognise.
 
 ## 0.4.0 — 2026-08-09
 
