@@ -256,8 +256,23 @@ refused(L, {'op': 'align', 'target': 'D2', 'beam': 'b0', 'beam_index': 0,
 refused(L, {'op': 'slide', 'target': 'D2', 'beam': 'b0', 'beam_index': 0,
             'distance': 0.01},
         'sliding one along a beam')
-refused(L, {'op': 'remove', 'target': 'D1'},
-        'removing what another element follows')
+# Removing the element at the root of an assembly takes the
+# assembly: half a beam dump is not a thing anyone asked for.
+L.add_mechanics(mirror_mount(name='MTx', attached_to=L.get_optics('D2')))
+L.apply_edit({'op': 'remove', 'target': 'D1'})
+check('removing the root takes the followers and their bodies too',
+      not L._is_optics('D1') and not L._is_optics('D2')
+      and not L._is_mechanics('MTx'),
+      json.dumps([o.name for o in L.optics]
+                 + [m.name for m in L.mechanics]))
+L.apply_edit({'op': 'undo'})
+check('  and one undo brings the whole thing back, jointed',
+      L.get_optics('D2').assembled_to is L.get_optics('D1')
+      and L.get_mechanics('MTx').attached_to is L.get_optics('D2'))
+L.apply_edit({'op': 'remove', 'target': 'MTx'})
+check('removing a leaf takes only itself',
+      L._is_optics('D2') and not L._is_mechanics('MTx'))
+L.apply_edit({'op': 'undo'})
 refused(L, {'op': 'set', 'target': 'D2',
             'attrs': {'assembled_to': 'nobody'}},
         'following something that is not there')

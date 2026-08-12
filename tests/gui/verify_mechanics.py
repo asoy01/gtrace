@@ -674,8 +674,17 @@ refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'b0'}},
         'attaching to a source')
 refused(L, {'op': 'set', 'target': 'BB1', 'attrs': {'attached_to': 'BB1'}},
         'attaching to another body')
-refused(L, {'op': 'remove', 'target': 'M1'},
-        'removing an optics with a body attached')
+# Removing an element takes what stands on it: a mount whose
+# mirror has gone would derive its pose from a ghost, and asking for
+# it to be taken away separately would be asking twice for one thing.
+L.apply_edit({'op': 'remove', 'target': 'M1'})
+check('removing an optics takes the body standing on it',
+      not L._is_optics('M1') and not L._is_mechanics('BB1'),
+      json.dumps([m.name for m in L.mechanics]))
+L.apply_edit({'op': 'undo'})
+check('  and one undo brings both back',
+      L._is_optics('M1') and L._is_mechanics('BB1')
+      and L.get_mechanics('BB1').attached_to is L.get_optics('M1'))
 
 L.apply_edit({'op': 'set', 'target': 'BB1',
               'attrs': {'offset': [0.05, 0.0], 'offset_angle': 0.1}})
@@ -1396,15 +1405,25 @@ check('turning it turns the chain with it',
 check('  and the fork is still on the post',
       close(fk.to_world(fk.points['bore']), pd.center))
 
-check('a body with something on it cannot be removed',
-      not L.can_undo or True)
-for target in ('P1', 'MT', 'M1'):
-    try:
-        L.apply_edit({'op': 'remove', 'target': target})
-        check("removing '%s' is refused while held" % target, False)
-    except EditError as e:
-        check("removing '%s' is refused while held" % target, True,
-              '(%s)' % str(e)[:40])
+# Removing anything takes the whole stack above it, however deep.
+for target, want in (('P1', ['P1', 'FK1']),
+                     ('MT', ['MT', 'P1', 'FK1']),
+                     ('M1', ['M1', 'MT', 'P1', 'FK1'])):
+    before = [m.name for m in L.mechanics] + [o.name for o in L.optics]
+    L.apply_edit({'op': 'remove', 'target': target})
+    gone = [n for n in before
+            if not L._is_mechanics(n) and not L._is_optics(n)]
+    check("removing '%s' takes what stands on it: %s"
+          % (target, ', '.join(want)),
+          sorted(gone) == sorted(want), json.dumps(gone))
+    L.apply_edit({'op': 'undo'})
+    check('  and one undo brings the stack back',
+          [m.name for m in L.mechanics] + [o.name for o in L.optics]
+          == before)
+check('  jointed as it was',
+      L.get_mechanics('FK1').attached_to is L.get_mechanics('P1')
+      and L.get_mechanics('P1').attached_to is L.get_mechanics('MT')
+      and L.get_mechanics('MT').attached_to is L.get_optics('M1'))
 refused(L, {'op': 'set', 'target': 'MT', 'attrs': {'attached_to': 'FK1'}},
         'a circle of attachments')
 refused(L, {'op': 'set', 'target': 'MT', 'attrs': {'attached_to': 'MT'}},

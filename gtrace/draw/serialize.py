@@ -317,6 +317,16 @@ def optic_to_dict(o):
     if hasattr(o, 'max_stray_order'):
         d['max_stray_order'] = (None if o.max_stray_order is None
                                 else int(o.max_stray_order))
+    # What it follows, if anything, and the joint it follows by. A
+    # front end needs it to know that the pose rows are the host's
+    # doing rather than the element's - and that it is not to be
+    # dragged.
+    host = getattr(o, 'assembled_to', None)
+    d['assembled_to'] = None if host is None else str(host.name)
+    if host is not None:
+        d['assembly_offset'] = _vec(o.assembly_offset)
+        d['assembly_angle'] = float(o.assembly_angle)
+        d['fix_rotation'] = bool(o.fix_rotation)
     return d
 
 def optics_to_dict(opticsList):

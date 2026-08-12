@@ -116,6 +116,27 @@ across them.
     where it stands are two questions, and the second already has
     answers (Ctrl-drag, the Center rows, Along beam / Move by).
 
+- **The element panel says what an element follows.** `Assembled to`
+  picks an element or a body for it to follow, and `(free)` lets it go
+  where it stands; neither the element itself nor anything that
+  already follows it is offered. While it follows something the pose
+  rows are the host's doing - they show where the host put it and
+  refuse the keyboard rather than taking a value only for the next
+  trace to write over it - and it cannot be dragged. The exception is
+  its turn when `Fix rotation` is off, which is how the opening of a
+  V is set. `Joint x`, `Joint y` and `Joint angle` nudge it without
+  letting it go.
+
+- **Changed: removing something takes what stands on it.** The mount
+  on the mirror, the pedestal under the mount, the far face of a beam
+  dump and its housing. It used to be refused, which was safe and
+  wrong: those are not things that happen to be near the element,
+  they are things whose place is *its* place, and asking for each of
+  them separately was asking twice for one thing. `remove_optics()`
+  and `remove_mechanics()` return what went, it is one step of undo,
+  and letting something go first - `disassemble()`, `detach()`, or
+  `(free)` in the panel - is what keeps it.
+
 - **`+ Dump` puts one on the bench from the viewer**, facing a beam
   that runs along +x, at the centre of the view. It is a kind of its
   own in the add row rather than a variant of something else, and it

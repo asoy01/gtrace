@@ -1775,6 +1775,24 @@ var OPTIC_FIELDS = [
     {key: 'slide_beam', label: 'Along beam', optional: true,
      choices: [], dynamicChoices: true},
     {key: 'slide_by', label: 'Move by', unit: 'mm', optional: true},
+    // What this element follows, if anything: the far face of a beam
+    // dump follows the near one, and a periscope's second mirror the
+    // first. Editable as a choice, filled by _refreshOpticPanel from
+    // the elements and bodies of the moment. While it follows
+    // something the pose rows above are the host's doing, and say so.
+    {key: 'assembled', label: 'Assembled to', optional: true,
+     choices: [], dynamicChoices: true},
+    // Where it sits in the host's frame, and how far it is turned
+    // relative to it. The adjustment a follower still owns - the
+    // rows show only while it follows something.
+    {key: 'ax', label: 'Joint x', unit: 'mm', optional: true},
+    {key: 'ay', label: 'Joint y', unit: 'mm', optional: true},
+    {key: 'aangle', label: 'Joint angle', unit: '\u00b0', optional: true},
+    // Whether the relative angle is frozen. True is a face of a dump,
+    // built at its angle; false lets the angle be aimed, and the
+    // element still turns with its host.
+    {key: 'fix_rotation', label: 'Fix rotation', bool: true,
+     optional: true},
     // The size of the substrate, in millimetres: that is how a blank is
     // ordered and how anyone speaks of one, and a 1 inch mirror reading
     // 0.0254 is arithmetic rather than a specification. Where it stands
@@ -1830,6 +1848,24 @@ function opticAnchorPoint(o) {
 }
 
 function opticFieldValue(o, key) {
+    switch (key) {
+    case 'assembled':
+        return o.assembled_to === null || o.assembled_to === undefined
+            ? undefined : o.assembled_to;
+    case 'ax':
+        return o.assembly_offset ? o.assembly_offset[0] / MM : undefined;
+    case 'ay':
+        return o.assembly_offset ? o.assembly_offset[1] / MM : undefined;
+    case 'aangle':
+        return o.assembled_to ? normAngle(o.assembly_angle || 0) * DEG
+                              : undefined;
+    case 'fix_rotation':
+        return o.assembled_to ? !!o.fix_rotation : null;
+    }
+    return _opticFieldValue(o, key);
+}
+
+function _opticFieldValue(o, key) {
     var c = o.center || o.HRcenter || [0, 0];
     switch (key) {
     case 'cx': return c[0];
@@ -1863,6 +1899,24 @@ function opticFieldValue(o, key) {
  * The edit message that sets one field of an optics.
  */
 function opticFieldMessage(o, key, value) {
+    switch (key) {
+    case 'ax':
+        return {op: 'set', target: o.name,
+                attrs: {assembly_offset: [value * MM, o.assembly_offset[1]]}};
+    case 'ay':
+        return {op: 'set', target: o.name,
+                attrs: {assembly_offset: [o.assembly_offset[0], value * MM]}};
+    case 'aangle':
+        return {op: 'set', target: o.name,
+                attrs: {assembly_angle: value / DEG}};
+    case 'fix_rotation':
+        return {op: 'set', target: o.name,
+                attrs: {fix_rotation: !!value}};
+    }
+    return _opticFieldMessage(o, key, value);
+}
+
+function _opticFieldMessage(o, key, value) {
     var c = o.center || o.HRcenter || [0, 0];
     var attrs = {};
     switch (key) {
@@ -3687,7 +3741,97 @@ Viewer.prototype._refreshOpticPanel = function () {
     refreshFieldTable(fields, OPTIC_FIELDS,
                       o ? function (key) { return opticFieldValue(o, key); }
                         : null,
-                      ['slide_beam', 'slide_by']);
+                      ['slide_beam', 'slide_by', 'assembled']);
+
+    this._refreshAssembly(o);
+};
+
+/*
+ * The rows that say what an element follows.
+ *
+ * Filled by hand, like the body's Attached to row and for the same
+ * reason: the choices are the elements and bodies of the moment. What
+ * is left out is this element and everything that already follows it,
+ * since a pose that comes from itself is what Python refuses as a
+ * circle.
+ *
+ * While it follows something, the pose rows above are the host's
+ * doing. They are disabled rather than left to be typed into and
+ * turned down - except the turn of one whose relative angle is free,
+ * which is genuinely still its own.
+ */
+Viewer.prototype._refreshAssembly = function (o) {
+    var fields = this.opticFields;
+    var af = fields.assembled;
+    if (!af) { return; }
+    var host = (o && o.assembled_to) || '';
+    var self = this;
+
+    if (af.editable) {
+        af.row.style.display = o ? '' : 'none';
+        af.el.textContent = '';
+        var free = htmlEl('option', null, '(free)');
+        free.value = '';
+        af.el.appendChild(free);
+        var carried = this._carriedBy(o);
+        [this.scene.optics, this.scene.mechanics].forEach(function (list) {
+            (list || []).forEach(function (x) {
+                if (!o || x.name === o.name || carried[x.name]) { return; }
+                var opt = htmlEl('option', null, x.name);
+                opt.value = x.name;
+                af.el.appendChild(opt);
+            });
+        });
+        af.el.value = host;
+        af.el.title = host
+            ? 'Following ' + host + ' - pick (free) to let it go where '
+              + 'it stands'
+            : 'Pick an element or a body for this one to follow';
+    } else {
+        af.row.style.display = (o && host) ? '' : 'none';
+        af.el.textContent = host || '-';
+    }
+
+    var swings = !!host && o.fix_rotation === false;
+    ['cx', 'cy', 'angle', 'slide_by'].forEach(function (key) {
+        var f = fields[key];
+        if (!f || !f.editable) { return; }
+        var frozen = !!host && !(key === 'angle' && swings);
+        f.el.disabled = frozen;
+        f.el.title = frozen
+            ? 'Following ' + host + ' - move the host instead'
+            : (key === 'angle' && swings
+               ? 'Free to turn about where it is held' : '');
+    });
+};
+
+/*
+ * The names of everything whose pose comes from this one, as a set.
+ *
+ * Walked over the scene rather than asked of Python: what it is for
+ * is to keep a circle out of a menu, and the scene already says what
+ * follows what.
+ */
+Viewer.prototype._carriedBy = function (o) {
+    var out = {};
+    if (!o) { return out; }
+    var front = {};
+    front[o.name] = true;
+    var all = (this.scene.optics || []).concat(this.scene.mechanics || []);
+    for (var guard = 0; guard < 64; guard++) {
+        var next = {}, any = false;
+        all.forEach(function (x) {
+            var h = x.assembled_to || x.attached_to;
+            if (h && front[h] && !out[x.name]) {
+                out[x.name] = true;
+                next[x.name] = true;
+                any = true;
+            }
+        });
+        if (!any) { break; }
+        front = next;
+    }
+    return out;
 };
 
 Viewer.prototype._selectedSource = function () {
@@ -3923,6 +4067,16 @@ Viewer.prototype._commitOpticField = function (key, input) {
         var by = parseField(input.value, 'mm');
         input.value = '0';
         if (typeof by === 'number' && isFinite(by)) { this.slideSelected(by); }
+        return;
+    }
+
+    if (key === 'assembled') {
+        var o0 = this._selectedOptic();
+        var current = (o0 && o0.assembled_to) || '';
+        if (input.value === current) { return; }
+        this.onEdit({op: 'set', target: o0.name,
+                     attrs: {assembled_to: input.value === ''
+                             ? null : input.value}});
         return;
     }
 
@@ -5323,6 +5477,13 @@ Viewer.prototype._bindEvents = function () {
         if (h && h.attached_to
                 && !(ev.shiftKey && h.fix_rotation === false)) {
             h = null;
+        }
+        // An element that follows another goes where its host goes,
+        // so it is no more draggable than an attached body - except
+        // its turn, when the relative angle is free.
+        if (o && o.assembled_to
+                && !(ev.shiftKey && o.fix_rotation === false)) {
+            o = null;
         }
         if (s) {
             self._beginSourceDrag(s, pt, ev.shiftKey);

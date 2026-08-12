@@ -1079,6 +1079,70 @@ var LENS = __LENS__;
             v._selectOptic(v.scene.optics[0]);
             sent.length = nd - 1;
         }
+        // --- an element that follows another ---
+        // The scene is what the panel reads, so a scene with a joint
+        // in it is all this side needs; what Python makes of the
+        // messages is verify_assembly's business.
+        if (EDITABLE) {
+            var asm = JSON.parse(JSON.stringify(SCENE));
+            asm.optics[1].assembled_to = asm.optics[0].name;
+            asm.optics[1].assembly_offset = [0.06, -0.01];
+            asm.optics[1].assembly_angle = 0.5;
+            asm.optics[1].fix_rotation = true;
+            model.set('scene', asm);
+            v._selectOptic(v.scene.optics[1]);
+            out.follower = {
+                host: v.opticFields.assembled.el.value,
+                shown: {
+                    assembled: rowShown('assembled'),
+                    ax: rowShown('ax'),
+                    aangle: rowShown('aangle'),
+                    fix: rowShown('fix_rotation')
+                },
+                ax: v.opticFields.ax.el.value,
+                aangle: v.opticFields.aangle.el.value,
+                frozen: [v.opticFields.cx.el.disabled,
+                         v.opticFields.cy.el.disabled,
+                         v.opticFields.angle.el.disabled],
+                // Itself and what follows it are not offered as hosts.
+                choices: Array.prototype.map.call(
+                    v.opticFields.assembled.el.options,
+                    function (o) { return o.value; })
+            };
+            // Its turn is its own once the relative angle is free.
+            var free = JSON.parse(JSON.stringify(asm));
+            free.optics[1].fix_rotation = false;
+            model.set('scene', free);
+            v._selectOptic(v.scene.optics[1]);
+            out.follower.freeAngle = !v.opticFields.angle.el.disabled;
+
+            // Dragging it does nothing: it goes where its host goes.
+            model.set('scene', asm);
+            v._selectOptic(v.scene.optics[1]);
+            var nf = sent.length;
+            var fp = screenOf(v.scene.optics[1].HRcenter);
+            mouse(v.svg, 'mousedown', fp[0], fp[1]);
+            mouse(window, 'mousemove', fp[0] + 40, fp[1] + 20);
+            mouse(window, 'mouseup', fp[0] + 40, fp[1] + 20);
+            out.follower.dragSent = sent.length - nf;
+
+            // Letting it go, and nudging the joint, are one message
+            // each.
+            nf = sent.length;
+            v.opticFields.assembled.el.value = '';
+            v.opticFields.assembled.el.dispatchEvent(
+                new Event('change', {bubbles: true}));
+            out.follower.freed = sent[sent.length - 1];
+            v.opticFields.ax.el.value = '70';
+            v.opticFields.ax.el.dispatchEvent(
+                new Event('change', {bubbles: true}));
+            out.follower.nudged = sent[sent.length - 1];
+            out.follower.sent = sent.length - nf;
+            sent.length = nf;
+            model.set('scene', SCENE);
+            v._selectOptic(v.scene.optics[0]);
+        }
+
     } catch (e) {
         out.error = String((e && e.stack) || e);
     }
@@ -1157,6 +1221,37 @@ check('the drawing gets the height, less the grip',
 check('and the view is left where the user put it', rz['scaleKept'])
 check('it cannot be dragged away to nothing', rm['floor'] >= 240,
       str(rm['floor']))
+
+print('--- an element that follows another ---')
+fw = res.get('follower')
+if fw is None:
+    check('the panel says what an element follows', False, 'no output')
+else:
+    check('the panel says what it follows',
+          fw['host'] == 'M1' and fw['shown']['assembled'], json.dumps(fw['host']))
+    check('  and offers the joint: where it sits and whether it may turn',
+          fw['shown']['ax'] and fw['shown']['aangle'] and fw['shown']['fix'])
+    check('  in millimetres and degrees, like every other adjustment',
+          abs(float(fw['ax']) - 60) < 1e-9
+          and abs(float(fw['aangle']) - np.rad2deg(0.5)) < 1e-6,
+          '%s / %s' % (fw['ax'], fw['aangle']))
+    check('the pose rows are the host\'s doing, and refuse the keyboard',
+          fw['frozen'] == [True, True, True], json.dumps(fw['frozen']))
+    check('  except the turn, once the relative angle is free',
+          fw['freeAngle'])
+    check('it cannot be dragged either', fw['dragSent'] == 0,
+          str(fw['dragSent']))
+    check('neither it nor what follows it is offered as a host',
+          'M2' not in fw['choices'] and '' in fw['choices']
+          and 'M1' in fw['choices'], json.dumps(fw['choices']))
+    check('(free) lets it go, in one message',
+          fw['freed'] and fw['freed']['op'] == 'set'
+          and fw['freed']['attrs'] == {'assembled_to': None},
+          json.dumps(fw['freed']))
+    check('and the joint rows nudge it without letting go',
+          fw['nudged'] and abs(fw['nudged']['attrs']['assembly_offset'][0]
+                               - 0.07) < 1e-12
+          and fw['sent'] == 2, json.dumps(fw['nudged']))
 
 print('--- the dump button ---')
 check('a dump is a plain button, not a menu',
@@ -1287,7 +1382,12 @@ check('everything but the type is editable',
                                      # a beam to slide along where none
                                      # passes through.
                                      'f', 'anchor_point',
-                                     'slide_beam', 'slide_by'},
+                                     'slide_beam', 'slide_by',
+                                     # The joint: what this element
+                                     # follows, where it sits on it,
+                                     # and whether the turn is frozen.
+                                     'assembled', 'ax', 'ay', 'aangle',
+                                     'fix_rotation'},
       str(sorted(res['editableFields'])))
 check('the type is not editable', 'type' not in res['editableFields'])
 check('an unset max stray order reads as auto',

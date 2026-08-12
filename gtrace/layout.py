@@ -2127,17 +2127,38 @@ class OpticalLayout(object):
 
     def remove_optics(self, name):
         '''
-        Remove the optics with the given name from the layout.
+        Remove the optics with the given name, and everything that
+        stands on it.
 
-        An optics with a body attached is refused: the mounts would
-        be left standing on something no longer there, with a pose
-        derived from a ghost. Detaching them - which leaves each one
-        exactly where it stands - or removing them first says what is
-        actually meant.
+        A mount on the mirror, a pedestal under the mount, the second
+        face of a beam dump: those are not things that happen to be
+        near the element, they are things whose place is *its* place.
+        Leaving them behind would leave each one deriving a pose from
+        a ghost, and asking the user to take them away one at a time
+        would be asking them to say twice what they meant once.
+
+        Detach or disassemble first to keep something that is standing
+        on it - that is what says "this one is its own now".
+
+        Returns
+        -------
+        list
+            Everything that was removed, the target first.
         '''
-        target = self.get_optics(name)
-        self._refuse_if_held(target)
-        self.optics.remove(target)
+        return self._remove_with_what_it_carries(self.get_optics(name))
+
+    def _remove_with_what_it_carries(self, target):
+        '''
+        Take something out of the layout along with everything whose
+        pose comes from it, however deep that goes.
+        '''
+        gone = [target] + self._carried_by(target)
+        for x in gone:
+            if isinstance(x, Mechanics):
+                self.mechanics.remove(x)
+            else:
+                self.optics.remove(x)
+        return gone
 
     def copy_optics(self, name, newname=None, offset=None):
         '''
@@ -2264,31 +2285,18 @@ class OpticalLayout(object):
 
     def remove_mechanics(self, name):
         '''
-        Remove the mechanics with the given name from the layout.
+        Remove the mechanics with the given name, and everything that
+        stands on it.
 
-        A body with something standing on it is refused, for the same
-        reason an optics is: what stands on it would be left deriving
-        a pose from a ghost.
-        '''
-        target = self.get_mechanics(name)
-        self._refuse_if_held(target)
-        self.mechanics.remove(target)
+        The same rule an optics is removed by, for the same reason:
+        what stands on it would be left deriving a pose from a ghost.
 
-    def _refuse_if_held(self, target):
+        Returns
+        -------
+        list
+            Everything that was removed, the target first.
         '''
-        Refuse to take away something other bodies are standing on,
-        or that another element is assembled to.
-        '''
-        attached = [m.name for m in self.mechanics
-                    if m.attached_to is target]
-        attached += [o.name for o in self.optics
-                     if getattr(o, 'assembled_to', None) is target]
-        if attached:
-            raise ValueError(
-                "Cannot remove '%s': %s attached to it. Detach or remove "
-                '%s first.'
-                % (target.name, ' and '.join("'%s'" % n for n in attached),
-                   'it' if len(attached) == 1 else 'them'))
+        return self._remove_with_what_it_carries(self.get_mechanics(name))
 
     def get_optics(self, name):
         '''
@@ -2856,13 +2864,13 @@ class OpticalLayout(object):
                 self.remove_dimension(name)
                 return self
             if self._is_mechanics(name):
-                # A body with something standing on it says so, in the
-                # same voice a held optics does.
-                try:
-                    self.remove_mechanics(name)
-                except ValueError as e:
-                    raise EditError(str(e))
-                return self
+                # Whatever stands on it goes with it. A mechanics
+                # takes no part in the trace, but something standing
+                # on one may be an element, so the beams only stand
+                # if nothing that went was one.
+                gone = self.remove_mechanics(name)
+                if all(isinstance(x, Mechanics) for x in gone):
+                    return self
             if self._is_source(name):
                 # Taking the last source out leaves a layout with
                 # nothing to trace, which is a picture of the optics and
@@ -2875,10 +2883,6 @@ class OpticalLayout(object):
                 except KeyError:
                     raise EditError("No optics named %r in the layout."
                                     % (name,))
-                except ValueError as e:
-                    # An optics with a body attached; the message
-                    # already says what to do about it.
-                    raise EditError(str(e))
 
         elif op == 'rules':
             rules = msg.get('rules') or {}
