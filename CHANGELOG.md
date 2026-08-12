@@ -632,6 +632,18 @@ across them.
   notebooks are self-contained, so the tutorial page now links
   straight to the files on GitHub, and `pip install
   "gtrace[notebook]"` plus the download is the whole setup.
+- **The English documentation is rewritten to read straight.** All six
+  handwritten pages and the prose cells of both tutorial notebooks. The
+  old text made its points by paradox, leaned on "which is what X is
+  for", used "X rather than Y" for cadence where nothing was being
+  contrasted, and carried its argument in dashed asides: 124 of those
+  across the pages, now 30. It also argued for design decisions the
+  reader had not asked about; why a decision was taken belongs in the
+  commit that took it, and the documentation keeps the "why" a reader
+  needs in order to predict what the code will do. Where a rule was
+  buried in an aside it is now a paragraph of its own. No behaviour,
+  number, code sample, class reference or link changed, and the
+  Japanese translation has not followed yet.
 
 ## 0.4.0 — 2026-08-09
 
