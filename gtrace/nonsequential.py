@@ -125,10 +125,16 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1,
     terminated_beam_list = [b for b in list(ans[1].values()) if b.incSurfAngle is not None]
     open_beam_list = [b for b in list(ans[1].values()) if b.incSurfAngle is None]
 
-    #For each open beam, perform the non sequential trace
+    #For each open beam, carry on through the rest of the system.
+    #The stray order rides with the beam: what it has already cost
+    #to make is what it costs, and `order` is the budget for the
+    #whole trace rather than a fresh allowance at every element.
+    #Zeroing it here - which this did until 2026-08 - made every
+    #element hand out `order` ghosts again, so nothing bounded the
+    #recursion but the power threshold, and a ghost arriving
+    #somewhere new was drawn as a main beam.
     for b in open_beam_list:
         b.length = open_beam_length
-        b.stray_order = 0
         beams = non_seq_trace(optList=optList, src_beam=b.copy(), order=order,
                               power_threshold=power_threshold,
                               open_beam_length=open_beam_length)

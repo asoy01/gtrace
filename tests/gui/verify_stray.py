@@ -18,12 +18,14 @@ neither: it makes no ghost, and an already-stray beam bounces off a
 mirror exactly as a fresh one does. A reflection off a face that is
 not meant to reflect makes one, and that is what ``order`` limits.
 
-Getting this wrong is not hypothetical. Between 0.3.1 and 0.4.0 the
-first external reflection was capped as though it were a ghost, so a
-stray beam arriving at a steering mirror produced nothing at the
-default order - invisible inside a trace, which resets the stray
-order at every element, and fatal to code calling hitFromHR directly.
-That is what these checks would have caught.
+Getting this wrong is not hypothetical, twice over. Between 0.3.1 and
+0.4.0 the first external reflection was capped as though it were a
+ghost, so a stray beam arriving at a steering mirror produced nothing
+at the default order - fatal to code calling hitFromHR directly, and
+invisible inside a trace, because of the second one: from 2025 until
+2026-08 non_seq_trace zeroed the counter every time a beam left one
+element for the next, so nothing arrived anywhere stray. Both are
+fixed, and both are checked here.
 '''
 
 import os
@@ -134,32 +136,56 @@ check('  and reflects at no cost either',
       'r1' in hit_it(bs, stray=2, order=0))
 
 
-print('--- what a trace makes of it ---')
+print('--- the order rides with the beam, across elements ---')
 
-# Inside a trace the arriving beam is at order 0 - non_seq_trace
-# resets it as a beam travels on - so this all comes to the same
-# thing there. The regression was invisible for exactly that reason,
-# which is why these checks call hitFromHR directly.
+# The counter used to be zeroed every time a beam left one element for
+# the next, so a ghost arrived at the next mirror as though it were
+# the main beam - drawn in the main beam's colour, and given a fresh
+# allowance of `order` ghosts of its own. Nothing then bounded the
+# recursion but the power threshold.
 from gtrace.layout import OpticalLayout, TraceRules
 
-L = OpticalLayout(
-    optics=[opt.Mirror(HRcenter=[0.5, 0.0], normAngleHR=np.deg2rad(135),
-                       diameter=1*inch, thickness=10*mm, name='M1'),
-            opt.Mirror(HRcenter=[0.5, 0.3], normAngleHR=np.deg2rad(-135),
-                       diameter=1*inch, thickness=10*mm, name='M2')],
-    sources=[GaussianBeam(pos=[0.0, 0.0], dirAngle=0.0,
-                          q0=q_from_waist(0.2*mm, 0.0, 1064*nm),
-                          wl=1064*nm, name='b0')],
-    rules=TraceRules(order=4, power_threshold=1e-8), name='stray')
-L.trace()
+def two_mirrors(order, threshold=1e-8):
+    L = OpticalLayout(
+        optics=[opt.Mirror(HRcenter=[0.5, 0.0], normAngleHR=np.deg2rad(135),
+                           diameter=1*inch, thickness=10*mm, name='M1'),
+                opt.Mirror(HRcenter=[0.5, 0.3], normAngleHR=np.deg2rad(-135),
+                           diameter=1*inch, thickness=10*mm, name='M2')],
+        sources=[GaussianBeam(pos=[0.0, 0.0], dirAngle=0.0,
+                              q0=q_from_waist(0.2*mm, 0.0, 1064*nm),
+                              wl=1064*nm, name='b0')],
+        rules=TraceRules(order=order, power_threshold=threshold),
+        name='stray')
+    L.trace()
+    return L
+
+L = two_mirrors(4)
 names = [b.name for b in L.beams]
 check('the main path is traced', 'M1:r1' in names and 'M2:r1' in names,
       str(names))
-check('and the ghosts are marked as such',
+check('the source and its steered beams are not stray',
+      all(b.stray_order == 0
+          for b in L.beams if b.name in ('b0', 'M1:r1'))
+      and L.beams[0].stray_order == 0)
+check('a ghost is marked as one',
       all(b.stray_order > 0 for b in L.beams if ':s' in b.name),
       str([(b.name, b.stray_order) for b in L.beams if ':s' in b.name]))
-check('  while the reflections off the mirrors are not',
-      all(b.stray_order == 0 for b in L.beams if b.name.endswith(':r1')))
+# The point of carrying the counter: a ghost that reaches the next
+# mirror and is steered by it is still a ghost.
+steered = [b for b in L.beams
+           if b.name.endswith(':r1') and b.stray_order > 0]
+check('and it is still one after another element steers it',
+      bool(steered),
+      str([(b.name, b.stray_order) for b in steered]))
+check('no beam comes back at an order above the budget',
+      all(b.stray_order <= 4 for b in L.beams),
+      str(max(b.stray_order for b in L.beams)))
+
+# And the budget is a budget: raising it buys more of the trace, which
+# is what it could not do while the counter was being zeroed.
+sizes = [len(two_mirrors(k).beams) for k in (0, 1, 2, 4)]
+check('the order bounds the trace, and a bigger one buys more of it',
+      sizes == sorted(sizes) and sizes[0] < sizes[-1], str(sizes))
 
 
 print()

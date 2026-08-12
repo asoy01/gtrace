@@ -479,6 +479,30 @@ across them.
 
 ### Fixed
 
+- **A ghost stopped being a ghost as soon as it left the element that
+  made it.** **Changed results.** `non_seq_trace` set a beam's
+  `stray_order` back to zero every time it travelled from one element
+  to the next, so a ghost arrived at the next mirror looking like the
+  main beam: drawn in the main beam's colour, and handed a fresh
+  allowance of `order` ghosts of its own.
+  - `order` therefore bounded nothing. The gate inside `hit` is
+    `stray_order <= order`, and zeroing the arriving beam only makes
+    it easier to pass, so every element multiplied the branches and
+    the recursion ended on `power_threshold` alone. On two mirrors
+    with `Refl_AR=0.5` and `order=3`, tracing produced 17763 beams
+    with the reset and 630 without it.
+  - The line came in as a one-line commit in 2025 titled "fixing a
+    recursion error", which it cannot have done: zeroing a counter
+    compared with `<=` lets more beams through, never fewer. The
+    recursion error a cavity causes is what `term_on_HR` is for.
+  - On the KAGRA layouts the whole effect is one of classification.
+    Both notebooks trace identically - same beams, same positions,
+    same powers, and `MainBeamList.csv`, `StrayBeamList.csv` and
+    `OpticsList.csv` byte for byte - and **176 beams that were being
+    drawn as main beams are now drawn as stray**, which is what they
+    are. Their envelopes follow, at the stray sigma.
+  - See #6.
+
 - **A mirror would not reflect a beam that was already stray.**
   **Changed results.** `hitFromHR` capped its first, external
   reflection with `stray_order <= order`, so a ghost arriving at a
