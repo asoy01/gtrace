@@ -116,6 +116,20 @@ across them.
     where it stands are two questions, and the second already has
     answers (Ctrl-drag, the Center rows, Along beam / Move by).
 
+- **`+ Dump` puts one on the bench from the viewer**, facing a beam
+  that runs along +x, at the centre of the view. It is a kind of its
+  own in the add row rather than a variant of something else, and it
+  cannot be on the model library shelf `+ Mechanics` opens: a model
+  holds shapes, and two of the three pieces of a dump are elements.
+  On the protocol it is one `add` of type `BeamDump`, taking
+  `center`, `angle` and `reflectivity` and nothing else - the rest of
+  the dimensions are the drawing's.
+  - **A dump is numbered and its pieces lettered**: `BD1a` and `BD1b`
+    are the two faces of the first dump and `BD1box` its housing, so
+    `BD2b` reads as the far face of the second. `unique_dump_name()`
+    finds a number that leaves all three free, since a dump has no
+    object of its own to hold a name.
+
 - **`beam_dump()` and `OpticalLayout.add_beam_dump()`** - two
   absorbing faces in a V and the housing they sit in, jointed so the
   three move as one. `angle` is the direction the light travels, so a

@@ -278,7 +278,14 @@ The beam dump
     faces_and_box = layout.add_beam_dump(name='BD', center=[0.3, 0.0],
                                          angle=0.0)
 
-``angle`` is **the direction the light travels**, so a dump is aimed the way the beam runs rather than by where its mouth points. The pieces come back — and are registered — hosts first.
+``angle`` is **the direction the light travels**, so a dump is aimed the way the beam runs rather than by where its mouth points. The pieces come back — and are registered — hosts first, and they are named from the dump: ``BD1a`` and ``BD1b`` are its two faces and ``BD1box`` its housing. A dump is numbered and its pieces lettered, so ``BD2b`` reads as the far face of the second dump. Without a name it is given the first free one.
+
+From a front end it is one ``add``::
+
+    {'op': 'add', 'type': 'BeamDump', 'name': 'BD1',
+     'params': {'center': [0.3, 0.0], 'angle': 0.0}}
+
+which is its own kind of add rather than a model on the library shelf: a model holds shapes, and two of the three pieces of a dump are elements. Only ``center``, ``angle`` and ``reflectivity`` are a front end's to set — the rest is the drawing's.
 
 The point of the V is that a black face is not perfectly black. What one face sends back the other catches and sends back again, so the light works its way into the wedge instead of coming out the way it came: with the default 4% a beam is down to 0.16% after two bounces and to a part in ten million after five. That is worth tracing, which is why the faces are elements rather than a shape drawn on the housing.
 

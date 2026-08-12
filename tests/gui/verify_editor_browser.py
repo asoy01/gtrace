@@ -521,7 +521,7 @@ if res2 is None:
 check('ran without exception', res2['error'] is None, str(res2['error'])[:300])
 check('the add row is the layout\'s again',
       res2['headRows'][0] == ['+ Mirror', '+ Lens', '+ Source',
-                              '+ Mechanics'],
+                              '+ Dump', '+ Mechanics'],
       json.dumps(res2['headRows'][0]))
 check('  with Align back on the second row',
       'Align' in res2['headRows'][1], json.dumps(res2['headRows'][1]))

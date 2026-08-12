@@ -460,6 +460,17 @@ DIMENSION_TYPE = 'Dimension'
 #: shapes rather than construction parameters.
 MECHANICS_TYPE = 'Mechanics'
 
+#: What an 'add' message says to put a beam dump on the bench. Not an
+#: element and not a body but an assembly of both, so it is its own
+#: kind of add rather than a model on the library shelf - a model
+#: holds shapes, and two of the three pieces of a dump are elements.
+DUMP_TYPE = 'BeamDump'
+
+#: What a beam dump takes from an 'add' message. The rest of what
+#: beam_dump() offers - the dimensions of the drawing it is taken
+#: from - is not a front end's to change.
+CREATABLE_DUMP_PARAMS = frozenset(['center', 'angle', 'reflectivity'])
+
 #: Attributes of a Mechanics a front end may change: its pose - or,
 #: attached, its attachment - and nothing else. The shapes are the body
 #: itself: they come from Python or from a saved layout, and a front
@@ -1083,7 +1094,7 @@ def _pose_host(obj):
 #: arguments at all; measure yours and pass it.
 DUMP_REFLECTIVITY = 0.04
 
-def beam_dump(name='BD', center=(0.0, 0.0), angle=0.0,
+def beam_dump(name='BD1', center=(0.0, 0.0), angle=0.0,
               reflectivity=DUMP_REFLECTIVITY, apex=0.025,
               face_length=0.050, face_thickness=0.003,
               opening=None, body_diameter=0.050, top_width=0.027327,
@@ -1118,8 +1129,10 @@ def beam_dump(name='BD', center=(0.0, 0.0), angle=0.0,
     Parameters
     ----------
     name : str, optional
-        The stem the three are named from: ``BD1``, ``BD2``, ``BDBOX``
-        for the default 'BD'.
+        What the dump is called. The three pieces are named from it:
+        ``BD1a``, ``BD1b`` and ``BD1box`` for the default 'BD1'. A
+        dump is numbered and its pieces lettered, so that a second
+        dump is BD2 and 'BD2b' reads as the far face of it.
     center : sequence of 2 floats, optional
         Where the post hole stands, in metres.
     angle : float, optional
@@ -1189,7 +1202,7 @@ def beam_dump(name='BD', center=(0.0, 0.0), angle=0.0,
             # traced, not a ghost of it, so it does not count against
             # the stray order.
             HRreflective=False,
-            name='%s%d' % (name, i + 1), **kwargs)
+            name='%s%s' % (name, 'ab'[i]), **kwargs)
         faces.append(m)
 
     # The housing is drawn in the dump's own frame, so it stands at
@@ -1201,7 +1214,7 @@ def beam_dump(name='BD', center=(0.0, 0.0), angle=0.0,
     housing = Mechanics(shapes=_dump_shapes(
         apex, face_length, face_thickness, half, body_diameter / 2.0,
         top_width / 2.0, width / 2.0, post_diameter / 2.0,
-        boss_diameter / 2.0), name='%sBOX' % name,
+        boss_diameter / 2.0), name='%sbox' % name,
         center=centre.tolist(), rotationAngle=turn)
 
     # One thing to move: the second face follows the first, and the
@@ -1741,8 +1754,9 @@ class OpticalLayout(object):
         Build a V beam dump and register it: two absorbing faces and
         the housing they sit in, jointed so the three move as one.
 
-        Takes what beam_dump() takes. The pieces are registered hosts
-        first, which is the order they have to go in.
+        Takes what beam_dump() takes. Without a name it is given the
+        first free one, and the pieces are registered hosts first,
+        which is the order they have to go in.
 
         Returns
         -------
@@ -1750,6 +1764,8 @@ class OpticalLayout(object):
             The two faces and the housing, as beam_dump() returns
             them.
         """
+        if not kwargs.get('name'):
+            kwargs['name'] = self.unique_dump_name()
         pieces = beam_dump(**kwargs)
         for x in pieces:
             if isinstance(x, Mechanics):
@@ -2325,6 +2341,25 @@ class OpticalLayout(object):
             i += 1
         return '%s%d' % (prefix, i)
 
+    def unique_dump_name(self, prefix='BD'):
+        '''
+        Return a name for a beam dump that leaves all three of its
+        pieces free to be called what they are called.
+
+        A dump has no object of its own - it is two elements and a
+        body - so what has to be free is not one name but the three
+        made from it.
+        '''
+        taken = set(o.name for o in self.optics)
+        taken.update(s.name for s in self.sources)
+        taken.update(d.name for d in self.dimensions)
+        taken.update(m.name for m in self.mechanics)
+        i = 1
+        while any('%s%d%s' % (prefix, i, tail) in taken
+                  for tail in ('', 'a', 'b', 'box')):
+            i += 1
+        return '%s%d' % (prefix, i)
+
     def unique_dimension_name(self, prefix='D'):
         '''
         Return a name of the form prefix + number that nothing in the
@@ -2764,7 +2799,26 @@ class OpticalLayout(object):
                 # A dimension is a note on the layout, not a part of it:
                 # nothing about the trace has changed.
                 return self
-            if msg.get('type') == SOURCE_TYPE:
+            if msg.get('type') == DUMP_TYPE:
+                # Two elements and a body, so it is neither an add of
+                # an optics nor of a mechanics. It falls through to
+                # the invalidation at the end with them, since two of
+                # its three pieces are elements the beams can hit.
+                params = msg.get('params') or {}
+                for key in params:
+                    if key not in CREATABLE_DUMP_PARAMS:
+                        raise EditError('%r is not a parameter a new beam '
+                                        'dump takes.' % (key,))
+                name = msg.get('name')
+                if name is not None and (not isinstance(name, str)
+                                         or not name.strip()):
+                    raise EditError('A name must be a non-empty string, '
+                                    'not %r.' % (name,))
+                try:
+                    self.add_beam_dump(name=name, **params)
+                except (ValueError, TypeError) as e:
+                    raise EditError(str(e))
+            elif msg.get('type') == SOURCE_TYPE:
                 src = self._source_from_message(msg)
                 try:
                     self.add_source(src)

@@ -312,7 +312,15 @@ var ADD_GROUPS = [
      types: ['Lens', 'CyLens'],
      names: ['Spherical', 'Cylindrical']},
     {label: 'Source', title: 'Add a laser source',
-     types: ['Source']}
+     types: ['Source']},
+    // A dump is neither an element nor a body but two of the one and
+    // one of the other, so it is a kind of its own rather than a
+    // variant of something else - which is what the button row is a
+    // list of. It cannot be on the model library shelf that
+    // + Mechanics opens: a model holds shapes, and two thirds of a
+    // dump are elements.
+    {label: 'Dump', title: 'Add a beam dump', types: ['BeamDump'],
+     dump: true}
 ];
 
 function addableType(type) {
@@ -1197,6 +1205,16 @@ Viewer.prototype._build = function () {
         var addRow = htmlEl('div', 'gt-btnrow');
         this.addMenus = [];
         ADD_GROUPS.forEach(function (g) {
+            if (g.dump) {
+                var dbtn = htmlEl('button', 'gt-btn', '+ ' + g.label);
+                dbtn.title = g.title + ' at the centre of the view, '
+                    + 'facing a beam that runs along +x';
+                dbtn.addEventListener('click', function () {
+                    self.addBeamDump();
+                });
+                addRow.appendChild(dbtn);
+                return;
+            }
             var only = g.types.length === 1 ? addableType(g.types[0]) : null;
             var btn = htmlEl('button', 'gt-btn', '+ ' + g.label);
             if (only) {
@@ -1595,6 +1613,7 @@ Viewer.prototype._build = function () {
                   ['Edit a property', 'apply it to the layout'],
                   ['+ Mirror / + Lens / + Source',
                    'add one at the centre of the view'],
+                  ['+ Dump', 'add a beam dump facing a beam along +x'],
                   ['+ Mirror, + Lens',
                    'open for the cylindrical variant'],
                   ['Remove', 'delete the selection'],
@@ -3132,6 +3151,52 @@ Viewer.prototype.removePoint = function () {
     this.selectedPoint = entries.length
         ? Math.min(this.selectedPoint, entries.length - 1) : null;
     return this._sendPoints(entries);
+};
+
+/*
+ * Put a beam dump at the centre of the view.
+ *
+ * Three pieces come of it - two absorbing faces and the housing they
+ * sit in - so what is chosen here is the name of the dump rather than
+ * of an element, and the pieces are named from it on the Python side.
+ * The first face is selected optimistically, as an added element is:
+ * it is the one the other two follow.
+ *
+ * It faces a beam running along +x, which is the direction a new
+ * mirror is put down to reflect and the way a bench is usually built.
+ */
+Viewer.prototype.addBeamDump = function () {
+    if (!this.onEdit) { return null; }
+    var name = this._freshDumpName();
+    var msg = {op: 'add', type: 'BeamDump', name: name,
+               params: {center: [this.cx, this.cy], angle: 0}};
+    this.selectedOptic = name + 'a';
+    this.selectedSource = null;
+    this.selectedMech = null;
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * A name for a dump that leaves all three of its pieces free.
+ *
+ * A dump has no object of its own, so what has to be free is not one
+ * name but the three made from it - the same question Python answers
+ * in unique_dump_name, asked here so that the selection can follow
+ * the new dump without waiting for a reply.
+ */
+Viewer.prototype._freshDumpName = function () {
+    var taken = {};
+    [this.scene.optics, this.scene.sources, this.scene.dimensions,
+     this.scene.mechanics].forEach(function (list) {
+        (list || []).forEach(function (o) { taken[o.name] = true; });
+    });
+    var i = 1;
+    while (taken['BD' + i] || taken['BD' + i + 'a']
+           || taken['BD' + i + 'b'] || taken['BD' + i + 'box']) {
+        i++;
+    }
+    return 'BD' + i;
 };
 
 /*

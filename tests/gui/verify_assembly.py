@@ -389,7 +389,7 @@ print('--- the beam dump the whole thing was for ---')
 # check that the arithmetic here is the arithmetic there.
 # angle is the way the light runs, so a beam going +y walks into a
 # dump laid out exactly as the drawing is: apex up, mouth down.
-f1, f2, box = beam_dump(name='BD', center=[0.0, 0.0], angle=np.pi / 2)
+f1, f2, box = beam_dump(name='BD1', center=[0.0, 0.0], angle=np.pi / 2)
 check('the two faces come out where the drawing dimensions them',
       close(np.array(f1.HRcenter) * 1e3, [-6.04805, 0.742606], tol=1e-4)
       and close(np.array(f2.HRcenter) * 1e3, [6.04805, 0.742606], tol=1e-4),
@@ -424,6 +424,9 @@ check('they are absorbers: nothing through, and the bounce is no ghost',
       and abs(f1.Refl_HR - DUMP_REFLECTIVITY) < 1e-15)
 check('the three come back jointed, so the dump is one thing',
       f2.assembled_to is f1 and box.attached_to is f1)
+check('  and the pieces are named from the dump: a, b and its box',
+      [f1.name, f2.name, box.name] == ['BD1a', 'BD1b', 'BD1box'],
+      json.dumps([f1.name, f2.name, box.name]))
 check('  and the housing is a body with a post hole in it',
       isinstance(box, Mechanics) and len(box.shapes) == 9)
 
@@ -445,7 +448,7 @@ def dump_apex(m1, m2):
 
 for at, aim in (([0.0, 0.0], np.pi / 2), ([0.3, 0.1], 0.0),
                 ([-0.2, 0.4], -0.7), ([0.05, -0.3], 2.9)):
-    g1, g2, gbox = beam_dump(name='G', center=at, angle=aim)
+    g1, g2, gbox = beam_dump(name='G1', center=at, angle=aim)
     check('the post hole stands where the dump was put (%s, %5.1f deg)'
           % (at, np.rad2deg(aim)),
           close(gbox.center, at, tol=1e-12),
@@ -458,7 +461,7 @@ for at, aim in (([0.0, 0.0], np.pi / 2), ([0.3, 0.1], 0.0),
 
 # And it stays agreed once the dump is moved and turned, which is what
 # the joint is for.
-g1, g2, gbox = beam_dump(name='G', center=[0.3, 0.1], angle=0.0)
+g1, g2, gbox = beam_dump(name='G1', center=[0.3, 0.1], angle=0.0)
 LG = OpticalLayout(sources=[], name='g')
 for x in (g1, g2):
     LG.add_optics(x)
@@ -479,7 +482,7 @@ b0 = GaussianBeam(pos=[0.0, 0.002], dirAngle=0.0,
                   wl=1064*nm, name='b0')
 L = OpticalLayout(sources=[b0], name='dump',
                   rules=TraceRules(order=8, power_threshold=1e-8))
-pieces = L.add_beam_dump(name='BD', center=[0.3, 0.0], angle=0.0)
+pieces = L.add_beam_dump(name='BD1', center=[0.3, 0.0], angle=0.0)
 L.trace()
 hits = [b for b in L.beams if b.name.startswith('BD')]
 check('a beam into the mouth is caught, and bounces more than twice',
@@ -516,7 +519,7 @@ for aim in (0.0, np.pi / 2, np.pi, -0.7):
     off = 0.002 * np.array([-np.sin(aim), np.cos(aim)])
     LL = OpticalLayout(sources=[src], name='aim',
                        rules=TraceRules(order=8, power_threshold=1e-8))
-    LL.add_beam_dump(name='BD', center=(at + off).tolist(), angle=aim)
+    LL.add_beam_dump(name='BD1', center=(at + off).tolist(), angle=aim)
     LL.trace()
     check('  aimed along %6.1f deg it still catches the beam'
           % np.rad2deg(aim),
@@ -532,8 +535,9 @@ check('a dump copies whole',
 back = OpticalLayout.from_dict(L.to_dict())
 back.trace()
 check('and saves and loads whole',
-      back.get_optics('BD2').assembled_to is back.get_optics('BD1')
-      and back.get_mechanics('BDBOX').attached_to is back.get_optics('BD1'))
+      back.get_optics('BD1b').assembled_to is back.get_optics('BD1a')
+      and back.get_mechanics('BD1box').attached_to
+      is back.get_optics('BD1a'))
 
 
 print()

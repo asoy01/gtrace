@@ -288,6 +288,10 @@ var LENS = __LENS__;
         out.addSourceGroup = !!addGroup('+ Source');
         out.mirrorItems = menuItems('+ Mirror');
         out.lensItems = menuItems('+ Lens');
+        // A dump is one thing to add and three things to name, so it
+        // is a plain button too.
+        out.addDumpButton = !!button('+ Dump');
+        out.addDumpGroup = !!addGroup('+ Dump');
 
         // Opening a menu adds nothing by itself, and shuts whatever
         // else was open. A press anywhere else shuts it too. Only where
@@ -1044,6 +1048,37 @@ var LENS = __LENS__;
             sent.length = nt;
         }
 
+        // --- the dump button ---
+        // Twice, so that the second one has to find a name around the
+        // first: three pieces of the first are in the way, and none
+        // of them is called what the first dump is called.
+        if (EDITABLE) {
+            var nd = sent.length;
+            button('+ Dump').click();
+            out.dump = {msg: sent[sent.length - 1],
+                        n: sent.length - nd,
+                        selected: v.selectedOptic};
+            var withDump = JSON.parse(JSON.stringify(v.scene));
+            ['a', 'b'].forEach(function (t) {
+                withDump.optics.push(Object.assign(
+                    {}, v.scene.optics[0], {name: out.dump.msg.name + t}));
+            });
+            withDump.mechanics = (withDump.mechanics || []).concat([
+                {name: out.dump.msg.name + 'box', center: [0, 0],
+                 rotationAngle: 0, attached_to: out.dump.msg.name + 'a',
+                 outline: [[0, 0], [0, 1], [1, 1], [1, 0]], shapes: [],
+                 resizable: null, width: null, height: null, layer: 'x',
+                 model: null, points: {}, offset: [0, 0], offset_angle: 0,
+                 fix_rotation: true}]);
+            model.set('scene', withDump);
+            nd = sent.length;
+            button('+ Dump').click();
+            out.dump2 = {msg: sent[sent.length - 1],
+                         n: sent.length - nd};
+            model.set('scene', SCENE);
+            v._selectOptic(v.scene.optics[0]);
+            sent.length = nd - 1;
+        }
     } catch (e) {
         out.error = String((e && e.stack) || e);
     }
@@ -1123,12 +1158,40 @@ check('and the view is left where the user put it', rz['scaleKept'])
 check('it cannot be dragged away to nothing', rm['floor'] >= 240,
       str(rm['floor']))
 
+print('--- the dump button ---')
+check('a dump is a plain button, not a menu',
+      res['addDumpButton'] and not res['addDumpGroup'])
+if res.get('dump'):
+    dm = res['dump']
+    check('one add message, naming the dump rather than an element',
+          dm['n'] == 1 and dm['msg'] and dm['msg']['op'] == 'add'
+          and dm['msg']['type'] == 'BeamDump' and dm['msg']['name'] == 'BD1',
+          json.dumps(dm['msg']))
+    check('  at the centre of the view, facing a beam along +x',
+          dm['msg'] and dm['msg']['params']['angle'] == 0
+          and len(dm['msg']['params']['center']) == 2,
+          json.dumps(dm['msg']['params']))
+    check('  and the selection follows its first face',
+          dm['selected'] == 'BD1a', str(dm['selected']))
+    check('the second dump steps over the first one\'s three pieces',
+          res['dump2']['msg']
+          and res['dump2']['msg']['name'] == 'BD2',
+          json.dumps(res['dump2']['msg']))
+    L2 = make_layout()[0]
+    L2.apply_edit(dm['msg'])
+    check('  and Python builds three pieces, jointed',
+          [o.name for o in L2.optics][-2:] == ['BD1a', 'BD1b']
+          and L2.get_optics('BD1b').assembled_to is L2.get_optics('BD1a')
+          and L2.get_mechanics('BD1box').attached_to
+          is L2.get_optics('BD1a'),
+          json.dumps([o.name for o in L2.optics]))
+
 print('--- the head ---')
 check('the buttons are on two rows', len(res['headRows']) == 2,
       str(res['headRows']))
 check('what adds to the layout on the first',
       res['headRows'][0] == ['+ Mirror', '+ Lens', '+ Source',
-                             '+ Mechanics'],
+                             '+ Dump', '+ Mechanics'],
       str(res['headRows'][0]))
 # One control per kind of thing, with the variants of a kind behind it.
 # Five buttons apiece read as five unrelated things - a cylindrical
