@@ -27,6 +27,7 @@ counts it as skipped rather than passed.
 
 | Suite | Checks |
 |---|---|
+| `verify_beam.py` | A beam's width, reduced q and circular q **agree with the q it was given**, over q-parameters that include the trait's own default. Traits does not notify when an assignment matches the value already there, so `GaussianBeam(q0=1j)` used to keep a reduced q of zero and come out of its first propagation with a real q. Also the same invariant after propagating, in glass, through `copy()`, and over every beam a trace produces |
 | `verify_surfaces.py` | Where the two faces of a substrate are, against an arc derived independently of the class: both curvature signs, both faces, at four heights across the aperture, plus `isHit` agreeing with what `hitFrom*` then traces, and the drawn arc meeting the drawn sides. Not a GUI check, but it wants counted assertions and this is where those live |
 | `verify_lens.py` | `Lens`: for seventeen lenses, the focal length **measured by tracing a ray through them** and reading the angle it leaves at, which owes nothing to the formula the constructor solved. Also what the constructor refuses and why, the defaults a lens needs, copy and save/load, and that a lens does not turn the beam through it into a ghost |
 | `verify_cylindrical.py` | `CyMirror`: the reflection and transmission matrices **against Siegman Table 15.1 written down from the book**, for both curve directions across angles and curvatures, with the spherical results pinned bit-for-bit to the pre-fix implementation |

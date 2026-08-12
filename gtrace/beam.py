@@ -243,15 +243,21 @@ class GaussianBeam(HasTraits):
         self.layer = layer
         self.n = n
 
-        if q0x:  ## Possible bug. If q0x is True then self.qx becomes True.
-            self.qx = q0x
-        else:
-            self.qx = q0
+        qx = q0x if q0x else q0  ## Possible bug. If q0x is True then
+        qy = q0y if q0y else q0  ## self.qx becomes True.
 
-        if q0y:
-            self.qy = q0y
-        else:
-            self.qy = q0
+        # Both are set before anything is derived from them, and the
+        # derivation is then explicit. The handlers below work out the
+        # width, the reduced q and the best matching circular q from qx
+        # *and* qy, so deriving after the first of the two would be
+        # deriving from a half-set beam. And traits does not notify when
+        # an assignment matches the value already there, so a beam given
+        # exactly the default q would otherwise keep the defaults: a
+        # reduced q of zero, which the first propagation turns into a
+        # real q.
+        self.trait_set(trait_change_notify=False, qx=qx, qy=qy)
+        self._qx_changed(None, qx)
+        self._qy_changed(None, qy)
 
         if dirVect is not None:
             self.dirVect = dirVect
@@ -276,8 +282,16 @@ class GaussianBeam(HasTraits):
         Make a deep copy.
         '''
         b = copy.deepcopy(self)
-        b.qrx = self.qrx
-        b.qry = self.qry
+        # deepcopy assigns the traits in its own order, so what a handler
+        # derived along the way can be left describing a half-built beam:
+        # the reduced q, and the circular q of a beam in glass. Copy the
+        # q-parameters over verbatim and derive the rest from them, as
+        # the constructor does.
+        b.trait_set(trait_change_notify=False,
+                    qx=self.qx, qy=self.qy,
+                    qrx=self.qrx, qry=self.qry)
+        b._qx_changed(None, b.qx)
+        b._qy_changed(None, b.qy)
         return b
 
 #}}}

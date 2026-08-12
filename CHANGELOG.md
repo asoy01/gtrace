@@ -474,10 +474,55 @@ across them.
 - `verify_mechanics.py` (315 checks), `verify_mech_browser.py` (81),
   `verify_align_browser.py` (34), `verify_editor.py` (143),
   `verify_editor_browser.py` (47) and
-  `verify_editor_drag_browser.py` (60). The suite is 25 files and
-  4518 checks.
+  `verify_editor_drag_browser.py` (60). With `verify_input.js`,
+  `verify_assembly.py` and `verify_beam.py`, the suite is 29 files and
+  4996 checks.
 
 ### Fixed
+
+- **A beam given exactly `q0=1j` came out of its first propagation with
+  a real q.** **Changed results**, at the last bits; see the end of this
+  entry. A `GaussianBeam` keeps its q-parameter twice: `qx` and
+  `qy`, and the reduced `qrx` and `qry`, which are what an ABCD
+  transform is applied to. The reduced pair, the width and the best
+  matching circular q are all derived by trait handlers when `qx` or
+  `qy` is assigned - and traits does not notify when an assignment
+  matches the value already there. `qx` defaults to `1j`, so a beam
+  constructed with that exact value kept every derived default: a width
+  of zero, and a reduced q of *zero*. The first propagation transformed
+  that zero, giving the beam a real q - infinite Rayleigh range, no
+  waist - and the next thing to ask its width divided by zero. A layout
+  whose source was written that way could not be traced at all.
+
+  The constructor now sets both q-parameters before deriving anything
+  from them, and derives explicitly rather than relying on a
+  notification that may not come. `copy()` does the same, which also
+  settles the circular q of a copied beam in glass: `deepcopy` assigns
+  the traits in its own order, so a handler could leave that value
+  describing a half-built beam.
+
+  Nothing in gtrace writes `1j` - every source it builds goes through
+  `q_from_waist` - which is how the crash survived from before 0.3.0
+  without anyone meeting it.
+
+  **What does change for an existing layout is the last bit or two.**
+  The old `copy()` carried a beam's q across as `(q/n)*n`, because it
+  copied the reduced q and let the handler rebuild the q from it. That
+  round trip is not exact for a beam in glass, and it is gone: a copy
+  now carries the q it was made from. On the KAGRA layouts the effect
+  is 26 of 51 lines of `MainBeamList.csv` and 24 of 59 of
+  `StrayBeamList.csv` differing in their q-parameters, by at most
+  1.11e-16 absolutely and 8.3e-15 relatively - some 37 units in the
+  last place. Every DXF is identical within the comparison tolerance,
+  the largest coordinate difference being 1.14e-13, and
+  `OpticsList.csv`, `bKAGRA_Mirror_Coordinates.txt` and `bKAGRA_log.txt`
+  are byte for byte the same. Nothing moves by a distance anything
+  could measure, but a run will not reproduce 0.4.0 bit for bit.
+
+  `verify_beam.py` is new: 129 checks asking that a beam's derived
+  values agree with the q it was given, over q-parameters that include
+  the trait's own default, after propagating, in glass, through
+  `copy()`, and over every beam a trace produces.
 
 - **A ghost stopped being a ghost as soon as it left the element that
   made it.** **Changed results.** `non_seq_trace` set a beam's
