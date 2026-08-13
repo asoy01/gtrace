@@ -318,6 +318,54 @@ check('a beam above it keeps the reflection, as before',
 check('and raising the gate takes that reflection away again',
       'M:r1' not in one_mirror(1, 2), str(sorted(one_mirror(1, 2))))
 
+# Both numbers can be given to the constructor, so a cavity mirror can
+# be built as one instead of being built and then adjusted. The defaults
+# are what the attributes always were, and copy() carries them: it used
+# to rebuild the element from term_on_HR alone and quietly reset the
+# other two.
+for cls, extra in [(opt.Mirror, {}), (opt.CyMirror, {}),
+                   (opt.Lens, {'f': 500*mm}), (opt.CyLens, {'f': 500*mm})]:
+    plain = cls(name='X', **extra)
+    check('%s defaults to the settings it always had' % cls.__name__,
+          plain.term_on_HR is False and plain.term_on_HR_order == 0
+          and plain.term_on_HR_transmits is False,
+          '%r %r %r' % (plain.term_on_HR, plain.term_on_HR_order,
+                        plain.term_on_HR_transmits))
+
+    made = cls(name='X', term_on_HR=True, term_on_HR_order=3,
+               term_on_HR_transmits=True, **extra)
+    check('%s takes all three from the constructor' % cls.__name__,
+          made.term_on_HR is True and made.term_on_HR_order == 3
+          and made.term_on_HR_transmits is True,
+          '%r %r %r' % (made.term_on_HR, made.term_on_HR_order,
+                        made.term_on_HR_transmits))
+
+    dup = made.copy()
+    check('and %s.copy() carries all three' % cls.__name__,
+          dup.term_on_HR is True and dup.term_on_HR_order == 3
+          and dup.term_on_HR_transmits is True,
+          '%r %r %r' % (dup.term_on_HR, dup.term_on_HR_order,
+                        dup.term_on_HR_transmits))
+
+# The two routes are the same mirror, so they trace the same beams.
+built = opt.Mirror(HRcenter=[0.5, 0.0], normAngleHR=np.deg2rad(180),
+                   diameter=100*mm, thickness=20*mm,
+                   wedgeAngle=np.deg2rad(0.25),
+                   HRtransmissive=True, HRreflective=True, name='M',
+                   term_on_HR=True, term_on_HR_order=0,
+                   term_on_HR_transmits=True)
+L_built = OpticalLayout(optics=[built],
+                        sources=[GaussianBeam(pos=[0.0, 0.0], dirAngle=0.0,
+                                              q0=q_from_waist(0.5*mm, 0.0,
+                                                              1064*nm),
+                                              wl=1064*nm, name='b0')],
+                        rules=TraceRules(order=4, power_threshold=1e-9),
+                        name='built')
+L_built.trace()
+check('a mirror set up at construction traces what one set up after does',
+      set(b.name for b in L_built.beams) == one_mirror(0, 0),
+      str(sorted(set(b.name for b in L_built.beams) ^ one_mirror(0, 0))))
+
 # Saved and loaded, since a flag that does not survive a round trip is
 # a flag that will be lost.
 import json, tempfile, os

@@ -545,7 +545,8 @@ class Mirror(Optics):
                  wedgeAngle=0.25*pi/180., inv_ROC_HR=1.0/7000.0, inv_ROC_AR=0.0,
                  Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45,
                  name="Mirror", HRtransmissive=False, HRreflective=True,
-                 term_on_HR=False,
+                 term_on_HR=False, term_on_HR_order=0,
+                 term_on_HR_transmits=False,
                  max_stray_order=None):
         '''
         Create a mirror object.
@@ -614,6 +615,18 @@ class Mirror(Optics):
             non-sequencial
             trace by forming a cavity.
             Defaults False.
+        term_on_HR_order : int, optional
+            Upper limit of the stray order at which term_on_HR still
+            terminates a beam. A beam of a higher stray order is left
+            alone.
+            Defaults 0.
+        term_on_HR_transmits : boolean, optional
+            What term_on_HR stops. False stops the beam at the
+            surface and computes nothing. True stops only the
+            external reflection off the HR, so the beam transmitted
+            through the substrate carries on. See the class
+            docstring.
+            Defaults False.
         '''
         self.diameter = diameter
 
@@ -650,8 +663,8 @@ class Mirror(Optics):
         self.HRtransmissive = HRtransmissive
         self.HRreflective = HRreflective
         self.term_on_HR = term_on_HR
-        self.term_on_HR_order = 0
-        self.term_on_HR_transmits = False
+        self.term_on_HR_order = term_on_HR_order
+        self.term_on_HR_transmits = term_on_HR_transmits
         self.max_stray_order = max_stray_order
 
 #}}}
@@ -667,6 +680,8 @@ class Mirror(Optics):
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
                       HRreflective=self.HRreflective,
                       term_on_HR=self.term_on_HR,
+                      term_on_HR_order=self.term_on_HR_order,
+                      term_on_HR_transmits=self.term_on_HR_transmits,
                       max_stray_order=self.max_stray_order)
         #Not a constructor argument: it says what a later change to the
         #curvature does, and construction has none.
@@ -1969,7 +1984,8 @@ class CyMirror(Mirror):
                  wedgeAngle=0.25*pi/180., inv_ROC_HR=1.0/7000.0, inv_ROC_AR=0.0,
                  Refl_HR=0.99, Trans_HR=0.01, Refl_AR=0.01, Trans_AR=0.99, n=1.45,
                  name="Mirror", HRtransmissive=False, HRreflective=True,
-                 term_on_HR=False,
+                 term_on_HR=False, term_on_HR_order=0,
+                 term_on_HR_transmits=False,
                  max_stray_order=None, curve_direction='h'):
         '''
         Create a cylindrical mirror object.
@@ -2038,6 +2054,18 @@ class CyMirror(Mirror):
             non-sequencial
             trace by forming a cavity.
             Defaults False.
+        term_on_HR_order : int, optional
+            Upper limit of the stray order at which term_on_HR still
+            terminates a beam. A beam of a higher stray order is left
+            alone.
+            Defaults 0.
+        term_on_HR_transmits : boolean, optional
+            What term_on_HR stops. False stops the beam at the
+            surface and computes nothing. True stops only the
+            external reflection off the HR, so the beam transmitted
+            through the substrate carries on. See the class
+            docstring.
+            Defaults False.
         curve_direction: str, optional
             Direction of curvature. Choose from ['h', 'v'].
             Defaults 'h'.
@@ -2077,8 +2105,8 @@ class CyMirror(Mirror):
         self.HRtransmissive = HRtransmissive
         self.HRreflective = HRreflective
         self.term_on_HR = term_on_HR
-        self.term_on_HR_order = 0
-        self.term_on_HR_transmits = False
+        self.term_on_HR_order = term_on_HR_order
+        self.term_on_HR_transmits = term_on_HR_transmits
         self.max_stray_order = max_stray_order
         self.curve_direction = curve_direction
 
@@ -2095,6 +2123,8 @@ class CyMirror(Mirror):
                       n=self.n, name=self.name, HRtransmissive=self.HRtransmissive,
                       HRreflective=self.HRreflective,
                       term_on_HR=self.term_on_HR,
+                      term_on_HR_order=self.term_on_HR_order,
+                      term_on_HR_transmits=self.term_on_HR_transmits,
                       max_stray_order=self.max_stray_order,
                       curve_direction=self.curve_direction)
         m.anchor_point = self.anchor_point
@@ -3654,7 +3684,8 @@ class Lens(Mirror):
                  wedgeAngle=0.0, Refl_HR=0.0, Trans_HR=1.0,
                  Refl_AR=0.0, Trans_AR=1.0, name="Lens",
                  HRtransmissive=True, HRreflective=False,
-                 term_on_HR=False,
+                 term_on_HR=False, term_on_HR_order=0,
+                 term_on_HR_transmits=False,
                  max_stray_order=None):
         '''
         Create a lens.
@@ -3720,6 +3751,10 @@ class Lens(Mirror):
             Defaults False, unlike Mirror. See the class docstring.
         term_on_HR : boolean, optional
             Defaults False.
+        term_on_HR_order : int, optional
+            Defaults 0.
+        term_on_HR_transmits : boolean, optional
+            Defaults False.
         max_stray_order : int or None, optional
             Defaults None.
 
@@ -3781,6 +3816,8 @@ class Lens(Mirror):
                         HRtransmissive=HRtransmissive,
                         HRreflective=HRreflective,
                         term_on_HR=term_on_HR,
+                        term_on_HR_order=term_on_HR_order,
+                        term_on_HR_transmits=term_on_HR_transmits,
                         max_stray_order=max_stray_order)
 
         #Placing by the middle is the natural thing for a lens, and it
@@ -3806,6 +3843,8 @@ class Lens(Mirror):
                     HRtransmissive=self.HRtransmissive,
                     HRreflective=self.HRreflective,
                     term_on_HR=self.term_on_HR,
+                    term_on_HR_order=self.term_on_HR_order,
+                    term_on_HR_transmits=self.term_on_HR_transmits,
                     max_stray_order=self.max_stray_order)
         m.anchor_point = self.anchor_point
         return m
@@ -3975,7 +4014,8 @@ class CyLens(Lens, CyMirror):
                  wedgeAngle=0.0, Refl_HR=0.0, Trans_HR=1.0,
                  Refl_AR=0.0, Trans_AR=1.0, name="CyLens",
                  HRtransmissive=True, HRreflective=False,
-                 term_on_HR=False,
+                 term_on_HR=False, term_on_HR_order=0,
+                 term_on_HR_transmits=False,
                  max_stray_order=None, curve_direction='h'):
         '''
         Create a cylindrical lens.
@@ -4016,6 +4056,8 @@ class CyLens(Lens, CyMirror):
                       HRtransmissive=HRtransmissive,
                       HRreflective=HRreflective,
                       term_on_HR=term_on_HR,
+                      term_on_HR_order=term_on_HR_order,
+                      term_on_HR_transmits=term_on_HR_transmits,
                       max_stray_order=max_stray_order)
 
         #After Lens.__init__, like CyMirror sets it after the Mirror
@@ -4040,6 +4082,8 @@ class CyLens(Lens, CyMirror):
                    HRtransmissive=self.HRtransmissive,
                    HRreflective=self.HRreflective,
                    term_on_HR=self.term_on_HR,
+                   term_on_HR_order=self.term_on_HR_order,
+                   term_on_HR_transmits=self.term_on_HR_transmits,
                    max_stray_order=self.max_stray_order,
                    curve_direction=self.curve_direction)
         m.anchor_point = self.anchor_point

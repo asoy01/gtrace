@@ -49,6 +49,34 @@ across them.
   and the flag surviving a save and load. A file written before this
   loads with it off.
 
+- **`term_on_HR_order` and `term_on_HR_transmits` are constructor
+  arguments**, on `Mirror`, `CyMirror`, `Lens` and `CyLens`, next to
+  `term_on_HR` which always was one. A cavity mirror can be built as
+  one:
+
+  ```python
+  ETM = Mirror(name='ETM', term_on_HR=True, term_on_HR_order=3,
+               term_on_HR_transmits=True)
+  ```
+
+  Setting them afterwards still works and means the same thing. The
+  defaults are what the attributes always were, 0 and False.
+
+### Fixed
+
+- **`copy()` carries `term_on_HR_order` and `term_on_HR_transmits`.**
+  **Changed results.** It rebuilt the element from `term_on_HR` alone,
+  so the copy of a mirror gated at order 2 was gated at 0 and the copy
+  of one kept transmitting stopped transmitting. Copying through the
+  layout - the viewer's copy button, `copy_optics`, save and load - was
+  never affected, since that route goes through the attribute
+  whitelist. The KAGRA layouts are byte for byte identical across it:
+  they copy their elements before setting these.
+
+  `verify_stray.py` grows 13 checks: the three settings from the
+  constructor and through `copy()` on all four classes, and a mirror
+  set up at construction tracing what one set up afterwards does.
+
 ## 0.5.0 — 2026-08-13
 
 ### Added
