@@ -1822,6 +1822,10 @@ var OPTIC_FIELDS = [
     {key: 'HRreflective', label: 'HR reflective', bool: true},
     {key: 'term_on_HR', label: 'Terminate on HR', bool: true},
     {key: 'term_on_HR_order', label: 'Term. on HR order'},
+    // What terminating stops: the beam, or only the reflection that
+    // would form the cavity. See Optics.term_on_HR_transmits.
+    {key: 'term_on_HR_transmits', label: 'Term. keeps transmission',
+     bool: true},
     // Only a CyMirror has this; the row hides itself otherwise. Two
     // values exist, so it is a choice rather than something to type.
     {key: 'curve_direction', label: 'Curve direction', optional: true,

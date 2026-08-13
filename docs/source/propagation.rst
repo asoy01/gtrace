@@ -66,3 +66,6 @@ Two more attributes bound the unfolding rather than count it:
 
 ``term_on_HR``
     Terminates a beam whose count is at most ``term_on_HR_order`` when it hits this HR, instead of reflecting it on. Without it, two facing high reflectors pass the main beam between them until the trace gives up. A cavity is the one configuration a non-sequential trace cannot finish on its own.
+
+``term_on_HR_transmits``
+    What terminating stops. False, the default, stops the beam at the surface and computes nothing there. True stops only the reflection that would come back, and the element is hit as usual otherwise, so the beam transmitted through the substrate carries on and is drawn. A cavity mirror can then be looked through, which is what a detector behind one sees. What survives is counted and capped by ``order``, ``max_stray_order`` and the power threshold like anything else, since it goes through the same code. Only the external reflection is dropped: a ghost leaving through the HR from inside the substrate is a ghost, and it is left to the budget. The gate is unchanged, so a beam above ``term_on_HR_order`` reflects as it always did.

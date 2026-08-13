@@ -107,12 +107,29 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1,
 
     #The beam hits an actual optical surface
 
-    #Avoid forming a cavity
+    #Avoid forming a cavity.
+    #
+    #What is stopped is the reflection: two facing high reflectors pass
+    #the main beam between them until the trace gives up, and the beam
+    #that does that is the external reflection off the HR.
+    #
+    #term_on_HR_transmits says whether stopping it means stopping
+    #everything. False, the default and what this has always done, ends
+    #the beam at the surface and computes nothing. True lets the element
+    #be hit as usual and drops the one beam that would come back, so a
+    #mirror can be a cavity mirror and still be looked through - the
+    #beam transmitted out of the far side is often the one a detector
+    #sees. Everything that survives is counted and capped as it would be
+    #anywhere else, since it goes through hit() by the ordinary route.
+    drop_reflection = False
     if hit_optics.term_on_HR  and final_answer['face'] == 'HR' and \
                 src_beam.stray_order <= hit_optics.term_on_HR_order:
 
-        src_beam.length = final_answer['distance']
-        return [src_beam]
+        if not getattr(hit_optics, 'term_on_HR_transmits', False):
+            src_beam.length = final_answer['distance']
+            return [src_beam]
+
+        drop_reflection = True
 
     #An optics may cap the stray order it is worth computing for itself.
     hit_order = getattr(hit_optics, 'max_stray_order', None)
@@ -122,8 +139,21 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1,
     ans = hit_optics.hit(src_beam, order=hit_order, threshold=power_threshold,
                          face=final_answer['face'])
 
-    terminated_beam_list = [b for b in list(ans[1].values()) if b.incSurfAngle is not None]
-    open_beam_list = [b for b in list(ans[1].values()) if b.incSurfAngle is None]
+    produced = ans[1]
+    if drop_reflection:
+        #'r1' is the external reflection, and the only beam here that
+        #can return to the element the source came from at the power a
+        #cavity needs. The ghosts that leave through the HR from inside
+        #the substrate ('r2' onwards) are not dropped: each is a round
+        #trip weaker and costs a stray order, so order and the power
+        #threshold end them, and they are what a ghost hunt is looking
+        #for. hit() is left alone - it is the sequential interface, and
+        #code that calls hitFromHR directly asks for 'r1' by name.
+        produced = dict(produced)
+        produced.pop('r1', None)
+
+    terminated_beam_list = [b for b in list(produced.values()) if b.incSurfAngle is not None]
+    open_beam_list = [b for b in list(produced.values()) if b.incSurfAngle is None]
 
     #For each open beam, carry on through the rest of the system.
     #The stray order rides with the beam: what it has already cost

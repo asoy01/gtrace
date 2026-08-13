@@ -273,6 +273,7 @@ EDITABLE_OPTIC_ATTRS = frozenset([
     'inv_ROC_HR', 'inv_ROC_AR', 'n',
     'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
     'HRtransmissive', 'HRreflective', 'term_on_HR', 'term_on_HR_order',
+    'term_on_HR_transmits',
     'max_stray_order', 'curve_direction', 'anchor_point',
     # Only a Lens has a focal length, and assigning to it re-solves both
     # curvatures. The check that the target is a lens is in
@@ -551,7 +552,8 @@ _ATTR_ORDER = ['anchor_point',
                'Refl_HR', 'Trans_HR', 'Refl_AR', 'Trans_AR',
                'inv_ROC_HR', 'inv_ROC_AR', 'f',
                'HRtransmissive', 'HRreflective', 'term_on_HR',
-               'term_on_HR_order', 'max_stray_order', 'curve_direction',
+               'term_on_HR_order', 'term_on_HR_transmits',
+               'max_stray_order', 'curve_direction',
                'normAngleHR', 'normVectHR',
                'HRcenter', 'ARcenter', 'center']
 
@@ -718,6 +720,8 @@ def optic_to_dict(m):
          'HRreflective': bool(m.HRreflective),
          'term_on_HR': bool(m.term_on_HR),
          'term_on_HR_order': int(m.term_on_HR_order),
+         'term_on_HR_transmits': bool(getattr(m, 'term_on_HR_transmits',
+                                              False)),
          'max_stray_order': (None if m.max_stray_order is None
                              else int(m.max_stray_order))}
     if isinstance(m, optcomp.CyMirror):
@@ -782,6 +786,7 @@ def optic_from_dict(d):
     else:
         raise ValueError('Unknown optics type: %s' % d['type'])
     m.term_on_HR_order = d.get('term_on_HR_order', 0)
+    m.term_on_HR_transmits = d.get('term_on_HR_transmits', False)
     #Absent from an older file, or from one written before the anchor
     #existed, the class default stands: 'HRcenter' for a mirror,
     #'center' for a lens.

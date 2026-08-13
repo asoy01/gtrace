@@ -9,6 +9,46 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
+## Unreleased
+
+### Added
+
+- **A cavity mirror can be looked through.** `term_on_HR` stops a beam
+  at the surface so that two facing high reflectors do not pass it back
+  and forth for ever, and until now it stopped everything: nothing was
+  computed at that element at all, so the beam that goes *through* an
+  input coupler - which is what a detector behind one sees - was lost
+  with the reflection.
+
+  `term_on_HR_transmits` says what stopping means. False, the default
+  and what `term_on_HR` has always done, ends the beam at the surface.
+  True drops only the external reflection, the one beam that can come
+  back at the power a cavity needs, and lets the element be hit as
+  usual otherwise: the substrate is crossed and drawn, the beam leaves
+  through the far face, and the ghosts inside are unfolded. All of that
+  is counted and capped by `order`, `max_stray_order` and the power
+  threshold exactly as anywhere else, because it goes through `hit()`
+  by the ordinary route.
+
+  A ghost that leaves through the HR from inside the substrate is not
+  dropped. It is a round trip weaker, it costs a stray order, and the
+  budget is what ends it - the same treatment every other ghost gets.
+  The gate is unchanged too: a beam arriving above `term_on_HR_order`
+  is not terminated and reflects as it always did.
+
+  The suppression lives in `non_seq_trace`, not in `hitFromHR`.
+  `hitFromHR` is the sequential interface, and code that calls it
+  directly - as the KAGRA layouts do - asks for `r1` by name; taking it
+  away there would break those callers, which is how `OMC-Layout-O4`
+  came to fail in 0.4.0. Nothing about the flag changes a trace that
+  leaves it alone: the KAGRA layouts are byte for byte identical across
+  it.
+
+  `verify_stray.py` grows 16 checks on what is dropped and what is not,
+  the gate, `order` and `max_stray_order` still bounding what survives,
+  and the flag surviving a save and load. A file written before this
+  loads with it off.
+
 ## 0.5.0 — 2026-08-13
 
 ### Added

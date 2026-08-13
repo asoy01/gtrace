@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 23:52+0900\n"
+"POT-Creation-Date: 2026-08-13 09:38+0900\n"
 "PO-Revision-Date: 2026-08-09 22:30+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -178,11 +178,11 @@ msgid ""
 msgstr "x と y の列が分かれているのは、ビームが一般に真円ではないからである。ウェッジのある基板を斜めに通ると、2つの方向のウエストが違ってくる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:185
-msgid "|6fc2ef0b36f0474fa0194c7374d67ba0|"
+msgid "|48425ef91c7d423fa81a7d9265c8f25c|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:191
-msgid "6fc2ef0b36f0474fa0194c7374d67ba0"
+msgid "48425ef91c7d423fa81a7d9265c8f25c"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:187
@@ -246,11 +246,11 @@ msgstr ""
 "パラメータは幅と波面の曲率をまとめて持っていて、ビームを追跡するとは、これを伝搬させることである。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:223
-msgid "|1730ecc8ef4a4535badad18788d19908|"
+msgid "|bcd86620764a4cd18225063ec37d75d8|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
-msgid "1730ecc8ef4a4535badad18788d19908"
+msgid "bcd86620764a4cd18225063ec37d75d8"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:236
@@ -274,11 +274,11 @@ msgstr ""
 "はその面が向いている方向である。\\ ``center`` は基板の中央で、図の四角形はそこに置かれる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:240
-msgid "|e4816140ff124ed38267ea3a47d8c061|"
+msgid "|fd5e5d0a79ef4d7e9e2e68de31db0ddc|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:242
-msgid "e4816140ff124ed38267ea3a47d8c061"
+msgid "fd5e5d0a79ef4d7e9e2e68de31db0ddc"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:307
@@ -316,11 +316,11 @@ msgstr ""
 " ``inv_ROC_HR`` ではなく半径である。だから平面は ``inf`` と表示される。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:325
-msgid "|e4ed958692e74e66a4d9e3a64ceaf699|"
+msgid "|00af769811c14ca4bfca5c5347417681|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:370
-msgid "e4ed958692e74e66a4d9e3a64ceaf699"
+msgid "00af769811c14ca4bfca5c5347417681"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:328
@@ -575,11 +575,11 @@ msgid ""
 msgstr "``Measure`` はクリック3回である。2回で何を測るかを、3回目で線をどこに引くかを指定する。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:588
-msgid "|fea4baf1b4e54adebfd8e51c94346e2c|"
+msgid "|8c0d1c037e804796bc5bc3885dc387b9|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:596
-msgid "fea4baf1b4e54adebfd8e51c94346e2c"
+msgid "8c0d1c037e804796bc5bc3885dc387b9"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:590
@@ -625,11 +625,11 @@ msgstr ""
 "は経路として読める。文字の意味は決まっている:"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:612
-msgid "|135a1cb7d5c54bb9a96f4abd19fad568|"
+msgid "|bcc0cd3b97e4407cbbd29922197bbdcb|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:614
-msgid "135a1cb7d5c54bb9a96f4abd19fad568"
+msgid "bcc0cd3b97e4407cbbd29922197bbdcb"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:625
@@ -691,11 +691,11 @@ msgstr ""
 "ある。自分の姿勢を持たず、どこに立つかは尋ねられるたびに宿主から計算される。ミラーを動かせばマウントもついてくる。同期させる手間は無い。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:799
-msgid "|e4770a3473da4279a29092b706113fd1|"
+msgid "|15063c11a7d7404f92361bf0e782171a|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:807
-msgid "e4770a3473da4279a29092b706113fd1"
+msgid "15063c11a7d7404f92361bf0e782171a"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:801
@@ -752,11 +752,11 @@ msgstr ""
 "はエディタを開く。同じビューアに、1つの部品の形状だけを、その部品自身の座標系で原点を示して描いたものである。この原点の位置に注意すること。部品を取り付けたときに宿主の基板中心に来る点なので、マウントは、これから保持するミラーを囲むように描く。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:878
-msgid "|9e2c782697654788967bd380e77c8f35|"
+msgid "|d80446ece0294d61aade47ead773c3d7|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:883
-msgid "9e2c782697654788967bd380e77c8f35"
+msgid "d80446ece0294d61aade47ead773c3d7"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:880
@@ -935,11 +935,11 @@ msgstr ""
 "``dimensions=False`` を渡せば寸法線は入らない。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1313
-msgid "|9f4f4d923b2f410c988dbe5d376a4fff|"
+msgid "|b3e4a36c275f45c9a8e49cbf99fb485f|"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1315
-msgid "9f4f4d923b2f410c988dbe5d376a4fff"
+msgid "b3e4a36c275f45c9a8e49cbf99fb485f"
 msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1361
@@ -1798,4 +1798,58 @@ msgstr ""
 
 #~ msgid "2ce40b03c850404c92144828a86b1883"
 #~ msgstr "2ce40b03c850404c92144828a86b1883"
+
+#~ msgid "|6fc2ef0b36f0474fa0194c7374d67ba0|"
+#~ msgstr ""
+
+#~ msgid "6fc2ef0b36f0474fa0194c7374d67ba0"
+#~ msgstr ""
+
+#~ msgid "|1730ecc8ef4a4535badad18788d19908|"
+#~ msgstr ""
+
+#~ msgid "1730ecc8ef4a4535badad18788d19908"
+#~ msgstr ""
+
+#~ msgid "|e4816140ff124ed38267ea3a47d8c061|"
+#~ msgstr ""
+
+#~ msgid "e4816140ff124ed38267ea3a47d8c061"
+#~ msgstr ""
+
+#~ msgid "|e4ed958692e74e66a4d9e3a64ceaf699|"
+#~ msgstr ""
+
+#~ msgid "e4ed958692e74e66a4d9e3a64ceaf699"
+#~ msgstr ""
+
+#~ msgid "|fea4baf1b4e54adebfd8e51c94346e2c|"
+#~ msgstr ""
+
+#~ msgid "fea4baf1b4e54adebfd8e51c94346e2c"
+#~ msgstr ""
+
+#~ msgid "|135a1cb7d5c54bb9a96f4abd19fad568|"
+#~ msgstr ""
+
+#~ msgid "135a1cb7d5c54bb9a96f4abd19fad568"
+#~ msgstr ""
+
+#~ msgid "|e4770a3473da4279a29092b706113fd1|"
+#~ msgstr ""
+
+#~ msgid "e4770a3473da4279a29092b706113fd1"
+#~ msgstr ""
+
+#~ msgid "|9e2c782697654788967bd380e77c8f35|"
+#~ msgstr ""
+
+#~ msgid "9e2c782697654788967bd380e77c8f35"
+#~ msgstr ""
+
+#~ msgid "|9f4f4d923b2f410c988dbe5d376a4fff|"
+#~ msgstr ""
+
+#~ msgid "9f4f4d923b2f410c988dbe5d376a4fff"
+#~ msgstr ""
 

@@ -449,6 +449,7 @@ var LENS = __LENS__;
             toggleField('HRtransmissive', true);
             toggleField('term_on_HR', true);
             setField('term_on_HR_order', '2');
+            toggleField('term_on_HR_transmits', true);
             // Echo one back for whichever optics is selected, then set
             // it to what it already is.
             var flagged = JSON.parse(JSON.stringify(v.scene));
@@ -1375,7 +1376,8 @@ check('everything but the type is editable',
                                      'Refl_AR', 'Trans_AR', 'max_stray_order',
                                      'HRtransmissive', 'HRreflective',
                                      'term_on_HR',
-                                     'term_on_HR_order', 'curve_direction',
+                                     'term_on_HR_order',
+                                     'term_on_HR_transmits', 'curve_direction',
                                      # Built for every optics; the rows hide
                                      # themselves where they do not apply -
                                      # a focal length on anything but a lens,
@@ -1551,7 +1553,7 @@ check('a plain Mirror hides the curve direction row',
 
 flags = res['flags']
 check('each real change sends one message, a redundant one none',
-      flags['sent'] == 3, str(flags['sent']))
+      flags['sent'] == 4, str(flags['sent']))
 check('an echoed flag ticks the box', res['flagEchoed'] is True,
       str(res['flagEchoed']))
 check('HR transmissive goes through as a boolean',
@@ -1562,6 +1564,9 @@ check('terminate on HR too',
 check('and the order as a number',
       flags['msgs'][2]['attrs']['term_on_HR_order'] == 2,
       str(flags['msgs'][2]))
+check('and what terminating keeps, as a boolean',
+      flags['msgs'][3]['attrs']['term_on_HR_transmits'] is True,
+      str(flags['msgs'][3]))
 
 print('--- a row only some classes have ---')
 cur = res['curve']

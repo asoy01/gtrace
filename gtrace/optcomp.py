@@ -447,6 +447,17 @@ class Mirror(Optics):
     term_on_HR_order : int
         Integer to specify the upper limit of the stray order used to judge
         whether to terminate the non sequential trace or not on HR reflection.
+    term_on_HR_transmits : boolean
+        What term_on_HR stops. False, the default, stops the beam at the
+        surface: nothing is computed, which is what term_on_HR has always
+        done. True stops only the reflection that would form the cavity,
+        and lets the element be hit as usual otherwise, so the beam
+        transmitted through the substrate carries on and the ghosts
+        inside it are unfolded, counted and capped by order and
+        max_stray_order like any others. Only the external reflection
+        off the HR is dropped; a ghost leaving through the HR from
+        inside the substrate is not. Has no effect unless term_on_HR is
+        True, as term_on_HR_order has none.
     anchor_point : str
         The point the optics is held by: 'HRcenter', the apex of the HR
         arc, or 'center', the middle of the substrate. It is the point
@@ -640,6 +651,7 @@ class Mirror(Optics):
         self.HRreflective = HRreflective
         self.term_on_HR = term_on_HR
         self.term_on_HR_order = 0
+        self.term_on_HR_transmits = False
         self.max_stray_order = max_stray_order
 
 #}}}
@@ -1937,6 +1949,17 @@ class CyMirror(Mirror):
     term_on_HR_order : int
         Integer to specify the upper limit of the stray order used to judge
         whether to terminate the non sequential trace or not on HR reflection.
+    term_on_HR_transmits : boolean
+        What term_on_HR stops. False, the default, stops the beam at the
+        surface: nothing is computed, which is what term_on_HR has always
+        done. True stops only the reflection that would form the cavity,
+        and lets the element be hit as usual otherwise, so the beam
+        transmitted through the substrate carries on and the ghosts
+        inside it are unfolded, counted and capped by order and
+        max_stray_order like any others. Only the external reflection
+        off the HR is dropped; a ghost leaving through the HR from
+        inside the substrate is not. Has no effect unless term_on_HR is
+        True, as term_on_HR_order has none.
     '''
 
 #{{{ __init__
@@ -2055,6 +2078,7 @@ class CyMirror(Mirror):
         self.HRreflective = HRreflective
         self.term_on_HR = term_on_HR
         self.term_on_HR_order = 0
+        self.term_on_HR_transmits = False
         self.max_stray_order = max_stray_order
         self.curve_direction = curve_direction
 
