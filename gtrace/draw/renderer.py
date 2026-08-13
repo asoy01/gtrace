@@ -91,7 +91,10 @@ def renderDXF(canvas, filename):
                 d.add_entity(dxf.LwPolyLine(x, y), ly.name)
             elif isinstance(s, draw.Rectangle):
                 d.add_entity(dxf.Rectangle(np.array(s.point)*scale_factor,
-                                           s.width*scale_factor, s.height*scale_factor), ly.name)
+                                           s.width*scale_factor, s.height*scale_factor,
+                                           angle=s.angle,
+                                           pivot=(None if s.pivot is None
+                                                  else np.array(s.pivot)*scale_factor)), ly.name)
             elif isinstance(s, draw.Circle):
                 d.add_entity(dxf.Circle(np.array(s.center)*scale_factor, s.radius*scale_factor), ly.name)
             elif isinstance(s, draw.Arc):

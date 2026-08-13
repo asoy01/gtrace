@@ -14,6 +14,8 @@ Complex numbers are represented as [real, imag] pairs.
 
 #{{{ Import modules
 
+import copy
+
 import numpy as np
 
 import gtrace.draw as draw
@@ -98,6 +100,53 @@ def _complex(c):
 
 #}}}
 
+#{{{ NEW_SHAPES
+
+#: What each kind of shape looks like when it is first put down, in
+#: metres about the origin, as the dict shape_from_dict builds from.
+#:
+#: A shape is put down in two places - into the part a shape editor is
+#: drawing, and onto the bench itself, where the viewer makes a body of
+#: one - so it is defined here, with the rest of what a shape dict is,
+#: rather than in either of them. It is drawn about the origin because
+#: that is the point a part is built around: the one that comes to sit
+#: at a host's substrate centre.
+#:
+#: The sizes are what a bench would recognise rather than ones that
+#: have to be found by zooming. A front end that works at some other
+#: scale - a layout is kilometres across where a part is millimetres -
+#: is expected to scale them to what it is showing.
+NEW_SHAPES = {
+    'line': {'type': 'line', 'start': [-0.01, 0.0], 'stop': [0.01, 0.0],
+             'thickness': 0.0},
+    'polyline': {'type': 'polyline', 'x': [-0.01, 0.0, 0.01],
+                 'y': [-0.01, 0.01, -0.01], 'thickness': 0.0},
+    'rectangle': {'type': 'rectangle', 'point': [-0.01, -0.01],
+                  'width': 0.02, 'height': 0.02, 'thickness': 0.0},
+    'circle': {'type': 'circle', 'center': [0.0, 0.0], 'radius': 0.005,
+               'thickness': 0.0},
+    'arc': {'type': 'arc', 'center': [0.0, 0.0], 'radius': 0.01,
+            'startangle': 0.0, 'stopangle': np.pi, 'thickness': 0.0},
+    'text': {'type': 'text', 'text': 'label', 'point': [0.0, 0.0],
+             'height': 0.005, 'rotation': 0.0},
+}
+
+def new_shapes():
+    '''
+    A copy of NEW_SHAPES, kind by kind.
+
+    A copy, because what comes back is handed to a front end and to
+    whoever asks: a caller that scaled the dict it was given would
+    otherwise resize every shape put down after it.
+
+    Returns
+    -------
+    dict
+    '''
+    return dict((k, copy.deepcopy(v)) for k, v in NEW_SHAPES.items())
+
+#}}}
+
 #{{{ shape_to_dict
 
 def shape_to_dict(s):
@@ -117,10 +166,15 @@ def shape_to_dict(s):
                 'y': _floats(s.y),
                 'thickness': float(s.thickness)}
     elif isinstance(s, draw.Rectangle):
+        # The pivot is written as it is kept: null where the rectangle
+        # turns about its own middle, so that a rectangle moved after
+        # a load still turns about itself.
         return {'type': 'rectangle',
                 'point': _vec(s.point),
                 'width': float(s.width),
                 'height': float(s.height),
+                'angle': float(s.angle),
+                'pivot': None if s.pivot is None else _vec(s.pivot),
                 'thickness': float(s.thickness)}
     elif isinstance(s, draw.Circle):
         return {'type': 'circle',
@@ -176,8 +230,13 @@ def shape_from_dict(d):
                              [float(v) for v in d['y']],
                              thickness=thickness)
     elif kind == 'rectangle':
+        # A file written before a rectangle could be turned has
+        # neither key, and squarely on the axes is what it meant.
+        pivot = d.get('pivot')
         return draw.Rectangle(list(d['point']), float(d['width']),
-                              float(d['height']), thickness=thickness)
+                              float(d['height']), thickness=thickness,
+                              angle=float(d.get('angle', 0.0)),
+                              pivot=None if pivot is None else list(pivot))
     elif kind == 'circle':
         return draw.Circle(list(d['center']), float(d['radius']),
                            thickness=thickness)
@@ -191,6 +250,81 @@ def shape_from_dict(d):
                          rotation=float(d.get('rotation', 0.0)))
     else:
         raise UnknownShapeError('Shape not supported: %r' % (kind,))
+
+#}}}
+
+#{{{ build_shape
+
+def build_shape(d, error=None):
+    '''
+    Build a shape from a dict and refuse one that cannot be drawn.
+
+    :func:`shape_from_dict` is the constructor's door: what describes
+    no shape is refused by the constructor itself, so there is no
+    second list of rules about what a circle is. What it cannot catch
+    is a shape that builds and then cannot be drawn - a rectangle of
+    no width, a coordinate at infinity - because those are numbers a
+    constructor has no opinion about. They are caught here.
+
+    Both places a shape is edited come through this: the shape editor
+    drawing a part, and a layout editing the one shape of a body drawn
+    on the bench. A rule kept in one of them would be a rule the other
+    did not have.
+
+    Parameters
+    ----------
+    d : dict
+        A shape as :func:`shape_to_dict` writes it.
+    error : type or None, optional
+        What to raise instead of ValueError, for a caller whose
+        protocol has an exception of its own.
+
+    Returns
+    -------
+    A drawing primitive.
+
+    Raises
+    ------
+    ValueError, or whatever ``error`` names
+        If the dict describes no shape, or one that cannot be drawn.
+    '''
+    fail = error or ValueError
+    try:
+        shape = shape_from_dict(d)
+    except UnknownShapeError:
+        raise
+    except draw.NumberOfElementError as e:
+        raise fail('That does not describe a %s: %s' % (d.get('type'), e))
+    except (KeyError, TypeError, ValueError, IndexError) as e:
+        raise fail('That does not describe a %s (%s: %s).'
+                   % (d.get('type'), type(e).__name__, e))
+
+    out = shape_to_dict(shape)
+    # A nan or an infinity would take the whole view with it the first
+    # time anything was framed.
+    for value in out.values():
+        for v in (value if isinstance(value, list) else [value]):
+            if isinstance(v, float) and not np.isfinite(v):
+                raise fail('A %s cannot be drawn with %r in it.'
+                           % (out['type'], v))
+    # A rectangle of no width, or of less than none, is not a smaller
+    # rectangle: it is a shape SVG refuses to draw and a bounding box
+    # that comes out inside out.
+    for key in ('width', 'height', 'radius'):
+        if key in out and not out[key] > 0:
+            raise fail('A %s needs a positive %s, not %r.'
+                       % (out['type'], key, out[key]))
+    # A polyline of one vertex draws nothing and has nothing to take
+    # hold of; of none, not even a place. The constructor only asks
+    # that x and y be of the same length, so this is the same kind of
+    # arithmetic as a positive width.
+    if out['type'] == 'polyline' and len(out['x']) < 2:
+        raise fail('A polyline needs at least two vertices, not %d.'
+                   % len(out['x']))
+    if out.get('thickness', 0.0) < 0:
+        raise fail('A %s cannot be drawn with a thickness of %r.'
+                   % (out['type'], out['thickness']))
+    return shape
 
 #}}}
 

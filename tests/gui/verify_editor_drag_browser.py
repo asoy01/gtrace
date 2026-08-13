@@ -31,7 +31,7 @@ import numpy as np
 
 import gtrace.draw as draw
 from gtrace.draw.viewer import viewer_css
-from gtrace.mechanics import Mechanics
+from gtrace.mechanics import Mechanics, shape_centre
 from gtrace.draw.viewer.editor import ShapeEditor
 from gtrace.unit import *
 
@@ -640,10 +640,19 @@ check('  and [ turns it back the other way',
       < 1e-12, json.dumps(res['quarterBack']))
 if qt['msg']:
     r1 = applied(qt['msg']).shapes[RECT]
-    check('  a turned rectangle reaching Python is a closed outline',
-          isinstance(r1, draw.PolyLine) and len(r1.x) == 5
-          and r1.x[0] == r1.x[-1] and r1.y[0] == r1.y[-1],
+    r0 = part.shapes[RECT]
+    a = qt['msg']['angle']
+    pv = np.asarray(qt['msg'].get('pivot')
+                    if qt['msg'].get('pivot') is not None
+                    else shape_centre(r0), dtype='float64')
+    R = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
+    want = (r0.corners() - pv) @ R.T + pv
+    check('  a turned rectangle reaching Python is still a rectangle',
+          isinstance(r1, draw.Rectangle) and abs(r1.angle - a) < 1e-12,
           type(r1).__name__)
+    check('  with its corners where the quarter turn put them',
+          np.allclose(r1.corners(), want, atol=1e-15),
+          str(np.round(r1.corners(), 6).tolist()))
 
 print('--- carrying the points a part names for itself ---')
 pk = res['pickPointMark']

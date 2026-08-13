@@ -33,16 +33,19 @@ import webbrowser
 import numpy as np
 
 import gtrace.optcomp as optcomp
+import gtrace.unit as unit
 from gtrace.beam import GaussianBeam
 from gtrace.mechanics import (Mechanics, DEFAULT_LAYER as MECHANICS_LAYER,
                               host_pose,
                               from_model as mechanics_from_model,
                               models as mechanics_models,
                               model_shapes as mechanics_model_shapes,
-                              model_params as mechanics_model_params)
+                              model_params as mechanics_model_params,
+                              model_prefix as mechanics_model_prefix)
 from gtrace.nonsequential import non_seq_trace
 from gtrace.draw.tools import drawAllOptics
-from gtrace.draw.serialize import (scene_to_dict, shape_to_dict,
+from gtrace.draw.serialize import (build_shape, new_shapes,
+                                   scene_to_dict, shape_to_dict,
                                    shape_from_dict, UnknownShapeError)
 from gtrace.draw.viewer import renderHTML
 import gtrace.draw as draw
@@ -467,10 +470,22 @@ MECHANICS_TYPE = 'Mechanics'
 #: holds shapes, and two of the three pieces of a dump are elements.
 DUMP_TYPE = 'BeamDump'
 
+#: What an add message calls an assembly. An element and the parts that
+#: hold it, so it is neither an add of an optics nor of a mechanics -
+#: the same shape of thing a beam dump is, and added the same way.
+ASSEMBLY_TYPE = 'Assembly'
+
 #: What a beam dump takes from an 'add' message. The rest of what
 #: beam_dump() offers - the dimensions of the drawing it is taken
 #: from - is not a front end's to change.
 CREATABLE_DUMP_PARAMS = frozenset(['center', 'angle', 'reflectivity'])
+
+#: What a new assembly may be given. The kind settles the rest - which
+#: mount, how thick the substrate - and what is here is what a front
+#: end has to say: where it stands, which way it looks, and for a lens
+#: what it is for.
+CREATABLE_ASSEMBLY_PARAMS = frozenset(['center', 'angle', 'diameter',
+                                       'thickness', 'f'])
 
 #: Attributes of a Mechanics a front end may change: its pose - or,
 #: attached, its attachment - and nothing else. The shapes are the body
@@ -504,7 +519,18 @@ EDITABLE_MECHANICS_ATTRS = frozenset(['center', 'rotationAngle',
                                       # Only a parametric body has a
                                       # size to set; Mechanics.resize
                                       # says so when it refuses.
-                                      'width', 'height'])
+                                      'width', 'height',
+                                      # The one shape of a body drawn
+                                      # by hand, as a serialized
+                                      # primitive. A body of one shape
+                                      # is a drawing - a wall, an
+                                      # aperture - and its shape is
+                                      # what there is to edit about
+                                      # it; a part of several is
+                                      # edited in the shape editor,
+                                      # where there is a list to pick
+                                      # from.
+                                      'shape'])
 
 #: The pose half of those: what an attached body does not have.
 _MECHANICS_POSE_ATTRS = frozenset(['center', 'rotationAngle'])
@@ -1059,6 +1085,17 @@ def mechanics_scene_dict(m):
             # on another by.
             'points': dict((str(k), [float(v[0]), float(v[1])])
                            for k, v in m.world_points().items()),
+            # The one shape of a body drawn by hand, in the frame it
+            # is written in. A body of one shape is a drawing rather
+            # than a part - a tank wall, an aperture, a note - so what
+            # there is to edit about it is that shape's own numbers,
+            # and a front end offers them and the grips that go with
+            # them. Null for a part off the library shelf, which is
+            # cut to size instead, and for one of several shapes,
+            # which is edited where there is a list to pick from.
+            'shape': (shape_to_dict(m.shapes[0])
+                      if (len(m.shapes) == 1 and m.params is None)
+                      else None),
             # How the body can be cut to a new size, and the size it
             # stands at: what the resize handles and the size rows
             # work from. Null for a hand-drawn body, whose rows hide
@@ -1117,7 +1154,11 @@ def beam_dump(name='BD1', center=(0.0, 0.0), angle=0.0,
 
     The three come back jointed: the second face follows the first and
     the housing is attached to it, so the dump is one thing to move.
-    Register them in the order they are returned, hosts first.
+    They come back split - the elements, then the bodies - since that
+    is the division everything downstream makes: a layout registers
+    the two by different doors, the trace sees only the first, and the
+    order within each list is hosts first, which is the order they
+    have to be registered in.
 
     The dimensions default to the drawing in ``local/BeamDump.dxf`` -
     a 50 mm face 3 mm thick, a 28 degree opening, and a 50 mm body
@@ -1171,8 +1212,8 @@ def beam_dump(name='BD1', center=(0.0, 0.0), angle=0.0,
 
     Returns
     -------
-    list
-        ``[face1, face2, housing]``: two Mirror and one Mechanics,
+    tuple
+        ``([face1, face2], [housing])``: the elements and the bodies,
         already jointed.
     '''
     if opening is None:
@@ -1234,7 +1275,7 @@ def beam_dump(name='BD1', center=(0.0, 0.0), angle=0.0,
                                - float(faces[0].normAngleHR))
     faces[1].fix_rotation = True
     housing.attach(faces[0], keep_pose=True)
-    return faces + [housing]
+    return faces, [housing]
 
 def _dump_shapes(apex, length, thick, half, radius, top_half, wide_half,
                  post_r, boss_r):
@@ -1673,6 +1714,290 @@ def _set_source_attr(b, key, value):
 
 #}}}
 
+
+#{{{ Assemblies: an element and the parts that hold it
+
+#: What a bench holds an optic with, unless told otherwise: a pedestal
+#: post and the fork that clamps it. Model names rather than shapes, so
+#: an assembly is built out of the same library the + Mechanics menu
+#: offers, and a bench of one's own is a matter of registering
+#: different models under different names.
+DEFAULT_PEDESTAL = 'PEDESTAL-25'
+DEFAULT_FORK = 'FORK-125'
+
+def _stand(optic, mount=None, pedestal=DEFAULT_PEDESTAL, fork=DEFAULT_FORK,
+           mount_name=None, pedestal_name=None, fork_name=None,
+           mount_offset=None):
+    '''
+    The parts that hold one element, jointed to it and to each other.
+
+    The mount is built around its optic, so it seats at the model's
+    designed position unless ``mount_offset`` says where else, in the
+    optic's own frame - x along the face normal, so a negative x sets
+    the mount further back than the model would. The pedestal stands in the hole the mount is
+    bolted down through - the point the model names 'post' - and the
+    fork closes round the pedestal, with its turn left free, since a
+    fork swings about the post it clamps and which way its handle
+    points is settled on the bench.
+
+    Every piece derives its pose from the one below it, so the whole
+    stack follows the element: move the mirror and the mount, the
+    pedestal and the fork come along, with nothing to keep in step.
+
+    A piece may be left out by passing None for its model: a mirror in
+    a mount and nothing else is a real thing to draw.
+
+    Returns
+    -------
+    list of Mechanics
+        Hosts before what stands on them, which is the order they have
+        to be registered in.
+    '''
+    parts = []
+    host = optic
+    for model, name, kind in ((mount, mount_name, 'mount'),
+                              (pedestal, pedestal_name, 'pedestal'),
+                              (fork, fork_name, 'fork')):
+        if model is None:
+            continue
+        if name is None:
+            name = '%s1' % (mechanics_model_prefix(model) or 'H')
+        if kind == 'mount':
+            part = mechanics_from_model(model, name=name, attached_to=host,
+                                        offset=mount_offset)
+        elif kind == 'pedestal':
+            # Where the thing above it is bolted down, when that thing
+            # marks the hole; on its origin when it does not.
+            post = getattr(host, 'points', {}).get('post')
+            part = mechanics_from_model(
+                model, name=name, attached_to=host,
+                offset=[0.0, 0.0] if post is None else post)
+        else:
+            part = mechanics_from_model(model, name=name, attached_to=host,
+                                        offset=[0.0, 0.0],
+                                        fix_rotation=False)
+        parts.append(part)
+        host = part
+    return parts
+
+def mirror_assembly(name='M1', center=(0.0, 0.0), angle=np.pi,
+                    diameter=1*unit.inch, thickness=6*unit.mm,
+                    mount='MOUNT-25', pedestal=DEFAULT_PEDESTAL,
+                    fork=DEFAULT_FORK, mount_name=None, pedestal_name=None,
+                    fork_name=None, mount_offset=None, **kwargs):
+    '''
+    A mirror and what holds it: the optic, its mount, the pedestal and
+    the clamping fork, jointed so the four move as one.
+
+    This is what goes onto a bench. A mirror on its own is an element
+    to trace with; a mirror in a mount on a pedestal is the thing that
+    is bolted down, takes up room and has to clear its neighbours -
+    and drawing it is most of what a layout is for.
+
+    The parts are attached to each other, so **the mirror is the thing
+    to move**: everything else derives its pose from it. Register them
+    in the order they come back, hosts first.
+
+    Parameters
+    ----------
+    name : str, optional
+        What the mirror is called. The parts are named from their own
+        models - MT1, P1, FK1 - rather than from this: a part is known
+        by what it is, and a bench numbers its mounts as mounts.
+    center : sequence of 2 floats, optional
+        Where the substrate centre stands, in metres. The mount is
+        drawn around that point, so it is what lines the stack up.
+    angle : float, optional
+        Which way the front face looks, in radians. Defaults to pi,
+        facing back down -x, which is what a new mirror does in the
+        viewer.
+    diameter, thickness : float, optional
+        The optic. 1 inch by 6 mm, which is what the one-inch mount is
+        drawn to seat.
+    mount, pedestal, fork : str or None, optional
+        Model names for the three parts. None leaves that piece out.
+    mount_name, pedestal_name, fork_name : str or None, optional
+        What to call them. None takes the model's own prefix and the
+        first number, which is what a layout then makes unique.
+    mount_offset : sequence of 2 floats or None, optional
+        Where the mount sits on the optic, in the optic's own frame -
+        x along the face normal. None is the model's designed
+        position, which is where a mount drawn around its optic
+        belongs; a number here is how far off that it is really
+        bolted. What the pedestal stands in moves with it, since the
+        post hole is a point of the mount.
+    **kwargs
+        Passed to the Mirror: a curvature, a reflectivity, a layer.
+
+    Returns
+    -------
+    tuple
+        ``([mirror], [mount, pedestal, fork])``: the elements and the
+        bodies, minus whatever was left out. Split because that is the
+        division everything downstream makes - a layout registers the
+        two by different doors, and the trace sees only the first -
+        and hosts first within each, which is the order they have to
+        be registered in.
+    '''
+    # Built at the origin and then stood where it goes: a Mirror is
+    # constructed from its front face, and what lines the stack up is
+    # the substrate centre - the point the mount is drawn around.
+    optic = optcomp.Mirror(HRcenter=[0.0, 0.0], normAngleHR=float(angle),
+                           diameter=float(diameter),
+                           thickness=float(thickness), name=name, **kwargs)
+    optic.center = np.asarray(center, dtype='float64')
+    return [optic], _stand(optic, mount=mount, pedestal=pedestal, fork=fork,
+                           mount_name=mount_name,
+                           pedestal_name=pedestal_name, fork_name=fork_name,
+                           mount_offset=mount_offset)
+
+def lens_assembly(name='L1', center=(0.0, 0.0), angle=np.pi, f=0.2,
+                  diameter=1*unit.inch, thickness=6*unit.mm,
+                  holder='HOLDER-25', pedestal=DEFAULT_PEDESTAL,
+                  fork=DEFAULT_FORK, holder_name=None, pedestal_name=None,
+                  fork_name=None, holder_offset=None, **kwargs):
+    '''
+    A lens and what holds it: the optic, its holder, the pedestal and
+    the clamping fork, jointed so the four move as one.
+
+    The same as :func:`mirror_assembly` over a :class:`Lens
+    <gtrace.optcomp.Lens>`, which is ordered by its focal length.
+
+    Parameters
+    ----------
+    name : str, optional
+        What the lens is called.
+    center : sequence of 2 floats, optional
+        Where the substrate centre stands, in metres.
+    angle : float, optional
+        Which way the front face looks, in radians.
+    f : float, optional
+        Focal length, in metres. Positive converges.
+    diameter, thickness : float, optional
+        The optic.
+    holder, pedestal, fork : str or None, optional
+        Model names for the three parts. None leaves that piece out.
+    holder_name, pedestal_name, fork_name : str or None, optional
+        What to call them.
+    holder_offset : sequence of 2 floats or None, optional
+        Where the holder sits on the lens, in the lens's own frame.
+        None is the model's designed position. See
+        :func:`mirror_assembly`.
+    **kwargs
+        Passed to the Lens.
+
+    Returns
+    -------
+    tuple
+        ``([lens], [holder, pedestal, fork])``: the elements and the
+        bodies, minus whatever was left out, hosts first within each.
+    '''
+    optic = optcomp.Lens(f=float(f), center=np.asarray(center,
+                                                       dtype='float64'),
+                         normAngleHR=float(angle),
+                         diameter=float(diameter),
+                         thickness=float(thickness), name=name, **kwargs)
+    return [optic], _stand(optic, mount=holder, pedestal=pedestal, fork=fork,
+                           mount_name=holder_name,
+                           pedestal_name=pedestal_name, fork_name=fork_name,
+                           mount_offset=holder_offset)
+
+#: The assemblies a front end can offer, in the order it should offer
+#: them. Each is a builder and the arguments that make it that size, so
+#: that "a two inch mirror assembly" is one name rather than four
+#: numbers to get right - and the label is what a menu shows.
+#:
+#: An assembly is not a model on the library shelf: a model holds
+#: shapes, and the first piece of every assembly here is an element.
+#: It is a builder, like the beam dump, and what a saved layout carries
+#: is what it built.
+ASSEMBLY_KINDS = [
+    {'kind': 'MIRROR-1IN', 'label': '1 inch mirror', 'prefix': 'M',
+     'description': '1 inch mirror in a 1 inch mount, on a pedestal '
+                    'and fork',
+     'builder': mirror_assembly,
+     'defaults': {'diameter': 1*unit.inch, 'thickness': 6*unit.mm,
+                  'mount': 'MOUNT-25', 'pedestal': DEFAULT_PEDESTAL,
+                  'fork': DEFAULT_FORK},
+     'parts': [('mount', 'mount_name'), ('pedestal', 'pedestal_name'),
+               ('fork', 'fork_name')]},
+    {'kind': 'MIRROR-2IN', 'label': '2 inch mirror', 'prefix': 'M',
+     'description': '2 inch mirror in a 2 inch mount, on a pedestal '
+                    'and fork',
+     'builder': mirror_assembly,
+     # The two-inch mount sits 5 mm further back than the drawing's
+     # designed position. Measured on the bench rather than taken from
+     # the drawing, which is why it is a number here and not in
+     # mirror_mount_2in: the model says where a mount is built around
+     # its optic, and this says where this assembly really bolts one.
+     'defaults': {'diameter': 2*unit.inch, 'thickness': 12.7*unit.mm,
+                  'mount': 'MOUNT-50', 'pedestal': DEFAULT_PEDESTAL,
+                  'fork': DEFAULT_FORK,
+                  'mount_offset': [-5*unit.mm, 0.0]},
+     'parts': [('mount', 'mount_name'), ('pedestal', 'pedestal_name'),
+               ('fork', 'fork_name')]},
+    {'kind': 'LENS-1IN', 'label': '1 inch lens', 'prefix': 'L',
+     'description': '1 inch lens in a 1 inch holder, on a pedestal '
+                    'and fork',
+     'builder': lens_assembly,
+     'defaults': {'diameter': 1*unit.inch, 'thickness': 6*unit.mm,
+                  'holder': 'HOLDER-25', 'pedestal': DEFAULT_PEDESTAL,
+                  'fork': DEFAULT_FORK},
+     'parts': [('holder', 'holder_name'), ('pedestal', 'pedestal_name'),
+               ('fork', 'fork_name')]},
+    {'kind': 'LENS-2IN', 'label': '2 inch lens', 'prefix': 'L',
+     'description': '2 inch lens in a 2 inch holder, on a pedestal '
+                    'and fork',
+     'builder': lens_assembly,
+     'defaults': {'diameter': 2*unit.inch, 'thickness': 12.7*unit.mm,
+                  'holder': 'HOLDER-50', 'pedestal': DEFAULT_PEDESTAL,
+                  'fork': DEFAULT_FORK},
+     'parts': [('holder', 'holder_name'), ('pedestal', 'pedestal_name'),
+               ('fork', 'fork_name')]},
+]
+
+def assembly_kinds():
+    '''
+    What :func:`assembly` can build: kind, label and description, in
+    the order a menu should show them.
+
+    Returns
+    -------
+    list of dict
+    '''
+    return [{'kind': a['kind'], 'label': a['label'],
+             'description': a['description'], 'prefix': a['prefix']}
+            for a in ASSEMBLY_KINDS]
+
+def _assembly_kind(kind):
+    for a in ASSEMBLY_KINDS:
+        if a['kind'] == kind:
+            return a
+    raise ValueError('No assembly called %r. assembly_kinds() lists what '
+                     'there is.' % (kind,))
+
+def assembly(kind, **kwargs):
+    '''
+    Build one of the assemblies :func:`assembly_kinds` lists.
+
+    ``assembly('MIRROR-2IN', center=[0.3, 0.1])`` is
+    :func:`mirror_assembly` with the two-inch numbers filled in. What
+    the kind settles can still be overridden - a thicker substrate, a
+    different fork - since it is only a set of defaults.
+
+    Returns
+    -------
+    tuple
+        ``(optics, bodies)``: the element and the parts that hold it,
+        hosts first within each.
+    '''
+    spec = _assembly_kind(kind)
+    args = dict(spec['defaults'])
+    args.update(kwargs)
+    return spec['builder'](**args)
+
+#}}}
+
 #{{{ OpticalLayout
 
 class OpticalLayout(object):
@@ -1760,24 +2085,80 @@ class OpticalLayout(object):
         the housing they sit in, jointed so the three move as one.
 
         Takes what beam_dump() takes. Without a name it is given the
-        first free one, and the pieces are registered hosts first,
-        which is the order they have to go in.
+        first free one, and the pieces are registered elements first
+        and then bodies, hosts before what stands on them, which is
+        the order they have to go in.
 
         Returns
         -------
-        list
-            The two faces and the housing, as beam_dump() returns
+        tuple
+            ``([face1, face2], [housing])``, as beam_dump() returns
             them.
         """
         if not kwargs.get('name'):
             kwargs['name'] = self.unique_dump_name()
-        pieces = beam_dump(**kwargs)
-        for x in pieces:
-            if isinstance(x, Mechanics):
-                self.add_mechanics(x)
-            else:
-                self.add_optics(x)
-        return pieces
+        optics, bodies = beam_dump(**kwargs)
+        for x in optics:
+            self.add_optics(x)
+        for x in bodies:
+            self.add_mechanics(x)
+        return optics, bodies
+
+    def add_assembly(self, kind, name=None, **params):
+        '''
+        Build one of the assemblies :func:`assembly_kinds` lists and
+        register the lot: the element, its mount, the pedestal and the
+        fork, jointed so the four move as one.
+
+        The names are filled in from the layout - the element takes the
+        first free one of its kind, and each part the first free one of
+        its own - so adding a second two-inch mirror gives M2 held by
+        MT2 on P2 in FK2, without asking.
+
+        Takes what the builder takes, on top of what the kind settles.
+
+        Parameters
+        ----------
+        kind : str
+            One of :func:`assembly_kinds`, e.g. ``'MIRROR-2IN'``.
+        name : str or None, optional
+            What to call the element. None takes the first free name.
+        **params
+            Passed to the builder: center, angle, and whatever else
+            that assembly takes.
+
+        Returns
+        -------
+        tuple
+            ``(optics, bodies)``, as the builder returned them.
+        '''
+        spec = _assembly_kind(kind)
+        args = dict(spec['defaults'])
+        args.update(params)
+        args['name'] = name or self.unique_optics_name(spec['prefix'])
+
+        taken = set(o.name for o in self.optics)
+        taken.update(s.name for s in self.sources)
+        taken.update(d.name for d in self.dimensions)
+        taken.update(m.name for m in self.mechanics)
+        taken.add(args['name'])
+        for model_key, name_key in spec.get('parts', []):
+            model = args.get(model_key)
+            if model is None or args.get(name_key):
+                continue
+            prefix = mechanics_model_prefix(model) or 'H'
+            i = 1
+            while '%s%d' % (prefix, i) in taken:
+                i += 1
+            args[name_key] = '%s%d' % (prefix, i)
+            taken.add(args[name_key])
+
+        optics, bodies = spec['builder'](**args)
+        for x in optics:
+            self.add_optics(x)
+        for x in bodies:
+            self.add_mechanics(x)
+        return optics, bodies
 
     def assemble(self, name, host, offset=None, offset_angle=None,
                  fix_rotation=True):
@@ -2831,6 +3212,25 @@ class OpticalLayout(object):
                     self.add_beam_dump(name=name, **params)
                 except (ValueError, TypeError) as e:
                     raise EditError(str(e))
+            elif msg.get('type') == ASSEMBLY_TYPE:
+                # An element and the parts that hold it. Like a dump,
+                # it is several things at once and falls through to the
+                # invalidation at the end with them, since the element
+                # is one the beams can hit.
+                params = msg.get('params') or {}
+                for key in params:
+                    if key not in CREATABLE_ASSEMBLY_PARAMS:
+                        raise EditError('%r is not a parameter a new '
+                                        'assembly takes.' % (key,))
+                name = msg.get('name')
+                if name is not None and (not isinstance(name, str)
+                                         or not name.strip()):
+                    raise EditError('A name must be a non-empty string, '
+                                    'not %r.' % (name,))
+                try:
+                    self.add_assembly(msg.get('kind'), name=name, **params)
+                except (ValueError, TypeError) as e:
+                    raise EditError(str(e))
             elif msg.get('type') == SOURCE_TYPE:
                 src = self._source_from_message(msg)
                 try:
@@ -3109,7 +3509,34 @@ class OpticalLayout(object):
         if size and not m.resizable:
             raise EditError(
                 "'%s' is not a resizable body: it was drawn by hand, so "
-                'edit its shapes instead.' % m.name)
+                'edit its shape instead.' % m.name)
+
+        # The one shape of a body drawn by hand. Built here, before
+        # anything is touched, so a shape that cannot be drawn leaves
+        # the body exactly as it was - the same care every other edit
+        # takes, and the same rules the shape editor applies, since
+        # both come through build_shape.
+        shape = None
+        if 'shape' in attrs:
+            if m.params is not None or len(m.shapes) != 1:
+                raise EditError(
+                    "'%s' is not a body of one hand-drawn shape, so it has "
+                    'no shape to set. A part off the library shelf is cut '
+                    'to size; a part of several shapes is edited with '
+                    'Mechanics.edit().' % m.name)
+            if not isinstance(attrs['shape'], dict):
+                raise EditError("'shape' is a serialized shape, not %r."
+                                % (attrs['shape'],))
+            if attrs['shape'].get('type') != shape_to_dict(m.shapes[0])['type']:
+                raise EditError(
+                    "'%s' is drawn with a %s: a shape asked to become a %r "
+                    'is a different shape, which is an add and a remove.'
+                    % (m.name, shape_to_dict(m.shapes[0])['type'],
+                       attrs['shape'].get('type')))
+            try:
+                shape = build_shape(attrs['shape'], error=EditError)
+            except UnknownShapeError as e:
+                raise EditError(str(e))
 
         # The attachment first: it decides what the rest lands on.
         if detaching:
@@ -3139,6 +3566,11 @@ class OpticalLayout(object):
                 m.resize(**size)
             except ValueError as e:
                 raise EditError(str(e))
+        if shape is not None:
+            # The list is refilled rather than replaced: it is the
+            # user's own object, and a Mechanics handed to a layout may
+            # be held elsewhere too.
+            m.shapes[0] = shape
         for key, value in sorted(offs.items()):
             setattr(m, key, value)
         for key, value in sorted(pose.items()):
@@ -3786,8 +4218,26 @@ class OpticalLayout(object):
         # can offer to add one. Names and descriptions only: the
         # shapes stay on the Python side, which builds the body when
         # asked.
-        scene['mechlib'] = [{'name': k, 'description': v}
+        # The shelf: a name, a line about it, and what to call the
+        # bodies built from it. A part is known by what it is - a mount
+        # is MT1 - and the model is where that is written down, so a
+        # front end adding one has the name to hand and a model of the
+        # user's own says it the same way the stock does.
+        scene['mechlib'] = [{'name': k, 'description': v,
+                             'prefix': mechanics_model_prefix(k)}
                             for k, v in mechanics_models().items()]
+        # What a shape of each kind looks like when it is first put
+        # down, so a front end can offer a body of one without holding
+        # its own answer to what a new circle is. The sizes are a
+        # bench's: a front end showing kilometres is expected to scale
+        # them to what it is showing.
+        scene['newshapes'] = new_shapes()
+        # The assemblies a front end can offer: an element and the
+        # parts that hold it, built by name rather than by four
+        # numbers. Not on the model shelf above - a model holds
+        # shapes, and the first piece of every one of these is an
+        # element.
+        scene['assemblies'] = assembly_kinds()
         # How deep the trace went, which is not a property of any
         # element but decides how much of the picture there is.
         scene['rules'] = self.rules.to_dict()

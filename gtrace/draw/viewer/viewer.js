@@ -362,18 +362,41 @@ var ALIGN_ITEMS = [
 ];
 
 /*
+ * How wide a view the sizes in the scene's newshapes channel are drawn
+ * for, in metres. They are a bench's sizes - a 20 mm plate, a 5 mm
+ * hole - which is right when what is on screen is a part, and
+ * invisible when it is three kilometres of interferometer. A shape put
+ * down on the layout is therefore scaled by how far the view has got
+ * from this, so that + Circle always leaves something that can be seen
+ * and taken hold of, whatever it is put down on.
+ */
+var SHAPE_REF_VIEW = 0.2;
+
+/*
  * The shapes a part can be drawn from, as the editor offers them.
  * The labels are the button row; the type is what an add message
  * names, and what shape_from_dict builds on the Python side.
  */
 var SHAPE_KINDS = [
-    {type: 'rectangle', label: '+ Rect'},
-    {type: 'circle', label: '+ Circle'},
-    {type: 'line', label: '+ Line'},
-    {type: 'polyline', label: '+ Poly'},
-    {type: 'arc', label: '+ Arc'},
-    {type: 'text', label: '+ Text'}
+    {type: 'rectangle', label: '+ Rect', prefix: 'RECT'},
+    {type: 'circle', label: '+ Circle', prefix: 'CIRC'},
+    {type: 'line', label: '+ Line', prefix: 'LINE'},
+    {type: 'polyline', label: '+ Poly', prefix: 'POLY'},
+    {type: 'arc', label: '+ Arc', prefix: 'ARC'},
+    {type: 'text', label: '+ Text', prefix: 'TEXT'}
 ];
+
+/*
+ * What a body of one shape is called, before the number. A drawing
+ * rather than a part, so it is named for what it is drawn as: CIRC1
+ * for a circle put down on the bench, RECT1 for a plate.
+ */
+function shapeKindPrefix(type) {
+    for (var i = 0; i < SHAPE_KINDS.length; i++) {
+        if (SHAPE_KINDS[i].type === type) { return SHAPE_KINDS[i].prefix; }
+    }
+    return 'H';
+}
 
 /*
  * The rows the panel shows for each kind of shape, and how each row
@@ -388,7 +411,10 @@ var SHAPE_FIELDS = {
         {key: 'x', label: 'Corner x', unit: 'mm'},
         {key: 'y', label: 'Corner y', unit: 'mm'},
         {key: 'width', label: 'Width', unit: 'mm'},
-        {key: 'height', label: 'Height', unit: 'mm'}
+        {key: 'height', label: 'Height', unit: 'mm'},
+        {key: 'angle', label: 'Angle', unit: 'deg'},
+        {key: 'px', label: 'Pivot x', unit: 'mm'},
+        {key: 'py', label: 'Pivot y', unit: 'mm'}
     ],
     circle: [
         {key: 'cx', label: 'Center x', unit: 'mm'},
@@ -455,6 +481,12 @@ function shapeFieldValue(s, key) {
     case 'startangle': return normAngle(s.startangle) * DEG;
     case 'stopangle': return normAngle(s.stopangle) * DEG;
     case 'rotation': return normAngle(s.rotation) * DEG;
+    case 'angle': return normAngle(s.angle || 0) * DEG;
+    // The pivot rows show what the rectangle turns about, which is its
+    // own middle until it is told otherwise; typing into one is what
+    // tells it otherwise.
+    case 'px': return rectanglePivot(s)[0] / MM;
+    case 'py': return rectanglePivot(s)[1] / MM;
     case 'text': return s.text;
     default: return s[key];
     }
@@ -481,7 +513,10 @@ function shapeFieldAttrs(s, key, value) {
     case 'radius': attrs[key] = value * MM; break;
     case 'startangle':
     case 'stopangle':
-    case 'rotation': attrs[key] = value / DEG; break;
+    case 'rotation':
+    case 'angle': attrs[key] = value / DEG; break;
+    case 'px': attrs.pivot = [value * MM, rectanglePivot(s)[1]]; break;
+    case 'py': attrs.pivot = [rectanglePivot(s)[0], value * MM]; break;
     case 'text': attrs.text = value; break;
     default: attrs[key] = value;
     }
@@ -501,8 +536,8 @@ function shapeBounds(s) {
         break;
     case 'polyline': xs = s.x.slice(); ys = s.y.slice(); break;
     case 'rectangle':
-        xs = [s.point[0], s.point[0] + s.width];
-        ys = [s.point[1], s.point[1] + s.height];
+        xs = rectangleCorners(s).map(function (p) { return p[0]; });
+        ys = rectangleCorners(s).map(function (p) { return p[1]; });
         break;
     case 'circle':
     case 'arc':
@@ -526,14 +561,41 @@ function shapeBounds(s) {
 var SHAPE_MIN = 0.0001;
 
 /*
- * The corners of a rectangle, lower left first and counterclockwise.
- * That is the order the corner grips are numbered in, so grip i is
- * dragged against corner i + 2 - the one that stays put.
+ * The point a rectangle turns about: the one it was given, or its own
+ * middle where it was given none. Null rather than the middle written
+ * out is what lets a rectangle that is moved keep turning about
+ * itself - the same rule draw.Rectangle.pivot_point applies.
+ */
+function rectanglePivot(s) {
+    if (s.pivot) { return [s.pivot[0], s.pivot[1]]; }
+    return [s.point[0] + s.width / 2, s.point[1] + s.height / 2];
+}
+
+/*
+ * The corners of a rectangle, lower left first and counterclockwise,
+ * as they stand after its own turn. That is the order the corner
+ * grips are numbered in, so grip i is dragged against corner i + 2 -
+ * the one that stays put.
  */
 function rectangleCorners(s) {
     var x = s.point[0], y = s.point[1];
-    return [[x, y], [x + s.width, y],
-            [x + s.width, y + s.height], [x, y + s.height]];
+    var cs = [[x, y], [x + s.width, y],
+              [x + s.width, y + s.height], [x, y + s.height]];
+    var a = s.angle || 0;
+    if (a === 0) { return cs; }
+    var q = rectanglePivot(s);
+    return cs.map(function (p) { return turnAbout(p, q, a); });
+}
+
+/*
+ * A scene point in the frame a rectangle was written in: the inverse
+ * of its own turn. Where a drag on a corner is worked out, since the
+ * width and the height are lengths along the rectangle's own axes.
+ */
+function rectangleUnturn(s, p) {
+    var a = s.angle || 0;
+    if (a === 0) { return [p[0], p[1]]; }
+    return turnAbout(p, rectanglePivot(s), -a);
 }
 
 /*
@@ -570,9 +632,14 @@ function shapePoints(s) {
     case 'line': return [s.start, s.stop];
     case 'polyline':
         return s.x.map(function (x, i) { return [x, s.y[i]]; });
-    case 'rectangle':
-        return rectangleCorners(s).concat(
-            [[s.point[0] + s.width / 2, s.point[1] + s.height / 2]]);
+    case 'rectangle': {
+        // The middle after the turn, which is the middle of the
+        // corners whether it turned about itself or about a point
+        // somewhere else.
+        var rc = rectangleCorners(s);
+        return rc.concat([[(rc[0][0] + rc[2][0]) / 2,
+                           (rc[0][1] + rc[2][1]) / 2]]);
+    }
     case 'circle':
     case 'arc': return [s.center];
     case 'text': return [s.point];
@@ -666,7 +733,13 @@ function shapeMoveAttrs(s, dx, dy) {
     case 'polyline':
         return {x: s.x.map(function (v) { return v + dx; }),
                 y: s.y.map(function (v) { return v + dy; })};
-    case 'rectangle':
+    case 'rectangle': {
+        // The pivot travels with the rectangle: a turn about a point
+        // left behind is a turn about a different part of the shape.
+        var ra = {point: [s.point[0] + dx, s.point[1] + dy]};
+        if (s.pivot) { ra.pivot = [s.pivot[0] + dx, s.pivot[1] + dy]; }
+        return ra;
+    }
     case 'text':
         return {point: [s.point[0] + dx, s.point[1] + dy]};
     case 'circle':
@@ -688,11 +761,41 @@ function shapeHandleAttrs(s, h, pt) {
         // The opposite corner stays put - that is what dragging a
         // corner of anything means - so the size is two absolute
         // values taken from it, and the lower left follows.
-        var f = rectangleCorners(s)[(h.i + 2) % 4];
-        var w = Math.max(SHAPE_MIN, Math.abs(pt[0] - f[0]));
-        var ht = Math.max(SHAPE_MIN, Math.abs(pt[1] - f[1]));
-        return {point: [pt[0] >= f[0] ? f[0] : f[0] - w,
-                        pt[1] >= f[1] ? f[1] : f[1] - ht],
+        //
+        // A rectangle turned about a point of its own is turned by a
+        // map that the drag does not change, so the arithmetic is the
+        // same one done in the frame it was written in: its turn then
+        // puts the answer back where the pointer is.
+        var a = s.angle || 0, w, ht, f;
+        if (!a || s.pivot) {
+            var q = rectangleUnturn(s, pt);
+            var cs = [[s.point[0], s.point[1]],
+                      [s.point[0] + s.width, s.point[1]],
+                      [s.point[0] + s.width, s.point[1] + s.height],
+                      [s.point[0], s.point[1] + s.height]];
+            f = cs[(h.i + 2) % 4];
+            w = Math.max(SHAPE_MIN, Math.abs(q[0] - f[0]));
+            ht = Math.max(SHAPE_MIN, Math.abs(q[1] - f[1]));
+            return {point: [q[0] >= f[0] ? f[0] : f[0] - w,
+                            q[1] >= f[1] ? f[1] : f[1] - ht],
+                    width: w, height: ht};
+        }
+        // A rectangle that turns about its own middle is turned about
+        // a point the drag *does* move, so there is no fixed frame to
+        // work in: the new rectangle is the one whose own axes span
+        // from the corner that stays to the pointer, and its middle -
+        // which is what it turns about - is halfway between the two.
+        f = rectangleCorners(s)[(h.i + 2) % 4];
+        var ca = Math.cos(a), sa = Math.sin(a);
+        var dx = pt[0] - f[0], dy = pt[1] - f[1];
+        var du = dx * ca + dy * sa, dv = -dx * sa + dy * ca;
+        w = Math.max(SHAPE_MIN, Math.abs(du));
+        ht = Math.max(SHAPE_MIN, Math.abs(dv));
+        // Signed, so the corner that stays is exactly where it was
+        // even where the drag has been held at the smallest size.
+        var su = du < 0 ? -w : w, sv = dv < 0 ? -ht : ht;
+        var ox = f[0] + su * ca - sv * sa, oy = f[1] + su * sa + sv * ca;
+        return {point: [(f[0] + ox) / 2 - w / 2, (f[1] + oy) / 2 - ht / 2],
                 width: w, height: ht};
     }
     case 'radius':
@@ -777,6 +880,46 @@ function turnedShape(s, da, pivot) {
 }
 
 /*
+ * A serialized shape with every length in it multiplied, and every
+ * angle left alone: the same shape at another size. What + Shape puts
+ * down, since the sizes it starts from are a bench's and the view may
+ * be anything.
+ *
+ * The lengths are named per kind, as they are everywhere else here,
+ * rather than guessed at by looking for numbers - a rotation and a
+ * radius are both numbers, and only one of them scales.
+ */
+function scaledShape(s, k) {
+    var out = shapeWith(s, {});
+    function pt(p) { return [p[0] * k, p[1] * k]; }
+    switch (s.type) {
+    case 'line':
+        out.start = pt(s.start); out.stop = pt(s.stop);
+        break;
+    case 'polyline':
+        out.x = s.x.map(function (v) { return v * k; });
+        out.y = s.y.map(function (v) { return v * k; });
+        break;
+    case 'rectangle':
+        out.point = pt(s.point);
+        out.width = s.width * k;
+        out.height = s.height * k;
+        if (s.pivot) { out.pivot = pt(s.pivot); }
+        break;
+    case 'circle':
+        out.center = pt(s.center); out.radius = s.radius * k;
+        break;
+    case 'arc':
+        out.center = pt(s.center); out.radius = s.radius * k;
+        break;
+    case 'text':
+        out.point = pt(s.point); out.height = s.height * k;
+        break;
+    }
+    return out;
+}
+
+/*
  * A serialized shape with some of its attributes replaced: what a
  * drag draws while it is being made, from exactly the attributes it
  * will send when it is let go.
@@ -842,8 +985,11 @@ function distToShape(s, x, y) {
 function shapeEncloses(s, x, y) {
     switch (s.type) {
     case 'rectangle':
-        return x >= s.point[0] && x <= s.point[0] + s.width
-            && y >= s.point[1] && y <= s.point[1] + s.height;
+        if (!s.angle) {
+            return x >= s.point[0] && x <= s.point[0] + s.width
+                && y >= s.point[1] && y <= s.point[1] + s.height;
+        }
+        return pointInPolygon(x, y, rectangleCorners(s));
     case 'circle':
         return Math.hypot(x - s.center[0], y - s.center[1]) <= s.radius;
     case 'polyline':
@@ -1073,6 +1219,14 @@ function Viewer(container, scene, options) {
     // where its handles were last drawn (screen coordinates, for the
     // mousedown hit test).
     this.dragMechResize = null;
+    // The one shape of a hand-drawn body, while it is being taken hold
+    // of by a grip: what the panel rows are built for, where those
+    // grips were last drawn (screen coordinates, for the mousedown hit
+    // test), and the drag itself.
+    this._mechShapeKind = null;
+    this._mechShapePts = null;
+    this.mechShapeHandles = [];
+    this.dragMechShape = null;
     this._handlePts = null;
 
     // Measuring. The tool is a mode because it takes two clicks, and
@@ -1287,6 +1441,74 @@ Viewer.prototype._build = function () {
         this.mechMenu = {button: hbtn, menu: hmenu, wrap: hwrap};
         this._refreshMechMenu();
 
+        // A shape on its own, behind one more. A part off the library
+        // shelf is a thing with a name; this is a line on the drawing -
+        // a wall, an aperture, a table edge, a note - and what comes of
+        // it is a body of that one shape, which is then moved, turned
+        // and dimensioned like any other. The kinds are the editor's,
+        // and what each looks like when it is first put down comes from
+        // the scene, so there is one answer to what a new circle is.
+        // An element and the parts that hold it, in one go: a mirror
+        // in a mount on a pedestal in a fork is what is actually bolted
+        // to a bench, and building that out of four adds and three
+        // attachments is four steps of undo and three chances to get an
+        // offset wrong. The kinds ride in the scene, like the model
+        // shelf, so the page deals in names.
+        // Names of their own: var is function-scoped, and the Align
+        // button further down builds an 'awrap' and an 'amenu' of its
+        // own. Sharing the name left both click handlers closing over
+        // whichever ran last, so + Assembly opened the Align menu.
+        var asmWrap = htmlEl('div', 'gt-add');
+        var asmBtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Assembly');
+        asmBtn.title = 'Add an element with the parts that hold it, at the '
+            + 'centre of the view';
+        var asmMenu = htmlEl('div', 'gt-menu');
+        asmMenu.style.display = 'none';
+        asmBtn.addEventListener('click', function () {
+            var open = asmMenu.style.display === 'none';
+            self.closeAddMenus();
+            if (open) {
+                asmMenu.style.display = '';
+                asmBtn.classList.add('gt-open');
+            }
+        });
+        asmWrap.appendChild(asmBtn);
+        asmWrap.appendChild(asmMenu);
+        addRow.appendChild(asmWrap);
+        self.addMenus.push({button: asmBtn, menu: asmMenu, wrap: asmWrap});
+        this.assemblyMenu = {button: asmBtn, menu: asmMenu, wrap: asmWrap};
+        this._refreshAssemblyMenu();
+
+        var swrap = htmlEl('div', 'gt-add');
+        var sbtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Shape');
+        sbtn.title = 'Draw a shape at the centre of the view, sized to '
+            + 'what is on screen';
+        var smenu = htmlEl('div', 'gt-menu');
+        smenu.style.display = 'none';
+        SHAPE_KINDS.forEach(function (kind) {
+            var item = htmlEl('button', 'gt-menuitem',
+                              kind.label.replace(/^\+ /, ''));
+            item.title = 'Draw a ' + kind.type + ' at the centre of the view';
+            item.addEventListener('click', function () {
+                self.closeAddMenus();
+                self.addShapeBody(kind.type);
+            });
+            smenu.appendChild(item);
+        });
+        sbtn.addEventListener('click', function () {
+            var open = smenu.style.display === 'none';
+            self.closeAddMenus();
+            if (open) {
+                smenu.style.display = '';
+                sbtn.classList.add('gt-open');
+            }
+        });
+        swrap.appendChild(sbtn);
+        swrap.appendChild(smenu);
+        addRow.appendChild(swrap);
+        self.addMenus.push({button: sbtn, menu: smenu, wrap: swrap});
+        this.shapeMenu = {button: sbtn, menu: smenu, wrap: swrap};
+
         head.appendChild(addRow);
     }
 
@@ -1439,6 +1661,16 @@ Viewer.prototype._build = function () {
         this.modelDesc.spellcheck = false;
         this.modelDesc.placeholder = 'one line, for the menu';
         mbody.appendChild(this.modelDesc);
+        // What the bodies built from it are called, before the number.
+        // A part is known by what it is - a mount is MT1 - and this is
+        // where a part of one's own says so, as the stock does.
+        this.modelPrefix = htmlEl('input', 'gt-input gt-input-text');
+        this.modelPrefix.type = 'text';
+        this.modelPrefix.spellcheck = false;
+        this.modelPrefix.placeholder = 'name prefix, e.g. MT';
+        this.modelPrefix.title = 'What to call the parts built from this: '
+            + 'MT gives MT1, MT2. Left empty, they are named H1, H2';
+        mbody.appendChild(this.modelPrefix);
         var mrow = htmlEl('div', 'gt-filebuttons');
         var saveModelBtn = htmlEl('button', 'gt-btn', 'Save to library');
         saveModelBtn.title = 'Register these shapes under that name';
@@ -1593,7 +1825,9 @@ Viewer.prototype._build = function () {
                   ['Remove', 'take it away'],
                   ['↑ / ↓', 'draw it earlier or later'],
                   ['Undo, or Ctrl + Z', 'put the last edit back'],
-                  ['Save to library', 'register the part under a name']);
+                  ['Save to library',
+                   'register the part under a name, and what to call '
+                   + 'the parts built from it']);
     }
     if (this.opts.onEdit && !editing) {
         rows.push(['Drag an optics or a laser', 'move it'],
@@ -1602,6 +1836,10 @@ Viewer.prototype._build = function () {
                   ['Drag a selected body', 'move it'],
                   ['Drag a corner handle', 'cut a breadboard to size'],
                   ['+ Mechanics', 'add a part from the model library'],
+                  ['+ Assembly', 'an element with the mount, pedestal '
+                   + 'and fork that hold it'],
+                  ['+ Shape', 'draw one at the centre of the view, '
+                   + 'sized to what is on screen'],
                   ['Attached to', 'seat a mount on an optics; '
                    + '(free) detaches it in place'],
                   ['Ctrl + drag', 'drop it square on a beam'],
@@ -2696,6 +2934,14 @@ Viewer.prototype._buildMechPanel = function () {
     this.mechFields = built.fields;
     this.mechBody.appendChild(built.table);
 
+    // The numbers of the one shape a hand-drawn body is, under the
+    // pose rows: a body of one shape is a drawing, and its radius or
+    // its width is the thing about it worth editing. A table of its
+    // own because the rows differ by kind - the same rows the shape
+    // editor shows, in the frame the shape is written in.
+    this.mechShapeRows = htmlEl('div', 'gt-shaperows');
+    this.mechBody.appendChild(this.mechShapeRows);
+
     if (this.onEdit) {
         var foot = htmlEl('div', 'gt-props-foot');
         var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
@@ -2704,6 +2950,36 @@ Viewer.prototype._buildMechPanel = function () {
         foot.appendChild(delBtn);
         this.mechBody.appendChild(foot);
     }
+};
+
+/*
+ * What a row of those says, and what typing into one sends.
+ *
+ * The rows are the shape's own, so the arithmetic is the shape's own
+ * too: shapeFieldValue and shapeFieldAttrs, the pair the editor uses,
+ * over the shape in the body's frame. What goes out is the whole
+ * shape, since that is what a layout takes - one attribute of a body,
+ * not a message about a shape somewhere in a list.
+ */
+Viewer.prototype._commitMechShapeField = function (key, el) {
+    var m = this._selectedMech();
+    if (!m || !m.shape || !this.onEdit) { return null; }
+    var value = parseField(el.value,
+                           fieldSpecUnit(SHAPE_FIELDS[m.shape.type], key));
+    if (typeof value === 'number' && isNaN(value)) {
+        this._refreshMechPanel();
+        return null;
+    }
+    var attrs = shapeFieldAttrs(m.shape, key, value);
+    var shape = shapeWith(m.shape, attrs);
+    // A value that is already there is not an edit.
+    if (JSON.stringify(shape) === JSON.stringify(m.shape)) {
+        this._refreshMechPanel();
+        return null;
+    }
+    var msg = {op: 'set', target: m.name, attrs: {shape: shape}};
+    this.onEdit(msg);
+    return msg;
 };
 
 /*
@@ -3024,14 +3300,20 @@ Viewer.prototype.moveShape = function (by) {
 /*
  * Register the part under the name in the panel.
  */
-Viewer.prototype.saveModel = function (name, description) {
+Viewer.prototype.saveModel = function (name, description, prefix) {
     if (!this.onEdit) { return null; }
     name = (name || (this.modelInput && this.modelInput.value) || '').trim();
     if (!name) { return null; }
     if (description === undefined) {
         description = (this.modelDesc && this.modelDesc.value) || '';
     }
+    if (prefix === undefined) {
+        prefix = ((this.modelPrefix && this.modelPrefix.value) || '').trim();
+    }
     var msg = {op: 'save_model', name: name, description: description};
+    // Left empty it is left unsaid, rather than sent as an empty name
+    // for Python to turn down.
+    if (prefix) { msg.prefix = prefix; }
     this.onEdit(msg);
     return msg;
 };
@@ -3321,20 +3603,79 @@ Viewer.prototype._refreshMechMenu = function () {
         item.title = entry.description || '';
         item.addEventListener('click', function () {
             self.closeAddMenus();
-            self.addMechanics(entry.name);
+            self.addMechanics(entry.name, entry.prefix);
         });
         hm.menu.appendChild(item);
     });
 };
 
 /*
+ * Fill the + Assembly menu from the kinds the scene carries. Like the
+ * model shelf, the building is Python's: the menu deals in names.
+ */
+Viewer.prototype._refreshAssemblyMenu = function () {
+    var self = this;
+    var am = this.assemblyMenu;
+    if (!am) { return; }
+    var kinds = this.scene.assemblies || [];
+    am.wrap.style.display = kinds.length ? '' : 'none';
+    am.menu.textContent = '';
+    kinds.forEach(function (entry) {
+        var item = htmlEl('button', 'gt-menuitem', entry.label || entry.kind);
+        item.title = entry.description || '';
+        item.addEventListener('click', function () {
+            self.closeAddMenus();
+            self.addAssembly(entry.kind, entry.prefix);
+        });
+        am.menu.appendChild(item);
+    });
+};
+
+/*
+ * Add an assembly at the centre of the current view: the element and
+ * the parts that hold it, as one edit and so as one step of undo.
+ *
+ * Only the element's name is chosen here, so that the selection can
+ * follow it without waiting for a reply. What the parts are called is
+ * Python's, which is where the free numbers are known.
+ */
+Viewer.prototype.addAssembly = function (kind, prefix) {
+    if (!this.onEdit) { return null; }
+    if (prefix === undefined || prefix === null) {
+        var kinds = this.scene.assemblies || [];
+        for (var i = 0; i < kinds.length; i++) {
+            if (kinds[i].kind === kind) { prefix = kinds[i].prefix; }
+        }
+    }
+    var name = this._freshOpticName(prefix || 'M');
+    // Facing back down -x, like a new mirror: that is where the beams
+    // already in a layout tend to come from.
+    var msg = {op: 'add', type: 'Assembly', kind: kind, name: name,
+               params: {center: [this.cx, this.cy], angle: Math.PI}};
+    this.selectedOptic = name;
+    this.selectedMech = null;
+    this.selectedSource = null;
+    this.selectedDim = null;
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
  * Add a library model at the centre of the current view. The name is
  * chosen here, like a new optics' name, so the viewer can select what
  * it asked for as soon as the scene comes back.
+ *
+ * What it is called before the number is the model's to say - a mount
+ * is MT1, a fork FK1 - and the shelf carries it. A model that says
+ * nothing gets H, which is what everything got before the models said
+ * anything.
  */
-Viewer.prototype.addMechanics = function (model) {
+Viewer.prototype.addMechanics = function (model, prefix) {
     if (!this.onEdit) { return null; }
-    var name = this._freshOpticName('H');
+    if (prefix === undefined || prefix === null) {
+        prefix = this._modelPrefix(model);
+    }
+    var name = this._freshOpticName(prefix || 'H');
     var msg = {op: 'add', type: 'Mechanics', name: name,
                params: {model: model, center: [this.cx, this.cy]}};
     this.selectedMech = name;
@@ -3343,6 +3684,63 @@ Viewer.prototype.addMechanics = function (model) {
     this.selectedDim = null;
     this.onEdit(msg);
     return msg;
+};
+
+/*
+ * What the shelf calls the bodies built from a model, for a caller
+ * that has the name and not the entry.
+ */
+Viewer.prototype._modelPrefix = function (model) {
+    var lib = this.scene.mechlib || [];
+    for (var i = 0; i < lib.length; i++) {
+        if (lib[i].name === model) { return lib[i].prefix || null; }
+    }
+    return null;
+};
+
+/*
+ * Put a shape of one kind down at the centre of the view, as a body of
+ * its own. Not addShape, which is the shape editor's and puts one into
+ * the part being drawn: on a bench a shape is a body, and a body is
+ * what everything here knows how to move, turn and measure.
+ *
+ * What the shape looks like comes from the scene - Python's answer to
+ * what a new circle is, the same one the shape editor puts down - and
+ * is scaled by how wide the view is, since those sizes are a bench's
+ * and this may be a layout kilometres across. The shape is drawn about
+ * the origin and the body is placed, which is the division everything
+ * else here keeps: where a body is, is its pose.
+ */
+Viewer.prototype.addShapeBody = function (kind) {
+    if (!this.onEdit) { return null; }
+    var lib = this.scene.newshapes || {};
+    var base = lib[kind];
+    if (!base) { return null; }
+    var name = this._freshOpticName(shapeKindPrefix(kind));
+    var msg = {op: 'add', type: 'Mechanics', name: name,
+               params: {center: [this.cx, this.cy],
+                        shapes: [scaledShape(base, this.shapeScale())]}};
+    this.selectedMech = name;
+    this.selectedOptic = null;
+    this.selectedSource = null;
+    this.selectedDim = null;
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * How much to scale a bench-sized shape by, for the view as it stands:
+ * the width on screen against the width those sizes were drawn for. A
+ * view that has no width yet - the very first render, before anything
+ * has been laid out - leaves them as they are rather than multiplying
+ * by nothing.
+ */
+Viewer.prototype.shapeScale = function () {
+    var w = this.svg && this.svg.clientWidth;
+    if (!w || !this.scale || !isFinite(this.scale)) { return 1; }
+    var visible = w / this.scale;
+    if (!isFinite(visible) || visible <= 0) { return 1; }
+    return visible / SHAPE_REF_VIEW;
 };
 
 Viewer.prototype._freshOpticName = function (prefix) {
@@ -3915,6 +4313,7 @@ Viewer.prototype._selectedMech = function () {
 };
 
 Viewer.prototype._refreshMechPanel = function () {
+    var self = this;
     var m = this._selectedMech();
     refreshFieldTable(this.mechFields, MECH_FIELDS,
                       m ? function (key) { return mechFieldValue(m, key); }
@@ -3962,6 +4361,31 @@ Viewer.prototype._refreshMechPanel = function () {
         }
     }
 
+    // The shape rows, when this body is one shape drawn by hand. A
+    // new table whenever the kind changes, since the rows themselves
+    // are different - the same rule the shape editor's panel keeps.
+    var shape = m ? m.shape : null;
+    var kind = shape ? shape.type : null;
+    if (kind !== this._mechShapeKind) {
+        this.mechShapeRows.textContent = '';
+        this.mechShapeFields = null;
+        this._mechShapeKind = kind;
+        if (kind && SHAPE_FIELDS[kind]) {
+            var sbuilt = buildFieldTable(
+                SHAPE_FIELDS[kind], !!this.onEdit,
+                function (key, el) { self._commitMechShapeField(key, el); },
+                function () { self._refreshMechPanel(); });
+            this.mechShapeFields = sbuilt.fields;
+            this.mechShapeRows.appendChild(sbuilt.table);
+        }
+    }
+    if (this.mechShapeFields) {
+        refreshFieldTable(this.mechShapeFields, SHAPE_FIELDS[kind],
+                          shape ? function (key) {
+                              return shapeFieldValue(shape, key);
+                          } : null);
+    }
+
     // An attached body has no pose of its own: the rows show where the
     // host put it, and refuse the keyboard rather than letting a value
     // be typed only for Python to turn it down.
@@ -3970,7 +4394,6 @@ Viewer.prototype._refreshMechPanel = function () {
     // swings about the post, and the Angle row is how it is said
     // exactly.
     var swings = attached && m.fix_rotation === false;
-    var self = this;
     ['cx', 'cy', 'angle'].forEach(function (key) {
         var f = self.mechFields[key];
         if (!f || !f.editable) { return; }
@@ -4017,6 +4440,21 @@ Viewer.prototype._commitMechField = function (key, input) {
         this.onEdit({op: 'set', target: m.name,
                      attrs: {attached_to: input.value === ''
                              ? null : input.value}});
+        return;
+    }
+
+    // A checkbox says what it is by being checked. Every other row
+    // here is a number read out of its value, and reading a checkbox
+    // that way gets 'on' - not a number, so the panel put itself back
+    // and nothing was ever sent: the row read as one that could be
+    // clicked and did nothing.
+    var field = null;
+    for (var i = 0; i < MECH_FIELDS.length; i++) {
+        if (MECH_FIELDS[i].key === key) { field = MECH_FIELDS[i]; }
+    }
+    if (field && field.bool) {
+        if (input.checked === !!mechFieldValue(m, key)) { return; }
+        this.onEdit(mechFieldMessage(m, key, input.checked));
         return;
     }
 
@@ -4727,11 +5165,21 @@ function shapeToSVG(s) {
         var pts = [];
         for (var i = 0; i < s.x.length; i++) { pts.push(s.x[i] + ',' + s.y[i]); }
         return svgEl('polyline', {points: pts.join(' ')});
-    case 'rectangle':
+    case 'rectangle': {
         // 'point' is the lower left corner; the scene group is y-up so
         // the SVG rect covers [point, point + (width, height)] directly.
-        return svgEl('rect', {x: s.point[0], y: s.point[1],
-                              width: s.width, height: s.height});
+        // A turn is an SVG rotate about the pivot - the same angle in
+        // the same scene coordinates - so a rectangle square to the
+        // axes is written exactly as it always was.
+        var ra = {x: s.point[0], y: s.point[1],
+                  width: s.width, height: s.height};
+        if (s.angle) {
+            var q = rectanglePivot(s);
+            ra.transform = ('rotate(' + (s.angle * DEG) + ' '
+                            + q[0] + ' ' + q[1] + ')');
+        }
+        return svgEl('rect', ra);
+    }
     case 'circle':
         return svgEl('circle', {cx: s.center[0], cy: s.center[1], r: s.radius});
     case 'arc':
@@ -5246,8 +5694,7 @@ Viewer.prototype.bbox = function () {
                 for (var i = 0; i < s.x.length; i++) { add(s.x[i], s.y[i]); }
                 break;
             case 'rectangle':
-                add(s.point[0], s.point[1]);
-                add(s.point[0] + s.width, s.point[1] + s.height);
+                rectangleCorners(s).forEach(function (p) { add(p[0], p[1]); });
                 break;
             case 'circle':
             case 'arc':
@@ -5447,6 +5894,15 @@ Viewer.prototype._bindEvents = function () {
                 ev.preventDefault();
                 return;
             }
+            var sidx = self._pickMechShapeHandle(px, py);
+            if (sidx >= 0 && self._selectedMech()) {
+                self._beginMechShapeDrag(self._selectedMech(), sidx);
+                dragging = true; moved = 0;
+                lastX = ev.clientX; lastY = ev.clientY;
+                self.svg.classList.add('gt-dragging');
+                ev.preventDefault();
+                return;
+            }
         }
 
         // Grabbing an optics or a laser starts an edit; grabbing
@@ -5513,6 +5969,13 @@ Viewer.prototype._bindEvents = function () {
                 self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
             return;
         }
+        if (self.dragMechShape) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateMechShapeDrag(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top));
+            return;
+        }
         if (self.dragPoint) {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
@@ -5575,6 +6038,15 @@ Viewer.prototype._bindEvents = function () {
             self._updateMechResize(
                 self.screenToScene(ev.clientX - rz.left, ev.clientY - rz.top));
             self._endMechResize(moved >= 4);
+            return;
+        }
+        if (self.dragMechShape) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            var sr = self.svg.getBoundingClientRect();
+            self._updateMechShapeDrag(
+                self.screenToScene(ev.clientX - sr.left, ev.clientY - sr.top));
+            self._endMechShapeDrag(moved >= 4);
             return;
         }
         if (self.dragPoint) {
@@ -6195,17 +6667,36 @@ Viewer.prototype._pickOptic = function (sx, sy) {
  * breadboard is huge, and a circle around it would cover the bench.
  * Of several hits the smallest wins, so a mount standing on a
  * breadboard is not shadowed by it.
+ *
+ * A body drawn as a straight line has an outline of no area at all,
+ * and a point is never inside one of those - so a click that passes
+ * near the outline counts too, at the same reach a shape is taken hold
+ * of by in the editor. A line encloses nothing and is reached by its
+ * outline alone, here as there.
  */
 Viewer.prototype._pickMech = function (sx, sy) {
     var best = null, bestArea = Infinity;
     var mechs = this.scene.mechanics || [];
+    var reach = SHAPE_PICK / this.scale;
     for (var i = 0; i < mechs.length; i++) {
         var m = mechs[i];
         var g = this.layerGroups[m.layer];
         if (g && !g.visible) { continue; }
         if (!m.outline || m.outline.length < 3) { continue; }
-        if (!pointInPolygon(sx, sy, m.outline)) { continue; }
         var area = polygonArea(m.outline);
+        if (!pointInPolygon(sx, sy, m.outline)) {
+            // Only for a body there is no inside of: a click near the
+            // edge of a breadboard is a click on the bench beside it,
+            // and has always been.
+            if (Math.abs(area) > 1e-12) { continue; }
+            var near = Infinity;
+            for (var k = 0; k < m.outline.length; k++) {
+                near = Math.min(near, distToSegment(
+                    sx, sy, m.outline[k],
+                    m.outline[(k + 1) % m.outline.length]));
+            }
+            if (near > reach) { continue; }
+        }
         if (area < bestArea) { best = m; bestArea = area; }
     }
     return best;
@@ -6260,6 +6751,30 @@ Viewer.prototype._setMechOutlinePts = function (worldPts, dragging) {
 };
 
 /*
+ * A point of a body's own frame, on the bench: turned by its pose and
+ * carried to where it stands. The shapes of a body are written in that
+ * frame, so this is what stands their grips in the picture.
+ */
+function mechToWorld(m, p) {
+    var a = m.rotationAngle || 0;
+    var c = Math.cos(a), sn = Math.sin(a);
+    return [m.center[0] + p[0] * c - p[1] * sn,
+            m.center[1] + p[0] * sn + p[1] * c];
+}
+
+/*
+ * The way back: a point on the bench, in the body's own frame. What a
+ * drag has to come through before it can say anything about a shape,
+ * since a shape's numbers are written in that frame.
+ */
+function mechToLocal(m, p) {
+    var a = m.rotationAngle || 0;
+    var c = Math.cos(a), sn = Math.sin(a);
+    var dx = p[0] - m.center[0], dy = p[1] - m.center[1];
+    return [dx * c + dy * sn, -dx * sn + dy * c];
+}
+
+/*
  * Stand the corner handles on a rectangle, remembering where they are
  * for the mousedown hit test.
  */
@@ -6280,6 +6795,108 @@ Viewer.prototype._hideMechHandles = function () {
     (this.mechHandles || []).forEach(function (el) {
         el.style.display = 'none';
     });
+};
+
+/*
+ * Stand the grips of a hand-drawn body's one shape where that shape
+ * is: the four corners of a rectangle, a point on the rim of a circle,
+ * the ends of a line, a vertex of an outline. The same grips the shape
+ * editor offers, on the bench instead of in the frame the part is
+ * drawn in - so the pool grows to whatever the shape needs, since an
+ * outline has as many vertices as it was given.
+ */
+Viewer.prototype._placeMechShapeHandles = function (m, shape) {
+    var self = this;
+    var grips = shapeHandles(shape);
+    while (this.mechShapeHandles.length < grips.length) {
+        var el = svgEl('rect', {'class': 'gt-handle', width: 7, height: 7});
+        el.style.display = 'none';
+        this.overlayGroup.appendChild(el);
+        this.mechShapeHandles.push(el);
+    }
+    this._mechShapePts = grips.map(function (h) {
+        var w = mechToWorld(m, h.p);
+        return self.sceneToScreen(w[0], w[1]);
+    });
+    this._mechShapeRoles = grips;
+    this.mechShapeHandles.forEach(function (el, i) {
+        if (i < self._mechShapePts.length) {
+            el.setAttribute('x', self._mechShapePts[i][0] - 3.5);
+            el.setAttribute('y', self._mechShapePts[i][1] - 3.5);
+            el.style.display = '';
+        } else {
+            el.style.display = 'none';
+        }
+    });
+};
+
+Viewer.prototype._hideMechShapeHandles = function () {
+    this._mechShapePts = null;
+    this._mechShapeRoles = null;
+    (this.mechShapeHandles || []).forEach(function (el) {
+        el.style.display = 'none';
+    });
+};
+
+/*
+ * The shape grip under a screen point, or -1. The same reach as any
+ * other grip here.
+ */
+Viewer.prototype._pickMechShapeHandle = function (px, py) {
+    if (!this._mechShapePts) { return -1; }
+    for (var i = 0; i < this._mechShapePts.length; i++) {
+        if (Math.abs(px - this._mechShapePts[i][0]) <= 6
+                && Math.abs(py - this._mechShapePts[i][1]) <= 6) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+/*
+ * Dragging a grip of a hand-drawn body's shape: a radius, a corner, an
+ * end, a vertex.
+ *
+ * The arithmetic is the shape editor's - shapeHandleAttrs, the same
+ * function that answers the same question there - done in the body's
+ * own frame, since that is where the shape's numbers are written. What
+ * is sent on release is the shape itself, which Python builds again
+ * and refuses if it cannot be drawn, exactly as it does for a number
+ * typed into a row.
+ */
+Viewer.prototype._beginMechShapeDrag = function (mech, index) {
+    if (!mech || !mech.shape || !this._mechShapeRoles) { return; }
+    this.dragMechShape = {
+        mech: mech,
+        handle: this._mechShapeRoles[index],
+        shape: shapeWith(mech.shape, {})
+    };
+    this._updateOverlay();
+};
+
+Viewer.prototype._updateMechShapeDrag = function (scenePt) {
+    var d = this.dragMechShape;
+    if (!d) { return; }
+    var local = mechToLocal(d.mech, scenePt);
+    d.shape = shapeWith(d.shape,
+                        shapeHandleAttrs(d.shape, d.handle, local));
+    // The grip that is being held moves with the shape it is changing.
+    var grips = shapeHandles(d.shape);
+    if (grips[d.handle.i] && grips[d.handle.i].role === d.handle.role) {
+        d.handle = grips[d.handle.i];
+    }
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endMechShapeDrag = function (commit) {
+    var d = this.dragMechShape;
+    this.dragMechShape = null;
+    if (!d) { return; }
+    this._updateOverlay();
+    // A press on a grip that never moved decided nothing.
+    if (!commit || !this.onEdit) { return; }
+    this.onEdit({op: 'set', target: d.mech.name, attrs: {shape: d.shape}});
 };
 
 /*
@@ -7263,6 +7880,27 @@ Viewer.prototype._updateOverlay = function () {
         }
     }
 
+    // The grips of a hand-drawn body's one shape, and mid-drag the
+    // box that shape is becoming. A body off the library shelf is cut
+    // to size by the corner handles above instead, and an attached one
+    // is not edited here at all.
+    if (this.dragMechShape) {
+        var ds = this.dragMechShape;
+        this._setMechOutlinePts(
+            shapeBounds(ds.shape).map(function (p) {
+                return mechToWorld(ds.mech, p);
+            }), true);
+        this._placeMechShapeHandles(ds.mech, ds.shape);
+    } else {
+        var sm = this._selectedMech();
+        if (this.onEdit && sm && sm.shape && !sm.attached_to
+                && !this.dragMech && !this.dragMechResize) {
+            this._placeMechShapeHandles(sm, sm.shape);
+        } else {
+            this._hideMechShapeHandles();
+        }
+    }
+
     // The beam the Along beam row names, marked along its whole length
     // so that the name in the panel and a line in the picture are the
     // same thing. Only while that panel is up: it belongs to the
@@ -7319,6 +7957,18 @@ Viewer.prototype._updateStatus = function () {
             (mr.round
                 ? '⌀ ' + fmtLen(mr.width)
                 : fmtLen(mr.width) + '  ×  ' + fmtLen(mr.height));
+        return;
+    }
+    // A shape being taken hold of by one of its grips: the number
+    // that grip is setting, so the drag says what it is doing.
+    var ms = this.dragMechShape;
+    if (ms) {
+        var b = shapeBounds(ms.shape);
+        this.statusBar.textContent = ms.mech.name + ':  ' +
+            (ms.shape.type === 'circle'
+                ? '⌀ ' + fmtLen(2 * ms.shape.radius)
+                : fmtLen(Math.abs(b[1][0] - b[0][0])) + '  ×  '
+                  + fmtLen(Math.abs(b[2][1] - b[1][1])));
         return;
     }
     var pd = this.dragPoint;
@@ -7544,6 +8194,7 @@ Viewer.prototype.setScene = function (scene) {
     this._refreshDisplayPanel();
     this._refreshRulesPanel();
     this._refreshMechMenu();
+    this._refreshAssemblyMenu();
     this._refreshUndo();
     this._setReadout(null);
 
@@ -7634,7 +8285,24 @@ var GTraceViewer = {
     // What an embedder may not make the viewer shorter than, whether by
     // dragging the grip or by working a height out for itself. Exported
     // so that the widget does not carry a second copy of the number.
-    MIN_HEIGHT: MIN_HEIGHT
+    MIN_HEIGHT: MIN_HEIGHT,
+    // What the page makes of a shape's geometry. Exported so that it
+    // can be held against gtrace without a browser: a rectangle now
+    // carries a turn of its own, and the page works out its corners,
+    // what encloses a click and what a drag sets from the same four
+    // numbers Python does - two answers to one question that have to
+    // agree.
+    rectanglePivot: rectanglePivot,
+    rectangleCorners: rectangleCorners,
+    turnedShape: turnedShape,
+    shapeEncloses: shapeEncloses,
+    shapeBounds: shapeBounds,
+    shapeSnapPoints: shapeSnapPoints,
+    shapeMoveAttrs: shapeMoveAttrs,
+    shapeHandles: shapeHandles,
+    shapeHandleAttrs: shapeHandleAttrs,
+    shapeFieldValue: shapeFieldValue,
+    shapeFieldAttrs: shapeFieldAttrs
 };
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -29,7 +29,8 @@ import numpy as np
 
 import gtrace.draw as draw
 from gtrace.draw.viewer import viewer_css
-from gtrace.mechanics import Mechanics, models, model_shapes
+from gtrace.mechanics import (Mechanics, models, model_shapes,
+                              model_prefix)
 from gtrace.draw.viewer.editor import ShapeEditor
 from gtrace.unit import *
 
@@ -292,9 +293,19 @@ var SCENE = __SCENE__;
         // --- the library ---
         v.modelInput.value = 'BROWSER-PART';
         v.modelDesc.value = 'made in the editor';
+        v.modelPrefix.value = 'XY';
         before = sent.length;
         button('Save to library').click();
         out.saveModel = sent[before] || null;
+        // Left empty, the part says nothing about what its bodies are
+        // called rather than saying it is called nothing.
+        v.modelPrefix.value = '  ';
+        v.modelInput.value = 'BROWSER-PART-2';
+        before = sent.length;
+        button('Save to library').click();
+        out.saveModelNoPrefix = sent[before] || null;
+        v.modelInput.value = 'BROWSER-PART';
+        v.modelPrefix.value = 'XY';
         v.modelInput.value = '   ';
         before = sent.length;
         button('Save to library').click();
@@ -495,8 +506,20 @@ sm = res['saveModel']
 check('Save to library sends the name and the line of description',
       sm and sm['op'] == 'save_model' and sm['name'] == 'BROWSER-PART'
       and sm['description'] == 'made in the editor', json.dumps(sm))
+check('  and what the parts built from it are called',
+      sm and sm.get('prefix') == 'XY', json.dumps(sm))
+sm2 = res['saveModelNoPrefix']
+check('a part that says nothing about its name sends no prefix',
+      sm2 and 'prefix' not in sm2, json.dumps(sm2))
+if sm2:
+    editor.apply_edit(sm2)
+    check('  and Python leaves it with none',
+          model_prefix('BROWSER-PART-2') is None)
 if sm:
     editor.apply_edit(sm)
+    check('  and Python writes the prefix onto the shelf',
+          model_prefix('BROWSER-PART') == 'XY',
+          str(model_prefix('BROWSER-PART')))
     check('  and Python puts the part on the shelf',
           'BROWSER-PART' in models()
           and len(model_shapes('BROWSER-PART')) == len(part.shapes))
@@ -521,7 +544,8 @@ if res2 is None:
 check('ran without exception', res2['error'] is None, str(res2['error'])[:300])
 check('the add row is the layout\'s again',
       res2['headRows'][0] == ['+ Mirror', '+ Lens', '+ Source',
-                              '+ Dump', '+ Mechanics'],
+                              '+ Dump', '+ Mechanics', '+ Assembly',
+                              '+ Shape'],
       json.dumps(res2['headRows'][0]))
 check('  with Align back on the second row',
       'Align' in res2['headRows'][1], json.dumps(res2['headRows'][1]))

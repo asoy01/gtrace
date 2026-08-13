@@ -48,8 +48,8 @@ from gtrace.mechanics import (Mechanics, point_in_polygon, DEFAULT_LAYER,
                               mirror_mount_2in, lens_holder,
                               pedestal, clamping_fork, host_pose,
                               register_model, models, model_shapes,
-                              model_params, model_points, from_model,
-                              save_models, load_models)
+                              model_params, model_points, model_prefix,
+                              from_model, save_models, load_models)
 from gtrace.unit import *
 
 npass = 0
@@ -880,10 +880,11 @@ check('scale scales every dimension',
 
 # The two-inch mount follows the Thorlabs KA2A drawing
 # (local/Polaris-2inch.pdf): plates 68.6 and 69.9 wide, 7.0 and 12.7
-# deep across the same 3.2 gap (22.9 body overall), adjusters 35.6
-# apart protruding 12.2 (35.1 overall), and the origin 3.95 behind
-# the front face - where the 10.3 optic pocket centres a standard
-# 12.7 thick two-inch optic.
+# deep across the same 3.2 gap (22.9 body overall), adjusters
+# protruding 12.2 (35.1 overall), and the origin 3.95 behind the front
+# face - where the 10.3 optic pocket centres a standard 12.7 thick
+# two-inch optic. The adjuster lines are the one dimension not off
+# that drawing: 2.1 inch apart, measured on the mount.
 m2 = mirror_mount_2in()
 lo, hi = m2.local_bbox()
 check('the 2in front face stands 3.95 mm ahead of the origin',
@@ -896,9 +897,18 @@ rects = [s for s in m2.shapes if isinstance(s, draw.Rectangle)]
 check('the front plate is its own 68.6 mm wide',
       abs(rects[0].height - 0.0686) < 1e-12, str(rects[0].height))
 tips2 = [s for s in m2.shapes if isinstance(s, draw.Arc)]
-check('the adjuster lines sit 35.6 mm apart',
+check('the adjuster lines sit 2.1 inch apart, knob to knob',
       sorted(round(float(s.center[1]), 9) for s in tips2)
-      == [-0.0178, 0.0178])
+      == [-0.02667, 0.02667],
+      str(sorted(round(float(s.center[1]), 9) for s in tips2)))
+check('  which is 53.34 mm',
+      abs((max(float(s.center[1]) for s in tips2)
+           - min(float(s.center[1]) for s in tips2)) - 2.1*inch) < 1e-12)
+knobs2 = [s for s in m2.shapes if isinstance(s, draw.Rectangle)][-1]
+check('  and the knobs still fall inside the plate',
+      abs(knobs2.point[1]) + knobs2.height <= 0.03495 + 1e-12,
+      '%.4f mm out of %.4f' % ((abs(knobs2.point[1]) + knobs2.height)/mm,
+                               0.03495/mm))
 check('the 2in drawing is nine shapes too', len(m2.shapes) == 9)
 hole2 = [s for s in m2.shapes if isinstance(s, draw.Circle)]
 check('  with the same post hole, bored the same way',
@@ -1551,6 +1561,66 @@ refused(L3, {'op': 'copy', 'target': 'M1', 'offset': [0.0, np.inf]},
 refused(L3, {'op': 'copy', 'target': 'M1', 'offset': 'over there'},
         'an offset that is not a place')
 
+
+print()
+print('--- what a model calls its parts ---')
+
+# A part is known by what it is: a mount is MT1 and a fork FK1,
+# whatever catalogue the footprint came from. The model says so, so
+# that two layouts do not each choose again - and so that a front end
+# adding one has the name to hand.
+for model, prefix in [('MOUNT-25', 'MT'), ('MOUNT-50', 'MT'),
+                      ('PEDESTAL-25', 'P'), ('FORK-125', 'FK'),
+                      ('HOLDER-25', 'HLD'), ('HOLDER-50', 'HLD'),
+                      ('BB3030', 'BB'), ('BBR30', 'BB')]:
+    check('%s says its parts are %s1' % (model, prefix),
+          model_prefix(model) == prefix, str(model_prefix(model)))
+check("'PD' is nobody's prefix - it reads as a photodetector",
+      'PD' not in [model_prefix(m) for m in models()])
+
+register_model('PREFIX-TEST', [draw.Circle([0.0, 0.0], 0.01)],
+               'one of my own', prefix='XY')
+check('a model of your own says what its parts are called',
+      model_prefix('PREFIX-TEST') == 'XY')
+register_model('PREFIX-NONE', [draw.Circle([0.0, 0.0], 0.01)], 'quiet')
+check('  and one that says nothing has none',
+      model_prefix('PREFIX-NONE') is None)
+try:
+    model_prefix('NO-SUCH-MODEL')
+    ok = False
+except KeyError:
+    ok = True
+check('asking about a model that is not there is a KeyError', ok)
+
+lib = os.path.join(WORK, 'mech_prefix_lib.json')
+save_models(lib, names=['PREFIX-TEST', 'PREFIX-NONE', 'MOUNT-25'])
+with open(lib) as f:
+    saved = json.load(f)
+check('a saved library carries the prefix',
+      saved['models']['PREFIX-TEST']['prefix'] == 'XY'
+      and saved['models']['MOUNT-25']['prefix'] == 'MT'
+      and saved['models']['PREFIX-NONE']['prefix'] is None,
+      json.dumps({k: v['prefix'] for k, v in saved['models'].items()}))
+
+# A library written before models said what their parts are called.
+del saved['models']['PREFIX-TEST']['prefix']
+with open(lib, 'w') as f:
+    json.dump(saved, f)
+load_models(lib)
+check('a library written without one loads with none',
+      model_prefix('PREFIX-TEST') is None)
+
+saved['models']['PREFIX-TEST']['prefix'] = 42
+with open(lib, 'w') as f:
+    json.dump(saved, f)
+try:
+    load_models(lib)
+    ok = False
+except ValueError:
+    ok = True
+check('a prefix that is not a name is refused', ok)
+check('  and the library is not half updated',
+      model_prefix('MOUNT-25') == 'MT')
 
 print()
 print('%d passed, %d failed' % (npass, nfail))

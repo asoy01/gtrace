@@ -291,20 +291,45 @@ class Rectangle(Entity):
     A rectangle
     '''
 
-    def __init__(self, point, width, height, thickness=0):
+    def __init__(self, point, width, height, thickness=0, angle=0.0,
+                 pivot=None):
         '''
         = Arguments =
-
+        point: lower left corner, before the turn
+        width:
+        height:
+        thickness:
+        angle: how far it is turned, counterclockwise, in radians
+        pivot: the point it is turned about. None is its middle.
         '''
         super(Rectangle, self).__init__()
         self.point = point
         self.width = width
         self.height = height
         self.thickness = thickness
+        self.angle = float(angle)
+        self.pivot = pivot
         x0 = point[0]
         y0 = point[1]        
         self.x = [x0, x0+width, x0+width, x0, x0]
         self.y = [y0, y0, y0+height, y0+height, y0]        
+        if self.angle != 0.0:
+            # A LWPOLYLINE is written either way, so a turned rectangle
+            # is the same entity through the same corners: the turn is
+            # done here rather than left to a DXF the readers would
+            # each have to agree on.
+            if pivot is None:
+                px, py = x0 + width/2.0, y0 + height/2.0
+            else:
+                px, py = pivot[0], pivot[1]
+            ca = math.cos(self.angle)
+            sa = math.sin(self.angle)
+            xs, ys = [], []
+            for x, y in zip(self.x, self.y):
+                dx, dy = x - px, y - py
+                xs.append(px + dx*ca - dy*sa)
+                ys.append(py + dx*sa + dy*ca)
+            self.x, self.y = xs, ys
 
     def report_min_max(self):
         '''
@@ -312,12 +337,7 @@ class Rectangle(Entity):
         of the drawing.
         Return value: ((xmin, ymin), (xmax, ymax))
         '''
-        xmin = min(self.point[0], self.point[0]+self.width)
-        xmax = max(self.point[0], self.point[0]+self.width)        
-        ymin = min(self.point[1], self.point[1]+self.height)
-        ymax = max(self.point[1], self.point[1]+self.height)
-        
-        return ((xmin, ymin), (xmax, ymax))
+        return ((min(self.x), min(self.y)), (max(self.x), max(self.y)))
 
     def draw(self, layername):
         output ='''  0\nLWPOLYLINE\n  5\n'''

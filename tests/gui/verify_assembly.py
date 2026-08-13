@@ -404,7 +404,8 @@ print('--- the beam dump the whole thing was for ---')
 # check that the arithmetic here is the arithmetic there.
 # angle is the way the light runs, so a beam going +y walks into a
 # dump laid out exactly as the drawing is: apex up, mouth down.
-f1, f2, box = beam_dump(name='BD1', center=[0.0, 0.0], angle=np.pi / 2)
+(f1, f2), (box,) = beam_dump(name='BD1', center=[0.0, 0.0],
+                             angle=np.pi / 2)
 check('the two faces come out where the drawing dimensions them',
       close(np.array(f1.HRcenter) * 1e3, [-6.04805, 0.742606], tol=1e-4)
       and close(np.array(f2.HRcenter) * 1e3, [6.04805, 0.742606], tol=1e-4),
@@ -463,7 +464,7 @@ def dump_apex(m1, m2):
 
 for at, aim in (([0.0, 0.0], np.pi / 2), ([0.3, 0.1], 0.0),
                 ([-0.2, 0.4], -0.7), ([0.05, -0.3], 2.9)):
-    g1, g2, gbox = beam_dump(name='G1', center=at, angle=aim)
+    (g1, g2), (gbox,) = beam_dump(name='G1', center=at, angle=aim)
     check('the post hole stands where the dump was put (%s, %5.1f deg)'
           % (at, np.rad2deg(aim)),
           close(gbox.center, at, tol=1e-12),
@@ -476,7 +477,7 @@ for at, aim in (([0.0, 0.0], np.pi / 2), ([0.3, 0.1], 0.0),
 
 # And it stays agreed once the dump is moved and turned, which is what
 # the joint is for.
-g1, g2, gbox = beam_dump(name='G1', center=[0.3, 0.1], angle=0.0)
+(g1, g2), (gbox,) = beam_dump(name='G1', center=[0.3, 0.1], angle=0.0)
 LG = OpticalLayout(sources=[], name='g')
 for x in (g1, g2):
     LG.add_optics(x)
@@ -497,7 +498,9 @@ b0 = GaussianBeam(pos=[0.0, 0.002], dirAngle=0.0,
                   wl=1064*nm, name='b0')
 L = OpticalLayout(sources=[b0], name='dump',
                   rules=TraceRules(order=8, power_threshold=1e-8))
-pieces = L.add_beam_dump(name='BD1', center=[0.3, 0.0], angle=0.0)
+dump_optics, dump_bodies = L.add_beam_dump(name='BD1',
+                                           center=[0.3, 0.0], angle=0.0)
+pieces = dump_optics + dump_bodies
 L.trace()
 hits = [b for b in L.beams if b.name.startswith('BD')]
 check('a beam into the mouth is caught, and bounces more than twice',

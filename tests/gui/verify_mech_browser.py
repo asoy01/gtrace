@@ -353,6 +353,33 @@ var EDITABLE = __EDITABLE__;
             if (m.name === 'Fork') { m.fix_rotation = false; }
         });
 
+        // --- the Fix rotation checkbox ---
+        // A row that could be clicked and did nothing: it was read for
+        // a number, like every other row, and a checkbox has none.
+        clickAt(screenOf(FORK_PT));
+        var fr = v.mechFields.fix_rotation;
+        out.forkFixRow = {
+            shown: !!(fr && fr.row.style.display !== 'none'),
+            editable: !!(fr && fr.editable),
+            checked: (fr && fr.editable) ? fr.el.checked : null
+        };
+        before = sent.length;
+        if (fr && fr.editable) {
+            fr.el.checked = true;
+            fr.el.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+        out.forkFixToggled = {msg: sent[before] || null,
+                              n: sent.length - before};
+        // And ticking it where it already stands says nothing.
+        before = sent.length;
+        if (fr && fr.editable) {
+            fr.el.checked = false;
+            fr.el.dispatchEvent(new Event('change', {bubbles: true}));
+            fr.el.checked = false;
+            fr.el.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+        out.forkFixAgain = sent.length - before;
+
         // --- Escape lets go ---
         clickAt(screenOf(BOARD_PT));
         window.dispatchEvent(new KeyboardEvent('keydown',
@@ -445,6 +472,115 @@ var EDITABLE = __EDITABLE__;
         if (bbItem) { bbItem.click(); }
         out.hwAdd = {msg: sent[before] || null, selected: v.selectedMech};
         v.selectedMech = null;   // nothing was really added
+
+        // What each model calls the bodies built from it. A part is
+        // known by what it is - a mount is MT1 - and the shelf is
+        // where that is written down.
+        out.hwNames = {};
+        if (hm) {
+            Array.prototype.forEach.call(hm.menu.querySelectorAll('button'),
+                function (b) {
+                    var was = sent.length;
+                    b.click();
+                    var msg = sent[was] || null;
+                    out.hwNames[b.textContent] = msg ? msg.name : null;
+                    v.selectedMech = null;
+                });
+        }
+
+        // --- every add button opens its own menu ---
+        // Each of these is built from a wrap, a button and a menu held
+        // in local variables, and `var` is function-scoped: two blocks
+        // that name theirs the same share one, and the click handlers
+        // then close over whichever ran last. That is not visible in
+        // what the menus contain - only in what a click on the button
+        // does - so it is checked here by clicking the buttons.
+        out.menuOwn = (v.addMenus || []).map(function (entry, i) {
+            v.closeAddMenus();
+            entry.button.click();
+            var shown = (v.addMenus || []).map(function (m) {
+                return m.menu.style.display !== 'none';
+            });
+            return {label: entry.button.textContent,
+                    open: shown.indexOf(true),
+                    count: shown.filter(Boolean).length,
+                    i: i};
+        });
+        v.closeAddMenus();
+
+        // --- the assembly menu ---
+        // An element and the parts that hold it, in one message. The
+        // menu is filled from the scene, like the model shelf.
+        var am = v.assemblyMenu;
+        out.asmMenu = {
+            shown: !!am && am.wrap.style.display !== 'none',
+            items: am ? Array.prototype.map.call(
+                am.menu.querySelectorAll('button'),
+                function (b) { return b.textContent; }) : []
+        };
+        out.asmAdd = {};
+        if (am) {
+            Array.prototype.forEach.call(am.menu.querySelectorAll('button'),
+                function (b) {
+                    var was = sent.length;
+                    b.click();
+                    out.asmAdd[b.textContent] = {
+                        msg: sent[was] || null,
+                        n: sent.length - was,
+                        selectedOptic: v.selectedOptic,
+                        selectedMech: v.selectedMech
+                    };
+                    v.selectedOptic = null;   // nothing was really added
+                });
+        }
+
+        // --- the shape menu ---
+        // Where the view is looking, read here: what + Shape puts down
+        // lands at the centre, and the driver moves the view later on.
+        out.cx = v.cx;
+        out.cy = v.cy;
+        var sm = v.shapeMenu;
+        out.shMenu = {
+            shown: !!sm && sm.wrap.style.display !== 'none',
+            items: sm ? Array.prototype.map.call(
+                sm.menu.querySelectorAll('button'),
+                function (b) { return b.textContent; }) : []
+        };
+        out.shAdd = {};
+        if (sm) {
+            Array.prototype.forEach.call(sm.menu.querySelectorAll('button'),
+                function (b, i) {
+                    var was = sent.length;
+                    b.click();
+                    out.shAdd[b.textContent] = {
+                        msg: sent[was] || null,
+                        selected: v.selectedMech,
+                        scale: v.shapeScale()
+                    };
+                    v.selectedMech = null;   // nothing was really added
+                });
+        }
+        // The same button at two zooms: what it puts down is sized to
+        // what is on screen, so the second is twice the first.
+        out.shZoom = null;
+        if (sm) {
+            var circleBtn = null;
+            Array.prototype.forEach.call(sm.menu.querySelectorAll('button'),
+                function (b) { if (b.textContent === 'Circle') { circleBtn = b; } });
+            if (circleBtn) {
+                var keep = v.scale;
+                var n0 = sent.length;
+                circleBtn.click();
+                var first = sent[n0] || null;
+                v.scale = keep / 2;          // twice as much of the bench
+                var n1 = sent.length;
+                circleBtn.click();
+                var second = sent[n1] || null;
+                v.scale = keep;
+                v.selectedMech = null;
+                out.shZoom = {first: first, second: second};
+            }
+        }
 
         // --- the size rows, and the corner handles ---
         clickAt(screenOf(BOARD_PT));
@@ -886,6 +1022,29 @@ check('and the next click wraps back to the mirror',
       and not res['cycleWraps']['selectedMech'],
       json.dumps(res['cycleWraps']))
 
+print('--- the Fix rotation checkbox ---')
+fr = res['forkFixRow']
+check('an attached body whose turn is free offers the row',
+      fr['shown'] and fr['editable'], json.dumps(fr))
+check('  showing the turn as free', fr['checked'] is False, json.dumps(fr))
+ft = res['forkFixToggled']
+check('ticking it sends one message, and says what a checkbox says',
+      ft['n'] == 1 and ft['msg'] and ft['msg']['op'] == 'set'
+      and ft['msg']['target'] == 'Fork'
+      and ft['msg']['attrs'] == {'fix_rotation': True},
+      json.dumps(ft))
+if ft['msg']:
+    layout.apply_edit(ft['msg'])
+    check('  and Python freezes the turn',
+          layout.get_mechanics('Fork').fix_rotation is True)
+    layout.apply_edit({'op': 'undo'})
+    check('  which undo lets go again',
+          layout.get_mechanics('Fork').fix_rotation is False)
+# The scene is what the model says, and nothing here is applied to it,
+# so putting the box back where the body stands is not an edit.
+check('setting it to what the body already is says nothing',
+      res['forkFixAgain'] == 0, str(res['forkFixAgain']))
+
 print('--- the model library menu ---')
 check('+ Mechanics lists exactly the library shelf',
       res['hwMenu']['shown']
@@ -902,6 +1061,155 @@ layout.apply_edit(ha['msg'])
 check('  and Python builds it from the shelf',
       layout.get_mechanics(ha['msg']['name']).resizable)
 layout.apply_edit({'op': 'undo'})
+
+# What a body off the shelf is called. The model says it, so a mount is
+# MT1 whatever catalogue the footprint came from - and 'PD' is nobody's
+# prefix here, since a photodetector is what that reads as.
+WANT_PREFIX = {'BB3030': 'BB', 'BB4530': 'BB', 'BB6045': 'BB',
+               'BBR30': 'BB', 'BBR45': 'BB',
+               'MOUNT-25': 'MT', 'MOUNT-50': 'MT',
+               'HOLDER-25': 'HLD', 'HOLDER-50': 'HLD',
+               'PEDESTAL-25': 'P', 'FORK-125': 'FK'}
+names = res['hwNames']
+check('every model on the shelf was asked for', set(names) == set(WANT_PREFIX),
+      json.dumps(sorted(names)))
+for model, prefix in sorted(WANT_PREFIX.items()):
+    got = names.get(model)
+    check('%s is added as %s1, not H1' % (model, prefix),
+          got == prefix + '1', str(got))
+check('and no two of them collide with what is already there',
+      all(v not in [m.name for m in layout.mechanics]
+          for v in names.values()), json.dumps(names))
+
+def scaled(shape, k):
+    '''
+    A shape dict with every length multiplied and every angle left
+    alone - written out here rather than taken from the page, since
+    what is being checked is that the page did it right.
+    '''
+    out = dict(shape)
+    for key in ('point', 'center', 'start', 'stop', 'pivot'):
+        if out.get(key) is not None:
+            out[key] = [v * k for v in out[key]]
+    for key in ('x', 'y'):
+        if out.get(key) is not None:
+            out[key] = [v * k for v in out[key]]
+    for key in ('width', 'height', 'radius'):
+        if out.get(key) is not None:
+            out[key] = out[key] * k
+    return out
+
+def same_shape(a, b, tol=1e-9):
+    if set(a) != set(b):
+        return False
+    for key in a:
+        x, y = a[key], b[key]
+        if isinstance(x, list) != isinstance(y, list):
+            return False
+        if isinstance(x, list):
+            if len(x) != len(y) or any(abs(p - q) > tol for p, q in zip(x, y)):
+                return False
+        elif isinstance(x, (int, float)) and isinstance(y, (int, float)):
+            if abs(x - y) > tol:
+                return False
+        elif x != y:
+            return False
+    return True
+
+print('--- every add button opens its own menu ---')
+own = res['menuOwn']
+check('there is a menu for every add button that has one',
+      len(own) >= 4, json.dumps([m['label'] for m in own]))
+for m in own:
+    check('%s opens its own menu, and only that one' % m['label'],
+          m['open'] == m['i'] and m['count'] == 1, json.dumps(m))
+
+print('--- the assembly menu ---')
+KINDS = [a['label'] for a in scene['assemblies']]
+check('+ Assembly lists the kinds the scene carries',
+      res['asmMenu']['shown'] and res['asmMenu']['items'] == KINDS,
+      json.dumps(res['asmMenu']['items']))
+for entry in scene['assemblies']:
+    aa = res['asmAdd'].get(entry['label']) or {}
+    msg = aa.get('msg')
+    check('choosing %s sends one add of that kind' % entry['label'],
+          aa.get('n') == 1 and msg and msg['op'] == 'add'
+          and msg['type'] == 'Assembly' and msg['kind'] == entry['kind'],
+          json.dumps(msg))
+    if not msg:
+        continue
+    check('  named for the element, and selected as one',
+          msg['name'].startswith(entry['prefix'])
+          and aa['selectedOptic'] == msg['name']
+          and not aa['selectedMech'], json.dumps(msg['name']))
+    check('  at the centre of the view',
+          np.allclose(msg['params']['center'], [res['cx'], res['cy']]),
+          json.dumps(msg['params']['center']))
+    n_optics = len(layout.optics)
+    n_mech = len(layout.mechanics)
+    layout.apply_edit(msg)
+    check('  and Python builds the element and three parts from it',
+          len(layout.optics) == n_optics + 1
+          and len(layout.mechanics) == n_mech + 3,
+          '%d optics, %d bodies' % (len(layout.optics), len(layout.mechanics)))
+    check('  the parts standing on the element',
+          layout.mechanics[-3].attached_to is layout.optics[-1],
+          layout.mechanics[-3].name)
+    layout.apply_edit({'op': 'undo'})
+    check('  and one undo takes all four away',
+          len(layout.optics) == n_optics and len(layout.mechanics) == n_mech)
+
+print('--- the shape menu ---')
+KINDS = ['Rect', 'Circle', 'Line', 'Poly', 'Arc', 'Text']
+check('+ Shape offers every kind the editor draws with',
+      res['shMenu']['shown'] and res['shMenu']['items'] == KINDS,
+      json.dumps(res['shMenu']['items']))
+TYPES = {'Rect': 'rectangle', 'Circle': 'circle', 'Line': 'line',
+         'Poly': 'polyline', 'Arc': 'arc', 'Text': 'text'}
+for label, kind in TYPES.items():
+    sa = res['shAdd'].get(label) or {}
+    msg = sa.get('msg')
+    check('choosing %s sends a body of one %s' % (label, kind),
+          msg and msg['op'] == 'add' and msg['type'] == 'Mechanics'
+          and len(msg['params']['shapes']) == 1
+          and msg['params']['shapes'][0]['type'] == kind
+          and 'model' not in msg['params'],
+          json.dumps(msg))
+    if not msg:
+        continue
+    check('  carried optimistically, like a model off the shelf',
+          sa['selected'] == msg['name'])
+    check('  and named for the shape it is',
+          msg['name'] == {'Rect': 'RECT1', 'Circle': 'CIRC1',
+                          'Line': 'LINE1', 'Poly': 'POLY1',
+                          'Arc': 'ARC1', 'Text': 'TEXT1'}[label],
+          msg['name'])
+    check('  at the centre of the view',
+          np.allclose(msg['params']['center'], [res['cx'], res['cy']]),
+          json.dumps(msg['params']['center']))
+    # The shape is Python's own answer to what a new one looks like,
+    # scaled: the page holds no second opinion about what a circle is.
+    want = scene['newshapes'][kind]
+    got = msg['params']['shapes'][0]
+    k = sa['scale']
+    check('  which is the scene\'s own new %s, scaled by the view' % kind,
+          same_shape(got, scaled(want, k)),
+          json.dumps({'got': got, 'want': scaled(want, k)}))
+    layout.apply_edit(msg)
+    body = layout.get_mechanics(msg['name'])
+    check('  and Python builds it where the page said',
+          len(body.shapes) == 1
+          and np.allclose(body.center, msg['params']['center']))
+    layout.apply_edit({'op': 'undo'})
+
+sz = res['shZoom']
+check('the same button puts down twice as much at half the zoom',
+      sz and sz['first'] and sz['second']
+      and abs(sz['second']['params']['shapes'][0]['radius']
+              - 2 * sz['first']['params']['shapes'][0]['radius']) < 1e-12,
+      json.dumps([sz['first']['params']['shapes'][0]['radius'],
+                  sz['second']['params']['shapes'][0]['radius']])
+      if sz and sz['first'] and sz['second'] else '')
 
 print('--- the size rows and the corner handles ---')
 bf = res['sizeRows']['board']

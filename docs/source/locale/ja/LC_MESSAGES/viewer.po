@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 23:19+0900\n"
+"POT-Creation-Date: 2026-08-13 16:04+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -407,25 +407,85 @@ msgstr ""
 #: ../../../gtrace/docs/source/viewer.rst:115
 msgid ""
 "There is one add button per kind of thing: ``+ Mirror``, ``+ Lens``, ``+ "
-"Source``, ``+ Dump`` and ``+ Mechanics``. The two that have variants open"
-" on the choice between them, spherical or cylindrical, since a "
-"cylindrical mirror is a mirror and not a fifth kind of thing. ``+ "
-"Mechanics`` opens on the model library, which is a list. ``+ Dump`` puts "
-"a :ref:`beam dump <mechanics>` down facing a beam that runs along +x. A "
-"dump is three pieces — two absorbing faces and the housing they sit in — "
-"so it is a kind of its own, and it cannot be on the library shelf that "
-"``+ Mechanics`` opens, because a model holds shapes and two thirds of a "
-"dump are elements."
+"Source``, ``+ Dump``, ``+ Mechanics``, ``+ Assembly`` and ``+ Shape``. "
+"The two that have variants open on the choice between them, spherical or "
+"cylindrical, since a cylindrical mirror is a mirror and not a fifth kind "
+"of thing. ``+ Mechanics`` opens on the model library, which is a list. "
+"**What is added is named for what it is**: a mount comes down as ``MT1``,"
+" a pedestal as ``P1``, a fork as ``FK1``, a holder as ``HLD1`` and a "
+"breadboard as ``BB1``. The model says so — a part of your own says it in "
+"the same place, through ``prefix`` — and a model that says nothing gives "
+"``H1``. A shape put down with ``+ Shape`` is named for the shape it is: "
+"``CIRC1``, ``RECT1``, ``LINE1``, ``POLY1``, ``ARC1``, ``TEXT1``. ``+ "
+"Dump`` puts a :ref:`beam dump <mechanics>` down facing a beam that runs "
+"along +x. A dump is three pieces — two absorbing faces and the housing "
+"they sit in — so it is a kind of its own, and it cannot be on the library"
+" shelf that ``+ Mechanics`` opens, because a model holds shapes and two "
+"thirds of a dump are elements."
 msgstr ""
-"追加ボタンは、種類ごとに1つである。\\ ``+ Mirror``\\ 、\\ ``+ Lens``\\ 、\\ ``+ Source``\\ "
-"、\\ ``+ Dump``\\ 、\\ ``+ Mechanics`` "
+"追加ボタンは、種類ごとに1つである。\\ ``+ Mirror`` 、\\ ``+ Lens`` 、\\ ``+ Source`` 、\\ ``+"
+" Dump`` 、\\ ``+ Mechanics`` 、\\ ``+ Assembly`` 、\\ ``+ Shape`` "
 "である。2種類あるものは、球面かシリンドリカルかの選択を開く。シリンドリカルミラーはミラーであって、5つ目の種類ではないからである。\\ ``+ "
-"Mechanics`` はモデルライブラリを開く。これはリストである。\\ ``+ Dump`` は :ref:`ビームダンプ "
-"<mechanics>` を、+x "
+"Mechanics`` はモデルライブラリを開く。これはリストである。\\ **追加されるものは、それが何であるかで名前が付く。** マウントは "
+"``MT1`` 、ペデスタルは ``P1`` 、フォークは ``FK1`` 、ホルダーは ``HLD1`` 、ブレッドボードは ``BB1`` "
+"として置かれる。そう言っているのはモデルであり、自分で作った部品も ``prefix`` で同じ場所に書ける。何も言わないモデルは ``H1`` "
+"になる。\\ ``+ Shape`` で置いた図形は、その図形の種類で名前が付く。\\ ``CIRC1`` 、\\ ``RECT1`` 、\\ "
+"``LINE1`` 、\\ ``POLY1`` 、\\ ``ARC1`` 、\\ ``TEXT1`` である。\\ ``+ Dump`` は "
+":ref:`ビームダンプ <mechanics>` を、+x "
 "方向に走るビームに向けて置く。ダンプは3つの部品（2枚の吸収面と、それが収まる筐体）からなるので独立した種類であり、\\ ``+ "
 "Mechanics`` が開くライブラリの棚には置けない。モデルが持つのは形状だが、ダンプの3分の2は素子だからである。"
 
 #: ../../../gtrace/docs/source/viewer.rst:117
+msgid ""
+"``+ Assembly`` puts down **an element with the parts that hold it**: a "
+"one or two inch mirror in its mount, or a lens in its holder, on a "
+"pedestal held down by a clamping fork. That is what is bolted to a bench,"
+" and building it out of four adds and three attachments is four steps of "
+"undo and three offsets to look up. One message makes all four, so it is "
+"**one step of undo**, and the parts are attached to the element: drag the"
+" mirror and the mount, the pedestal and the fork come with it. The names "
+"follow the same rule as everything else — ``M2`` held by ``MT2`` on "
+"``P2`` in ``FK2``."
+msgstr ""
+"``+ Assembly`` は、\\ **素子と、それを保持する部品一式**\\ "
+"を置く。1インチまたは2インチのミラーをマウントに入れたもの、あるいはレンズをホルダーに入れたもので、いずれもペデスタルの上に立ち、クランピングフォークで押さえられている。ベンチに実際に載るのはこれであり、これを4回の追加と3回の取り付けで組むと、undo"
+" が4段になり、オフセットを3つ調べることになる。1つのメッセージで4つとも作られるので、\\ **undo は1段**\\ "
+"である。部品は素子に取り付けられているので、ミラーをドラッグすればマウント・ペデスタル・フォークが付いてくる。名前の規則は他と同じで、\\ "
+"``M2`` が ``MT2`` に保持され、\\ ``P2`` の上に立ち、\\ ``FK2`` で押さえられる。"
+
+#: ../../../gtrace/docs/source/viewer.rst:119
+msgid ""
+"``+ Shape`` opens on the six drawing primitives — rectangle, circle, "
+"line, polyline, arc and text — and puts one down as a body of that one "
+"shape: a tank wall, an aperture, the edge of a table, a note on the "
+"drawing. This is the same thing as writing "
+"``Mechanics(shapes=[draw.Circle(...)])`` in a cell, without the cell. "
+"What comes down is moved, turned, dimensioned and edited like any other "
+"body, and :py:meth:`edit<gtrace.mechanics.Mechanics.edit>` opens it for a"
+" second shape."
+msgstr ""
+"``+ Shape`` "
+"は6つの描画プリミティブ（矩形・円・線・ポリライン・円弧・テキスト）を開き、その図形1つを持つ部品として置く。真空槽の壁、開口、テーブルの縁、図面上の注記といったものである。セルに"
+" ``Mechanics(shapes=[draw.Circle(...)])`` "
+"と書くのと同じことを、セル無しで行う。置いたものは他の部品と同じように移動・回転・寸法付け・編集ができ、2つ目の図形を足したければ "
+":py:meth:`edit<gtrace.mechanics.Mechanics.edit>` で開く。"
+
+#: ../../../gtrace/docs/source/viewer.rst:121
+msgid ""
+"**A shape is sized to the view it is put down in.** The sizes are a "
+"bench's — a 20 mm plate, a 5 mm hole — which is right when the screen is "
+"showing a part and invisible when it is showing three kilometres of "
+"interferometer, so they are scaled by how wide the view is. Zoomed in on "
+"an output table, ``+ Circle`` leaves a circle a few centimetres across; "
+"framed on the whole layout, one that can be seen. Type the number you "
+"want into the panel afterwards."
+msgstr ""
+"**図形は、置いたときのビューに合わせた大きさになる。** 元の寸法はベンチのもの（20 mm の板、5 mm "
+"の穴）で、画面に部品が映っているときはこれで良いが、3 km "
+"の干渉計が映っているときは見えない。そこでビューの幅に応じて拡大縮小する。出力テーブルに寄っていれば ``+ Circle`` "
+"は数センチの円を残し、レイアウト全体を映していれば見える大きさの円を残す。欲しい数値は、後からパネルに打ち込めばよい。"
+
+#: ../../../gtrace/docs/source/viewer.rst:123
 msgid ""
 "**A numeric row is a calculator.** A bench measurement is usually arrived"
 " at rather than known, so a row takes the sum as well as the answer: "
@@ -437,7 +497,7 @@ msgstr ""
 "``2*25.4`` は 50.8、\\ ``300/4`` は 75 "
 "になる。使えるのは括弧と四則演算、先頭のマイナスだけである。コードとして評価はしない。テキストを解析するので、入力欄は電卓であって、ページへの侵入口ではない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:119
+#: ../../../gtrace/docs/source/viewer.rst:125
 msgid ""
 "A value may also carry **a unit of its own, in square brackets**, and it "
 "converts into the unit the row is labelled with: ``1[in]`` in a "
@@ -459,7 +519,7 @@ msgstr ""
 " ``1[in]+2`` は 27.4 "
 "である。種類の違う単位は拒否される。角度の行に長さを入れても換算できないからである。単位を持たない行（次数や屈折率など）では、どんな単位も拒否される。拒否された入力は何も送らず、行はモデルの持つ値に戻る。"
 
-#: ../../../gtrace/docs/source/viewer.rst:121
+#: ../../../gtrace/docs/source/viewer.rst:127
 msgid ""
 "Each edit is applied to the registered object, the layout is re-traced, "
 "and the new scene is pushed back into the view. Your current zoom, pan "
@@ -467,7 +527,7 @@ msgid ""
 "you."
 msgstr "編集はそれぞれ、登録されたオブジェクトに適用され、レイアウトが再トレースされ、新しいシーンが表示に押し戻される。今のズーム・パン・レイヤーの表示状態は保たれるので、絵が足元で跳ねることはない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:123
+#: ../../../gtrace/docs/source/viewer.rst:129
 msgid ""
 "An element turns about the point it is held by, which is what its "
 "**Anchor** names. A mirror swings about the apex of its HR face, so "
@@ -481,24 +541,24 @@ msgstr ""
 "面の頂点の回りに振れるので、回してもビームスポットが面から外れない。レンズは基板の中心の回りに回る。カーソルに追随する輪郭も同じ点の回りに描かれるので、ドラッグ中に見えているものが、そのまま結果になる。モデル側も同じ回り方をする。セルで"
 " ``normAngleHR`` に代入しても、アンカー点を支点に回る。\\ :ref:`changing-a-curvature` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:126
+#: ../../../gtrace/docs/source/viewer.rst:132
 msgid "Editing a source"
 msgstr "光源を編集する"
 
-#: ../../../gtrace/docs/source/viewer.rst:128
+#: ../../../gtrace/docs/source/viewer.rst:134
 msgid ""
 "Clicking a laser opens the source panel, and it is edited like anything "
 "else: drag the box to move the laser, hold Shift to turn it, or type the "
 "numbers."
 msgstr "レーザーをクリックすると光源のパネルが開く。編集の仕方は他と同じで、箱をドラッグして動かし、Shift を押しながらで回し、数値を打ち込む。"
 
-#: ../../../gtrace/docs/source/viewer.rst:130
+#: ../../../gtrace/docs/source/viewer.rst:136
 msgid ""
 "A laser turns about the point its light comes from, since that point *is*"
 " the source, so the nose of the box stays put while it swings."
 msgstr "レーザーは、光の出る点の回りに回る。その点\\ *こそが*\\ 光源だからで、回しても箱の鼻先は動かない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:132
+#: ../../../gtrace/docs/source/viewer.rst:138
 msgid ""
 "**The beam is given as its waist, not as a q-parameter.** Four rows carry"
 " it: the waist size in each direction, in millimetres, and where that "
@@ -511,7 +571,7 @@ msgstr ""
 "4つの行がそれを担う。各方向のウエスト径をミリメートルで、そのウエストの位置をレーザーからビームに沿って前方へメートルで指定する。レーザーはそう指定されるものであり、モードマッチングもその言葉で行う。q"
 " パラメータとの相互変換は Python が行う。ウエストが何を意味するかは、モデルが言うことだからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:134
+#: ../../../gtrace/docs/source/viewer.rst:140
 msgid ""
 "The remaining rows are the wavelength (in nanometres), the power, the "
 "refractive index of the medium it fires into, and a **Free length**: how "
@@ -522,13 +582,13 @@ msgstr ""
 "残りの行は、波長（ナノメートル）、パワー、撃ち込む媒質の屈折率、そして **Free length**\\ "
 "（何にも届かないビームをどれだけの長さで描くか）である。最後のものは、レイアウトを組み立てている途中の状態にあたる。ビームが何かに当たれば、トレースがそこで切るので、この数値は関係なくなる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:136
+#: ../../../gtrace/docs/source/viewer.rst:142
 msgid ""
 "Changing the wavelength keeps the waist and changes the divergence; see "
 ":ref:`editing-a-source`."
 msgstr "波長を変えるとウエストが保たれ、発散角が変わる。\\ :ref:`editing-a-source` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:138
+#: ../../../gtrace/docs/source/viewer.rst:144
 msgid ""
 "``+ Source`` adds a laser at the centre of the view, firing along +x, "
 "with a catalogue beam: 1064 nm, 1 W and a 0.2 mm waist at the laser. It "
@@ -540,11 +600,11 @@ msgstr ""
 "0.2 mm のウエストである。既にある光源からは何もコピーしない。持ち越した q "
 "パラメータは、新しいレーザーが立っていない点から測ったウエストを表すことになるからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:141
+#: ../../../gtrace/docs/source/viewer.rst:147
 msgid "Tracing rules"
 msgstr "トレースのルール"
 
-#: ../../../gtrace/docs/source/viewer.rst:143
+#: ../../../gtrace/docs/source/viewer.rst:149
 msgid ""
 "The side bar carries the three rules the trace runs under: the **Order**,"
 " the **Power threshold** and the **Open beam** length. These are the "
@@ -555,7 +615,7 @@ msgstr ""
 "**Open beam** "
 "の長さである。迷光を追うときに手を伸ばすのはこの数値である。しきい値を下げると、より暗い経路まで見つかるが、その分時間がかかる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:145
+#: ../../../gtrace/docs/source/viewer.rst:151
 msgid ""
 "Unlike the beam width controls, changing one of these re-traces, and the "
 "picture that comes back has more or fewer beams in it. See "
@@ -564,11 +624,11 @@ msgstr ""
 "ビーム幅の操作と違い、これらを変えると再トレースが走り、返ってくる絵はビームの本数が増えたり減ったりする。\\ "
 ":py:class:`TraceRules<gtrace.layout.TraceRules>` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:148
+#: ../../../gtrace/docs/source/viewer.rst:154
 msgid "Aligning to a beam"
 msgstr "ビームに合わせて置く"
 
-#: ../../../gtrace/docs/source/viewer.rst:150
+#: ../../../gtrace/docs/source/viewer.rst:156
 msgid ""
 "Almost every element on a bench is meant to sit square across a beam with"
 " the beam through its middle. Dragging gets an element approximately "
@@ -581,7 +641,7 @@ msgstr ""
 "**Ctrl を押しながらドラッグ**\\ する。ビームの上で放すと、素子はそのビームに正対する向きに回され、ビーム軸の上に載る。Ctrl "
 "を押した時点で輪郭が吸い付くので、放す前に結果が見える。ステータスバーは、これから載るビームの名前を表示する。"
 
-#: ../../../gtrace/docs/source/viewer.rst:152
+#: ../../../gtrace/docs/source/viewer.rst:158
 msgid ""
 "What has to be over the beam is the *element*, not the cursor: a beam "
 "passing anywhere within the element's own footprint counts. An element is"
@@ -592,7 +652,7 @@ msgstr ""
 "ビームの上に無ければならないのは\\ *素子*\\ "
 "であって、カーソルではない。素子自身の占める範囲のどこかをビームが通っていればよい。素子は掴んだところで掴まれるので、拡大していると中心からかなり離れることがあり、カーソルを基準にする規則は、あるズーム以上で機能しなくなる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:154
+#: ../../../gtrace/docs/source/viewer.rst:160
 msgid ""
 "Only the distance along the beam is taken from where you dropped it, "
 "which is the one of the three numbers a drag can usefully choose. The "
@@ -600,7 +660,7 @@ msgid ""
 " does not leave to chance."
 msgstr "放した位置から取るのは、ビームに沿った距離だけである。3つの数のうち、ドラッグで有意に決められるのはこれだけだからである。残る2つ、角度とビームを横切る方向のずれは、ベンチでは成り行きに任せない数である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:156
+#: ../../../gtrace/docs/source/viewer.rst:162
 msgid ""
 "Which point of the element lands on the axis is again what the anchor "
 "names: the apex of the front face for a mirror, since that is where the "
@@ -610,7 +670,7 @@ msgstr ""
 "素子のどの点が軸の上に載るかも、アンカーが言う。ミラーなら前面の頂点で、そこでビームが止まるからである。レンズなら基板の中心で、ビームが通り抜けるからである。カーソルの下にビームが無い状態での"
 " Ctrl は、普通の移動になる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:158
+#: ../../../gtrace/docs/source/viewer.rst:164
 msgid ""
 "The geometry is Python's. The browser says which beam and where along it,"
 " and :py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` works "
@@ -621,11 +681,11 @@ msgstr ""
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` "
 "は、ページの中のコピーではなくトレース済みのビーム自身から計算する::"
 
-#: ../../../gtrace/docs/source/viewer.rst:167
+#: ../../../gtrace/docs/source/viewer.rst:173
 msgid "Aiming by places"
 msgstr "場所を指定して向きを決める"
 
-#: ../../../gtrace/docs/source/viewer.rst:169
+#: ../../../gtrace/docs/source/viewer.rst:175
 msgid ""
 "Ctrl-drag answers \"square onto *that* beam\". The other question a bench"
 " asks is which way a face should look when the beam that will strike it "
@@ -638,7 +698,7 @@ msgstr ""
 "ビームに直交させる」である。ベンチが問うもう1つは、これから当たるビームがまだ存在しないときに、面をどちらに向けるかである。鎖の最初のミラーや、向きを決めて初めてビームが現れるミラーがそれにあたる。\\"
 " **Align** は、ビームではなく場所からその答えを出す。素子は動かさない。どこに立つかは別の問いで、それ自体に3つの答えがあるからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:171
+#: ../../../gtrace/docs/source/viewer.rst:177
 msgid ""
 "**Line 2 points** (``a``) turns the face square across the line between "
 "two places you click, looking from the first towards the second. A line "
@@ -649,7 +709,7 @@ msgstr ""
 "**Line 2 points**\\ （\\ ``a``\\ "
 "）は、クリックした2つの場所を結ぶ線に面を直交させ、1つ目から2つ目のほうを向かせる。線には法線が2つあり、クリックの順がどちらかを決める。同じ2点を逆順にクリックすると素子は反対を向く。面を裏返すのはこの方法である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:173
+#: ../../../gtrace/docs/source/viewer.rst:179
 msgid ""
 "**Bisect 3 points** (``b``) takes from, at, to. The face ends up on the "
 "bisector of that corner, which is where a mirror folding light from the "
@@ -659,7 +719,7 @@ msgstr ""
 "**Bisect 3 points**\\ （\\ ``b``\\ "
 "）は、始点・頂点・終点の順に取る。面はその角の二等分線の向きになる。最初の場所から最後の場所へ光を折り返すミラーが向くべき方向である。角度ではなく3つの場所で言った、反射の法則である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:175
+#: ../../../gtrace/docs/source/viewer.rst:181
 msgid ""
 "**Turn ±45°** (``]`` and ``[``) is the quarter turn a steering mirror is "
 "specified by, from wherever it faces now."
@@ -667,7 +727,7 @@ msgstr ""
 "**Turn ±45°**\\ （\\ ``]`` と ``[``\\ ）は、今向いている向きから 45° ずつ回す。ステアリングミラーは 45°"
 " で指定されるものだからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:177
+#: ../../../gtrace/docs/source/viewer.rst:183
 msgid ""
 "The clicks land on the same marked points a measurement snaps to: the "
 "corners and apexes of a substrate, the ends of a beam, and **the screw "
@@ -682,18 +742,18 @@ msgstr ""
 "である。この操作を近似ではなく正確にしているのは、この穴である。マウントは穴のパターンに載るものであり、どちらを向くべきかは2つの穴についての問いだからである。進めながらカーソルまで腕が描かれ、素子はそのとき向く向きで輪郭が示され、ステータスバーはこれから取る角度を表示する。測定と同じくモードになっていて、Escape"
 " で選択を保ったまま抜けられる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:179
+#: ../../../gtrace/docs/source/viewer.rst:185
 msgid ""
 "Turning is about the anchor point, so the substrate centre travels with "
 "it. That is the model's own rule about pivots, not something Align "
 "decides."
 msgstr "回転はアンカー点の回りなので、基板の中心は一緒に動く。これは Align が決めることではなく、モデル自身の支点の規則である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:182
+#: ../../../gtrace/docs/source/viewer.rst:188
 msgid "Moving along a beam by a number"
 msgstr "数値でビームに沿って動かす"
 
-#: ../../../gtrace/docs/source/viewer.rst:184
+#: ../../../gtrace/docs/source/viewer.rst:190
 msgid ""
 "Aligning leaves one degree of freedom: how far along the beam the element"
 " sits. That one is not for a mouse, since a lens goes where the mode "
@@ -704,7 +764,7 @@ msgstr ""
 "向きを決めると、自由度が1つ残る。ビームに沿ってどこに素子が座るかである。これはマウスで決めるものではない。レンズが座る位置はモードマッチングが決めるからである。そこでプロパティのパネルが数値として提供する。選択した素子をビームが通っていれば、\\"
 " **Angle** の下に2つの行が現れる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:186
+#: ../../../gtrace/docs/source/viewer.rst:192
 msgid ""
 "**Along beam** picks which beam, from those that reach the element. That "
 "is the same footprint a Ctrl-drag snaps over, less the element's own "
@@ -716,7 +776,7 @@ msgstr ""
 "Ctrl+ドラッグが吸着するのと同じで、素子自身の内部反射だけは除く。内部反射には、外を動くための軸が無いからである。最初は最も近いものが選ばれる。45°"
 " のミラーには入るビームと出るビームの両方が通るので、「沿って」がどちらを指すかは言う必要がある。"
 
-#: ../../../gtrace/docs/source/viewer.rst:188
+#: ../../../gtrace/docs/source/viewer.rst:194
 msgid ""
 "The list is also a picker, but a name like ``b0:M1t1`` says nothing about"
 " which line in the picture it is. So **Ctrl + click a beam** to name it "
@@ -734,7 +794,7 @@ msgstr ""
 "は既に「この素子を、あのビームに対して」を意味していて、ここでも同じ意味である。ビームは素子から外れたところをクリックすること。素子の上でクリックすると素子を掴んでしまう。Ctrl"
 " 無しのクリックは、これまでどおりビームの読み出しである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:190
+#: ../../../gtrace/docs/source/viewer.rst:196
 msgid ""
 "Ctrl + clicking the same place again steps to the next beam of the "
 "bundle, as clicking again does for the readout. Beams routinely lie on "
@@ -747,7 +807,7 @@ msgstr ""
 "Ctrl+クリックすると、束の中の次のビームに進む。読み出しで同じ場所を再クリックしたときと同じである。ビームは日常的に重なる。往復するビームは同じ線を共有するし、迷光が主ビームに沿って走ることも多い。だから指し示すだけでは分けられず、目当てのものが最も近いとは限らない。別の場所を"
 " Ctrl+クリックすると、巡回は最初からやり直しになる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:192
+#: ../../../gtrace/docs/source/viewer.rst:198
 msgid ""
 "The mark carries an arrow halfway along it, showing which way the chosen "
 "beam travels. That is the direction **Move by** counts as positive. Two "
@@ -758,7 +818,7 @@ msgstr ""
 "印には中ほどに矢印が付いていて、選んだビームがどちら向きに進むかを示す。\\ **Move by** "
 "が正とする向きである。1本の線を共有する2本のビームは、たいてい逆向きに走る。矢印が無いと、一方から他方に切り替えても絵は変わらないのに、移動の符号だけが反転することになる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:194
+#: ../../../gtrace/docs/source/viewer.rst:200
 msgid ""
 "**Move by [mm]** is a distance to move, not a place to be. Type it, press"
 " Enter, and the element slides that far, positive in the direction the "
@@ -772,7 +832,7 @@ msgstr ""
 "を押し続けても素子がベンチを歩いていくことはない。単位はミリメートルである。ベンチ上の調整はミリメートルで語られるし、\\ ``0.05`` "
 "は間違いを誘うからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:196
+#: ../../../gtrace/docs/source/viewer.rst:202
 msgid ""
 "Nothing else moves: not the orientation, not the offset across the beam. "
 "An element already square on the beam stays square and slides along it. "
@@ -780,23 +840,23 @@ msgid ""
 "moved makes no difference::"
 msgstr "他には何も動かない。向きも、ビームを横切る方向のずれも変わらない。既にビームに直交している素子は、直交したまま沿って滑る。基板全体が平行移動するので、名目上どの点を動かしているかは結果に影響しない::"
 
-#: ../../../gtrace/docs/source/viewer.rst:202
+#: ../../../gtrace/docs/source/viewer.rst:208
 msgid ""
 "Since the layout holds optics by reference, the object you edited in the "
 "browser is the object your own variable names:"
 msgstr "レイアウトは素子を参照で持っているので、ブラウザで編集したオブジェクトは、手元の変数が指すオブジェクトそのものである:"
 
-#: ../../../gtrace/docs/source/viewer.rst:210
+#: ../../../gtrace/docs/source/viewer.rst:216
 msgid "And in the other direction:"
 msgstr "逆向きにも:"
 
-#: ../../../gtrace/docs/source/viewer.rst:217
+#: ../../../gtrace/docs/source/viewer.rst:223
 msgid ""
 "``w.edits`` returns the edit messages received so far, oldest first, "
 "which is a convenient record of what you did by hand."
 msgstr "``w.edits`` は、それまでに受け取った編集メッセージを古い順に返す。手で行った操作の記録として使える。"
 
-#: ../../../gtrace/docs/source/viewer.rst:219
+#: ../../../gtrace/docs/source/viewer.rst:225
 msgid ""
 "Curvature is presented as a radius of curvature, not as the "
 "``inv_ROC_HR`` the model stores, and converted on the way in and out. A "
@@ -806,11 +866,11 @@ msgstr ""
 "曲率は、モデルが保持する ``inv_ROC_HR`` ではなく曲率半径として表示し、出入りのところで変換する。だから平面はゼロではなく "
 "``inf`` になり、パネルの数値はミラーのデータシートに書かれている数値と同じになる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:222
+#: ../../../gtrace/docs/source/viewer.rst:228
 msgid "Lenses"
 msgstr "レンズ"
 
-#: ../../../gtrace/docs/source/viewer.rst:224
+#: ../../../gtrace/docs/source/viewer.rst:230
 #, python-format
 msgid ""
 "``+ Lens`` puts a lens at the centre of the view. Unlike a mirror, it "
@@ -827,7 +887,7 @@ msgstr ""
 " mm・1インチ径である。そこから編集する。両面とも反射しないのでゴーストは作らない。レンズのゴーストが目当てなら、\\ **Refl HR** "
 "と **Refl AR** の行に実際のコーティングの値を入れる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:226
+#: ../../../gtrace/docs/source/viewer.rst:232
 msgid ""
 "Selecting a lens adds a **Focal length** row, directly under the type. It"
 " is first because for a lens it is the number that matters. Writing to it"
@@ -843,7 +903,7 @@ msgstr ""
 " で :py:attr:`f<gtrace.optcomp.Lens.f>` "
 "に代入したときと全く同じである。下にある2つの曲率半径はそれに追随する。曲率半径のほうを編集してもよい。それがレンズの実際の記述であり、焦点距離はそこから読み戻される。レンズ以外では、この行は現れない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:228
+#: ../../../gtrace/docs/source/viewer.rst:234
 msgid ""
 "It is in millimetres, as the rows describing the substrate are. A lens is"
 " listed in a catalogue in millimetres and spoken of that way, and typing "
@@ -856,7 +916,7 @@ msgstr ""
 "``0.075`` と打つのは間違いを誘う。素子が\\ *立つ*\\ "
 "位置はメートルのままである。それはベンチを横切る距離であって部品の寸法ではないからで、ページから出ていくメッセージも他と同じくメートルである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:230
+#: ../../../gtrace/docs/source/viewer.rst:236
 msgid ""
 "A focal length the blank cannot be ground to is refused, with the reason "
 "shown in the panel, and the lens is left as it was. ``inf`` is refused "
@@ -866,7 +926,7 @@ msgstr ""
 "その素材では削り出せない焦点距離は拒否され、理由がパネルに表示されて、レンズは元のままになる。\\ ``inf`` "
 "は送る前に拒否する。パワーの無いレンズは平面窓であり、それは別の素子だからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:232
+#: ../../../gtrace/docs/source/viewer.rst:238
 msgid ""
 "The **Anchor** row says which point the element is held by: **HR "
 "center**, the apex of the front face, or **substrate center**, the middle"
@@ -881,11 +941,11 @@ msgstr ""
 "面で留める。望遠鏡の曲率半径を掃引しても、ビームスポットが面から外れないようにするためである。レンズは中心で留める。ビームが通り抜けるからである。何が動くかは"
 " :ref:`changing-a-curvature` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:237
+#: ../../../gtrace/docs/source/viewer.rst:243
 msgid "Mechanics"
 msgstr "Mechanics（部品）"
 
-#: ../../../gtrace/docs/source/viewer.rst:239
+#: ../../../gtrace/docs/source/viewer.rst:245
 msgid ""
 "Bodies drawn on the ``mechanics`` layer — breadboards, mounts, clamps, "
 "the wall of a vacuum tank — are picked, dragged and edited like anything "
@@ -894,7 +954,7 @@ msgstr ""
 "``mechanics`` "
 "レイヤーに描かれる部品（ブレッドボード・マウント・クランプ・真空槽の壁など）は、他と同じように選択・ドラッグ・編集できる。違いは2つある。"
 
-#: ../../../gtrace/docs/source/viewer.rst:241
+#: ../../../gtrace/docs/source/viewer.rst:247
 msgid ""
 "**They are picked last.** A breadboard covers most of a bench, so a click"
 " lands on the beam or the element in front of it first, and only reaches "
@@ -907,7 +967,7 @@ msgstr ""
 "**選択の順序が最後である。** "
 "ブレッドボードはベンチのほとんどを覆うので、クリックはまず手前のビームや素子に当たり、他に何も無いところでだけボードに届く。複数の部品が重なっていれば小さいほうが勝つので、ボードの上に立つマウントがボードに隠されることはない。ミラーの下に完全に隠れたマウントには、同じ場所をもう一度クリックすれば届く。素子から下のビームへと降りていく巡回の、最後が部品である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:243
+#: ../../../gtrace/docs/source/viewer.rst:249
 msgid ""
 "**They are dragged only once selected.** A press on an unselected board "
 "usually means \"pan the view\" rather than \"move the bench\", so the "
@@ -918,7 +978,7 @@ msgstr ""
 "**選択してからでないとドラッグできない。** "
 "選択されていないボードを押すのは、たいてい「ベンチを動かす」ではなく「表示をパンする」という意味だからである。だから最初のクリックは選択で、その後のドラッグで動く。取り付けた部品もドラッグできない。宿主が行くところへ行くからである。ただし回転が自由なら、Shift+ドラッグで、留まっている点の回りに振れる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:245
+#: ../../../gtrace/docs/source/viewer.rst:251
 msgid ""
 "**A drag settles on the marked points.** Everything a measurement can "
 "snap to is somewhere a part can be placed: the screw holes of a "
@@ -932,7 +992,7 @@ msgstr ""
 "測定が吸着できる場所は、どれも部品を置きうる場所である。ブレッドボードのねじ穴、他の部品の角と中心、そして部品が自分で名前を付けた点（マウントの下の穴、ペデスタルの軸、フォークのボアなど）である。ペデスタルをマウントの下の穴の近くで放せば、ちょうどその上に載る。Alt"
 " を押すと、カーソルの位置をそのまま使う。何に吸着したかはステータスバーが表示する。"
 
-#: ../../../gtrace/docs/source/viewer.rst:247
+#: ../../../gtrace/docs/source/viewer.rst:253
 msgid ""
 "A body with a size — a breadboard, or anything else built with parameters"
 " — carries four corner handles while it is selected. Dragging one cuts it"
@@ -943,7 +1003,25 @@ msgstr ""
 "寸法を持つ部品（ブレッドボードや、パラメータから作られた部品）は、選択されているあいだ四隅にハンドルを持つ。1つをドラッグすると、対角の角を固定したまま新しい寸法に切り出される。Python"
 " は格子を拡大縮小するのではなく開け直すので、穴の直径とピッチは変わらない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:249
+#: ../../../gtrace/docs/source/viewer.rst:255
+msgid ""
+"**A body that is one shape drawn by hand is edited by that shape.** This "
+"is what ``+ Shape`` puts down, and a wall that could be put down and not "
+"resized would not be worth putting down: the panel shows the shape's own "
+"rows under the pose rows — a radius, a width and a height, the ends of a "
+"line, the angle of a turned rectangle — and its grips stand on the "
+"drawing, the same grips the shape editor offers. A drag on one is worked "
+"out in the body's own frame, so it lands where it was let go however the "
+"body is turned. A part off the library shelf is cut to size by the corner"
+" handles instead, a part of several shapes is drawn in the :ref:`shape "
+"editor <the-shape-editor>` where there is a list to pick from, and an "
+"attached body is edited through its host."
+msgstr ""
+"**手で描いた図形1つの部品は、その図形で編集する。** ``+ Shape`` "
+"が置くのはこれであり、置けても寸法を変えられない壁なら、置く意味が無い。パネルには姿勢の行の下にその図形自身の行が出る。半径、幅と高さ、線の両端、回した矩形の角度である。グリップも図の上に立つ。図形エディタが出すのと同じグリップである。ドラッグは部品自身の座標系で計算されるので、部品がどう回っていても、放した場所に来る。ライブラリの棚から出した部品は代わりに四隅のハンドルで寸法を変え、複数の図形からなる部品は、選ぶためのリストがある"
+" :ref:`図形エディタ <the-shape-editor>` で描き、取り付けられた部品は宿主を通して編集する。"
+
+#: ../../../gtrace/docs/source/viewer.rst:257
 msgid ""
 "**A round board is cut to a diameter.** A vacuum tank is round and so is "
 "the board in the bottom of it. Such a body has one size, not two: the "
@@ -956,7 +1034,7 @@ msgstr ""
 "Height ではなく **Diameter** "
 "の行が1つ出て、角をドラッグするとその1つの数値が決まる。中心は動かない。円板には固定しておく対角の角が無いからである。ハンドルは、その円に外接する正方形の上に立ち、カーソルに追随する。"
 
-#: ../../../gtrace/docs/source/viewer.rst:251
+#: ../../../gtrace/docs/source/viewer.rst:259
 msgid ""
 "**Assembled to** in the element panel says what this element follows: the"
 " far face of a beam dump follows the near one, a periscope's second "
@@ -970,7 +1048,7 @@ msgstr ""
 " **(free)** "
 "を選ぶと、今の位置のまま独立に戻る。素子自身と、既にその素子に従っているものは選択肢に出ない。自分自身から導かれる姿勢には値が無いからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:253
+#: ../../../gtrace/docs/source/viewer.rst:261
 msgid ""
 "While it follows something, **Center x**, **Center y**, **Angle** and "
 "**Move by** are the host's doing. They show where the host put it and "
@@ -988,7 +1066,7 @@ msgstr ""
 "**Joint y**\\ ・\\ **Joint angle** "
 "は、宿主の座標系の中でどこに座るかで、他の調整と同じくミリメートルと度である。従属を解かずに位置を微調整できる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:255
+#: ../../../gtrace/docs/source/viewer.rst:263
 msgid ""
 "**Remove takes what stands on the thing removed**: the mount on the "
 "mirror, the pedestal under the mount, the far face of a dump and its "
@@ -1003,7 +1081,7 @@ msgstr ""
 " の1段なので、思ったより多く消えてしまっても Undo 1回で戻せる。何かを残したければ、先に **(free)** で切り離す。部品なら "
 "**Attached to** → **(free)** である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:257
+#: ../../../gtrace/docs/source/viewer.rst:265
 msgid ""
 "**Copy** in the element panel adds a second one of it, with everything "
 "standing on it — the mount, the pedestal under the mount, the fork over "
@@ -1016,7 +1094,7 @@ msgstr ""
 "は、その素子をもう1つ足す。上に立っているものすべて（マウント、その下のペデスタル、ペデスタルを押さえるフォーク）も一緒で、元と同じ留め方でコピー側に留まる。コピーは自分の直径ぶん離れた位置に立ち、選択された状態になるので、そのまま目的の場所へドラッグできる。何がコピーされて何がされないかは"
 " :ref:`mechanics` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:259
+#: ../../../gtrace/docs/source/viewer.rst:267
 msgid ""
 "**Screw holes are snap points.** An element dragged near one lands its "
 "anchor point exactly on it, which is what a bench offers: optics go on "
@@ -1030,7 +1108,7 @@ msgstr ""
 "ねじ穴の近くでドラッグを放した素子は、アンカー点をちょうどその上に載せる。ベンチが提供しているのはそれで、光学素子は格子の上に載る。レーザーも同じで、光の出る点を穴に載せる。レーザーも他と同じくボルトで留めるものであり、ビームを回したときにモデルが固定する点がその点だからである。Alt"
 " を押すと吸着しない。測定ツールと Align も、この穴を印の付いた点として扱う。"
 
-#: ../../../gtrace/docs/source/viewer.rst:261
+#: ../../../gtrace/docs/source/viewer.rst:269
 msgid ""
 "The properties panel of an attached body shows what it is attached to, "
 "and its pose greyed out, since those numbers are derived from the host. "
@@ -1047,7 +1125,7 @@ msgstr ""
 " ``(free)`` は、立っている場所で切り離す。\\ **Offset x/y** と **Offset angle** "
 "は、その位置から意図的にずらすためのものである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:263
+#: ../../../gtrace/docs/source/viewer.rst:271
 msgid ""
 "**Fix rotation** decides whether the body may be turned while it is held."
 " With it off, the ``Angle`` row and Shift-drag swing the body about the "
@@ -1057,7 +1135,7 @@ msgstr ""
 "**Fix rotation** は、保持されているあいだに部品を回してよいかを決める。off にすると、\\ ``Angle`` の行と "
 "Shift+ドラッグで、留まっている点の回りに部品が振れる（フォークならポストの回り）。それでも部品は宿主と一緒に回る。"
 
-#: ../../../gtrace/docs/source/viewer.rst:265
+#: ../../../gtrace/docs/source/viewer.rst:273
 msgid ""
 "Names are not drawn for a body. A bench has more bodies than optics, and "
 "a picture labelled with three mounts and a board is harder to read than "
@@ -1066,11 +1144,11 @@ msgstr ""
 "部品には名前を描かない。ベンチには素子より部品のほうが多く、マウント3つとボードの名前が並んだ絵は、無い絵より読みにくい。\\ "
 "``drawMechanicsNames=True`` で表示できる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:270
+#: ../../../gtrace/docs/source/viewer.rst:278
 msgid "The shape editor"
 msgstr "形状エディタ"
 
-#: ../../../gtrace/docs/source/viewer.rst:272
+#: ../../../gtrace/docs/source/viewer.rst:280
 msgid ""
 ":py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens a part "
 "in an editor of its own:"
@@ -1078,7 +1156,7 @@ msgstr ""
 ":py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` "
 "は、部品を専用のエディタで開く:"
 
-#: ../../../gtrace/docs/source/viewer.rst:281
+#: ../../../gtrace/docs/source/viewer.rst:289
 msgid ""
 "It is the same viewer, handed a scene of nothing but the shapes of one "
 "body, drawn in the frame they are written in **with the origin marked**. "
@@ -1090,18 +1168,25 @@ msgstr ""
 "これは同じビューアに、1つの部品の形状だけからなるシーンを渡したものである。形状が書かれている座標系で、\\ **原点を示して**\\ "
 "描かれる。原点は、部品を取り付けたときに宿主の基板中心に来る点なので、これが見えていることが、部品を正しく作ることのほとんどを占める。ズーム・パン・undo・測定・レイヤーパネルは、そのまま使える。"
 
-#: ../../../gtrace/docs/source/viewer.rst:283
+#: ../../../gtrace/docs/source/viewer.rst:291
 msgid ""
 "The side bar swaps: buttons that put a rectangle, circle, line, polyline,"
 " arc or text down at the origin; the list of shapes in the order they are"
 " drawn, which is where one is picked, copied, moved earlier or later and "
 "taken away; the numbers of whichever is picked, in millimetres and "
-"degrees; and **Save to library**, which registers the part under a name."
+"degrees — for a rectangle that is its corner, its width and height, its "
+"**Angle**, and the **Pivot** that angle is taken about, which reads its "
+"middle until it is typed over; and **Save to library**, which registers "
+"the part under a name, a line of description and a name prefix — what the"
+" parts built from it are called, ``MT`` giving ``MT1``, ``MT2``. Left "
+"empty they are named ``H1``, ``H2``."
 msgstr ""
-"サイドバーは中身が入れ替わる。矩形・円・線・ポリライン・円弧・テキストを原点に置くボタン、描かれる順に並んだ形状のリスト（選択・複製・順序の入れ替え・削除はここで行う）、選択中の形状の数値（ミリメートルと度）、そして部品を名前を付けて登録する"
-" **Save to library** である。"
+"サイドバーは中身が入れ替わる。矩形・円・線・ポリライン・円弧・テキストを原点に置くボタン、描かれる順に並んだ形状のリスト（選択・複製・順序の入れ替え・削除はここで行う）、選択中の形状の数値（ミリメートルと度。矩形なら、角、幅と高さ、\\"
+" **Angle**\\ 、そしてその角度を取る **Pivot** で、Pivot は打ち込むまでは矩形の中心を表示する）、そして **Save"
+" to library** である。これは部品を、名前・1行の説明・名前のプレフィックス（そのモデルから作る部品の呼び方。\\ ``MT`` なら"
+" ``MT1`` 、\\ ``MT2`` になる）を付けて登録する。空のままなら ``H1`` 、\\ ``H2`` になる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:285
+#: ../../../gtrace/docs/source/viewer.rst:293
 msgid ""
 "A shape is also worked on in the drawing. A click picks it, by its "
 "outline or by what it encloses, the smallest winning, and the same place "
@@ -1110,13 +1195,15 @@ msgid ""
 "four corners of a rectangle with the opposite one staying put, a point on"
 " the rim of a circle for its radius, the two ends of a line, where an arc"
 " starts, stops and how far out it runs, and one grip per vertex of an "
-"outline. Shift-drag turns it about the middle of its box, and ``[`` and "
-"``]`` turn it 45° at a time."
+"outline. A turned rectangle is gripped by the corners it really has, and "
+"a drag on one is worked out along its own axes, so the width and the "
+"height stay its width and its height. Shift-drag turns it about the "
+"middle of its box, and ``[`` and ``]`` turn it 45° at a time."
 msgstr ""
-"形状は図の上でも操作できる。クリックすると、輪郭か、囲んでいる領域で選ばれ、小さいほうが勝つ。同じ場所をもう一度クリックすると、重なっているものを順に降りていく。選択中の形状はドラッグで運べて、グリップが付く。グリップ1つが数値1つに対応する。矩形は四隅（対角は動かない）、円は半径のための円周上の点、線は両端、円弧は始まり・終わり・半径、輪郭は頂点ごとに1つである。Shift+ドラッグでバウンディングボックスの中心の回りに回り、\\"
+"形状は図の上でも操作できる。クリックすると、輪郭か、囲んでいる領域で選ばれ、小さいほうが勝つ。同じ場所をもう一度クリックすると、重なっているものを順に降りていく。選択中の形状はドラッグで運べて、グリップが付く。グリップ1つが数値1つに対応する。矩形は四隅（対角は動かない）、円は半径のための円周上の点、線は両端、円弧は始まり・終わり・半径、輪郭は頂点ごとに1つである。回した矩形は、実際に持っている角がグリップになる。ドラッグはその矩形自身の軸に沿って計算されるので、幅と高さは幅と高さのままである。Shift+ドラッグでバウンディングボックスの中心の回りに回り、\\"
 " ``[`` と ``]`` で45°ずつ回る。"
 
-#: ../../../gtrace/docs/source/viewer.rst:287
+#: ../../../gtrace/docs/source/viewer.rst:295
 msgid ""
 "A drag settles on the marked points — the origin, the corners, centres, "
 "vertices and edge midpoints of the other shapes, and the named points "
@@ -1129,7 +1216,7 @@ msgstr ""
 "を押すとカーソルの位置をそのまま使う。ポリラインは頂点ごとに編集する。入力欄はグリップで選んだ頂点に効き、\\ **+ Vertex** "
 "は次の頂点との中間に角を1つ足し、\\ **− Vertex** は選択中の頂点を取り除く。"
 
-#: ../../../gtrace/docs/source/viewer.rst:289
+#: ../../../gtrace/docs/source/viewer.rst:297
 msgid ""
 "**Named points** have a panel of their own. These are the points the part"
 " names for itself: ``'post'`` for the hole a mount is bolted down "
@@ -1142,7 +1229,7 @@ msgstr ""
 " ``'axis'``\\ 、フォークが ``'bore'`` "
 "である。ある部品を別の部品の上に立てるときに使う点なので、どれか1つの形状ではなく部品そのものに属する。原点の十字と同じ琥珀色で、小さなリングと名前として描かれる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:291
+#: ../../../gtrace/docs/source/viewer.rst:299
 msgid ""
 "Pick one from the list, or click its ring, and the rows give its **Name**"
 " and its place in millimetres. Drag the ring to carry it, settling on the"
@@ -1157,7 +1244,7 @@ msgstr ""
 "でカーソルの位置をそのまま使えるのも同じである。リングは、その下にある形状よりも先に選択される。リングは小さな印で、形状は面積を持つものだからである。ただし選択中の形状のグリップよりは後になる。\\"
 " **+ Point** は原点に仮の名前で点を1つ足すので、そこに名前を打ち込む。\\ **− Point** は選択中の点を取り除く。"
 
-#: ../../../gtrace/docs/source/viewer.rst:293
+#: ../../../gtrace/docs/source/viewer.rst:301
 msgid ""
 "This is how a point that no drawing shows gets placed. A mount is bolted "
 "to its pedestal from underneath, so its post hole is in no top view, but "
@@ -1169,7 +1256,7 @@ msgstr ""
 " ``mirror_mount()`` "
 "は、点に名前を付けると同時に、その位置に円も描く。この2つは別物である。円は図面であり、名前は部品を立てるための点である。"
 
-#: ../../../gtrace/docs/source/viewer.rst:295
+#: ../../../gtrace/docs/source/viewer.rst:303
 msgid ""
 "Names are how a part is stood on something, so two points cannot share "
 "one and a point cannot go unnamed. Renaming, moving, adding and removing "
@@ -1178,30 +1265,31 @@ msgstr ""
 "名前は、部品を何かの上に立てるための手がかりなので、2つの点が同じ名前を持つことはできず、名前の無い点も置けない。名前の変更・移動・追加・削除は、いずれもその時点のリスト全体を送る。だからどれも"
 " undo の1段になる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:297
+#: ../../../gtrace/docs/source/viewer.rst:305
 msgid ""
 "Every gesture commits as one message, so it is one step of undo and goes "
-"through the same constructor a typed row does. **A turned rectangle "
-"becomes an outline**, because a ``Rectangle`` has its sides along the "
-"axes and no turned form; one undo puts the rectangle back. The editor "
-"works on the body itself, by reference, so a part already registered in a"
-" layout is redrawn there as soon as the layout is drawn again."
+"through the same constructor a typed row does. **A turned rectangle is "
+"still a rectangle**: it has an ``Angle`` of its own and a ``Pivot`` to "
+"take that angle about, both on the panel, so turning one leaves a width "
+"and a height to go on editing. The editor works on the body itself, by "
+"reference, so a part already registered in a layout is redrawn there as "
+"soon as the layout is drawn again."
 msgstr ""
 "どの操作も1つのメッセージとして確定するので、undo の1段になり、入力欄から打ったときと同じコンストラクタを通る。\\ "
-"**回した矩形は輪郭になる。** ``Rectangle`` は辺が軸に平行と決まっていて、回った形が存在しないからである。undo "
-"を1回すれば矩形に戻る。エディタは部品そのものを参照で扱うので、レイアウトに登録済みの部品なら、そのレイアウトを描き直した時点で反映される。"
+"**回した矩形は矩形のままである。** 自分自身の ``Angle`` と、その角度を取る ``Pivot`` "
+"を持ち、どちらもパネルに出るので、回したあとも幅と高さを編集し続けられる。エディタは部品そのものを参照で扱うので、レイアウトに登録済みの部品なら、そのレイアウトを描き直した時点で反映される。"
 
-#: ../../../gtrace/docs/source/viewer.rst:300
+#: ../../../gtrace/docs/source/viewer.rst:308
 msgid "Measuring"
 msgstr "測定"
 
-#: ../../../gtrace/docs/source/viewer.rst:302
+#: ../../../gtrace/docs/source/viewer.rst:310
 msgid ""
 "**Measure** arms the measuring tool. It takes three clicks: two to say "
 "what is being measured, and one to say where the line goes."
 msgstr "**Measure** で測定ツールを構える。クリックは3回で、2回で何を測るかを、3回目で線をどこに引くかを指定する。"
 
-#: ../../../gtrace/docs/source/viewer.rst:307
+#: ../../../gtrace/docs/source/viewer.rst:315
 msgid ""
 "A measurement across the substrate of ``M1``, from the apex of its HR "
 "face to the apex of its AR face. The span runs inside the glass, so the "
@@ -1212,7 +1300,7 @@ msgstr ""
 "``M1`` の基板を横切る測定。HR 面の頂点から AR "
 "面の頂点までである。区間がガラスの中を通っているので、線の下に光学的距離も書かれる。線そのものは素子から外へ寄せてあり、2つの点へは補助線が伸びている。"
 
-#: ../../../gtrace/docs/source/viewer.rst:309
+#: ../../../gtrace/docs/source/viewer.rst:317
 msgid ""
 "The third click exists because the two points worth measuring between are"
 " usually the two the drawing is busiest around: along a beam, or through "
@@ -1222,7 +1310,7 @@ msgid ""
 "lines then run back to the points, as on any engineering drawing."
 msgstr "3回目のクリックがあるのは、測る価値のある2点が、たいてい図のいちばん混み合っているところにあるからである。ビームに沿っていたり、素子を貫いていたりする。2点を直線で結ぶと、線は測っている当のものの上に載ってしまい、読むことも掴むこともできない。どこへ寄せるかは図の見せ方の選択なので、目で決める。あとは製図と同じく、2点まで補助線が伸びる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:311
+#: ../../../gtrace/docs/source/viewer.rst:319
 msgid ""
 "Between the first two clicks a line follows the cursor and the status bar"
 " reports the distance as it stands. After the second, the dimension "
@@ -1234,7 +1322,7 @@ msgstr ""
 "最初の2回のクリックの間は、カーソルに線が追随し、ステータスバーがその時点の距離を表示する。2回目の後は、寸法線そのものが破線でプレビューされる。確定したものを描くのと同じコードで描かれ、カーソルがどれだけ外へ寄せるかを決める。区間のすぐ近くではオフセットが"
 " 0 になるので、狙いを定めなくても2点を直線で結んだ線が引ける。"
 
-#: ../../../gtrace/docs/source/viewer.rst:313
+#: ../../../gtrace/docs/source/viewer.rst:321
 msgid ""
 "**Esc** puts the tool away at any stage and drops whatever was half "
 "placed. **m** arms it from the keyboard. The tool disarms itself after "
@@ -1244,18 +1332,18 @@ msgstr ""
 "**Esc** はどの段階でもツールを片付け、置きかけのものを捨てる。\\ **m** "
 "はキーボードから構える。ツールは最後のクリックで自動的に解除され、できた寸法線が選択されるので、数値はすぐパネルに出る。"
 
-#: ../../../gtrace/docs/source/viewer.rst:315
+#: ../../../gtrace/docs/source/viewer.rst:323
 msgid ""
 "While the tool is up, nothing else answers the mouse: no element is "
 "grabbed and no beam is pinned. A click means \"measure here\" and nothing"
 " else, which keeps a drag from moving the element being measured."
 msgstr "ツールを構えているあいだ、マウスには他の何も反応しない。素子は掴まれず、ビームも固定されない。クリックは「ここを測る」だけを意味する。測っている素子をドラッグで動かしてしまわないためである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:318
+#: ../../../gtrace/docs/source/viewer.rst:326
 msgid "Snapping"
 msgstr "吸着"
 
-#: ../../../gtrace/docs/source/viewer.rst:320
+#: ../../../gtrace/docs/source/viewer.rst:328
 msgid ""
 "The first two clicks take the nearest marked point if there is one within"
 " reach, and the cursor position if not. The marked point is shown as a "
@@ -1265,13 +1353,13 @@ msgid ""
 "about that. What is on offer:"
 msgstr "最初の2回のクリックは、届く範囲に印の付いた点があればそれを、無ければカーソルの位置を取る。確定する前に、その点がリングで示される。3回目のクリックは何にも吸着しない。測る2点は正確な値だが、線をどこに引くかは場所の空き具合の問題であり、モデルの中にそれについて意見を持つものは無いからである。使えるのは次の点である:"
 
-#: ../../../gtrace/docs/source/viewer.rst:322
+#: ../../../gtrace/docs/source/viewer.rst:330
 msgid ""
 "the four **corners** of each substrate, where the wedge and the sagitta "
 "of a curved face put them;"
 msgstr "各基板の4つの\\ **角**\\ 。ウェッジと曲面のサジッタが決める位置にある"
 
-#: ../../../gtrace/docs/source/viewer.rst:323
+#: ../../../gtrace/docs/source/viewer.rst:331
 msgid ""
 "the **apex of each face** and the **middle** of each substrate — the same"
 " points :ref:`changing-a-curvature` calls the anchors;"
@@ -1279,11 +1367,11 @@ msgstr ""
 "各面の\\ **頂点**\\ と各基板の\\ **中心**\\ 。\\ :ref:`changing-a-curvature` "
 "がアンカーと呼ぶのと同じ点である"
 
-#: ../../../gtrace/docs/source/viewer.rst:324
+#: ../../../gtrace/docs/source/viewer.rst:332
 msgid "both **ends of every beam** in the trace."
 msgstr "トレース中のすべての\\ **ビームの両端**\\ 。"
 
-#: ../../../gtrace/docs/source/viewer.rst:326
+#: ../../../gtrace/docs/source/viewer.rst:334
 msgid ""
 "The reach is in screen pixels, so it is the same to the eye however far "
 "the view is zoomed. Points on a hidden layer are not offered: a layer "
@@ -1296,11 +1384,11 @@ msgstr ""
 "届く範囲は画面のピクセルで決まるので、どれだけズームしても見た目は同じである。非表示のレイヤーの点は候補にならない。切ったレイヤーは「今は見ていない」と宣言したものであり、見えない点に吸着すると、測定の端が何も無いように見える場所に付いてしまうからである。ビームが当たった面で終わっている場合は、素子の点が勝つ。そちらがモデルの持つ正確な値であり、\\"
 " ``M2 HR`` のほうが ``b0 end`` より役に立つ名前だからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:329
+#: ../../../gtrace/docs/source/viewer.rst:337
 msgid "The dimension panel"
 msgstr "寸法線のパネル"
 
-#: ../../../gtrace/docs/source/viewer.rst:331
+#: ../../../gtrace/docs/source/viewer.rst:339
 msgid ""
 "Clicking a dimension line shows it in the panel: its name, both ends — "
 "which are editable, so a measurement placed by eye can be given exact "
@@ -1313,7 +1401,7 @@ msgstr ""
 " **Line offset**\\ 、そして **Measurement** の下に距離・2つの成分 **Δx** と **Δy**\\ "
 "・方向が出る。\\ **Remove** は素子のときと同じく、レイアウトから取り除く。"
 
-#: ../../../gtrace/docs/source/viewer.rst:333
+#: ../../../gtrace/docs/source/viewer.rst:341
 msgid ""
 "The components are there because a bench is built on axes: a mount goes "
 "300 along and 75 across, and that pair is as often the number wanted as "
@@ -1322,7 +1410,7 @@ msgid ""
 "shows them alongside the distance while the measurement is being taken."
 msgstr "成分があるのは、ベンチが軸の上に組まれるからである。マウントは「縦に300、横に75」の位置に置く。この対のほうが、2点間の直線距離より欲しい数であることも多い。符号は1点目から2点目に向かう向きで、方向の表示と揃えてある。測定中はステータスバーにも距離と並べて表示される。"
 
-#: ../../../gtrace/docs/source/viewer.rst:335
+#: ../../../gtrace/docs/source/viewer.rst:343
 msgid ""
 "**Line offset** is in millimetres, like the other rows that are an "
 "adjustment rather than a place: it is nudged until the line clears "
@@ -1334,7 +1422,7 @@ msgstr ""
 "はミリメートルである。位置ではなく調整を表す他の行と同じで、覆っていたものが見えるようになるまで動かす。2点を結ぶ向きに対して左が正で、0 "
 "なら2点のちょうど間に線が引かれる。測った内容は何も変わらない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:337
+#: ../../../gtrace/docs/source/viewer.rst:345
 msgid ""
 "Three more rows appear when the whole span runs inside one substrate: "
 "which element it is inside, that element's refractive index, and the "
@@ -1346,7 +1434,7 @@ msgstr ""
 "（物理的な距離に屈折率を掛けたもの）である。それ以外の場合には現れない。なぜこの場合にだけ光学的距離を報告するのかは "
 ":ref:`dimensions` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:339
+#: ../../../gtrace/docs/source/viewer.rst:347
 msgid ""
 "A dimension is picked by its **line**, not by the span between the "
 "measured points. That span usually runs along a beam or through an "
@@ -1358,17 +1446,17 @@ msgstr ""
 "寸法線は\\ **線**\\ "
 "で選択する。測った2点の間の区間ではない。その区間はたいていビームに沿っているか素子を貫いていて、そこで掴めるようにすると、線を外へ寄せた意味が無くなる。線は、その下にあるものより先に選択される。これで困ることはほとんど無い。線は数ピクセルの幅しかなく、しかも場所の空いているところに置かれているからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:341
+#: ../../../gtrace/docs/source/viewer.rst:349
 msgid ""
 "Dimensions are part of the layout, not a scratch overlay. They are saved "
 "with it, come back with it, and are taken back by undo."
 msgstr "寸法線はレイアウトの一部であって、一時的な重ね書きではない。一緒に保存され、一緒に戻り、undo でも取り消せる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:346
+#: ../../../gtrace/docs/source/viewer.rst:354
 msgid "Measuring without Python"
 msgstr "Python 無しで測る"
 
-#: ../../../gtrace/docs/source/viewer.rst:348
+#: ../../../gtrace/docs/source/viewer.rst:356
 msgid ""
 "**The static HTML file can be measured on too.** Everything the tool "
 "needs to place a measurement is already in the page: the points to snap "
@@ -1379,13 +1467,13 @@ msgstr ""
 "**静的な HTML ファイルの上でも測定できる。** "
 "測定を置くのに必要なものは、すべてページの中にある。吸着する点はシーンと一緒に運ばれるし、2点間の距離は算術である。寸法を測れるファイルを同僚に送れることは、このファイルを用意する理由の大部分を占める。"
 
-#: ../../../gtrace/docs/source/viewer.rst:350
+#: ../../../gtrace/docs/source/viewer.rst:358
 msgid ""
 "Two things such a page cannot do, both because Python is what would have "
 "done them:"
 msgstr "そうしたページにできないことが2つある。どちらも、やるとしたら Python の仕事だからである:"
 
-#: ../../../gtrace/docs/source/viewer.rst:352
+#: ../../../gtrace/docs/source/viewer.rst:360
 msgid ""
 "**no optical distance.** Whether a span runs inside a substrate is a "
 "question about the surfaces, and those live in the model rather than in "
@@ -1397,7 +1485,7 @@ msgstr ""
 "区間が基板の中を通っているかどうかは面についての問いで、面は図面ではなくモデルの中にある。レイアウトが持っていた寸法線は光学的距離を保つ。ファイルを書く前に"
 " Python が計算しておいたからである。読み手が引いた寸法線は、物理的な長さだけになる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:353
+#: ../../../gtrace/docs/source/viewer.rst:361
 msgid ""
 "**the measurement is not saved.** It lasts as long as the page. It is "
 "also the reader's own: **Remove** offers to take back what they drew and "
@@ -1407,7 +1495,7 @@ msgstr ""
 "**測定は保存されない。** ページを閉じるまでの命である。また、それは読み手自身のものである。\\ **Remove** "
 "が取り消しを申し出るのは読み手が引いたものだけで、読み取り専用のビューアが、渡されたレイアウトを変えたように見えることはない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:355
+#: ../../../gtrace/docs/source/viewer.rst:363
 msgid ""
 "The same applies to a widget made read-only with ``editable=False``, "
 "which has nowhere to send edits. There, a scene pushed by ``update()`` "
@@ -1416,11 +1504,11 @@ msgstr ""
 "``editable=False`` で読み取り専用にしたウィジェットでも同じである。こちらには編集の送り先が無い。ただしそこでは、\\ "
 "``update()`` が押し込むシーンが、他のすべてと一緒に読み手の測定も置き換える。"
 
-#: ../../../gtrace/docs/source/viewer.rst:358
+#: ../../../gtrace/docs/source/viewer.rst:366
 msgid "Undo and redo"
 msgstr "undo と redo"
 
-#: ../../../gtrace/docs/source/viewer.rst:360
+#: ../../../gtrace/docs/source/viewer.rst:368
 msgid ""
 "**Undo** in the side bar, or Ctrl + Z with the pointer over the viewer, "
 "puts the layout back as it was before the last edit. It is out of reach "
@@ -1431,7 +1519,7 @@ msgstr ""
 "で、レイアウトは直前の編集の前の状態に戻る。取り消す編集が無いあいだは押せない。1回に1つの編集ずつ、\\ "
 ":py:data:`UNDO_DEPTH<gtrace.layout.UNDO_DEPTH>` 回まで遡れる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:362
+#: ../../../gtrace/docs/source/viewer.rst:370
 msgid ""
 "**Redo**, or Ctrl + Shift + Z or Ctrl + Y, walks forward again through "
 "the edits that Undo took back. It is out of reach until an undo has put "
@@ -1443,13 +1531,13 @@ msgstr ""
 "が何かを脇に置くまでは押せない。そして\\ **次に編集を1つ行うと、待っているものは捨てられる**\\ "
 "。レイアウトが別の道を進んだ以上、戻るべき枝は残っていない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:364
+#: ../../../gtrace/docs/source/viewer.rst:372
 msgid ""
 "The history belongs to the layout, not to the viewer, so it covers edits "
 "sent from a cell as well as edits made in the browser::"
 msgstr "履歴はビューアではなくレイアウトに属するので、セルから送った編集も、ブラウザで行った編集も同じように扱われる::"
 
-#: ../../../gtrace/docs/source/viewer.rst:371
+#: ../../../gtrace/docs/source/viewer.rst:379
 msgid ""
 "A step of the history holds the elements themselves alongside their "
 "values, so undoing restores those values onto those same objects. The "
@@ -1466,7 +1554,7 @@ msgstr ""
 ":py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>`"
 " にできることより強い。あちらはオブジェクトを対応づける手がかりが名前しかない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:373
+#: ../../../gtrace/docs/source/viewer.rst:381
 msgid ""
 "What it does not cover is an assignment made directly in Python: "
 "``M1.HRcenter = ...`` is not an edit the layout ever sees. It is captured"
@@ -1477,7 +1565,7 @@ msgstr ""
 "は、レイアウトが見ることのない変更である。ただし、\\ *次に*\\ 通った編集の直前に取られるスナップショットには入るので、その編集を undo"
 " すれば一緒に戻る。"
 
-#: ../../../gtrace/docs/source/viewer.rst:375
+#: ../../../gtrace/docs/source/viewer.rst:383
 msgid ""
 "A refused edit changes nothing and costs no step, so Undo after one takes"
 " back the edit before it. It also leaves anything waiting to be redone "
@@ -1486,11 +1574,11 @@ msgstr ""
 "拒否された編集は何も変えず、段も消費しない。だから拒否された直後の Undo "
 "は、その前の編集を取り消す。やり直し待ちのものもそのまま残る。何も決まっていないからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:378
+#: ../../../gtrace/docs/source/viewer.rst:386
 msgid "Read-only viewers"
 msgstr "読み取り専用のビューア"
 
-#: ../../../gtrace/docs/source/viewer.rst:380
+#: ../../../gtrace/docs/source/viewer.rst:388
 msgid ""
 "A widget constructed without a layout, or with ``editable=False``, shows "
 "the readout but no editing controls. The static HTML is always read-only:"
@@ -1501,7 +1589,7 @@ msgstr ""
 "のウィジェットは、読み出しは見せるが編集の操作は出さない。静的な HTML は常に読み取り専用である。背後に再トレースする Python "
 "が無いので、編集しても意味を持ちようがない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:382
+#: ../../../gtrace/docs/source/viewer.rst:390
 msgid ""
 "Measuring is the exception, since it asks nothing of the model. The tool "
 "is there in a read-only viewer, and what it draws stays in the page. See "
@@ -1510,18 +1598,18 @@ msgstr ""
 "測定だけは例外である。モデルに何も要求しないからである。読み取り専用のビューアにもツールがあり、引いたものはページの中に残る。そこでできない2つのことは"
 " :ref:`measuring-without-python` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:384
+#: ../../../gtrace/docs/source/viewer.rst:392
 msgid ""
 "A rejected edit — an unknown attribute, a value outside the permitted "
 "set, a duplicate name — leaves the layout untouched and reports itself in"
 " the viewer, rather than raising somewhere nothing would see it."
 msgstr "拒否された編集（未知の属性、許されない値、名前の重複）は、レイアウトを変えずにビューアの中でその旨を伝える。誰も見ないところで例外を投げたりはしない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:387
+#: ../../../gtrace/docs/source/viewer.rst:395
 msgid "Files"
 msgstr "ファイル"
 
-#: ../../../gtrace/docs/source/viewer.rst:389
+#: ../../../gtrace/docs/source/viewer.rst:397
 msgid ""
 "The side bar has two file panels. All the reading and writing is done by "
 "Python, and the paths are relative to where the kernel is running; the "
@@ -1531,7 +1619,7 @@ msgstr ""
 "サイドバーにはファイルのパネルが2つある。読み書きはすべて Python "
 "が行い、パスはカーネルが動いているディレクトリからの相対である。ページにディスクへのアクセスは渡さない。どちらのパネルも画面上のものを変えないので、ビューアは何をしたかをステータス行に表示する。"
 
-#: ../../../gtrace/docs/source/viewer.rst:391
+#: ../../../gtrace/docs/source/viewer.rst:399
 msgid ""
 "**Optical layout (JSON)** — **Save** and **Load** write and read the "
 "layout itself. Loading updates it in place, so the names bound in the "
@@ -1541,13 +1629,13 @@ msgstr ""
 "は、レイアウトそのものを書き、読む。読み込みはその場で更新するので、上のセルで束縛した名前は正しいオブジェクトを指し続ける。\\ "
 ":doc:`layout` を参照。"
 
-#: ../../../gtrace/docs/source/viewer.rst:393
+#: ../../../gtrace/docs/source/viewer.rst:401
 msgid ""
 "**Drawing (DXF)** — **Export** writes a drawing of the layout for the "
 "rest of an engineering workflow."
 msgstr "**Drawing (DXF)** の **Export** は、エンジニアリングの残りの工程へ渡すための図面を書く。"
 
-#: ../../../gtrace/docs/source/viewer.rst:395
+#: ../../../gtrace/docs/source/viewer.rst:403
 msgid ""
 "They are kept apart, with a file name each, because they deal in two "
 "different things. The layout is the model, and saving it and loading it "
@@ -1558,7 +1646,7 @@ msgstr ""
 "2つを分けてあり、ファイル名も別々なのは、扱っているものが違うからである。レイアウトはモデルであり、保存して読み戻せば同じ系が手に入る。DXF "
 "はモデルの\\ *絵*\\ であって、二度と戻ってこない先へ出ていくものなので、そちらに Load を押すのは間違いにしかならない。"
 
-#: ../../../gtrace/docs/source/viewer.rst:397
+#: ../../../gtrace/docs/source/viewer.rst:405
 msgid ""
 "The drawing's name starts from the layout's with the extension swapped, "
 "so the two match without being typed twice; from then on it is yours. An "
@@ -1569,11 +1657,11 @@ msgstr ""
 "図面の名前は、レイアウトの名前の拡張子を差し替えたところから始まるので、2度打たなくても揃う。その後は自由に変えてよい。打ち込んだ拡張子はそのまま使い、省いた場合は補う。パネルがどの種類のファイルかを既に言っているからである。\\"
 " ``layout.widget(dxf_path=...)`` で、開始時の名前を Python から指定できる。"
 
-#: ../../../gtrace/docs/source/viewer.rst:402
+#: ../../../gtrace/docs/source/viewer.rst:410
 msgid "DXF export"
 msgstr "DXF 書き出し"
 
-#: ../../../gtrace/docs/source/viewer.rst:404
+#: ../../../gtrace/docs/source/viewer.rst:412
 msgid ""
 "The button is sugar on "
 ":py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`, the "
@@ -1584,7 +1672,7 @@ msgstr ""
 "を呼ぶだけのものである。\\ "
 ":py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>` と対になっている:"
 
-#: ../../../gtrace/docs/source/viewer.rst:412
+#: ../../../gtrace/docs/source/viewer.rst:420
 msgid ""
 "**Dimensions are drawn, on a layer of their own.** A dimension is a note "
 "about the system rather than part of it, and a layer is what CAD offers "
@@ -1596,14 +1684,14 @@ msgstr ""
 "が用意しているのがレイヤーである。だから図面は測定を運びつつ、開いた人に押し付けない。まったく入れたくなければ "
 "``dimensions=False`` を渡す。"
 
-#: ../../../gtrace/docs/source/viewer.rst:414
+#: ../../../gtrace/docs/source/viewer.rst:422
 msgid ""
 "The ticks and the lettering are sized as fractions of the measurement, "
 "not in millimetres. A drawing has no fixed scale, and a label sized for a"
 " bench would be invisible across a substrate."
 msgstr "矢印と文字の大きさは、ミリメートルではなく測定値に対する割合で決める。図面には決まった縮尺が無く、ベンチの大きさに合わせた文字は、基板を横切る測定では見えなくなるからである。"
 
-#: ../../../gtrace/docs/source/viewer.rst:416
+#: ../../../gtrace/docs/source/viewer.rst:424
 msgid ""
 "The underlying renderer is unchanged and still callable directly, which "
 "is what to use if you are not holding an "
@@ -1612,7 +1700,7 @@ msgstr ""
 "下にあるレンダラは変わっておらず、今も直接呼べる。\\ "
 ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` を使っていないときはこちらを使う:"
 
-#: ../../../gtrace/docs/source/viewer.rst:424
+#: ../../../gtrace/docs/source/viewer.rst:432
 msgid ""
 "This route draws no dimensions. They belong to the layout, and ``draw()``"
 " leaves them out, because the viewer draws them itself from the scene and"

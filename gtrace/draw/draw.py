@@ -152,21 +152,120 @@ class PolyLine(Shape):
 
 class Rectangle(Shape):
     '''
-    A rectangle
+    A rectangle, square to the axes or turned about a point of its own.
+
+    Note that angles are stored in rad.
+
+    The rectangle is built from ``point``, ``width`` and ``height``
+    with its sides along the axes, and then turned by ``angle`` about
+    ``pivot``. Those four numbers are what it is; the corners follow
+    from them, and :meth:`corners` is where every part of gtrace that
+    draws, bounds or picks one gets them from.
+
+    The pivot is kept rather than folded into the corner, so that a
+    rectangle turned about a hole, a hinge or the middle of a bench
+    still knows what it was turned about: setting ``angle`` again
+    turns it about the same point. It is carried when the rectangle
+    is moved, since a turn about a point that stayed behind is a turn
+    about a different part of the shape.
     '''
-    
-    def __init__(self, point, width, height, thickness=0):
+
+    def __init__(self, point, width, height, thickness=0, angle=0.0,
+                 pivot=None, angle_in_rad=True):
         '''
         = Arguments =
-        point: lower left corner of the rectangle
+        point: lower left corner of the rectangle, before it is turned
         width:
         height:
+        thickness:
+        angle: how far it is turned, counterclockwise
+        pivot: the point it is turned about, in the same coordinates as
+        point. None - the default - is the middle of the rectangle, so
+        that a rectangle given an angle and nothing else turns where it
+        stands.
+        angle_in_rad: whether angle is in radians. False is degrees.
         '''
         super(Rectangle, self).__init__()
         self.point = point
         self.width = width
         self.height = height
         self.thickness = thickness
+        self.angle = float(angle) if angle_in_rad else pi*float(angle)/180.0
+        self.pivot = (None if pivot is None
+                      else [float(pivot[0]), float(pivot[1])])
+
+    def pivot_point(self):
+        '''
+        The point the rectangle is turned about, as a point.
+
+        The middle of the rectangle where none was given - which is
+        why a rectangle that is moved and never given a pivot keeps
+        turning about itself.
+        '''
+        if self.pivot is not None:
+            return np.asarray(self.pivot, dtype='float64')
+        p = np.asarray(self.point, dtype='float64')
+        return p + [self.width/2.0, self.height/2.0]
+
+    def turned(self, angle, pivot=(0.0, 0.0)):
+        '''
+        A copy turned about a point, still a rectangle.
+
+        The turn is added to the one the rectangle already carries,
+        and what it is turned about follows: a rectangle that turned
+        about a hole in it turns about where that hole has got to. A
+        rectangle that had no pivot of its own is left with none, so
+        it goes on turning about its own middle - which is where its
+        middle has got to, since the middle travels with the corners.
+
+        = Arguments =
+        angle: how far to turn it, counterclockwise, in radians
+        pivot: the point to turn about, in the same coordinates as
+        point. Default the origin.
+
+        Returns a new Rectangle.
+        '''
+        pv = np.asarray(pivot, dtype='float64')
+        ca = np.cos(angle)
+        sa = np.sin(angle)
+
+        def carry(p):
+            d = np.asarray(p, dtype='float64') - pv
+            return pv + [d[0]*ca - d[1]*sa, d[0]*sa + d[1]*ca]
+
+        # The corners are turned by adding the angle and moving what
+        # the rectangle is turned about; the box it is written from
+        # follows that point rather than being turned itself, which is
+        # what keeps the two statements of the same rectangle in step.
+        q = self.pivot_point()
+        moved = carry(q) - q
+        return Rectangle(np.asarray(self.point, dtype='float64') + moved,
+                         self.width, self.height, thickness=self.thickness,
+                         angle=self.angle + angle,
+                         pivot=None if self.pivot is None else carry(q))
+
+    def corners(self):
+        '''
+        The four corners, lower left first and counterclockwise, as
+        they stand after the turn.
+
+        Returns
+        -------
+        numpy.ndarray
+            Of shape (4, 2).
+        '''
+        p = np.asarray(self.point, dtype='float64')
+        cs = np.array([p,
+                       p + [self.width, 0.0],
+                       p + [self.width, self.height],
+                       p + [0.0, self.height]])
+        if self.angle == 0.0:
+            return cs
+        q = self.pivot_point()
+        ca = np.cos(self.angle)
+        sa = np.sin(self.angle)
+        R = np.array([[ca, -sa], [sa, ca]])
+        return (cs - q) @ R.T + q
 
 
 #}}}

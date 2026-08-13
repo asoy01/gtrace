@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 23:19+0900\n"
+"POT-Creation-Date: 2026-08-13 16:36+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -804,16 +804,20 @@ msgstr ""
 #: ../../../gtrace/docs/source/layout.rst:283
 msgid ""
 "``angle`` is **the direction the light travels**, so a dump is aimed the "
-"way the beam runs, not by where its mouth points. The pieces come back, "
-"and are registered, hosts first. They are named from the dump: ``BD1a`` "
-"and ``BD1b`` are its two faces and ``BD1box`` its housing. A dump is "
-"numbered and its pieces lettered, so ``BD2b`` is the far face of the "
-"second dump. Without a name it is given the first free one."
+"way the beam runs, not by where its mouth points. What comes back is "
+"split — ``(optics, bodies)``, as every builder here returns — and each "
+"list is hosts first, which is the order they are registered in. They are "
+"named from the dump: ``BD1a`` and ``BD1b`` are its two faces and "
+"``BD1box`` its housing. A dump is numbered and its pieces lettered, so "
+"``BD2b`` is the far face of the second dump. Without a name it is given "
+"the first free one."
 msgstr ""
-"``angle`` は\\ **光が進む向き**\\ "
-"である。ダンプはビームの走る向きに合わせて置くもので、口がどちらを向いているかで置くのではない。部品は返り値として返り、宿主から順に登録される。名前はダンプから付ける。\\"
-" ``BD1a`` と ``BD1b`` が2枚の面、\\ ``BD1box`` が筐体である。ダンプに番号を、部品に文字を振るので、\\ "
-"``BD2b`` は2つ目のダンプの奥側の面である。名前を渡さなければ、空いている最初の番号が付く。"
+"angle は\\ **光が進む向き**\\ "
+"である。ダンプはビームの走る向きに合わせて置くもので、口がどちらを向いているかで置くのではない。返るのは分かれた形で、(optics, "
+"bodies) "
+"である。ここのビルダーはどれもこの形で返す。各リストの中は宿主から順で、それが登録すべき順序でもある。名前はダンプから付ける。BD1a と "
+"BD1b が2枚の面、BD1box が筐体である。ダンプに番号を、部品に文字を振るので、BD2b "
+"は2つ目のダンプの奥側の面である。名前を渡さなければ、空いている最初の番号が付く。"
 
 #: ../../../gtrace/docs/source/layout.rst:285
 msgid "From a front end it is one ``add``::"
@@ -1080,22 +1084,89 @@ msgid "The model library"
 msgstr "モデルライブラリ"
 
 #: ../../../gtrace/docs/source/layout.rst:356
+msgid ""
+"What actually goes onto a bench is not a mirror but a mirror in a mount, "
+"on a pedestal, held down by a fork. "
+":py:func:`assembly<gtrace.layout.assembly>` builds one:"
+msgstr ""
+"ベンチに実際に載るのはミラーではなく、マウントに入ったミラーであり、それはペデスタルの上に立ち、フォークで押さえられている。 "
+":py:func:`assembly<gtrace.layout.assembly>` がそれを作る。"
+
+#: ../../../gtrace/docs/source/layout.rst:366
+msgid ""
+"Four objects come back, the element first and then the parts that hold "
+"it, each attached to the one below: the mount to the optic at the model's"
+" designed position, the pedestal in the hole the mount is bolted down "
+"through, the fork round the pedestal with its turn free. **The element is"
+" the thing to move** — everything else derives its pose from it. "
+":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` "
+"registers the lot and fills in the names, each piece taking the first "
+"number free for its own kind, so a second two-inch mirror comes down as "
+"``M2`` held by ``MT2`` on ``P2`` in ``FK2``."
+msgstr ""
+"返るのは4つのオブジェクトで、素子が先頭、続いてそれを保持する部品が並ぶ。各部品は1つ下のものに取り付けられている。マウントは素子に、モデルが決めた位置で。ペデスタルは、マウントを止めているネジ穴に。フォークはペデスタルの周りに、回転を自由にして。\\"
+" **動かす対象は素子である** — 他は全て素子から姿勢を導く。 "
+":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` "
+"は4つまとめて登録し、名前も埋める。各部品は自分の種類で空いている最初の番号を取るので、2つ目の2インチミラーは ``M2`` として置かれ、\\"
+" ``MT2`` に保持され、\\ ``P2`` の上に立ち、\\ ``FK2`` で押さえられる。"
+
+#: ../../../gtrace/docs/source/layout.rst:368
+msgid ""
+":py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` and "
+":py:func:`lens_assembly<gtrace.layout.lens_assembly>` are what the kinds "
+"are made of, and take the same arguments plus the models to build the "
+"parts from; a piece is left out by passing ``None`` for its model. "
+"``mount_offset`` says where the mount is really bolted, in the optic's "
+"own frame with x along the face normal: the two-inch kind sits its mount "
+"**5 mm further back** than the drawing's designed position, which is a "
+"bench measurement rather than something the model knows. What the "
+"pedestal stands in moves with it, since the post hole is a point of the "
+"mount. An assembly is not a model on the library shelf, and cannot be: a "
+"model holds shapes, and the first piece of every assembly is an element."
+msgstr ""
+":py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` と "
+":py:func:`lens_assembly<gtrace.layout.lens_assembly>` "
+"が、この種類の中身である。同じ引数に加えて、部品を作るモデル名を取る。モデル名に ``None`` を渡せば、その部品を省ける。\\ "
+"``mount_offset`` は、マウントが実際にどこに留められているかを述べる。素子自身の枠で、x は面法線の向きである。\\ "
+"**2インチの種類は、図面の設計位置より 5 mm 後ろ**\\ "
+"にマウントを置く。これはモデルが知っている値ではなく、ベンチでの実測である。ペデスタルが入るネジ穴はマウントの点なので、一緒に動く。アセンブリはモデルライブラリの棚に置けない。モデルが持つのは形状だが、どのアセンブリも先頭の1つは素子だからである。"
+
+#: ../../../gtrace/docs/source/layout.rst:370
 msgid "Parts repeat, so they are worth registering once:"
 msgstr "部品は繰り返し使うので、一度登録しておく価値がある:"
 
-#: ../../../gtrace/docs/source/layout.rst:371
+#: ../../../gtrace/docs/source/layout.rst:386
 msgid ""
-"A model is a **value**: shapes, a layer, a description and the builder "
-"parameters, copied in when it is registered and copied out when it is "
-"used, so a body and the model it came from stay independent. Loading a "
-"file merges it into the registry name by name, which is how a library is "
-"assembled from several files. A file with one bad shape in it is refused "
-"whole, leaving the registry untouched."
+"A model is a **value**: shapes, a layer, a description, what its parts "
+"are called and the builder parameters, copied in when it is registered "
+"and copied out when it is used, so a body and the model it came from stay"
+" independent."
 msgstr ""
 "モデルは\\ **値**\\ "
-"である。形状・レイヤー・説明・ビルダーのパラメータからなり、登録するときにコピーされ、使うときにもコピーされる。だから部品と、その元になったモデルは互いに独立している。ファイルを読み込むと、名前ごとにレジストリへマージされる。複数のファイルからライブラリを組み立てられるのはこのためである。1つでも不正な形状が入っているファイルは丸ごと拒否され、レジストリは元のままになる。"
+"である。図形・レイヤー・説明・そこから作る部品の名前・ビルダーのパラメータが、登録した時点で複製されて入り、使うときに複製されて出る。部品と、その元になったモデルは、互いに独立のままである。"
 
-#: ../../../gtrace/docs/source/layout.rst:373
+#: ../../../gtrace/docs/source/layout.rst:388
+msgid ""
+"``prefix`` is what the bodies built from it are named, before the number,"
+" and it is part of the definition rather than of any one layout: a part "
+"is known by what it is, so a mount is ``MT1`` whatever catalogue the "
+"footprint came from, and a front end adding one has the name to hand. The"
+" stock says ``MT`` for a mount, ``P`` for a pedestal, ``FK`` for a fork, "
+"``HLD`` for a holder and ``BB`` for a breadboard — ``PD`` is deliberately"
+" nobody's, since a photodetector is what that reads as. A model that says"
+" nothing leaves the naming to whoever is doing it, which is ``H`` in the "
+"viewer. Loading a file merges it into the registry name by name, which is"
+" how a library is assembled from several files. A file with one bad shape"
+" in it is refused whole, leaving the registry untouched."
+msgstr ""
+"``prefix`` "
+"は、そのモデルから作った部品に付ける名前の、番号の前の部分である。これは特定のレイアウトではなく定義の側に属する。部品はそれが何であるかで呼ばれるからで、マウントはフットプリントがどのカタログのものであっても"
+" ``MT1`` であり、追加するフロントエンドは名前を手元に持っていることになる。標準で用意してあるものは、マウントが ``MT`` "
+"、ペデスタルが ``P`` 、フォークが ``FK`` 、ホルダーが ``HLD`` 、ブレッドボードが ``BB`` である。\\ ``PD``"
+" は意図的に誰にも使っていない。フォトディテクタと読めてしまうからである。何も言わないモデルは、名前を付ける側に任せる。ビューアではそれが "
+"``H`` になる。"
+
+#: ../../../gtrace/docs/source/layout.rst:390
 msgid ""
 "A body keeps the shapes themselves, and the model name only as a label. "
 "**The saved layout is the truth**: a library that has moved on cannot "
@@ -1109,7 +1180,7 @@ msgstr ""
 ":py:meth:`relink_mechanics<gtrace.layout.OpticalLayout.relink_mechanics>`"
 " で、姿勢にも取り付けにも触らない。"
 
-#: ../../../gtrace/docs/source/layout.rst:375
+#: ../../../gtrace/docs/source/layout.rst:392
 msgid ""
 "The stock models are generic on purpose — ``BB3030``, ``MOUNT-25``, "
 "``HOLDER-50`` and the like — because gtrace does not invent a vendor's "
@@ -1118,7 +1189,7 @@ msgstr ""
 "同梱のモデル（\\ ``BB3030``\\ 、\\ ``MOUNT-25``\\ 、\\ ``HOLDER-50`` "
 "など）が汎用的なのは意図的である。gtrace は特定のベンダーの寸法を勝手に決めない。その裏にあるビルダーは、実測した数値を受け取る:"
 
-#: ../../../gtrace/docs/source/layout.rst:390
+#: ../../../gtrace/docs/source/layout.rst:407
 msgid ""
 ":py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` is the "
 "board that goes in the bottom of a vacuum tank. The grid is the "
@@ -1130,7 +1201,7 @@ msgstr ""
 ":py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` "
 "は、真空槽の底に入れるボードである。格子は長方形のボードと同じで、中心について対称、ピッチも同じである。どの穴が実在するかは縁が決める。縁から一定の余裕だけ内側にある位置には穴を開け、そうでない位置には開けない。だから列は縁に近づくほど短くなり、実物の円板の開け方と同じになる。"
 
-#: ../../../gtrace/docs/source/layout.rst:392
+#: ../../../gtrace/docs/source/layout.rst:409
 msgid ""
 "A body built by one of these keeps the parameters it was built from, in "
 "``params``, which is what makes it resizable. "
@@ -1151,11 +1222,11 @@ msgstr ""
 "である。手で描いた部品について分かるのは形状だけだからである。\\ **円形の部品の寸法は、2つではなく1つである。** ``width`` でも"
 " ``height`` でも直径が決まり、食い違う2つを渡すと拒否される。"
 
-#: ../../../gtrace/docs/source/layout.rst:395
+#: ../../../gtrace/docs/source/layout.rst:412
 msgid "Editing a body from a front end"
 msgstr "フロントエンドから部品を編集する"
 
-#: ../../../gtrace/docs/source/layout.rst:397
+#: ../../../gtrace/docs/source/layout.rst:414
 msgid ""
 "The same operations reach a body, with its own whitelist "
 "(``EDITABLE_MECHANICS_ATTRS``: ``center``, ``rotationAngle``, "
@@ -1167,7 +1238,7 @@ msgstr ""
 "``offset_angle``\\ 、\\ ``fix_rotation``\\ 、\\ ``width``\\ 、\\ "
 "``height``\\ ）である:"
 
-#: ../../../gtrace/docs/source/layout.rst:409
+#: ../../../gtrace/docs/source/layout.rst:426
 msgid ""
 "An ``add`` naming a ``model`` and no ``shapes`` is built from the "
 "library; one carrying ``shapes`` is built from them. ``attached_to`` "
@@ -1188,11 +1259,11 @@ msgstr ""
 "``width`` や ``height`` の設定は ``resize`` を通り、寸法を持たない部品ならそう言って拒む。取り付けた部品への "
 "``rotate`` は、回転が自由でなければ拒否される。"
 
-#: ../../../gtrace/docs/source/layout.rst:412
+#: ../../../gtrace/docs/source/layout.rst:429
 msgid "Drawing a part"
 msgstr "部品を描く"
 
-#: ../../../gtrace/docs/source/layout.rst:414
+#: ../../../gtrace/docs/source/layout.rst:431
 msgid ""
 ":py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens the "
 "shape editor on a body: the same viewer, handed a scene of nothing but "
@@ -1207,7 +1278,7 @@ msgstr ""
 ":py:class:`ShapeEditor<gtrace.draw.viewer.editor.ShapeEditor>` "
 "で、ブラウザ無しでも動かせて、独自のプロトコルを話す:"
 
-#: ../../../gtrace/docs/source/layout.rst:429
+#: ../../../gtrace/docs/source/layout.rst:446
 msgid ""
 "The operations are ``add_shape``, ``set_shape``, ``remove_shape``, "
 "``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``set_points``, "
@@ -1230,27 +1301,37 @@ msgstr ""
 " 以下の寸法、無限遠の座標、頂点が1つしかない輪郭）は、出口で拒否する。添字は\\ **リスト上の位置**\\ "
 "であり、これは描画の順でもあるので、1つ消すと後ろの番号がずれる。"
 
-#: ../../../gtrace/docs/source/layout.rst:431
+#: ../../../gtrace/docs/source/layout.rst:448
 msgid ""
 "A turn is the one edit that is not a set of attributes, because what "
 "turning means differs by kind. An arc's two angles move, a text turns "
-"with its own rotation, and a ``Rectangle`` — a corner, a width and a "
-"height, with its sides along the axes — has no turned form at all and "
-"comes back as the closed polyline of its four corners. That rule is "
-":py:func:`turned_shape<gtrace.mechanics.turned_shape>`, which is also how"
-" a turned body's rectangles reach the bench. ``pivot`` defaults to "
-":py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the middle of the"
-" shape's bounding box."
+"with its own rotation, and a ``Rectangle`` carries a turn of its own — an"
+" ``angle`` and the ``pivot`` it is taken about — so it takes them and "
+"stays a rectangle, with a width and a height to go on editing. Everything"
+" else goes through "
+":py:func:`turned_shape<gtrace.mechanics.turned_shape>`. ``pivot`` "
+"defaults to :py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the "
+"middle of the shape's bounding box."
 msgstr ""
 "回転だけは、属性の設定にできない。回すことの意味が種類ごとに違うからである。円弧では2つの角度が動き、テキストは自身の回転角で回り、\\ "
-"``Rectangle``\\ "
-"（角と幅と高さで表され、辺は軸に平行と決まっている）には回った形が存在しないので、4つの角を結んだ閉じたポリラインとして返る。この規則が "
-":py:func:`turned_shape<gtrace.mechanics.turned_shape>` "
-"で、回転した部品の長方形がベンチ上に出てくるときも同じ経路を通る。\\ ``pivot`` の既定は "
-":py:func:`shape_centre<gtrace.mechanics.shape_centre>`\\ "
+"``Rectangle`` は自分自身の回転を持つ — ``angle`` と、その角度を取る ``pivot`` である — "
+"ので、それを受け取って矩形のまま残る。幅と高さもそのまま編集できる。それ以外は "
+":py:func:`turned_shape<gtrace.mechanics.turned_shape>` を通る。\\ ``pivot`` "
+"の既定は :py:func:`shape_centre<gtrace.mechanics.shape_centre>` "
 "、つまり形状のバウンディングボックスの中心である。"
 
-#: ../../../gtrace/docs/source/layout.rst:433
+#: ../../../gtrace/docs/source/layout.rst:450
+msgid ""
+"A **body's** turn is a different question and is not written into the "
+"shapes: a body's pose says where it stands and which way it faces, and "
+"the shapes are read in the frame it is written in. So a rectangle carried"
+" by a turned body still reaches the bench as the closed polyline of its "
+"four corners, which is what a DXF writes of it either way."
+msgstr ""
+"**部品**\\ "
+"の回転はこれとは別の話で、図形には書き込まれない。部品の姿勢が、どこに立っていてどちらを向いているかを述べ、図形はそれが書かれた座標系のまま読まれるからである。したがって回転した部品が持つ矩形は、いまでも4つの角を結んだ閉じたポリラインとしてベンチ上に出てくる。DXFに書かれるものは、どちらにしてもこれである。"
+
+#: ../../../gtrace/docs/source/layout.rst:452
 #, python-brace-format
 msgid ""
 "``set_points`` carries the **whole list** of named points, not one of "
@@ -1266,7 +1347,7 @@ msgstr ""
 " undo の1段になる。2つの点が同じ名前を持つことはできず、名前の無い点も置けない。シーンのチャネルは ``points`` で、\\ "
 "``{'name': str, 'point': [x, y], 'index': int}`` のリストである。"
 
-#: ../../../gtrace/docs/source/layout.rst:435
+#: ../../../gtrace/docs/source/layout.rst:454
 msgid ""
 "The editor holds the ``Mechanics`` **by reference**, like everything else"
 " here, so a body already registered in a layout is redrawn there at the "
@@ -1276,27 +1357,27 @@ msgstr ""
 "エディタは ``Mechanics`` を、ここの他のものと同じく\\ **参照で**\\ "
 "持つ。だからレイアウトに登録済みの部品なら、そのレイアウトの次の描画で反映される。取り付け・姿勢・ビルダーのパラメータには触れない。"
 
-#: ../../../gtrace/docs/source/layout.rst:438
+#: ../../../gtrace/docs/source/layout.rst:457
 msgid "Scene channels for a front end"
 msgstr "フロントエンド向けのシーンチャネル"
 
-#: ../../../gtrace/docs/source/layout.rst:440
+#: ../../../gtrace/docs/source/layout.rst:459
 msgid ""
-":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds eight "
+":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds nine "
 "entries to what "
 ":py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: "
 "``can_undo`` and ``can_redo``, the ``dimensions`` above with their "
 "measurements, ``snap`` (the points of the optics a front end may snap a "
-"measurement to), ``sources`` and ``rules``, and ``mechanics`` and "
-"``mechlib`` for the bodies."
+"measurement to), ``sources`` and ``rules``, and ``mechanics``, "
+"``mechlib`` and ``newshapes`` for the bodies."
 msgstr ""
-":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` は、\\ "
+":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` は、 "
 ":py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` "
-"が作るものに8つの項目を足す。\\ ``can_undo`` と ``can_redo``\\ 、測定値を伴う上記の "
-"``dimensions``\\ 、\\ ``snap``\\ （フロントエンドが測定を吸着させてよい素子上の点）、\\ ``sources`` "
-"と ``rules``\\ 、そして部品のための ``mechanics`` と ``mechlib`` である。"
+"が作るものに9つの項目を足す。\\ ``can_undo`` と ``can_redo`` 、測定値を伴う上記の ``dimensions`` "
+"、\\ ``snap`` （フロントエンドが測定を吸着させてよい素子上の点）、\\ ``sources`` と ``rules`` "
+"、そして部品のための ``mechanics`` ・\\ ``mechlib`` ・\\ ``newshapes`` である。"
 
-#: ../../../gtrace/docs/source/layout.rst:442
+#: ../../../gtrace/docs/source/layout.rst:461
 msgid ""
 "``sources`` says which of the beams the user put there. Nothing else can:"
 " a source is traced from a *copy* of itself, so its own beam sits in "
@@ -1312,7 +1393,7 @@ msgstr ""
 "の中に、そこから作られたビームと同じ顔をして並んでいるからである。各項目は、レーザーがどこに立ち、どちらへ撃ち、どんな光を出すかを持つ。ウエストも含み、これは保存せずここで計算する。寸法線の長さと同じ理由である。\\"
 " ``rules`` はトレースのルールを運ぶ。どの素子にも属さないが、図にどれだけのものが現れるかを決める。"
 
-#: ../../../gtrace/docs/source/layout.rst:444
+#: ../../../gtrace/docs/source/layout.rst:463
 msgid ""
 "Each dimension carries a ``line``, the two ends its line lands on once "
 "the offset is applied, so only one place has an opinion about which side "
@@ -1321,24 +1402,56 @@ msgstr ""
 "各寸法線は ``line`` "
 "を持つ。オフセットを適用した後で線が実際に落ちる2つの端であり、こうしておけば、オフセットをどちら側に出すかについて意見を持つ場所が1つで済む。"
 
-#: ../../../gtrace/docs/source/layout.rst:446
+#: ../../../gtrace/docs/source/layout.rst:465
+#, python-brace-format
 msgid ""
-"``mechanics`` carries each body's pose, what it is attached to, and the "
-"outline a front end picks it by. The outline is worked out here, since it"
-" is the same polygon "
+"``mechanics`` carries each body's pose, what it is attached to, the "
+"outline a front end picks it by, and — for a body that is one shape drawn"
+" by hand — that ``shape``, in the frame it is written in. A body of one "
+"shape is a drawing rather than a part, so its own numbers are what there "
+"is to edit about it: ``{'op': 'set', 'target': ..., 'attrs': {'shape': "
+"{...}}}`` sets them, through the same rules the shape editor applies. A "
+"part off the library shelf is cut to size with ``width`` and ``height`` "
+"instead, and one of several shapes is edited with "
+":py:meth:`edit<gtrace.mechanics.Mechanics.edit>`; both refuse a ``shape``"
+" rather than guessing which one was meant. The outline is worked out "
+"here, since it is the same polygon "
 ":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against, "
 "and a browser has no reason to hold a second description of it. "
-"``mechlib`` is the model library as names and descriptions, which is what"
-" the ``+ Mechanics`` menu shows; the shapes stay on this side until one "
-"is chosen."
+"``mechlib`` is the model library as names, descriptions and name "
+"prefixes, which is what the ``+ Mechanics`` menu shows and what it calls "
+"the bodies it adds; the shapes stay on this side until one is chosen. "
+"``assemblies`` is what "
+":py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` lists, so a front"
+" end can offer an element with the parts that hold it by name; the "
+"building is on this side, and one ``{'op': 'add', 'type': 'Assembly', "
+"'kind': ...}`` makes all four, which is one step of undo. ``newshapes`` "
+"is what a shape of each kind looks like when it is first put down — the "
+"same :py:data:`NEW_SHAPES<gtrace.draw.serialize.NEW_SHAPES>` a shape "
+"editor draws from — so that ``+ Shape`` can offer a body of one without a"
+" front end holding its own answer to what a new circle is. The sizes are "
+"a bench's, and a front end showing kilometres is expected to scale them "
+"to what it is showing."
 msgstr ""
-"``mechanics`` は、各部品の姿勢・何に取り付けられているか・フロントエンドが選択に使う輪郭を運ぶ。輪郭はこちら側で計算する。\\ "
+"``mechanics`` "
+"は、各部品の姿勢・何に取り付けられているか・フロントエンドが選択に使う輪郭を運ぶ。手で描いた図形1つの部品については、その ``shape`` "
+"も、書かれた座標系のまま運ぶ。図形1つの部品は部品というより図であり、その図形自身の数値が編集の対象だからである。\\ ``{'op': "
+"'set', 'target': ..., 'attrs': {'shape': {...}}}`` "
+"がそれを設定する。判定は図形エディタと同じ規則を通る。ライブラリの棚から出した部品は代わりに ``width`` と ``height`` "
+"で寸法を変え、複数の図形からなる部品は :py:meth:`edit<gtrace.mechanics.Mechanics.edit>` "
+"で編集する。どちらも、どの図形のことか推測せずに ``shape`` を拒否する。輪郭はこちら側で計算する。 "
 ":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` "
 "が判定に使うのと同じ多角形であり、ブラウザが同じものをもう1つ持つ理由が無いからである。\\ ``mechlib`` "
-"はモデルライブラリを名前と説明として運ぶ。\\ ``+ Mechanics`` "
-"のメニューが見せているのはこれである。形状は、選ばれるまでこちら側に留まる。"
+"はモデルライブラリを、名前・説明・名前のプレフィックスとして運ぶ。\\ ``+ Mechanics`` "
+"のメニューが見せているのはこれであり、追加する部品の名前もこれによる。形状は、選ばれるまでこちら側に留まる。\\ ``assemblies`` は"
+" :py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` "
+"が返すもので、フロントエンドが「素子とそれを保持する部品」を名前で提供できるようにするためである。組み立てるのはこちら側で、\\ ``{'op':"
+" 'add', 'type': 'Assembly', 'kind': ...}`` 1つで4つとも作られる。undo も1段である。\\ "
+"``newshapes`` は、各種類の図形を最初に置いたときの姿である — 図形エディタが使うのと同じ "
+":py:data:`NEW_SHAPES<gtrace.draw.serialize.NEW_SHAPES>` で、\\ ``+ Shape`` "
+"が、フロントエンド側に「新しい円とは何か」の答えを持たせずに図形1つの部品を出せるようにするためである。寸法はベンチの寸法なので、キロメートルを表示しているフロントエンドは、表示に合わせて拡大縮小することが期待される。"
 
-#: ../../../gtrace/docs/source/layout.rst:448
+#: ../../../gtrace/docs/source/layout.rst:467
 msgid ""
 "``snap`` carries the four corners of each substrate, the apex of each "
 "face and the middle, the points a body names for itself, and the centre "
@@ -1357,11 +1470,11 @@ msgstr ""
 "側から出すのは、これが幾何だからである。角の位置は、ウェッジと曲面のサジッタが決める。ビームの端はあえて\\ *入れていない*\\ "
 "。シーンは既にすべてのビームの端を持っているので、フロントエンドはそれをそのまま使えるからである。"
 
-#: ../../../gtrace/docs/source/layout.rst:451
+#: ../../../gtrace/docs/source/layout.rst:470
 msgid "Undo and redo"
 msgstr "undo と redo"
 
-#: ../../../gtrace/docs/source/layout.rst:453
+#: ../../../gtrace/docs/source/layout.rst:472
 msgid ""
 "Every edit that goes through ``apply_edit`` keeps the state before it, so"
 " it can be taken back. The state an undo steps out of is kept in turn, so"
@@ -1370,7 +1483,7 @@ msgstr ""
 "``apply_edit`` を通った編集はすべて、その直前の状態を保持するので、取り消せる。undo "
 "が抜け出した状態も同じように保持されるので、やり直せる:"
 
-#: ../../../gtrace/docs/source/layout.rst:463
+#: ../../../gtrace/docs/source/layout.rst:482
 msgid ""
 "The history lives on the layout, not in a front end, so undo means the "
 "same thing however the edit arrived. It goes back ``UNDO_DEPTH`` edits, "
@@ -1382,7 +1495,7 @@ msgstr ""
 "回ぶんまで遡れる。redo 側も同じ数までで、redo を埋めるのは undo "
 "だけだからである。拒否された編集は何も変えず、段も消費しない。ファイルを書くだけの ``save`` も同様である。"
 
-#: ../../../gtrace/docs/source/layout.rst:465
+#: ../../../gtrace/docs/source/layout.rst:484
 msgid ""
 "**An edit that goes through discards whatever is waiting to be redone.** "
 "Once the layout has taken a different turn, the branch that was stepped "
@@ -1392,7 +1505,7 @@ msgstr ""
 "**編集が1つ通ると、やり直し待ちのものはすべて捨てられる。** "
 "レイアウトが別の道を進んだ以上、抜け出した枝はもう戻り先ではない。取っておいた状態は、新しい編集がリネームしたり消したり動かしたりしたかもしれない素子を記述しているからである。"
 
-#: ../../../gtrace/docs/source/layout.rst:467
+#: ../../../gtrace/docs/source/layout.rst:486
 msgid ""
 "A step holds the registered elements themselves alongside their "
 "serialized values, and restoring one puts those values back onto those "

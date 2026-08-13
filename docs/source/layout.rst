@@ -277,10 +277,10 @@ The beam dump
 
 .. code-block:: python
 
-    faces_and_box = layout.add_beam_dump(name='BD', center=[0.3, 0.0],
+    faces, bodies = layout.add_beam_dump(name='BD', center=[0.3, 0.0],
                                          angle=0.0)
 
-``angle`` is **the direction the light travels**, so a dump is aimed the way the beam runs, not by where its mouth points. The pieces come back, and are registered, hosts first. They are named from the dump: ``BD1a`` and ``BD1b`` are its two faces and ``BD1box`` its housing. A dump is numbered and its pieces lettered, so ``BD2b`` is the far face of the second dump. Without a name it is given the first free one.
+``angle`` is **the direction the light travels**, so a dump is aimed the way the beam runs, not by where its mouth points. What comes back is split — ``(optics, bodies)``, as every builder here returns — and each list is hosts first, which is the order they are registered in. They are named from the dump: ``BD1a`` and ``BD1b`` are its two faces and ``BD1box`` its housing. A dump is numbered and its pieces lettered, so ``BD2b`` is the far face of the second dump. Without a name it is given the first free one.
 
 From a front end it is one ``add``::
 
@@ -353,6 +353,20 @@ The copies are made through the same dicts a saved layout is written with, so wh
 The model library
 ^^^^^^^^^^^^^^^^^^
 
+What actually goes onto a bench is not a mirror but a mirror in a mount, on a pedestal, held down by a fork. :py:func:`assembly<gtrace.layout.assembly>` builds one:
+
+.. code-block:: python
+
+    from gtrace.layout import assembly, assembly_kinds
+
+    assembly_kinds()                    # MIRROR-1IN, MIRROR-2IN, LENS-1IN, ...
+    layout.add_assembly('MIRROR-2IN', center=[0.3, 0.1], angle=deg2rad(45))
+    layout.add_assembly('LENS-1IN', center=[0.6, 0.1], f=150*mm)
+
+Four objects come back, the element first and then the parts that hold it, each attached to the one below: the mount to the optic at the model's designed position, the pedestal in the hole the mount is bolted down through, the fork round the pedestal with its turn free. **The element is the thing to move** — everything else derives its pose from it. :py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` registers the lot and fills in the names, each piece taking the first number free for its own kind, so a second two-inch mirror comes down as ``M2`` held by ``MT2`` on ``P2`` in ``FK2``.
+
+:py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` and :py:func:`lens_assembly<gtrace.layout.lens_assembly>` are what the kinds are made of, and take the same arguments plus the models to build the parts from; a piece is left out by passing ``None`` for its model. ``mount_offset`` says where the mount is really bolted, in the optic's own frame with x along the face normal: the two-inch kind sits its mount **5 mm further back** than the drawing's designed position, which is a bench measurement rather than something the model knows. What the pedestal stands in moves with it, since the post hole is a point of the mount. An assembly is not a model on the library shelf, and cannot be: a model holds shapes, and the first piece of every assembly is an element.
+
 Parts repeat, so they are worth registering once:
 
 .. code-block:: python
@@ -360,7 +374,8 @@ Parts repeat, so they are worth registering once:
     from gtrace.mechanics import (register_model, models, from_model,
                                   save_models, load_models)
 
-    register_model('CLAMP-30', clamp, 'a 30 mm clamp with one bolt hole')
+    register_model('CLAMP-30', clamp, 'a 30 mm clamp with one bolt hole',
+                   prefix='CL')          # its parts are CL1, CL2
     models()                                   # name -> description
     layout.add_mechanics(from_model('CLAMP-30', name='C2',
                                     center=[0.4, 0.1]))
@@ -368,7 +383,9 @@ Parts repeat, so they are worth registering once:
     save_models('parts.json', names=['CLAMP-30'])
     load_models('parts.json')                  # merged by name, last wins
 
-A model is a **value**: shapes, a layer, a description and the builder parameters, copied in when it is registered and copied out when it is used, so a body and the model it came from stay independent. Loading a file merges it into the registry name by name, which is how a library is assembled from several files. A file with one bad shape in it is refused whole, leaving the registry untouched.
+A model is a **value**: shapes, a layer, a description, what its parts are called and the builder parameters, copied in when it is registered and copied out when it is used, so a body and the model it came from stay independent.
+
+``prefix`` is what the bodies built from it are named, before the number, and it is part of the definition rather than of any one layout: a part is known by what it is, so a mount is ``MT1`` whatever catalogue the footprint came from, and a front end adding one has the name to hand. The stock says ``MT`` for a mount, ``P`` for a pedestal, ``FK`` for a fork, ``HLD`` for a holder and ``BB`` for a breadboard — ``PD`` is deliberately nobody's, since a photodetector is what that reads as. A model that says nothing leaves the naming to whoever is doing it, which is ``H`` in the viewer. Loading a file merges it into the registry name by name, which is how a library is assembled from several files. A file with one bad shape in it is refused whole, leaving the registry untouched.
 
 A body keeps the shapes themselves, and the model name only as a label. **The saved layout is the truth**: a library that has moved on cannot change a drawing you already made. :py:meth:`relink_mechanics<gtrace.layout.OpticalLayout.relink_mechanics>` is how you ask for the newer definition, and it touches neither pose nor attachment.
 
@@ -428,7 +445,9 @@ Drawing a part
 
 The operations are ``add_shape``, ``set_shape``, ``remove_shape``, ``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``set_points``, ``save_model``, ``undo`` and ``redo``. A shape is edited by taking it apart into the dict :py:func:`shape_to_dict<gtrace.draw.serialize.shape_to_dict>` writes, changing what the message names and building it again, so the constructors are the only rule about what a shape is. What they do not catch — a size of none or less, a coordinate at infinity, an outline of one vertex — is refused on the way out. An index is a **place in the list**, which is also the order the shapes are drawn in, so removing one renumbers those after it.
 
-A turn is the one edit that is not a set of attributes, because what turning means differs by kind. An arc's two angles move, a text turns with its own rotation, and a ``Rectangle`` — a corner, a width and a height, with its sides along the axes — has no turned form at all and comes back as the closed polyline of its four corners. That rule is :py:func:`turned_shape<gtrace.mechanics.turned_shape>`, which is also how a turned body's rectangles reach the bench. ``pivot`` defaults to :py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the middle of the shape's bounding box.
+A turn is the one edit that is not a set of attributes, because what turning means differs by kind. An arc's two angles move, a text turns with its own rotation, and a ``Rectangle`` carries a turn of its own — an ``angle`` and the ``pivot`` it is taken about — so it takes them and stays a rectangle, with a width and a height to go on editing. Everything else goes through :py:func:`turned_shape<gtrace.mechanics.turned_shape>`. ``pivot`` defaults to :py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the middle of the shape's bounding box.
+
+A **body's** turn is a different question and is not written into the shapes: a body's pose says where it stands and which way it faces, and the shapes are read in the frame it is written in. So a rectangle carried by a turned body still reaches the bench as the closed polyline of its four corners, which is what a DXF writes of it either way.
 
 ``set_points`` carries the **whole list** of named points, not one of them, because no index survives a rename: a point is known by its name, and the name is the thing being edited. Renaming one, moving one, adding one and taking one away are all the same message, which also makes each of them one step of undo. Two points cannot share a name, and a point cannot go unnamed. The scene channel is ``points``, a list of ``{'name': str, 'point': [x, y], 'index': int}``.
 
@@ -437,13 +456,13 @@ The editor holds the ``Mechanics`` **by reference**, like everything else here, 
 Scene channels for a front end
 -------------------------------
 
-:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds eight entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` (the points of the optics a front end may snap a measurement to), ``sources`` and ``rules``, and ``mechanics`` and ``mechlib`` for the bodies.
+:py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds nine entries to what :py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds: ``can_undo`` and ``can_redo``, the ``dimensions`` above with their measurements, ``snap`` (the points of the optics a front end may snap a measurement to), ``sources`` and ``rules``, and ``mechanics``, ``mechlib`` and ``newshapes`` for the bodies.
 
 ``sources`` says which of the beams the user put there. Nothing else can: a source is traced from a *copy* of itself, so its own beam sits in ``beams`` looking like the ones the trace made from it. Each entry carries where the laser stands, which way it fires, and the light it emits, including the waist, which is worked out here rather than stored, for the same reason a dimension's length is. ``rules`` carries the tracing rules, which belong to no element but decide how much of the picture there is.
 
 Each dimension carries a ``line``, the two ends its line lands on once the offset is applied, so only one place has an opinion about which side the offset goes.
 
-``mechanics`` carries each body's pose, what it is attached to, and the outline a front end picks it by. The outline is worked out here, since it is the same polygon :py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against, and a browser has no reason to hold a second description of it. ``mechlib`` is the model library as names and descriptions, which is what the ``+ Mechanics`` menu shows; the shapes stay on this side until one is chosen.
+``mechanics`` carries each body's pose, what it is attached to, the outline a front end picks it by, and — for a body that is one shape drawn by hand — that ``shape``, in the frame it is written in. A body of one shape is a drawing rather than a part, so its own numbers are what there is to edit about it: ``{'op': 'set', 'target': ..., 'attrs': {'shape': {...}}}`` sets them, through the same rules the shape editor applies. A part off the library shelf is cut to size with ``width`` and ``height`` instead, and one of several shapes is edited with :py:meth:`edit<gtrace.mechanics.Mechanics.edit>`; both refuse a ``shape`` rather than guessing which one was meant. The outline is worked out here, since it is the same polygon :py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against, and a browser has no reason to hold a second description of it. ``mechlib`` is the model library as names, descriptions and name prefixes, which is what the ``+ Mechanics`` menu shows and what it calls the bodies it adds; the shapes stay on this side until one is chosen. ``assemblies`` is what :py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` lists, so a front end can offer an element with the parts that hold it by name; the building is on this side, and one ``{'op': 'add', 'type': 'Assembly', 'kind': ...}`` makes all four, which is one step of undo. ``newshapes`` is what a shape of each kind looks like when it is first put down — the same :py:data:`NEW_SHAPES<gtrace.draw.serialize.NEW_SHAPES>` a shape editor draws from — so that ``+ Shape`` can offer a body of one without a front end holding its own answer to what a new circle is. The sizes are a bench's, and a front end showing kilometres is expected to scale them to what it is showing.
 
 ``snap`` carries the four corners of each substrate, the apex of each face and the middle, the points a body names for itself, and the centre of every screw hole a body carries. The named points come before the holes, because two marks at one place count as the same point and the first wins: a mount's post hole is both a circle in the drawing and the point it is stood on its pedestal by, and ``MT post`` is a more useful label than ``MT hole``. These points come from Python because they are geometry, and a corner is where the wedge and the sagitta of a curved face put it. Beam ends are deliberately *not* in it: the scene already carries the ends of every beam, so a front end can offer those directly.
 

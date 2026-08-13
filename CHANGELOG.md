@@ -49,6 +49,193 @@ across them.
   and the flag surviving a save and load. A file written before this
   loads with it off.
 
+- **An element and the parts that hold it, in one call.** What is
+  bolted to a bench is not a mirror but a mirror in a mount, on a
+  pedestal, held down by a fork - four objects and three joints, which
+  was four steps of undo in the viewer and three offsets to look up.
+
+  ```python
+  from gtrace.layout import assembly, assembly_kinds
+
+  assembly_kinds()          # MIRROR-1IN, MIRROR-2IN, LENS-1IN, LENS-2IN
+  layout.add_assembly('MIRROR-2IN', center=[0.3, 0.1], angle=deg2rad(45))
+  layout.add_assembly('LENS-1IN', center=[0.6, 0.1], f=150*mm)
+  ```
+
+  What comes back is `(optics, bodies)` - the elements and the parts
+  that hold them, split - each attached to the one below - the mount at the model's
+  designed position, the pedestal in the hole the mount is bolted down
+  through, the fork round the pedestal with its turn free. **The
+  element is the thing to move**: everything else derives its pose from
+  it. `add_assembly` registers the lot and fills the names in, each
+  piece taking the first number free for its own kind, so a second
+  two-inch mirror is `M2` held by `MT2` on `P2` in `FK2`.
+
+  It is split because that is the division everything downstream
+  makes: a layout registers the two by different doors, and the trace
+  sees only the first. Handing back one flat list left every caller
+  sorting it out again by class.
+
+  `mirror_assembly` and `lens_assembly` are what the kinds are made of
+  and take the models to build the parts from; `None` leaves a piece
+  out. `mount_offset` says where the mount is really bolted, in the
+  optic's own frame with x along the face normal - the two-inch kind
+  sits its mount **5 mm further back** than the drawing's designed
+  position, a bench measurement rather than something the model knows. `+ Assembly` in the viewer adds one, as **one message and so one
+  step of undo**.
+
+  An assembly is a builder rather than a model on the library shelf,
+  and cannot be one: a model holds shapes, and the first piece of every
+  assembly is an element. A saved layout carries what was built - the
+  optics, the bodies and the attachments - like a beam dump's.
+
+  `verify_assembly_parts.py` arrives with 66 checks: the stack and what
+  holds what, the pedestal landing on the point the mount's model names
+  for its hole, moving the element carrying everything, the names, one
+  message and one undo, saving and loading, a piece left out, and what
+  the protocol refuses. `verify_mech_browser.py` grows 24 driving the
+  real menu.
+
+- **A part added from the viewer is named for what it is.** Everything
+  the `+ Mechanics` menu put down was called `H1`, `H2`, whichever
+  model it came from - a name that says nothing about what is standing
+  there. A model now says what its parts are called, and the stock
+  says it:
+
+  | model | parts |
+  |---|---|
+  | `MOUNT-25`, `MOUNT-50` | `MT1`, `MT2` |
+  | `PEDESTAL-25` | `P1`, `P2` |
+  | `FORK-125` | `FK1`, `FK2` |
+  | `HOLDER-25`, `HOLDER-50` | `HLD1`, `HLD2` |
+  | `BB3030`, `BBR30`, … | `BB1`, `BB2` |
+
+  `PD` is deliberately nobody's prefix: a photodetector is what that
+  reads as, which is why a pedestal is `P`.
+
+  It is `register_model(..., prefix='MT')`, so a part of your own says
+  it in the same place the stock does - through the argument, or
+  through the **Save to library** panel, which grows a field for it.
+  It travels with the model through `save_models` and `load_models`; a
+  library written before this loads with none, and a model that says
+  nothing still gives `H1`. `model_prefix(name)` reads it back, and the
+  `mechlib` channel carries it so a front end has the name to hand.
+
+  A shape put down with `+ Shape` is named for the shape it is:
+  `CIRC1`, `RECT1`, `LINE1`, `POLY1`, `ARC1`, `TEXT1`.
+
+  Nothing already in a layout is renamed - a name is a name - and
+  nothing about how names are checked has changed: they share the one
+  namespace, and the first free number is what is offered.
+
+- **A body that is one shape drawn by hand is edited by that shape,
+  from the layout.** `+ Shape` put one down and then the layout could
+  only move it and turn it: a radius, a width, the ends of a line were
+  reachable through `Mechanics.edit()` alone, which is another viewer
+  and a cell in a notebook. A wall that can be put down and not resized
+  is not worth putting down.
+
+  The panel now shows the shape's own rows under the pose rows - the
+  same rows the shape editor shows, in the frame the shape is written
+  in - and its grips stand on the drawing. A drag on one is worked out
+  in the body's own frame, so a corner lands where it was let go
+  however the body is turned, and it is `shapeHandleAttrs` that works
+  it out: the same function answering the same question in the other
+  viewer.
+
+  The body carries its shape in the `mechanics` channel, and
+  `{'op': 'set', 'target': ..., 'attrs': {'shape': {...}}}` sets it.
+  What has no one shape refuses it rather than guessing: a part off the
+  library shelf is cut to size with `width` and `height`, and one of
+  several shapes is edited where there is a list to pick from.
+
+  The rules about what can be drawn moved to
+  `gtrace.draw.serialize.build_shape`, which both the shape editor and
+  the layout now come through: a rectangle of no width was refused in
+  one of them and would have been let through the other.
+
+- **A body drawn as a straight line can be clicked.** Its outline has
+  no area, and a point is never inside one of those, so a body whose
+  one shape was a horizontal or vertical line could not be selected at
+  all. A click that passes near the outline now counts, at the same
+  reach a shape is taken hold of by in the editor - for a body with no
+  inside only, so a click beside a breadboard still misses it.
+
+  `verify_mech_shape_browser.py` arrives with 46 checks driving real
+  drags: the rows a circle, a rectangle and a line offer, where the
+  grips stand on a body that is turned, every message fed to a real
+  layout, and what offers nothing - a breadboard, a body of several
+  shapes, an attached body.
+
+- **A shape can be put down from the viewer.** `+ Shape` sits next to
+  `+ Mechanics` and opens on the six drawing primitives - rectangle,
+  circle, line, polyline, arc and text - putting one down at the centre
+  of the view as a body of that one shape. A tank wall, an aperture,
+  the edge of a table, a note on the drawing: things that were a cell
+  of `Mechanics(shapes=[draw.Circle(...)])` until now. What comes down
+  is moved, turned, dimensioned and edited like any other body, and
+  `Mechanics.edit()` opens it for a second shape.
+
+  **What it puts down is sized to the view.** The sizes are a bench's -
+  a 20 mm plate, a 5 mm hole - which is right over a part and invisible
+  over three kilometres of interferometer, so they are scaled by how
+  wide the view is: `+ Circle` leaves something that can be seen and
+  taken hold of at any zoom, and the number wanted is typed in
+  afterwards.
+
+  The shapes themselves are Python's. `NEW_SHAPES` - what a shape of
+  each kind looks like when it is first put down - moved from
+  `gtrace.draw.viewer.editor` to `gtrace.draw.serialize`, where the
+  rest of what a shape dict is lives, and rides in the scene as the new
+  `newshapes` channel; the page scales what it is given rather than
+  holding its own answer to what a new circle is. It still reads from
+  `editor` under the name it had. No message is new: the body arrives
+  as the `add` a layout already took, with its shapes spelled out.
+
+  `verify_mech_browser.py` grows 32 checks driving the real menu: every
+  kind sends a body of that one shape at the centre of the view, each
+  message is fed to `apply_edit`, what is sent is the scene's own new
+  shape scaled by the view, and the same button at half the zoom puts
+  down twice as much.
+
+- **A rectangle can be turned.** `draw.Rectangle` takes an `angle` and
+  the `pivot` that angle is taken about, so a plate set on a bench at
+  30 degrees is a rectangle rather than a polyline that used to be one
+  - it keeps its width, its height and the four numbers a panel edits:
+
+  ```python
+  draw.Rectangle([0, 0], 0.2, 0.1, angle=deg2rad(30))
+  draw.Rectangle([0, 0], 0.2, 0.1, angle=deg2rad(30), pivot=[0, 0])
+  ```
+
+  The pivot is kept rather than folded into the corner, so setting the
+  angle again turns the rectangle about the same point; it travels
+  with the shape when it is carried. A pivot of `None` - the default -
+  is the middle of the rectangle, worked out when it is asked for
+  rather than written down, which is what lets a rectangle that is
+  moved keep turning about itself. `angle_in_rad=False` takes degrees,
+  as on `Arc` and `Text`.
+
+  `corners()` is where the shape says where it is, and everything that
+  draws, bounds, picks, exports or drags one now asks it: the bounding
+  box of a body, the DXF (an LWPOLYLINE through the corners it really
+  has, as it always was), the snap points, the shape editor, and the
+  page - where a turned rectangle is an SVG rect with a rotate about
+  its pivot, and its corners, its grips and what a click falls inside
+  all follow the turn.
+
+  Nothing square to the axes moved: `angle` defaults to 0, every part
+  gtrace ships is drawn exactly as it was, and a layout written before
+  this loads with no angle and no pivot. A rectangle carried by a body
+  that is *itself* turned still comes out as the closed polyline of its
+  corners, as before - the body's turn is not written into the shape.
+
+  Three suites arrive with it: `verify_rect.py` (78 checks, the class
+  and everything downstream of it), `verify_rect.js` (441, the page
+  and gtrace agreeing about where the corners are, and what a drag on
+  one means) and `verify_rect_browser.py` (11, where the browser
+  actually paints it, read back through `getScreenCTM`).
+
 - **`term_on_HR_order` and `term_on_HR_transmits` are constructor
   arguments**, on `Mirror`, `CyMirror`, `Lens` and `CyLens`, next to
   `term_on_HR` which always was one. A cavity mirror can be built as
@@ -62,7 +249,51 @@ across them.
   Setting them afterwards still works and means the same thing. The
   defaults are what the attributes always were, 0 and False.
 
+### Changed
+
+- **The two-inch mount's adjuster knobs are 2.1 inch apart.** They were
+  drawn 35.6 mm apart, which is what the KA2A drawing dimensions, and
+  that is closer together than they are on the mount. `MOUNT-50` and
+  everything built from it - `mirror_mount_2in()`, the `MIRROR-2IN`
+  assembly - are wider across the back for it. Every other dimension
+  is still the drawing's.
+
+  A layout saved before this keeps the shapes it was saved with, since
+  a layout carries them by value; `relink_mechanics('MOUNT-50')` is how
+  it picks the new drawing up.
+
+- **`beam_dump()` returns `(optics, bodies)`** rather than one flat
+  list of three, so that every builder here hands back the same shape.
+  `[face1, face2, housing]` becomes `([face1, face2], [housing])`:
+
+  ```python
+  (f1, f2), (box,) = beam_dump(name='BD1')
+  faces, bodies = layout.add_beam_dump(name='BD1')
+  ```
+
+  The split is the division everything downstream makes - a layout
+  registers elements and bodies by different doors, and the trace sees
+  only the elements - so it is made once, where the pieces are built,
+  instead of by every caller with an `isinstance`. `add_beam_dump()`
+  returns the same pair.
+
 ### Fixed
+
+- **The Fix rotation checkbox on a body did nothing.** A clamping fork
+  is held by the post it clamps and may be swung about it, and that
+  row is what says so - but the panel read it the way it reads every
+  other row, as a number out of the input's value. A checkbox has none
+  ('on' is not a number), so the panel quietly put itself back and no
+  message was ever sent: the row could be clicked, changed nothing, and
+  came back as it was when the body was selected again. It is now read
+  the way a checkbox is read, which is what the optics panel has always
+  done with its own. Both ends of the plumbing were already there - the
+  attribute is editable, and the message builder knew the row - so
+  nothing else changes.
+
+  `verify_mech_browser.py` grows 6 checks: the row on a body whose turn
+  is free, the message ticking it sends, Python freezing the turn and
+  undo letting it go, and a tick that changes nothing sending nothing.
 
 - **`copy()` carries `term_on_HR_order` and `term_on_HR_transmits`.**
   **Changed results.** It rebuilt the element from `term_on_HR` alone,

@@ -179,8 +179,9 @@ emb = embedded_scene(html_file)
 check('the embedded scene parses', emb is not None)
 check('it has all the channels',
       set(emb.keys()) == {'canvas', 'beams', 'optics', 'display',
-                          'sources', 'mechanics', 'mechlib', 'rules',
-                          'can_undo', 'can_redo', 'dimensions', 'snap'},
+                          'sources', 'mechanics', 'mechlib', 'newshapes',
+                          'assemblies', 'rules', 'can_undo', 'can_redo',
+                          'dimensions', 'snap'},
       str(list(emb.keys())))
 # A written page has no Python behind it, so there is nothing it could
 # undo and no button offering to.

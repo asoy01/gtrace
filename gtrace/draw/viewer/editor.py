@@ -31,7 +31,8 @@ import copy
 import numpy as np
 
 import gtrace.draw as draw
-from gtrace.draw.serialize import (scene_to_dict, shape_to_dict,
+from gtrace.draw.serialize import (NEW_SHAPES, build_shape,
+                                   scene_to_dict, shape_to_dict,
                                    shape_from_dict, UnknownShapeError)
 from gtrace.layout import EditError, UNDO_DEPTH
 from gtrace.mechanics import (DEFAULT_LAYER, LAYER_COLOR, register_model,
@@ -92,32 +93,21 @@ __status__ = "Beta"
 EDITABLE_SHAPE_ATTRS = {
     'line': frozenset(['start', 'stop', 'thickness']),
     'polyline': frozenset(['x', 'y', 'thickness']),
-    'rectangle': frozenset(['point', 'width', 'height', 'thickness']),
+    'rectangle': frozenset(['point', 'width', 'height', 'angle',
+                            'pivot', 'thickness']),
     'circle': frozenset(['center', 'radius', 'thickness']),
     'arc': frozenset(['center', 'radius', 'startangle', 'stopangle',
                       'thickness']),
     'text': frozenset(['text', 'point', 'height', 'rotation']),
 }
 
-#: What each kind of shape looks like when it is first put down, in
-#: metres about the origin. A part is drawn around the point that sits
-#: at the host's substrate centre, so a new shape starts there and is
-#: given a size a bench would recognise rather than one that has to be
-#: found by zooming.
-NEW_SHAPES = {
-    'line': {'type': 'line', 'start': [-0.01, 0.0], 'stop': [0.01, 0.0],
-             'thickness': 0.0},
-    'polyline': {'type': 'polyline', 'x': [-0.01, 0.0, 0.01],
-                 'y': [-0.01, 0.01, -0.01], 'thickness': 0.0},
-    'rectangle': {'type': 'rectangle', 'point': [-0.01, -0.01],
-                  'width': 0.02, 'height': 0.02, 'thickness': 0.0},
-    'circle': {'type': 'circle', 'center': [0.0, 0.0], 'radius': 0.005,
-               'thickness': 0.0},
-    'arc': {'type': 'arc', 'center': [0.0, 0.0], 'radius': 0.01,
-            'startangle': 0.0, 'stopangle': np.pi, 'thickness': 0.0},
-    'text': {'type': 'text', 'text': 'label', 'point': [0.0, 0.0],
-             'height': 0.005, 'rotation': 0.0},
-}
+# NEW_SHAPES - what each kind of shape looks like when it is first put
+# down - is imported above rather than defined here. It moved to
+# gtrace.draw.serialize, with the rest of what a shape dict is, when a
+# shape came to be put down in two places: here, into the part being
+# drawn, and on the bench itself, where the viewer's + Shape makes a
+# body of one. What a new circle is should not be answered twice. The
+# name still reads from here, which is where it was.
 
 #: How far a duplicate is put from the shape it was made from, in
 #: metres. Enough to be seen and taken hold of, small enough that it is
@@ -310,12 +300,13 @@ class ShapeEditor(object):
         replaced is left alone.
 
         A turn is the one edit that is not a set of attributes: what
-        turning means differs by kind - an arc's angles move, a text
-        turns with its own rotation - and a rectangle, having its
-        sides along the axes, comes back as the closed polyline of its
-        corners. The angle is in radians, counterclockwise; ``pivot``
-        defaults to the middle of the shape's bounding box, which is
-        the box a front end draws around it.
+        turning means differs by kind - an arc's two angles move, a
+        text turns with its own rotation, and a rectangle carries a
+        turn of its own, so it takes the angle and the point it was
+        taken about and stays a rectangle. The angle is in radians,
+        counterclockwise; ``pivot`` defaults to the middle of the
+        shape's bounding box, which is the box a front end draws
+        around it.
 
         The named points are set as a whole list rather than one at a
         time. There is no index that survives a rename - a point is
@@ -422,11 +413,23 @@ class ShapeEditor(object):
                 if not np.all(np.isfinite(pivot)):
                     raise EditError('A shape cannot be turned about %r.'
                                     % (msg['pivot'],))
+            # A rectangle carries a turn of its own, so turning one
+            # here sets that rather than taking the shape apart: the
+            # drawing is the same either way - the corners land in the
+            # same places - and what comes back is still a rectangle,
+            # with a width and a height to go on editing.
+            #
+            # A body's turn is a different question and is not written
+            # into the shape: see turned_shape.
+            turned = self.shapes[i]
+            if isinstance(turned, draw.Rectangle):
+                turned = turned.turned(angle, pivot)
+            else:
+                turned = rotate_shape(turned, angle, pivot)
             # Through the same door as every other edit: what comes
             # back is taken apart and built again, so the constructors
             # have the last word here too.
-            self.shapes[i] = self._build(
-                shape_to_dict(rotate_shape(self.shapes[i], angle, pivot)))
+            self.shapes[i] = self._build(shape_to_dict(turned))
             return self
 
         if op == 'set_points':
@@ -445,7 +448,15 @@ class ShapeEditor(object):
             if not isinstance(description, str):
                 raise EditError('A description is a line of text, not %r.'
                                 % (description,))
-            register_model(name, self.mechanics, description)
+            # What the bodies built from it are called, before the
+            # number. Optional: a model that says nothing leaves the
+            # naming to whoever is doing it.
+            prefix = msg.get('prefix')
+            if prefix is not None and (not isinstance(prefix, str)
+                                       or not prefix.strip()):
+                raise EditError('A name prefix is a non-empty string, '
+                                'not %r.' % (prefix,))
+            register_model(name, self.mechanics, description, prefix=prefix)
             # The body now says where its shapes came from, which is
             # what relink_mechanics later goes by.
             self.mechanics.model = name
@@ -514,43 +525,13 @@ class ShapeEditor(object):
         checked on the way out, against the shape as it came back,
         rather than against the message.
         '''
+        # The rules are build_shape's, which a layout editing the one
+        # shape of a body on the bench comes through as well: what can
+        # be drawn should not be answered twice.
         try:
-            shape = shape_from_dict(d)
+            return build_shape(d, error=EditError)
         except UnknownShapeError as e:
             raise EditError(str(e))
-        except draw.NumberOfElementError as e:
-            raise EditError('That does not describe a %s: %s'
-                            % (d.get('type'), e))
-        except (KeyError, TypeError, ValueError, IndexError) as e:
-            raise EditError('That does not describe a %s (%s: %s).'
-                            % (d.get('type'), type(e).__name__, e))
-
-        out = shape_to_dict(shape)
-        # A nan or an infinity would take the whole view with it the
-        # first time anything was framed.
-        for value in out.values():
-            for v in (value if isinstance(value, list) else [value]):
-                if isinstance(v, float) and not np.isfinite(v):
-                    raise EditError('A %s cannot be drawn with %r in it.'
-                                    % (out['type'], v))
-        # A rectangle of no width, or of less than none, is not a
-        # smaller rectangle: it is a shape SVG refuses to draw and a
-        # bounding box that comes out inside out.
-        for key in ('width', 'height', 'radius'):
-            if key in out and not out[key] > 0:
-                raise EditError('A %s needs a positive %s, not %r.'
-                                % (out['type'], key, out[key]))
-        # A polyline of one vertex draws nothing and has nothing to
-        # take hold of; of none, not even a place. The constructor
-        # only asks that x and y be of the same length, so this is
-        # the same kind of arithmetic as a positive width.
-        if out['type'] == 'polyline' and len(out['x']) < 2:
-            raise EditError('A polyline needs at least two vertices, '
-                            'not %d.' % len(out['x']))
-        if out.get('thickness', 0.0) < 0:
-            raise EditError('A %s cannot be drawn with a thickness of %r.'
-                            % (out['type'], out['thickness']))
-        return shape
 
 #}}}
 
@@ -654,13 +635,9 @@ def _shape_points(s):
         return pts + [((pts[i][0] + pts[i + 1][0]) / 2.0, 'midpoint')
                       for i in range(len(pts) - 1)]
     if isinstance(s, draw.Rectangle):
-        p = np.asarray(s.point, dtype='float64')
-        corners = [p,
-                   p + [s.width, 0.0],
-                   p + [s.width, s.height],
-                   p + [0.0, s.height]]
+        corners = list(s.corners())
         return ([(c, 'corner') for c in corners]
-                + [(p + [s.width / 2.0, s.height / 2.0], 'centre')]
+                + [(sum(corners) / 4.0, 'centre')]
                 + [((corners[i] + corners[(i + 1) % 4]) / 2.0, 'midpoint')
                    for i in range(4)])
     if isinstance(s, (draw.Circle, draw.Arc)):

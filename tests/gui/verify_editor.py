@@ -41,7 +41,7 @@ from gtrace.draw.serialize import shape_to_dict
 from gtrace.layout import OpticalLayout, TraceRules, EditError, q_from_waist
 from gtrace.mechanics import (Mechanics, breadboard, mirror_mount,
                               models, model_shapes, model_params,
-                              from_model, register_model)
+                              model_prefix, from_model, register_model)
 from gtrace.draw.viewer.editor import (ShapeEditor, NEW_SHAPES,
                                        EDITABLE_SHAPE_ATTRS, EDIT_LAYER,
                                        DUPLICATE_OFFSET)
@@ -295,19 +295,22 @@ th = np.pi / 4
 R = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
 want = np.array([[-0.02, -0.01], [0.02, -0.01], [0.02, 0.01],
                  [-0.02, 0.01], [-0.02, -0.01]]) @ R.T
-check('a turned rectangle comes back as an outline, closed',
-      isinstance(turned, draw.PolyLine) and len(turned.x) == 5
-      and turned.x[0] == turned.x[-1] and turned.y[0] == turned.y[-1],
+check('a turned rectangle is still a rectangle',
+      isinstance(turned, draw.Rectangle)
+      and abs(turned.angle - th) < 1e-15,
       type(turned).__name__)
-check('  of its four corners, turned about the middle of the shape',
-      np.allclose(np.column_stack([turned.x, turned.y]), want, atol=1e-15),
-      str(np.round(np.column_stack([turned.x, turned.y]), 6).tolist()))
+check('  with its corners turned about the middle of the shape',
+      np.allclose(turned.corners(), want[:4], atol=1e-15),
+      str(np.round(turned.corners(), 6).tolist()))
+check('  and its width and height still there to edit',
+      abs(turned.width - 0.04) < 1e-15 and abs(turned.height - 0.02) < 1e-15)
 check('  and it keeps its place in the list',
       len(ed.shapes) == 5 and isinstance(ed.shapes[1], draw.Circle))
 ed.apply_edit({'op': 'undo'})
-check('  undo puts the rectangle back',
+check('  undo puts the rectangle back square to the axes',
       isinstance(ed.shapes[0], draw.Rectangle)
-      and abs(ed.shapes[0].width - 0.04) < 1e-15)
+      and abs(ed.shapes[0].width - 0.04) < 1e-15
+      and ed.shapes[0].angle == 0.0)
 ed.apply_edit({'op': 'rotate_shape', 'index': 0, 'angle': 0.0})
 check('a turn of nothing leaves a rectangle a rectangle',
       isinstance(ed.shapes[0], draw.Rectangle))
@@ -507,6 +510,24 @@ L.add_source(GaussianBeam(pos=[0, 0], dirAngle=0.0,
                           wl=1064*nm, name='b0'))
 mt = mirror_mount(name='MT1', attached_to=L.get_optics('M1'))
 L.add_mechanics(mt)
+
+# What the parts built from a saved model are called. A model of the
+# user's own says it the way the stock does, and one that says nothing
+# leaves the naming to whoever is doing it.
+ed2 = ShapeEditor(Mechanics(shapes=[draw.Circle([0.0, 0.0], 0.01)],
+                            name='NP1'))
+ed2.apply_edit({'op': 'save_model', 'name': 'EDITOR-PREFIX',
+                'description': 'one of mine', 'prefix': 'XY'})
+check('save_model carries what the parts are called',
+      model_prefix('EDITOR-PREFIX') == 'XY', str(model_prefix('EDITOR-PREFIX')))
+ed2.apply_edit({'op': 'save_model', 'name': 'EDITOR-NOPREFIX',
+                'description': 'quiet'})
+check('  and a model that says nothing has none',
+      model_prefix('EDITOR-NOPREFIX') is None)
+refused(ed2, {'op': 'save_model', 'name': 'EDITOR-BAD', 'prefix': 42},
+        'a prefix that is not a name')
+refused(ed2, {'op': 'save_model', 'name': 'EDITOR-BAD', 'prefix': '  '},
+        'a prefix of nothing but spaces')
 
 ed = ShapeEditor(mt)
 n0 = len(L.scene_dict()['canvas']['layers'][-1]['shapes'])

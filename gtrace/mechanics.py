@@ -138,8 +138,9 @@ def _shape_bbox_points(s):
     if isinstance(s, draw.PolyLine):
         return [[x, y] for x, y in zip(s.x, s.y)]
     if isinstance(s, draw.Rectangle):
-        p = np.asarray(s.point, dtype='float64')
-        return [p, p + [s.width, s.height]]
+        # Its corners rather than the two it is written from: a turned
+        # rectangle reaches past both of them.
+        return [c for c in s.corners()]
     if isinstance(s, (draw.Circle, draw.Arc)):
         c = np.asarray(s.center, dtype='float64')
         return [c - s.radius, c + s.radius]
@@ -159,10 +160,12 @@ def turned_shape(s, angle, offset=(0.0, 0.0)):
     with the same thickness.
 
     A ``Rectangle`` survives as a ``Rectangle`` only while the turn is
-    nothing at all. It is defined by a corner, a width and a height,
-    with its sides along the axes, so there is no such thing as a
-    turned one - what comes back instead is the closed polyline of its
-    four corners, which is also what a DXF would have had to write.
+    nothing at all - a carry alone keeps it, pivot and all. Turned, it
+    comes back as the closed polyline of its four corners, which is
+    what a DXF would write of it either way. A rectangle turned about
+    a pivot of its own is turned about the pivot carried with it, so
+    the corners are its own, not those of the box it was written
+    from.
 
     Parameters
     ----------
@@ -200,13 +203,17 @@ def turned_shape(s, angle, offset=(0.0, 0.0)):
     if isinstance(s, draw.Rectangle):
         p = np.asarray(s.point, dtype='float64')
         if angle == 0.0:
+            # A pivot of None is the middle of the rectangle, and the
+            # middle travels with it: it is left as None rather than
+            # written out, so a carried rectangle still turns about
+            # itself.
             return draw.Rectangle(carry(p), s.width, s.height,
-                                  thickness=s.thickness)
+                                  thickness=s.thickness, angle=s.angle,
+                                  pivot=(None if s.pivot is None
+                                         else carry(s.pivot)))
         # The first corner again at the end: an open polyline of four
         # would be a rectangle with a side missing.
-        corners = np.array([p, p + [s.width, 0.0],
-                            p + [s.width, s.height], p + [0.0, s.height],
-                            p])
+        corners = np.vstack([s.corners(), s.corners()[:1]])
         pts = carry(corners)
         return draw.PolyLine(x=pts[:, 0], y=pts[:, 1],
                              thickness=s.thickness)
@@ -734,8 +741,9 @@ class Mechanics(object):
         coordinates. The local ones are left untouched.
 
         A rectangle survives as a rectangle only while the body is not
-        turned; a Rectangle has no orientation of its own, so a turned
-        one comes out as the closed polyline of its corners.
+        turned; a rectangle carries an angle of its own, but a body's
+        turn is not written into it, so a turned one comes out as the
+        closed polyline of its corners.
         '''
         out = []
         for s in self.shapes:
@@ -1139,11 +1147,16 @@ def mirror_mount_2in(scale=1.0, knobs=True, **kwargs):
 
     Measured off that drawing: front plate 68.6 wide and 7.0 deep,
     the 3.2 adjustment gap (the 22.9 overall body minus the two
-    plates), back plate 69.9 wide and 12.7 deep, and the adjuster
-    lines 35.6 apart. The adjusters protrude 12.2 behind the back
-    plate (35.1 overall); how that splits into stem and knob, and the
-    knob width, are drawn in the one-inch mount's proportions, since
-    the drawing does not dimension them.
+    plates), back plate 69.9 wide and 12.7 deep. The adjusters
+    protrude 12.2 behind the back plate (35.1 overall); how that
+    splits into stem and knob, and the knob width, are drawn in the
+    one-inch mount's proportions, since the drawing does not dimension
+    them.
+
+    **The adjuster lines are 2.1 inch (53.34 mm) apart**, which is
+    measured on the mount rather than read off the drawing - the
+    figure the drawing gives puts the knobs closer together than they
+    are. The knobs sit on those lines, so it is knob to knob.
 
     The local origin is the substrate centre of the mounted optic.
     The drawing's optic pocket is 10.3 deep, so a standard 12.7 thick
@@ -1171,7 +1184,7 @@ def mirror_mount_2in(scale=1.0, knobs=True, **kwargs):
     shapes = _mount_shapes(u, knobs,
                            front_w=68.6, front_d=7.0, gap=3.2,
                            back_w=69.9, back_d=12.7,
-                           face_ahead=3.95, tip_span=17.8, tip_r=2.5,
+                           face_ahead=3.95, tip_span=26.67, tip_r=2.5,
                            stem_d=5.7, stem_w=6.4,
                            knob_d=6.5, knob_w=12.7)
     return Mechanics(shapes=shapes, **kwargs)
@@ -1424,7 +1437,7 @@ def _mount_shapes(u, knobs, front_w, front_d, gap, back_w, back_d,
 #: at.
 _MODEL_REGISTRY = {}
 
-def register_model(name, source, description=''):
+def register_model(name, source, description='', prefix=None):
     '''
     Put a model into the library, by value.
 
@@ -1448,6 +1461,13 @@ def register_model(name, source, description=''):
         place.
     description : str, optional
         One line for models() to show.
+    prefix : str or None, optional
+        What to call the bodies built from this model, before the
+        number: 'MT' gives MT1, MT2. A part is known by what it is - a
+        mount is MT1 whatever catalogue it came from - so the model
+        says it rather than every layout choosing again, and a front
+        end that adds one has the name to hand. None leaves it to
+        whoever is naming, which is 'H' in the viewer.
 
     Returns
     -------
@@ -1467,6 +1487,12 @@ def register_model(name, source, description=''):
         'shapes': [shape_to_dict(s) for s in shapes],
         'layer': str(layer),
         'description': str(description),
+        # What bodies built from it are called. Part of the definition
+        # rather than of the layout: the same part dropped into two
+        # layouts should come out with the same kind of name, and a
+        # model of one's own says what its parts are called the same
+        # way the stock does.
+        'prefix': None if prefix is None else str(prefix),
         # The named points of the part - the hole a pedestal screws
         # into, the bore a fork closes on. They are what one part is
         # stood on another by, so they belong to the model rather than
@@ -1516,6 +1542,23 @@ def model_points(name):
                        'mechanics.models() lists what there is.' % (name,))
     return dict((k, np.array(v, dtype='float64'))
                 for k, v in (d.get('points') or {}).items())
+
+def model_prefix(name):
+    '''
+    What bodies built from a registered model are called, before the
+    number - 'MT' for a mount, 'FK' for a fork - or None where the
+    model does not say.
+
+    Raises
+    ------
+    KeyError
+        If the library has no such model.
+    '''
+    d = _MODEL_REGISTRY.get(str(name))
+    if d is None:
+        raise KeyError('No model named %r in the library. '
+                       'mechanics.models() lists what there is.' % (name,))
+    return d.get('prefix')
 
 def model_params(name):
     '''
@@ -1608,6 +1651,8 @@ def save_models(filename, names=None):
         (k, {'shapes': [dict(s) for s in v['shapes']],
              'layer': str(v['layer']),
              'description': str(v.get('description', '')),
+             'prefix': (None if v.get('prefix') is None
+                        else str(v['prefix'])),
              'points': dict((str(pk), [float(pv[0]), float(pv[1])])
                             for pk, pv in (v.get('points') or {}).items()),
              'params': (None if v.get('params') is None
@@ -1690,10 +1735,18 @@ def load_models(filename):
         if params is not None and not isinstance(params, dict):
             raise ValueError('Model %r of %s has malformed parameters: %r.'
                              % (name, filename, params))
+        prefix = d.get('prefix')
+        if prefix is not None and (not isinstance(prefix, str)
+                                   or not prefix.strip()):
+            raise ValueError('Model %r of %s has no usable name prefix: '
+                             '%r.' % (name, filename, prefix))
         staged[str(name)] = {
             'shapes': shapes,
             'layer': str(layer),
             'description': str(d.get('description', '')),
+            # A library written before models said what their parts
+            # are called has none, and none is what it meant.
+            'prefix': None if prefix is None else str(prefix),
             'points': points,
             'params': None if params is None else dict(params)}
 
@@ -1703,27 +1756,34 @@ def load_models(filename):
 # The generic stock: a few breadboards and mounts under names that say
 # what they are and no more. Registered through the same door a user's
 # models come through, so the built-ins prove the door works.
+# Each says what its parts are called: a mount is MT1 and a fork FK1,
+# whatever catalogue the footprint came from. 'PD' is deliberately not
+# among them - a photodetector is what that reads as - which is why a
+# pedestal is P.
 register_model('BB3030', breadboard(0.30, 0.30),
-               '300 x 300 mm breadboard, 25 mm grid')
+               '300 x 300 mm breadboard, 25 mm grid', prefix='BB')
 register_model('BB4530', breadboard(0.45, 0.30),
-               '450 x 300 mm breadboard, 25 mm grid')
+               '450 x 300 mm breadboard, 25 mm grid', prefix='BB')
 register_model('BB6045', breadboard(0.60, 0.45),
-               '600 x 450 mm breadboard, 25 mm grid')
+               '600 x 450 mm breadboard, 25 mm grid', prefix='BB')
 register_model('BBR30', round_breadboard(0.30),
-               '300 mm round breadboard, 25 mm grid')
+               '300 mm round breadboard, 25 mm grid', prefix='BB')
 register_model('BBR45', round_breadboard(0.45),
-               '450 mm round breadboard, 25 mm grid')
+               '450 mm round breadboard, 25 mm grid', prefix='BB')
 register_model('MOUNT-25', mirror_mount(),
-               'kinematic mount for a 1 inch optic')
+               'kinematic mount for a 1 inch optic', prefix='MT')
 register_model('MOUNT-50', mirror_mount_2in(),
-               'kinematic mount for a 2 inch optic (KA2A footprint)')
+               'kinematic mount for a 2 inch optic (KA2A footprint)',
+               prefix='MT')
 register_model('HOLDER-25', lens_holder(length=0.030, thickness=0.010),
-               'lens holder for a 1 inch optic, 30 x 10 mm')
+               'lens holder for a 1 inch optic, 30 x 10 mm', prefix='HLD')
 register_model('PEDESTAL-25', pedestal(),
-               '1 inch pedestal post, 31.8 mm base (RS05P8E footprint)')
+               '1 inch pedestal post, 31.8 mm base (RS05P8E footprint)',
+               prefix='P')
 register_model('FORK-125', clamping_fork(),
-               'clamping fork for a 1 inch pedestal (CF125 footprint)')
+               'clamping fork for a 1 inch pedestal (CF125 footprint)',
+               prefix='FK')
 register_model('HOLDER-50', lens_holder(length=0.056, thickness=0.0127),
-               'lens holder for a 2 inch optic, 56 x 12.7 mm')
+               'lens holder for a 2 inch optic, 56 x 12.7 mm', prefix='HLD')
 
 #}}}
