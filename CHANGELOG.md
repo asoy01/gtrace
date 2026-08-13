@@ -9,7 +9,7 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
-## Unreleased
+## 0.6.0 — 2026-08-13
 
 ### Added
 

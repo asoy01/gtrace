@@ -10,7 +10,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="gtrace",
-    version="0.5.0",
+    version="0.6.0",
     author="Yoichi Aso",
     author_email="asoy01@gmail.com",
     description="2D ray tracing package for Gaussian beams",
