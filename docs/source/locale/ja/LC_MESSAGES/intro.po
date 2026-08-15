@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 23:19+0900\n"
+"POT-Creation-Date: 2026-08-15 17:59+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -23,240 +23,723 @@ msgstr "はじめに"
 
 #: ../../../gtrace/docs/source/intro.rst:4
 msgid ""
-"gtrace is a python package to trace the propagation of Gaussian beams "
-"among optical components such as mirrors and lenses. The features of "
-"gtrace include:"
-msgstr "gtrace は、ミラーやレンズなどの光学素子の間を伝わるガウシアンビームの伝搬を追跡する Python パッケージである。主な機能:"
-
-#: ../../../gtrace/docs/source/intro.rst:6
-msgid ""
-"Automatically track the Gaussian beam propagation, i.e. q-parameter "
-"change, using the ABCD matrix method."
-msgstr "ABCD 行列法で、ガウシアンビームの伝搬（q パラメータの変化）を自動的に追跡する。"
-
-#: ../../../gtrace/docs/source/intro.rst:7
-msgid "Reflection and refraction at interface surfaces are properly treated."
-msgstr "界面での反射と屈折を正しく扱う。"
-
-#: ../../../gtrace/docs/source/intro.rst:8
-msgid ""
-"Automatically track the optical distance traveled by a beam through "
-"dielectric media."
-msgstr "誘電体中をビームが進んだ光学的距離を自動的に追跡する。"
-
-#: ../../../gtrace/docs/source/intro.rst:9
-msgid "Sequential or non-sequential trace modes are available."
-msgstr "逐次トレースと非逐次トレースのどちらのモードも使える。"
-
-#: ../../../gtrace/docs/source/intro.rst:10
-msgid "Exporting the results to DXF files."
-msgstr "結果を DXF ファイルに書き出せる。"
-
-#: ../../../gtrace/docs/source/intro.rst:11
-msgid ""
-"A built-in viewer that needs no CAD software: zoom, pan, and click "
-"anywhere along a beam to read out its parameters at that point. It runs "
-"as a self-contained HTML file or as a cell output in a Jupyter notebook."
+"gtrace traces Gaussian beams through an optical system laid out on a "
+"bench. You place mirrors and lenses in Python and trace the beams. You "
+"look at the result in a browser and move the elements until the layout is"
+" right. When the layout is finished, you export the drawing to DXF."
 msgstr ""
-"CAD ソフトの要らない内蔵ビューア。ズームとパンができ、ビーム上のどこをクリックしても、その点でのビームパラメータが読み出せる。自己完結の "
-"HTML ファイルとしても、Jupyter notebook のセル出力としても動く。"
+"gtrace は、ベンチ上に配置した光学系の中をガウシアンビームが進む様子を追跡する。ミラーとレンズを Python "
+"で配置し、ビームをトレースする。結果をブラウザで見ながら、レイアウトが正しくなるまで素子を動かす。レイアウトができあがったら、図面を DXF "
+"に書き出す。"
 
 #: ../../../gtrace/docs/source/intro.rst:12
-msgid ""
-"An :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` container that "
-"holds a whole optical system, so that a layout can be traced, drawn, "
-"saved to JSON and edited from the viewer."
-msgstr ""
-"光学系全体を1つに保持するコンテナ "
-":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`\\ "
-"。レイアウトのトレース・描画・JSON への保存・ビューアからの編集ができる。"
+msgid "The bench built further down this page, seen in gtrace's viewer."
+msgstr "このページの下の方で組むベンチを、gtrace のビューアで見たところ。"
 
 #: ../../../gtrace/docs/source/intro.rst:14
-msgid ""
-"The main motivation behind the development of gtrace was to help the "
-"design of the optical layout for the `KAGRA "
-"<http://gwcenter.icrr.u-tokyo.ac.jp/en/>`_ interferometer. That layout "
-"has to satisfy many constraints at once, and placing mirrors on a CAD by "
-"hand and adjusting distances and orientations one at a time is too slow. "
-"We needed to adjust the layout by computer, and for that we needed a "
-"representation a program can work with. gtrace represents mirrors and "
-"beams as python objects, so propagation becomes interactions between "
-"beams and mirrors, and the optimisation can be automated."
-msgstr ""
-"gtrace 開発のいちばんの動機は、\\ `KAGRA <http://gwcenter.icrr.u-tokyo.ac.jp/en/>`_ "
-"干渉計の光学レイアウトの設計を助けることだった。このレイアウトは多くの制約を同時に満たさなければならず、CAD "
-"上にミラーを手で置いて距離や向きを一つずつ調整していては間に合わない。計算機でレイアウトを調整する必要があり、そのためにはプログラムが扱える形の表現が必要だった。gtrace"
-" はミラーとビームを Python のオブジェクトとして表現する。こうするとビームの伝搬はビームとミラーの相互作用になり、最適化を自動化できる。"
+msgid "What it does:"
+msgstr "gtrace ができること:"
 
 #: ../../../gtrace/docs/source/intro.rst:16
 msgid ""
-"The main ingredients of gtrace are mirrors and beams. A mirror is an "
-"instance of the :py:class:`Mirror <gtrace.optcomp.Mirror>` class. You "
-"place mirrors in a 2D plane and set their size, curvature, "
-"reflectivities, wedge angle and so on. You then launch a beam, an "
-"instance of :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>`, from a "
-"point in that plane. When the beam hits a mirror it splits into sub-"
-"beams: reflections, refractions, and the beams that come back out of the "
-"substrate. Those beam objects are yours to propagate further. In non-"
-"sequential mode gtrace propagates them for you until a termination "
-"condition is met — the beam hits nothing, or its power falls below a "
-"threshold, and so on. At the end you have a collection of beam objects, "
-"which you can export to a DXF file."
+"You place the elements and gtrace works out the rest. Which surface a "
+"beam hits next, where it goes and what comes off it are computed, not "
+"declared."
 msgstr ""
-"gtrace の主役はミラーとビームである。ミラーは :py:class:`Mirror <gtrace.optcomp.Mirror>` "
-"クラスのインスタンスで、2次元平面に配置し、大きさ・曲率・反射率・ウェッジ角などを設定する。次に、その平面のある点から "
-":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` "
-"のインスタンスであるビームを打ち出す。ビームがミラーに当たると、反射・屈折・基板から出てくるビームといったサブビームに分かれる。返ってきたビームオブジェクトは、自分でさらに伝搬させられる。非逐次モードでは、終了条件が満たされるまで"
-" gtrace "
-"が伝搬させる。終了条件は、どのミラーにも当たらない、パワーがしきい値を下回る、などである。最後に、生成されたビームオブジェクトの一群が手に入る。これは"
-" DXF ファイルに書き出せる。"
+"素子を置けば、残りは gtrace "
+"が計算する。ビームが次にどの面に当たるか、どこへ進むか、そこから何が出てくるかは、宣言するものではなく計算されるものである。"
 
 #: ../../../gtrace/docs/source/intro.rst:19
-msgid "Two ways of working"
-msgstr "2つの使い方"
-
-#: ../../../gtrace/docs/source/intro.rst:21
 msgid ""
-"The description above is the low level interface: you hold the mirrors "
-"and the beams yourself and pass them around. Everything in gtrace can be "
-"done this way, and the :doc:`tutorial` starts there."
-msgstr ""
-"上の説明は低レベルインターフェースのもので、ミラーとビームを自分で持ち、自分で受け渡す。gtrace "
-"でできることはすべてこのやり方でもできるし、\\ :doc:`tutorial` もそこから始まる。"
+"Reflection and refraction are treated at every surface, so the faint "
+"ghost beams off anti-reflection coatings come out of the trace along with"
+" the beam you meant to have."
+msgstr "反射と屈折を全ての面で扱う。そのため、反射防止コートから出る弱いゴーストビームも、目的のビームと一緒にトレース結果に出てくる。"
 
-#: ../../../gtrace/docs/source/intro.rst:23
+#: ../../../gtrace/docs/source/intro.rst:22
 msgid ""
-"On top of it there is a container, "
-":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, which holds the "
-"optics, the source beams and the tracing rules as one object. Register "
-"your optics into a layout and you get tracing, drawing, JSON persistence "
-"and the interactive viewer without carrying the lists around by hand. The"
-" optics are held *by reference*: the mirror you registered and the mirror"
-" in your own variable are the same object, so an edit made in the viewer "
-"changes the object in your code. The last part of the :doc:`tutorial` "
-"goes through it; :doc:`layout` and :doc:`viewer` describe it in reference"
-" detail."
+"The ABCD matrix is multiplied out along every beam. The beam radius, the "
+"wavefront curvature, the waist and the accumulated Gouy phase are "
+"therefore known at every point of every beam."
 msgstr ""
-"その上に、光学素子・ソースビーム・トレースのルールを1つのオブジェクトとして持つコンテナ "
-":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
-"がある。素子をレイアウトに登録すれば、リストを手で持ち回らずに、トレース・描画・JSON への保存・対話的なビューアが使える。素子は\\ "
-"*参照で*\\ 保持される。登録したミラーと手元の変数のミラーは同じオブジェクトなので、ビューアで加えた編集はコード側のオブジェクトに効く。\\ "
-":doc:`tutorial` の最後の部分でこれを一通り使い、\\ :doc:`layout` と :doc:`viewer` "
-"がリファレンスとして詳しく説明する。"
+"ABCD 行列を全てのビームに沿って掛け合わせる。そのため、ビーム半径・波面の曲率・ウェスト・積算した Gouy "
+"位相が、全てのビームの全ての点で分かる。"
+
+#: ../../../gtrace/docs/source/intro.rst:25
+msgid "Optical path length accumulates through glass as well as through air."
+msgstr "光路長は、空気中だけでなくガラス中でも積算される。"
 
 #: ../../../gtrace/docs/source/intro.rst:26
+msgid ""
+"The result can be read out by clicking in the viewer, saved as JSON, sent"
+" to somebody as a single HTML page, or exported to DXF for CAD."
+msgstr ""
+"結果はビューアをクリックして読み取れる。JSON として保存し、1枚の HTML ページとして人に送り、CAD 用に DXF "
+"へ書き出すこともできる。"
+
+#: ../../../gtrace/docs/source/intro.rst:29
+msgid ""
+"gtrace works in two dimensions: everything lies on one plane. That covers"
+" a bench layout, the case gtrace was written for. The limitation may be "
+"lifted in the future."
+msgstr ""
+"gtrace は2次元で動く。全てが1つの平面上にある。これはベンチのレイアウトを扱うのに十分であり、gtrace "
+"はそのために書かれた。この制限は将来外れるかもしれない。"
+
+#: ../../../gtrace/docs/source/intro.rst:34
 msgid "Installation"
 msgstr "インストール"
 
-#: ../../../gtrace/docs/source/intro.rst:33
-msgid "Python 3.9 or newer. gtrace itself needs only numpy, scipy and traits."
-msgstr "Python 3.9 以上。gtrace 本体が必要とするのは numpy・scipy・traits だけである。"
-
 #: ../../../gtrace/docs/source/intro.rst:36
-msgid "What the viewer needs"
-msgstr "ビューアに必要なもの"
+msgid "Python 3.9 or newer::"
+msgstr "Python 3.9 以降が必要である::"
 
-#: ../../../gtrace/docs/source/intro.rst:38
-msgid "The viewer has two front ends, with different requirements:"
-msgstr "ビューアには2つのフロントエンドがあり、必要なものが違う:"
+#: ../../../gtrace/docs/source/intro.rst:40
+msgid ""
+"This installs gtrace and both viewers: the widget that runs inside a "
+"Jupyter notebook, and the standalone HTML page that opens in a web "
+"browser."
+msgstr ""
+"これで gtrace と、2種類のビューアの両方が入る。Jupyter notebook の中で動くウィジェットと、ウェブブラウザで開く単独の "
+"HTML ページである。"
 
-#: ../../../gtrace/docs/source/intro.rst:44
-msgid "Front end"
-msgstr "フロントエンド"
+#: ../../../gtrace/docs/source/intro.rst:43
+msgid "It does not install Jupyter itself. If you do not have Jupyter::"
+msgstr "これは Jupyter 本体をインストールしない。Jupyter が入っていない場合は::"
 
-#: ../../../gtrace/docs/source/intro.rst:45
-msgid "Needs"
-msgstr "必要なもの"
-
-#: ../../../gtrace/docs/source/intro.rst:46
-msgid "Self-contained HTML — ``render_html()``, ``show(backend='html')``"
-msgstr "自己完結 HTML（\\ ``render_html()``\\ 、\\ ``show(backend='html')``\\ ）"
-
-#: ../../../gtrace/docs/source/intro.rst:48
-msgid "Nothing beyond gtrace and a web browser"
-msgstr "gtrace と Web ブラウザ以外には何も要らない"
-
-#: ../../../gtrace/docs/source/intro.rst:49
-msgid "Jupyter widget — ``widget()``, or ``show()`` inside a notebook"
-msgstr "Jupyter ウィジェット（\\ ``widget()``\\ 、または notebook 内での ``show()``\\ ）"
+#: ../../../gtrace/docs/source/intro.rst:47
+msgid ""
+"VS Code's notebook editor works instead of JupyterLab: open the "
+"``.ipynb`` file and select the interpreter you installed gtrace into."
+msgstr ""
+"JupyterLab の代わりに VS Code の notebook エディタでもよい。\\ ``.ipynb`` ファイルを開き、gtrace"
+" を入れたインタプリタを選ぶ。"
 
 #: ../../../gtrace/docs/source/intro.rst:50
 msgid ""
-"``anywidget`` (>= 0.9), which brings ``ipywidgets`` with it, and a "
-"Jupyter front end"
-msgstr "``anywidget``\\ （0.9 以上。\\ ``ipywidgets`` も一緒に入る）と Jupyter のフロントエンド"
+"If you do not use notebooks, ``pip install gtrace`` installs gtrace and "
+"the HTML viewer, and leaves out the widget."
+msgstr ""
+"notebook を使わないなら、\\ ``pip install gtrace`` で gtrace と HTML "
+"ビューアが入る。ウィジェットは入らない。"
 
 #: ../../../gtrace/docs/source/intro.rst:53
 msgid ""
-"Neither route needs Node.js, a build step, a CDN or network access. The "
-"viewer's JavaScript and CSS ship inside the package and are inlined into "
-"the page it writes. No CAD software is needed either."
-msgstr ""
-"どちらの経路にも、Node.js・ビルド工程・CDN・ネットワークアクセスは要らない。ビューアの JavaScript と CSS "
-"はパッケージに同梱されていて、書き出されるページにインラインで埋め込まれる。CAD ソフトも要らない。"
+"The quotes around ``gtrace[notebook]`` matter in zsh, which would "
+"otherwise read the brackets as a glob."
+msgstr "``gtrace[notebook]`` を囲む引用符は zsh で必要である。無いと、角括弧が glob として解釈される。"
 
-#: ../../../gtrace/docs/source/intro.rst:55
+#: ../../../gtrace/docs/source/intro.rst:57
+msgid "A first layout"
+msgstr "最初のレイアウト"
+
+#: ../../../gtrace/docs/source/intro.rst:59
 msgid ""
-":py:meth:`show<gtrace.layout.OpticalLayout.show>` picks the widget when "
-"it is running in a Jupyter kernel with anywidget installed, and writes "
-"the HTML file otherwise, so the same code works both ways. Without "
-"anywidget the widget raises ``WidgetNotAvailable`` and says so."
+"A laser, a lens and two steering mirrors. This runs in a notebook or in a"
+" plain script; nothing in it is notebook specific."
 msgstr ""
-":py:meth:`show<gtrace.layout.OpticalLayout.show>` は、anywidget が入った "
-"Jupyter カーネルで動いていればウィジェットを選び、そうでなければ HTML "
-"ファイルを書く。だから同じコードがどちらでも動く。anywidget が無い場合、ウィジェットは ``WidgetNotAvailable`` "
-"を投げてそのことを伝える。"
+"レーザー1台、レンズ1枚、ステアリングミラー2枚。これは notebook でも素のスクリプトでも動く。notebook "
+"固有のものは何も使っていない。"
 
-#: ../../../gtrace/docs/source/intro.rst:58
-msgid "From a clone"
-msgstr "clone から使う"
+#: ../../../gtrace/docs/source/intro.rst:97
+msgid "Reading it from the top:"
+msgstr "上から順に読んでいく:"
 
-#: ../../../gtrace/docs/source/intro.rst:60
-msgid "To work from the source tree instead::"
-msgstr "代わりにソースツリーから使うには::"
-
-#: ../../../gtrace/docs/source/intro.rst:66
+#: ../../../gtrace/docs/source/intro.rst:99
 msgid ""
-"Use ``pip install -e \".[notebook]\"`` if you intend to change gtrace "
-"itself. The quotes matter in zsh, which would otherwise expand the "
-"brackets as a glob."
+"**Units.** Lengths are in metres and angles are in radians. "
+"``gtrace.unit`` gives you ``mm``, ``cm``, ``inch``, ``nm``, ``ppm`` and "
+"the rest as plain multipliers, and ``deg2rad`` for angles, so ``250*mm`` "
+"and ``deg2rad(135)`` read the way they should."
 msgstr ""
-"gtrace 自体に手を入れるつもりなら ``pip install -e \".[notebook]\"`` を使う。zsh "
-"では引用符が必要で、無いと角括弧が glob として展開される。"
+"**単位。** 長さはメートル、角度はラジアンである。\\ ``gtrace.unit`` は ``mm``\\ 、\\ ``cm``\\ 、\\"
+" ``inch``\\ 、\\ ``nm``\\ 、\\ ``ppm`` などを単なる倍率として与え、角度には ``deg2rad`` "
+"を与える。そのため ``250*mm`` や ``deg2rad(135)`` をそのまま書ける。"
 
-#: ../../../gtrace/docs/source/intro.rst:69
-msgid "Running the tutorial"
-msgstr "チュートリアルを実行する"
-
-#: ../../../gtrace/docs/source/intro.rst:71
+#: ../../../gtrace/docs/source/intro.rst:104
 msgid ""
-"The :doc:`tutorial` is a pair of Jupyter notebooks. Both are self-"
-"contained: they need gtrace and nothing else from the repository, so "
-"downloading the ``.ipynb`` files is enough, and the :doc:`tutorial` page "
-"links to them on GitHub. A Jupyter front end runs them::"
+"**The source beam.** A :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>`"
+" starts at ``pos`` and travels in the direction ``dirAngle``, measured "
+"from the x axis counterclockwise. Its shape is the complex beam parameter"
+" ``q0``; :py:func:`q_from_waist<gtrace.layout.q_from_waist>` builds one "
+"from a waist radius, the distance from that waist to where the beam "
+"starts, and the wavelength."
 msgstr ""
-":doc:`tutorial` は2つの Jupyter notebook である。どちらも自己完結していて、必要なのは gtrace "
-"だけである。リポジトリの他のファイルは要らないので、\\ ``.ipynb`` ファイルをダウンロードすれば足りる。\\ "
-":doc:`tutorial` のページに GitHub 上のファイルへのリンクがある。実行には Jupyter のフロントエンドを使う::"
+"**光源ビーム。** :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` は ``pos`` "
+"から出発し、\\ ``dirAngle`` の方向へ進む。角度は x 軸から反時計回りに測る。ビームの形は複素ビームパラメータ ``q0`` "
+"で表す。\\ :py:func:`q_from_waist<gtrace.layout.q_from_waist>` "
+"は、ウェスト半径・そのウェストからビームの出発点までの距離・波長の3つからこれを作る。"
 
-#: ../../../gtrace/docs/source/intro.rst:76
+#: ../../../gtrace/docs/source/intro.rst:111
 msgid ""
-"VS Code's notebook editor works too: open the file and select the "
-"interpreter you installed gtrace into. Run the cells from the top. The "
-"last chapter opens the viewer in the cell output, which is the part that "
-"needs anywidget; everything before it works without."
+"**The elements.** :py:class:`Lens<gtrace.optcomp.Lens>` is ordered by its"
+" focal length. :py:class:`Mirror<gtrace.optcomp.Mirror>` has two "
+"surfaces, the front face HR and the back face AR. ``HRcenter`` places the"
+" front face and ``normAngleHR`` is the direction its normal points, so "
+"``deg2rad(135)`` turns a beam travelling along +x into one travelling "
+"along +y. ``Refl_HR=0.99, Trans_HR=0.01`` say that one part in a hundred "
+"goes through the mirror instead of bouncing off it. That is why ten beams"
+" come back from a bench with only three elements on it."
 msgstr ""
-"VS Code の notebook エディタでも動く。ファイルを開き、gtrace "
-"をインストールしたインタプリタを選ぶ。セルは上から順に実行する。最後の章はセル出力にビューアを開く。anywidget "
-"が要るのはそこだけで、それより前は無くても動く。"
+"**素子。** :py:class:`Lens<gtrace.optcomp.Lens>` は焦点距離で注文する。\\ "
+":py:class:`Mirror<gtrace.optcomp.Mirror>` は2つの面を持つ。前面が HR、背面が AR である。\\ "
+"``HRcenter`` が前面の位置を決め、\\ ``normAngleHR`` はその面の法線が向く方向である。したがって "
+"``deg2rad(135)`` は、+x 方向に進むビームを +y 方向に進むビームに変える。\\ ``Refl_HR=0.99, "
+"Trans_HR=0.01`` "
+"は、100分の1がミラーで反射せずに透過することを表す。素子が3つしかないベンチから10本のビームが返ってくるのは、そのためである。"
 
-#: ../../../gtrace/docs/source/intro.rst:79
-msgid "Limitations"
-msgstr "制限事項"
-
-#: ../../../gtrace/docs/source/intro.rst:81
+#: ../../../gtrace/docs/source/intro.rst:120
 msgid ""
-"gtrace is at this moment limited to 2D optical layouts. This limitation "
-"might be lifted in the future."
-msgstr "gtrace は現時点では2次元の光学レイアウトに限られる。この制限は将来外れるかもしれない。"
+"**The layout.** :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` is"
+" the whole system in one object: the elements, the source beams, and the "
+"rules the trace runs under. "
+":py:class:`TraceRules<gtrace.layout.TraceRules>` has three of those:"
+msgstr ""
+"**レイアウト。** :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
+"は、光学系全体を1つのオブジェクトにまとめたものである。素子、光源ビーム、そしてトレースが従う規則を持つ。\\ "
+":py:class:`TraceRules<gtrace.layout.TraceRules>` には規則が3つある:"
+
+#: ../../../gtrace/docs/source/intro.rst:129
+msgid "Rule"
+msgstr "規則"
+
+#: ../../../gtrace/docs/source/intro.rst:130
+msgid "What it sets"
+msgstr "何を決めるか"
+
+#: ../../../gtrace/docs/source/intro.rst:131
+msgid "``power_threshold``"
+msgstr "``power_threshold``"
+
+#: ../../../gtrace/docs/source/intro.rst:132
+msgid ""
+"How faint a beam has to get before it stops being followed. Lower it to "
+"chase more ghosts, at the cost of time."
+msgstr "ビームがどこまで弱くなったら追跡をやめるか。下げるとより多くのゴーストを追えるが、時間がかかる。"
+
+#: ../../../gtrace/docs/source/intro.rst:134
+msgid "``order``"
+msgstr "``order``"
+
+#: ../../../gtrace/docs/source/intro.rst:135
+msgid "How many internal reflections are followed when a beam enters a substrate."
+msgstr "ビームが基板に入ったとき、内部反射を何回まで追うか。"
+
+#: ../../../gtrace/docs/source/intro.rst:137
+msgid "``open_beam_length``"
+msgstr "``open_beam_length``"
+
+#: ../../../gtrace/docs/source/intro.rst:138
+msgid ""
+"How long a beam that hits nothing is drawn. The default is 1 m; 15 cm "
+"keeps this small bench from being lost in its own stray beams."
+msgstr ""
+"何にも当たらないビームをどれだけの長さで描くか。既定は 1 m である。この小さなベンチでは 15 cm "
+"にして、自分の迷光に埋もれないようにしている。"
+
+#: ../../../gtrace/docs/source/intro.rst:142
+msgid ""
+"**The trace.** :py:meth:`trace()<gtrace.layout.OpticalLayout.trace>` "
+"releases each source beam, follows it wherever the geometry takes it, and"
+" returns every beam produced on the way."
+msgstr ""
+"**トレース。** :py:meth:`trace()<gtrace.layout.OpticalLayout.trace>` "
+"は各光源ビームを放ち、幾何が導くままに追跡し、その過程で生じた全てのビームを返す。"
+
+#: ../../../gtrace/docs/source/intro.rst:147
+msgid "Showing the result"
+msgstr "結果を表示する"
+
+#: ../../../gtrace/docs/source/intro.rst:153
+msgid ""
+"In a Jupyter notebook this puts the viewer in the cell output. Anywhere "
+"else it writes a self-contained HTML file and opens it in your browser."
+msgstr ""
+"Jupyter notebook では、これでセルの出力にビューアが出る。それ以外の場所では、自己完結した HTML "
+"ファイルを書き出してブラウザで開く。"
+
+#: ../../../gtrace/docs/source/intro.rst:156
+msgid ""
+"The two show the same drawing and report the same beam numbers. They "
+"differ in what they can change. The notebook widget has a running Python "
+"kernel behind it, so it can edit the layout and trace it again. The HTML "
+"file has no kernel, so it is read-only: you can pan, zoom, click a beam "
+"and measure a distance, but not move anything."
+msgstr ""
+"この2つは同じ絵を表示し、同じ数値を報告する。違うのは何を変えられるかである。notebook のウィジェットの後ろでは Python "
+"カーネルが動いているので、レイアウトを編集して再トレースできる。HTML "
+"ファイルにはカーネルが無いので読み取り専用である。パン・ズーム・ビームのクリック・距離の測定はできるが、ものを動かすことはできない。"
+
+#: ../../../gtrace/docs/source/intro.rst:165
+msgid ""
+"The bench in the notebook widget, with the beam between the two steering "
+"mirrors clicked."
+msgstr "notebook のウィジェットで見たベンチ。2枚のステアリングミラーの間のビームをクリックしたところ。"
+
+#: ../../../gtrace/docs/source/intro.rst:168
+msgid ""
+"Click anywhere along a beam, not only at a corner. The panel then tells "
+"you what that beam is doing *at that point*: the radius, the wavefront "
+"ROC, the complex q, the waist radius, the distance to the waist, the "
+"Rayleigh range, the accumulated Gouy phase, the power, and the optical "
+"path travelled so far. The x and y columns are separate, because a beam "
+"is not round in general."
+msgstr ""
+"ビームの上ならどこをクリックしてもよい。角である必要はない。パネルはそのビームが\\ *その点で*\\ 何をしているかを教える。半径、波面の "
+"ROC、複素数 q、ウェスト半径、ウェストまでの距離、レイリー長、積算した Gouy 位相、パワー、そしてそこまでに進んだ光路長である。x と y"
+" の列が分かれているのは、ビームが一般には丸くないからである。"
+
+#: ../../../gtrace/docs/source/intro.rst:175
+msgid ""
+"Click an element and the panel shows its properties instead, and lets you"
+" change them."
+msgstr "素子をクリックすると、パネルはビームの読み取りではなくその素子のプロパティを表示し、値を変更できるようにする。"
+
+#: ../../../gtrace/docs/source/intro.rst:178
+msgid ""
+"Drag the background to pan and use the wheel to zoom; ``Fit`` frames the "
+"whole layout again. The buttons along the top of the widget add elements,"
+" align one element to a beam, measure a distance, and undo. :doc:`viewer`"
+" goes through all of them."
+msgstr ""
+"背景をドラッグするとパンし、ホイールでズームする。\\ ``Fit`` "
+"はレイアウト全体が収まるように戻す。ウィジェット上部のボタンで、素子を追加し、素子をビームに正対させ、距離を測り、undo する。\\ "
+":doc:`viewer` にその全てが書いてある。"
+
+#: ../../../gtrace/docs/source/intro.rst:184
+msgid "Changing the layout"
+msgstr "レイアウトを変更する"
+
+#: ../../../gtrace/docs/source/intro.rst:186
+msgid ""
+"Working with gtrace is a loop: place an element, look at what the beams "
+"do, move the element. Both halves of that loop reach the same objects."
+msgstr "gtrace の使い方はループである。素子を置き、ビームがどうなるかを見て、素子を動かす。このループの両側は同じオブジェクトに届く。"
+
+#: ../../../gtrace/docs/source/intro.rst:189
+msgid ""
+"From Python, keep the widget in a variable and call ``update()`` after a "
+"change:"
+msgstr "Python からは、ウィジェットを変数に入れておき、変更のあとで ``update()`` を呼ぶ:"
+
+#: ../../../gtrace/docs/source/intro.rst:202
+msgid ""
+"From the widget, drag an element to move it, ctrl-drag it onto a beam to "
+"align it, or type a new number into the properties panel. Those edits "
+"reach the objects in your notebook, because the layout holds the optics "
+"by reference and does not copy them::"
+msgstr ""
+"ウィジェットからは、素子をドラッグして動かし、Ctrl "
+"を押しながらビームの上へドラッグして正対させ、あるいはプロパティパネルに数値を打ち込む。これらの編集は notebook "
+"側のオブジェクトに届く。レイアウトは素子を参照で保持していて、コピーを作らないからである::"
+
+#: ../../../gtrace/docs/source/intro.rst:210
+msgid ""
+"So the mirror you dragged in the browser is the ``S2`` your next cell "
+"sees."
+msgstr "つまり、ブラウザでドラッグしたミラーは、次のセルが見る ``S2`` そのものである。"
+
+#: ../../../gtrace/docs/source/intro.rst:213
+msgid "Saving and exporting"
+msgstr "保存と書き出し"
+
+#: ../../../gtrace/docs/source/intro.rst:221
+msgid ""
+":py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>`"
+" reads a saved layout back into the objects you already have, so a change"
+" you did not want can be undone by reloading."
+msgstr ""
+":py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>`"
+" は、保存したレイアウトを、いま手元にあるオブジェクトへ読み戻す。意図しない変更をしてしまったら、読み直せば元に戻せる。"
+
+#: ../../../gtrace/docs/source/intro.rst:225
+msgid ""
+"The beams are ordinary Python objects, so the numbers are there to be "
+"used in your own code:"
+msgstr "ビームは普通の Python オブジェクトなので、その数値を自分のコードで使える:"
+
+#: ../../../gtrace/docs/source/intro.rst:241
+msgid ""
+"The viewer cannot do this part. A layout can be produced by a search, an "
+"optimisation or a loop over a catalogue of stock lenses, and only then "
+"opened and looked at."
+msgstr "この部分はビューアにはできない。レイアウトは、探索や最適化、あるいは手持ちのレンズのカタログを回すループから作ることができる。作ってからビューアで開いて眺めればよい。"
+
+#: ../../../gtrace/docs/source/intro.rst:246
+msgid "Where to go next"
+msgstr "次に読むもの"
+
+#: ../../../gtrace/docs/source/intro.rst:252
+msgid "If you want to"
+msgstr "やりたいこと"
+
+#: ../../../gtrace/docs/source/intro.rst:253
+msgid "Read"
+msgstr "読むページ"
+
+#: ../../../gtrace/docs/source/intro.rst:254
+msgid "Work through a real example from end to end"
+msgstr "実例を最初から最後まで通してやってみる"
+
+#: ../../../gtrace/docs/source/intro.rst:255
+msgid ":doc:`tutorial`"
+msgstr ":doc:`tutorial`"
+
+#: ../../../gtrace/docs/source/intro.rst:256
+msgid "Match a laser into a cavity with two lenses"
+msgstr "レンズ2枚でレーザーを共振器にモードマッチングさせる"
+
+#: ../../../gtrace/docs/source/intro.rst:257
+msgid ":doc:`the mode matching example<tutorial/modematching>`"
+msgstr ":doc:`モードマッチングの例題<tutorial/modematching>`"
+
+#: ../../../gtrace/docs/source/intro.rst:258
+msgid "Know what the coordinates, mirrors and lenses mean"
+msgstr "座標系・ミラー・レンズが何を意味するかを知る"
+
+#: ../../../gtrace/docs/source/intro.rst:259
+msgid ":doc:`basic_concepts`"
+msgstr ":doc:`basic_concepts`"
+
+#: ../../../gtrace/docs/source/intro.rst:260
+msgid "Understand what happens at a surface, and where the ghost beams come from"
+msgstr "面で何が起きるか、ゴーストビームがどこから来るかを理解する"
+
+#: ../../../gtrace/docs/source/intro.rst:262
+msgid ":doc:`propagation`"
+msgstr ":doc:`propagation`"
+
+#: ../../../gtrace/docs/source/intro.rst:263
+msgid ""
+"Use everything ``OpticalLayout`` can do: mechanics, assemblies, "
+"dimensions, undo, JSON"
+msgstr "``OpticalLayout`` の機能を全部使う: 周辺物、組み立て、寸法線、undo、JSON"
+
+#: ../../../gtrace/docs/source/intro.rst:265
+msgid ":doc:`layout`"
+msgstr ":doc:`layout`"
+
+#: ../../../gtrace/docs/source/intro.rst:266
+msgid "Use everything the viewer can do"
+msgstr "ビューアの機能を全部使う"
+
+#: ../../../gtrace/docs/source/intro.rst:267
+msgid ":doc:`viewer`"
+msgstr ":doc:`viewer`"
+
+#: ../../../gtrace/docs/source/intro.rst:268
+msgid ""
+"Drive a layout from code the way the viewer does, or write a front end of"
+" your own"
+msgstr "ビューアと同じようにコードからレイアウトを操作する、あるいは自分のフロントエンドを書く"
+
+#: ../../../gtrace/docs/source/intro.rst:270
+msgid ":doc:`editing`"
+msgstr ":doc:`editing`"
+
+#: ../../../gtrace/docs/source/intro.rst:272
+msgid ""
+"Two of those pages are worth reading early. :doc:`propagation` explains "
+"where the ghost beams come from and how they are counted. Read it so that"
+" you can choose ``order`` and ``power_threshold`` on purpose, instead of "
+"turning them until the picture looks right. :doc:`layout` covers what a "
+"layout holds besides optics: the mounts, pedestals and breadboards a real"
+" bench needs, and the drawing options that decide what goes into a DXF "
+"file."
+msgstr ""
+"このうち2ページは早めに読む価値がある。\\ :doc:`propagation` "
+"は、ゴーストビームがどこから来て、どう数えられるかを説明する。これを読めば、\\ ``order`` と ``power_threshold`` "
+"を、絵が良さそうに見えるまで回すのではなく、根拠を持って選べるようになる。\\ :doc:`layout` "
+"は、レイアウトが素子以外に何を持つかを扱う。実際のベンチに要るマウント・ペデスタル・ブレッドボードと、DXF "
+"ファイルに何が入るかを決める作図オプションである。"
+
+#: ../../../gtrace/docs/source/intro.rst:280
+msgid ""
+"There is also a lower level to gtrace, underneath ``OpticalLayout``. "
+"Mirrors and beams work on their own: you can hand a beam to a mirror, get"
+" the reflected and transmitted beams back, and carry them yourself. "
+"Anything a layout does can be done that way, and the last chapter of the "
+":doc:`tutorial` builds a cavity like that before registering it in a "
+"layout. Use it when the geometry has to be computed instead of placed by "
+"hand."
+msgstr ""
+"gtrace には ``OpticalLayout`` "
+"の下にもう一段低い層がある。ミラーとビームはそれだけで動く。ミラーにビームを渡すと、反射ビームと透過ビームが返ってくるので、それを自分で持ち回ればよい。レイアウトができることは全てこのやり方でもできる。\\"
+" :doc:`tutorial` "
+"の最後の章は、そうやって共振器を組んでからレイアウトに登録する。配置を手で決めるのではなく計算で決める必要があるときに、この層を使う。"
+
+#: ../../../gtrace/docs/source/intro.rst:288
+msgid "Installing from a git clone"
+msgstr "git clone からインストールする"
+
+#: ../../../gtrace/docs/source/intro.rst:290
+msgid "To track gtrace's own development, or to edit gtrace itself::"
+msgstr "gtrace 自体の開発を追いかけたい場合や、gtrace に手を入れたい場合は::"
+
+#: ../../../gtrace/docs/source/intro.rst:296
+msgid ""
+"The tutorial notebooks live in ``docs/source/tutorial/``. They need "
+"nothing from the repository but gtrace itself, so downloading the "
+"``.ipynb`` files on their own works too; :doc:`tutorial` links to them."
+msgstr ""
+"チュートリアルの notebook は ``docs/source/tutorial/`` にある。リポジトリからは gtrace "
+"本体以外に何も必要としないので、\\ ``.ipynb`` ファイルだけをダウンロードしても動く。\\ :doc:`tutorial` "
+"にそのリンクがある。"
+
+#~ msgid ""
+#~ "gtrace is a python package to "
+#~ "trace the propagation of Gaussian beams"
+#~ " among optical components such as "
+#~ "mirrors and lenses. The features of "
+#~ "gtrace include:"
+#~ msgstr "gtrace は、ミラーやレンズなどの光学素子の間を伝わるガウシアンビームの伝搬を追跡する Python パッケージである。主な機能:"
+
+#~ msgid ""
+#~ "Automatically track the Gaussian beam "
+#~ "propagation, i.e. q-parameter change, using"
+#~ " the ABCD matrix method."
+#~ msgstr "ABCD 行列法で、ガウシアンビームの伝搬（q パラメータの変化）を自動的に追跡する。"
+
+#~ msgid "Reflection and refraction at interface surfaces are properly treated."
+#~ msgstr "界面での反射と屈折を正しく扱う。"
+
+#~ msgid ""
+#~ "Automatically track the optical distance "
+#~ "traveled by a beam through dielectric"
+#~ " media."
+#~ msgstr "誘電体中をビームが進んだ光学的距離を自動的に追跡する。"
+
+#~ msgid "Sequential or non-sequential trace modes are available."
+#~ msgstr "逐次トレースと非逐次トレースのどちらのモードも使える。"
+
+#~ msgid "Exporting the results to DXF files."
+#~ msgstr "結果を DXF ファイルに書き出せる。"
+
+#~ msgid ""
+#~ "A built-in viewer that needs no"
+#~ " CAD software: zoom, pan, and click"
+#~ " anywhere along a beam to read "
+#~ "out its parameters at that point. "
+#~ "It runs as a self-contained HTML"
+#~ " file or as a cell output in"
+#~ " a Jupyter notebook."
+#~ msgstr ""
+#~ "CAD "
+#~ "ソフトの要らない内蔵ビューア。ズームとパンができ、ビーム上のどこをクリックしても、その点でのビームパラメータが読み出せる。自己完結の "
+#~ "HTML ファイルとしても、Jupyter notebook のセル出力としても動く。"
+
+#~ msgid ""
+#~ "An :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
+#~ "container that holds a whole optical "
+#~ "system, so that a layout can be"
+#~ " traced, drawn, saved to JSON and "
+#~ "edited from the viewer."
+#~ msgstr ""
+#~ "光学系全体を1つに保持するコンテナ "
+#~ ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`\\ "
+#~ "。レイアウトのトレース・描画・JSON への保存・ビューアからの編集ができる。"
+
+#~ msgid ""
+#~ "The main motivation behind the "
+#~ "development of gtrace was to help "
+#~ "the design of the optical layout "
+#~ "for the `KAGRA "
+#~ "<http://gwcenter.icrr.u-tokyo.ac.jp/en/>`_ interferometer. "
+#~ "That layout has to satisfy many "
+#~ "constraints at once, and placing mirrors"
+#~ " on a CAD by hand and adjusting"
+#~ " distances and orientations one at a"
+#~ " time is too slow. We needed to"
+#~ " adjust the layout by computer, and"
+#~ " for that we needed a representation"
+#~ " a program can work with. gtrace "
+#~ "represents mirrors and beams as python"
+#~ " objects, so propagation becomes "
+#~ "interactions between beams and mirrors, "
+#~ "and the optimisation can be automated."
+#~ msgstr ""
+#~ "gtrace 開発のいちばんの動機は、\\ `KAGRA "
+#~ "<http://gwcenter.icrr.u-tokyo.ac.jp/en/>`_ "
+#~ "干渉計の光学レイアウトの設計を助けることだった。このレイアウトは多くの制約を同時に満たさなければならず、CAD "
+#~ "上にミラーを手で置いて距離や向きを一つずつ調整していては間に合わない。計算機でレイアウトを調整する必要があり、そのためにはプログラムが扱える形の表現が必要だった。gtrace"
+#~ " はミラーとビームを Python "
+#~ "のオブジェクトとして表現する。こうするとビームの伝搬はビームとミラーの相互作用になり、最適化を自動化できる。"
+
+#~ msgid ""
+#~ "The main ingredients of gtrace are "
+#~ "mirrors and beams. A mirror is an"
+#~ " instance of the :py:class:`Mirror "
+#~ "<gtrace.optcomp.Mirror>` class. You place "
+#~ "mirrors in a 2D plane and set "
+#~ "their size, curvature, reflectivities, wedge"
+#~ " angle and so on. You then "
+#~ "launch a beam, an instance of "
+#~ ":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>`, from a"
+#~ " point in that plane. When the "
+#~ "beam hits a mirror it splits into"
+#~ " sub-beams: reflections, refractions, and"
+#~ " the beams that come back out "
+#~ "of the substrate. Those beam objects "
+#~ "are yours to propagate further. In "
+#~ "non-sequential mode gtrace propagates "
+#~ "them for you until a termination "
+#~ "condition is met — the beam hits"
+#~ " nothing, or its power falls below"
+#~ " a threshold, and so on. At the"
+#~ " end you have a collection of "
+#~ "beam objects, which you can export "
+#~ "to a DXF file."
+#~ msgstr ""
+#~ "gtrace の主役はミラーとビームである。ミラーは :py:class:`Mirror "
+#~ "<gtrace.optcomp.Mirror>` "
+#~ "クラスのインスタンスで、2次元平面に配置し、大きさ・曲率・反射率・ウェッジ角などを設定する。次に、その平面のある点から "
+#~ ":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` "
+#~ "のインスタンスであるビームを打ち出す。ビームがミラーに当たると、反射・屈折・基板から出てくるビームといったサブビームに分かれる。返ってきたビームオブジェクトは、自分でさらに伝搬させられる。非逐次モードでは、終了条件が満たされるまで"
+#~ " gtrace "
+#~ "が伝搬させる。終了条件は、どのミラーにも当たらない、パワーがしきい値を下回る、などである。最後に、生成されたビームオブジェクトの一群が手に入る。これは"
+#~ " DXF ファイルに書き出せる。"
+
+#~ msgid "Two ways of working"
+#~ msgstr "2つの使い方"
+
+#~ msgid ""
+#~ "The description above is the low "
+#~ "level interface: you hold the mirrors"
+#~ " and the beams yourself and pass "
+#~ "them around. Everything in gtrace can"
+#~ " be done this way, and the "
+#~ ":doc:`tutorial` starts there."
+#~ msgstr ""
+#~ "上の説明は低レベルインターフェースのもので、ミラーとビームを自分で持ち、自分で受け渡す。gtrace "
+#~ "でできることはすべてこのやり方でもできるし、\\ :doc:`tutorial` もそこから始まる。"
+
+#~ msgid ""
+#~ "On top of it there is a "
+#~ "container, "
+#~ ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, which"
+#~ " holds the optics, the source beams"
+#~ " and the tracing rules as one "
+#~ "object. Register your optics into a "
+#~ "layout and you get tracing, drawing, "
+#~ "JSON persistence and the interactive "
+#~ "viewer without carrying the lists around"
+#~ " by hand. The optics are held "
+#~ "*by reference*: the mirror you "
+#~ "registered and the mirror in your "
+#~ "own variable are the same object, "
+#~ "so an edit made in the viewer "
+#~ "changes the object in your code. "
+#~ "The last part of the :doc:`tutorial` "
+#~ "goes through it; :doc:`layout` and "
+#~ ":doc:`viewer` describe it in reference "
+#~ "detail."
+#~ msgstr ""
+#~ "その上に、光学素子・ソースビーム・トレースのルールを1つのオブジェクトとして持つコンテナ "
+#~ ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
+#~ "がある。素子をレイアウトに登録すれば、リストを手で持ち回らずに、トレース・描画・JSON "
+#~ "への保存・対話的なビューアが使える。素子は\\ *参照で*\\ "
+#~ "保持される。登録したミラーと手元の変数のミラーは同じオブジェクトなので、ビューアで加えた編集はコード側のオブジェクトに効く。\\ "
+#~ ":doc:`tutorial` の最後の部分でこれを一通り使い、\\ :doc:`layout` と"
+#~ " :doc:`viewer` がリファレンスとして詳しく説明する。"
+
+#~ msgid "Python 3.9 or newer. gtrace itself needs only numpy, scipy and traits."
+#~ msgstr "Python 3.9 以上。gtrace 本体が必要とするのは numpy・scipy・traits だけである。"
+
+#~ msgid "What the viewer needs"
+#~ msgstr "ビューアに必要なもの"
+
+#~ msgid "The viewer has two front ends, with different requirements:"
+#~ msgstr "ビューアには2つのフロントエンドがあり、必要なものが違う:"
+
+#~ msgid "Front end"
+#~ msgstr "フロントエンド"
+
+#~ msgid "Needs"
+#~ msgstr "必要なもの"
+
+#~ msgid "Self-contained HTML — ``render_html()``, ``show(backend='html')``"
+#~ msgstr "自己完結 HTML（\\ ``render_html()``\\ 、\\ ``show(backend='html')``\\ ）"
+
+#~ msgid "Nothing beyond gtrace and a web browser"
+#~ msgstr "gtrace と Web ブラウザ以外には何も要らない"
+
+#~ msgid "Jupyter widget — ``widget()``, or ``show()`` inside a notebook"
+#~ msgstr "Jupyter ウィジェット（\\ ``widget()``\\ 、または notebook 内での ``show()``\\ ）"
+
+#~ msgid ""
+#~ "``anywidget`` (>= 0.9), which brings "
+#~ "``ipywidgets`` with it, and a Jupyter"
+#~ " front end"
+#~ msgstr "``anywidget``\\ （0.9 以上。\\ ``ipywidgets`` も一緒に入る）と Jupyter のフロントエンド"
+
+#~ msgid ""
+#~ "Neither route needs Node.js, a build "
+#~ "step, a CDN or network access. The"
+#~ " viewer's JavaScript and CSS ship "
+#~ "inside the package and are inlined "
+#~ "into the page it writes. No CAD"
+#~ " software is needed either."
+#~ msgstr ""
+#~ "どちらの経路にも、Node.js・ビルド工程・CDN・ネットワークアクセスは要らない。ビューアの JavaScript "
+#~ "と CSS はパッケージに同梱されていて、書き出されるページにインラインで埋め込まれる。CAD "
+#~ "ソフトも要らない。"
+
+#~ msgid ""
+#~ ":py:meth:`show<gtrace.layout.OpticalLayout.show>` picks "
+#~ "the widget when it is running in"
+#~ " a Jupyter kernel with anywidget "
+#~ "installed, and writes the HTML file "
+#~ "otherwise, so the same code works "
+#~ "both ways. Without anywidget the widget"
+#~ " raises ``WidgetNotAvailable`` and says so."
+#~ msgstr ""
+#~ ":py:meth:`show<gtrace.layout.OpticalLayout.show>` は、anywidget"
+#~ " が入った Jupyter カーネルで動いていればウィジェットを選び、そうでなければ HTML"
+#~ " ファイルを書く。だから同じコードがどちらでも動く。anywidget が無い場合、ウィジェットは "
+#~ "``WidgetNotAvailable`` を投げてそのことを伝える。"
+
+#~ msgid "To work from the source tree instead::"
+#~ msgstr "代わりにソースツリーから使うには::"
+
+#~ msgid "Running the tutorial"
+#~ msgstr "チュートリアルを実行する"
+
+#~ msgid ""
+#~ "The :doc:`tutorial` is a pair of "
+#~ "Jupyter notebooks. Both are self-"
+#~ "contained: they need gtrace and nothing"
+#~ " else from the repository, so "
+#~ "downloading the ``.ipynb`` files is "
+#~ "enough, and the :doc:`tutorial` page "
+#~ "links to them on GitHub. A Jupyter"
+#~ " front end runs them::"
+#~ msgstr ""
+#~ ":doc:`tutorial` は2つの Jupyter notebook "
+#~ "である。どちらも自己完結していて、必要なのは gtrace だけである。リポジトリの他のファイルは要らないので、\\"
+#~ " ``.ipynb`` ファイルをダウンロードすれば足りる。\\ :doc:`tutorial` "
+#~ "のページに GitHub 上のファイルへのリンクがある。実行には Jupyter "
+#~ "のフロントエンドを使う::"
+
+#~ msgid ""
+#~ "VS Code's notebook editor works too: "
+#~ "open the file and select the "
+#~ "interpreter you installed gtrace into. "
+#~ "Run the cells from the top. The"
+#~ " last chapter opens the viewer in "
+#~ "the cell output, which is the part"
+#~ " that needs anywidget; everything before"
+#~ " it works without."
+#~ msgstr ""
+#~ "VS Code の notebook エディタでも動く。ファイルを開き、gtrace "
+#~ "をインストールしたインタプリタを選ぶ。セルは上から順に実行する。最後の章はセル出力にビューアを開く。anywidget "
+#~ "が要るのはそこだけで、それより前は無くても動く。"
+
+#~ msgid "Limitations"
+#~ msgstr "制限事項"
+
+#~ msgid ""
+#~ "gtrace is at this moment limited "
+#~ "to 2D optical layouts. This limitation"
+#~ " might be lifted in the future."
+#~ msgstr "gtrace は現時点では2次元の光学レイアウトに限られる。この制限は将来外れるかもしれない。"
 

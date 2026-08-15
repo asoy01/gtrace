@@ -1,50 +1,111 @@
 The viewer
 ===============================
 
-For a long time the only way to look at a trace was to write a DXF file and open it in CAD software. That works, but the loop is slow, it needs a CAD program on every machine that wants to look at a result, and the DXF carries no physics. It is a drawing, so there is nothing in it to ask about the beam.
-
-gtrace ships a viewer that answers those three points. It draws the same scene, needs no software beyond a browser, and carries the q-parameters of the beams alongside the geometry, so you can click anywhere along a beam and read out what the beam is doing *at that point*, not only at the vertices.
+The viewer draws a traced layout in a browser, and lets you work on it
+there. You can read out what a beam is doing at any point along it. You can
+move an element and watch the beams follow, measure across a substrate, and
+write the result out as JSON or DXF.
 
 .. code-block:: python
 
     layout.show()
 
-That is the whole entry point. In a Jupyter notebook it returns a widget that renders in the output cell. Anywhere else it writes a self-contained HTML file and opens it in your browser. Both drive the same viewer.
+That is all you need to call. In a Jupyter notebook it puts the viewer in
+the cell output. Anywhere else it writes a self-contained HTML file and
+opens it in your browser.
 
-Three ways in
---------------
+.. figure:: tutorial/figures/viewer_readout.png
+   :width: 100%
 
-The viewer is one piece of dependency-free JavaScript with three front ends over it. They share a serializer and a scene format, so they show the same picture and report the same numbers.
+   The viewer with a beam clicked. The drawing is on the left, the readout
+   and the controls on the right.
 
-.. code-block:: python
+Opening it
+-----------
 
-    layout.show()                       # picks the right one for you
-    layout.render_html('trace.html')    # a file you can send to someone
-    layout.widget()                     # a notebook cell output
+There are three entry points, and they differ in what they can do:
 
-**Self-contained HTML.** :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>` writes one file with the scene, the viewer code and the styling all inlined. There is no server and nothing to install. You can mail the file to a collaborator, who can read the beam parameters off it and take dimensions on it, and it will still open in ten years.
+.. list-table::
+   :header-rows: 1
+   :widths: 34 66
 
-**Notebook widget.** :py:meth:`widget<gtrace.layout.OpticalLayout.widget>` embeds the viewer as a cell output. The Python kernel is still alive behind it, so this is the one that can edit and re-trace. It needs ``anywidget``; without it, use the HTML backend.
+   * - Call
+     - What you get
+   * - ``layout.show()``
+     - The notebook widget inside a Jupyter kernel with ``anywidget``
+       installed, the HTML file otherwise. ``show(backend='html')`` or
+       ``backend='widget'`` overrides the choice.
+   * - ``layout.widget()``
+     - The notebook cell output. A Python kernel is alive behind it, so
+       this is the one that can **edit and re-trace**.
+   * - ``layout.render_html('trace.html')``
+     - One file with the scene, the viewer code and the styling inlined.
+       You do not have to install or serve anything. It is **read-only**: you
+       can pan, zoom, read beams out and measure, but not move anything.
 
-**Explicit choice.** ``layout.show(backend='html')`` or ``backend='widget'`` overrides the automatic pick.
+All three drive the same viewer, so they show the same picture and report
+the same numbers.
 
-If you are not using an :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, the renderer is callable directly, and can also be dropped into ``drawOptSys`` in place of the DXF renderer:
+Getting around
+---------------
 
-.. code-block:: python
+.. list-table::
+   :header-rows: 1
+   :widths: 34 66
 
-    from gtrace.draw.viewer import renderHTML, html_render_func
+   * - Gesture
+     - What it does
+   * - Wheel
+     - Zoom, centred on the cursor.
+   * - Drag the background
+     - Pan.
+   * - ``Fit`` button, or ``f``
+     - Frame the whole layout again.
+   * - Layer panel
+     - Switch layers on and off one by one. You can hide the stray beams
+       without running the trace again.
+   * - ``Esc``
+     - Leave whatever mode you are in, and drop the selection.
 
-    renderHTML(canvas, beams, 'trace.html', optics=optList)
+Making room
+^^^^^^^^^^^^
 
-    drawOptSys(optList, beamList, 'trace.html',
-               render_func=html_render_func(beamList, optList))
+A notebook cell is wide and short, and a bench drawing usually is not.
+There are three ways to give the drawing more room.
 
-Pass ``optics`` if you want to be able to click the elements. Without it the viewer draws them but has no way to say which is which.
+**Drag the bottom edge.** A grip runs along the bottom of the widget. Drag
+it down to make the viewer taller. The new height is written back to the
+``height`` traitlet, so it survives a re-render, and ``w.height`` reports
+the height you dragged to. Dragging does not reframe the view: you are
+already looking where you meant to look.
 
-Reading out a beam
--------------------
+**Fold the side panel away** with the small button at the top right of the
+drawing, which gives the drawing the whole width. The button stays where it
+was, turned round, to bring the panel back.
 
-Click anywhere on a beam. The point is projected onto the beam segment, the q-parameter is advanced to that distance, and the panel reports, separately for the x and y directions where they differ:
+**Ask for a height in Python**: ``layout.show(height=700)``, or
+``w.height = 700`` afterwards, which also reframes the drawing to suit.
+Setting the height from Python reframes because a height chosen there is
+usually a request to see the whole thing at that size.
+
+With no height given, the widget takes its height from the width of the
+output area, so the drawing starts as tall as it is wide. It measures the
+width of the *drawing*, not the width of the widget. The side panel is a
+fixed strip, so squaring the whole widget would leave the drawing taller
+than it is wide, which is the wrong shape for a bench. The height is capped
+to the window height. Split the notebook pane and the drawing squares
+itself up again.
+
+The grip belongs to the widget. The written HTML file fills its window
+already.
+
+Reading a beam
+---------------
+
+Click anywhere on a beam, not only at a vertex. gtrace projects the point
+onto the beam segment and advances the q-parameter to that distance. The
+panel then reports what the beam is doing **there**. The x and y directions
+are reported separately where they differ:
 
 ============================ ==============================================
 Radius ``w``                 Beam radius at the clicked point
@@ -59,153 +120,713 @@ Optical dist.                Optical path length accumulated so far
 Stray order                  How many ghost reflections produced this beam
 ============================ ==============================================
 
-The readout needs the beam objects, and a DXF has none. That is why the viewer is not a DXF renderer pointed at a browser.
+``pinned 1/8`` in the corner of the panel means eight beams pass through the
+point you clicked. Click the same place again to step through them. Beams
+often lie on top of one another. A beam and its return share a line, and a
+stray beam often runs along a main beam, so pointing at a place cannot
+separate them.
 
-Clicking an element instead of a beam opens its properties.
+A DXF file holds geometry only, and there is nothing in it to ask about a
+beam. This readout therefore comes from the model, not from the drawing.
 
 .. _the-lasers:
 
 The lasers
------------
+^^^^^^^^^^^
 
-Each registered source is drawn as a small box at the point its light comes from, with the beam leaving through the nose of it.
+Each registered source is drawn as a small box at the point its light comes
+from, and the beam leaves through the nose of the box. Without the box you
+could not tell which beams you put there yourself. A source is traced from a
+*copy* of itself, so its own beam looks like the beams the trace made from
+it.
 
-The box is there because nothing else in the picture says which of the beams you put there. A source is traced from a *copy* of itself, so its own beam is in the drawing looking like the beams the trace made from it. Without the box there is no way to tell the laser from the first ghost, and nowhere to click to change it.
+The box is drawn in screen pixels and keeps its size as you zoom. A layout
+can be one bench or one kilometre long, and a box sized in metres would be a
+dot on one and would cover the other. The box is a marker, not a part, and
+it is not exported to DXF. There is one exception. When the beam gets wider
+than the aperture it comes out of, the box grows with the view, so the
+aperture goes on matching the beam.
 
-The box is drawn in screen pixels and keeps its size as you zoom. A layout runs from a bench to a kilometre, so a body sized in metres would be a dot on one and would cover the other. It is a marker, not a part: gtrace draws optics at their optical size and nothing at its mechanical size. It is not exported to DXF for the same reason.
+The box sits *behind* the point the light leaves from, so it does not cover
+the beam. A click picks the box before any element underneath it. Clicking
+a laser opens the source properties, on a read-only page as much as in the
+notebook.
 
-**The one exception is when the beam is wider than the aperture it comes out of.** Zoom in far enough and the drawn envelope outgrows a fixed-size nose, which would be a picture of something that cannot happen. Past that point the box grows with the view, and the aperture goes on matching the beam. The crossing is where the two meet — the envelope as it is drawn, against the width of the nose — so zooming through it changes nothing suddenly.
+Looking at an element
+----------------------
 
-The box sits *behind* the point the light leaves from, so it does not cover the beam it is pointing at. It is picked ahead of any element underneath it, because a laser usually stands right against the first mirror, and a box of a few dozen pixels that an element could shadow would be unreachable. The element is still there to be clicked anywhere off the box.
+Click an element and the panel shows its properties.
 
-Clicking a laser opens the source properties, on a read-only page as much as in the notebook.
+.. figure:: tutorial/figures/viewer_properties.png
+   :width: 100%
 
-Controls
----------
+   A mirror selected. Position and angle at the top, then the substrate,
+   then the coatings, then the flags that decide how deep its ghosts are
+   followed.
 
-Zoom with the wheel, centred on the cursor. Pan by dragging the background. Layers can be toggled individually, so the stray beams can be taken out of the way without re-running anything.
+Position is in metres, because it is a distance across the bench. The
+dimensions of the part are in millimetres: the diameter, the thickness, the
+radius of curvature and the focal length. A catalogue lists them that way,
+and typing ``0.075`` for a 75 mm lens is easy to get wrong. Adjustments such
+as **Move by** and **Line offset** are in millimetres too.
 
-Making room
-^^^^^^^^^^^^
+Curvature is presented as a **radius**, not as the ``inv_ROC_HR`` the model
+stores, and converted on the way in and out. A flat surface is then ``inf``
+instead of zero, and the number in the panel is the number written on the
+mirror's data sheet.
 
-A notebook cell is a letterbox and a bench drawing is not, so there are two ways to give the drawing more of it.
+The **Anchor** row says which point the element is held by: **HR center**,
+the apex of the front face, or **substrate center**, the middle of the
+glass. It is the point that stays put when a curvature changes, and it is
+the point the element turns about. A mirror pins its HR face, so sweeping
+the radii of a telescope does not move the beam spot off that face. A lens
+pins its middle, because the beam goes through it. See
+:ref:`changing-a-curvature`.
 
-**The drawing starts as tall as it is wide.** With no height given, the widget takes its height from the width of the output area, so it fits the cell you put it in. It measures the width of the *drawing*, not of the widget: the side panel is a fixed strip of the width and a column of numbers, so squaring the whole thing would leave the drawing taller than it is wide, which is the wrong way round for a bench. When the widget is narrow enough that the panel stacks underneath, the drawing has the whole width and the same rule applies. The height is capped to the window, and never falls below the height it used to be fixed at. Only the browser knows any of these numbers, so this is settled there, on the pass that first sees a real width. Split the notebook pane and it squares itself up again.
+Each edit is applied to the registered object, the layout is re-traced, and
+the new scene is pushed back into the view. Your zoom, pan and layer
+visibility are kept, so the picture does not jump underneath you.
 
-Pass a number to fix it: ``layout.show(height=700)``, or ``w.height = 700`` afterwards, which also reframes the drawing to suit. The width then no longer decides.
+Typing a number
+^^^^^^^^^^^^^^^^
 
-**Drag the bottom edge.** A grip runs along the bottom of the widget; dragging it down makes the viewer taller. The new height is written back to the ``height`` traitlet, so it survives a re-render and ``w.height`` reports what you dragged to. Dragging does not reframe the view, since you are already looking where you meant to. Setting ``w.height`` from Python does reframe, since a height chosen there is usually a request to see the whole thing at that size.
+**A numeric row is a calculator.** You usually compute a bench measurement
+instead of knowing it, so a row takes the sum as well as the answer:
+``2*25.4`` is 50.8, and ``300/4`` is 75. Brackets, the four operations and a
+leading minus are all it accepts. The text is parsed, not evaluated as code.
 
-**Fold the side panel away** with the small button at the top right of the drawing, which gives the drawing the whole width. The button stays where it was, turned round, to bring the panel back.
+A value may also carry **a unit of its own, in square brackets**, and it
+converts into the unit the row is labelled with: ``1[in]`` in a millimetre
+row is 25.4, in a metre row 0.0254.
 
-The grip belongs to the widget. The written HTML file fills its window already.
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
 
-Beam widths
-^^^^^^^^^^^^
+   * - Kind
+     - Units
+   * - Length
+     - ``m``, ``cm``, ``mm``, ``um``, ``nm``, ``in``, ``mil``, ``ft``
+   * - Angle
+     - ``rad``, ``mrad``, ``deg``
+   * - Power
+     - ``W``, ``mW``, ``uW``, ``kW``
 
-The side bar chooses how the envelope is drawn: the width in units of the 1/e² radius (1 σ, 2.7 σ or 3 σ) and which transverse direction it shows (x, y or their average). The default is 2.7 σ in x. See :ref:`why-2.7-sigma` for what those numbers mean.
+The unit converts the number it follows. Everything after that is ordinary
+arithmetic in the unit of the row, so ``1[in]+2`` in a millimetre row is
+27.4. A unit of the wrong kind is refused: a length typed into an angle
+converts to nothing. A row that has no unit of its own, such as an order or
+a refractive index, refuses every unit. A refused entry sends nothing, and
+the row goes back to the value the model holds.
 
-Changing either redraws but does not re-trace: the display changed, the physics did not. The controls are absent from the static HTML, since redrawing needs Python. Choose there at write time with ``render_html(..., width_mode='y')``.
+Lenses
+^^^^^^^
 
-Editing
---------
+Selecting a lens adds a **Focal length** row, directly under the type. It is
+first because it is the number that matters for a lens. Writing to it
+re-solves both curvatures together. The shape of the lens is kept and the
+lens does not move, exactly as when you assign to
+:py:attr:`f<gtrace.optcomp.Lens.f>` in Python. The two radii further down
+follow the focal length. You may still edit the radii instead: they are the
+real description of the lens, and the focal length is read back from them.
 
-In the notebook widget the loop runs both ways. Clicking an element opens a properties panel where its position, orientation, size, curvature, refractive index, reflectivities and tracing flags can be edited. Elements and sources can be added, removed and renamed, and distances can be measured off the drawing (``Measure``).
-
-There is one add button per kind of thing: ``+ Mirror``, ``+ Lens``, ``+ Source``, ``+ Dump``, ``+ Mechanics``, ``+ Assembly`` and ``+ Shape``. The two that have variants open on the choice between them, spherical or cylindrical, since a cylindrical mirror is a mirror and not a fifth kind of thing. ``+ Mechanics`` opens on the model library, which is a list. **What is added is named for what it is**: a mount comes down as ``MT1``, a pedestal as ``P1``, a fork as ``FK1``, a holder as ``HLD1`` and a breadboard as ``BB1``. The model says so — a part of your own says it in the same place, through ``prefix`` — and a model that says nothing gives ``H1``. A shape put down with ``+ Shape`` is named for the shape it is: ``CIRC1``, ``RECT1``, ``LINE1``, ``POLY1``, ``ARC1``, ``TEXT1``. ``+ Dump`` puts a :ref:`beam dump <mechanics>` down facing a beam that runs along +x. A dump is three pieces — two absorbing faces and the housing they sit in — so it is a kind of its own, and it cannot be on the library shelf that ``+ Mechanics`` opens, because a model holds shapes and two thirds of a dump are elements.
-
-``+ Assembly`` puts down **an element with the parts that hold it**: a one or two inch mirror in its mount, or a lens in its holder, on a pedestal held down by a clamping fork. That is what is bolted to a bench, and building it out of four adds and three attachments is four steps of undo and three offsets to look up. One message makes all four, so it is **one step of undo**, and the parts are attached to the element: drag the mirror and the mount, the pedestal and the fork come with it. The names follow the same rule as everything else — ``M2`` held by ``MT2`` on ``P2`` in ``FK2``.
-
-``+ Shape`` opens on the six drawing primitives — rectangle, circle, line, polyline, arc and text — and puts one down as a body of that one shape: a tank wall, an aperture, the edge of a table, a note on the drawing. This is the same thing as writing ``Mechanics(shapes=[draw.Circle(...)])`` in a cell, without the cell. What comes down is moved, turned, dimensioned and edited like any other body, and :py:meth:`edit<gtrace.mechanics.Mechanics.edit>` opens it for a second shape.
-
-**A shape is sized to the view it is put down in.** The sizes are a bench's — a 20 mm plate, a 5 mm hole — which is right when the screen is showing a part and invisible when it is showing three kilometres of interferometer, so they are scaled by how wide the view is. Zoomed in on an output table, ``+ Circle`` leaves a circle a few centimetres across; framed on the whole layout, one that can be seen. Type the number you want into the panel afterwards.
-
-**A numeric row is a calculator.** A bench measurement is usually arrived at rather than known, so a row takes the sum as well as the answer: ``2*25.4`` is 50.8, ``300/4`` is 75. Brackets, the four operations and a leading minus are the whole of it. Nothing is evaluated as code; the text is parsed, so a row is a calculator and not a way into the page.
-
-A value may also carry **a unit of its own, in square brackets**, and it converts into the unit the row is labelled with: ``1[in]`` in a millimetre row is 25.4, in a metre row 0.0254. Lengths are ``m``, ``cm``, ``mm``, ``um``, ``nm``, ``in``, ``mil`` and ``ft``; angles ``rad``, ``mrad`` and ``deg``; power ``W``, ``mW``, ``uW`` and ``kW``. The unit converts the number it follows, and everything after that is ordinary arithmetic in the row's own unit, so ``1[in]+2`` in a millimetre row is 27.4. A unit of the wrong kind is refused, since a length typed into an angle converts to nothing, and so is any unit at all in a row that has none of its own, such as an order or a refractive index. A refused entry sends nothing, and the row goes back to what the model holds.
-
-Each edit is applied to the registered object, the layout is re-traced, and the new scene is pushed back into the view. Your current zoom, pan and layer visibility are kept, so the picture does not jump underneath you.
-
-An element turns about the point it is held by, which is what its **Anchor** names. A mirror swings about the apex of its HR face, so turning it does not walk the beam spot off it, and a lens about the middle of its substrate. The outline that follows the cursor is drawn about that point too, so what you are shown while dragging is where the element ends up. The model turns the same way: assigning ``normAngleHR`` in a cell pivots the anchor point too. See :ref:`changing-a-curvature`.
+A focal length the blank cannot be ground to is refused. The reason is shown
+in the panel, and the lens is left as it was. ``inf`` is refused before it
+is sent. A lens with no power is a flat window, which is a different
+element.
 
 Editing a source
 ^^^^^^^^^^^^^^^^^
 
-Clicking a laser opens the source panel, and it is edited like anything else: drag the box to move the laser, hold Shift to turn it, or type the numbers.
+Clicking a laser opens the source panel. Drag the box to move the laser,
+hold Shift to turn it, or type the numbers. A laser turns about the point
+its light comes from. That point *is* the source, so the nose of the box
+stays put while the box swings.
 
-A laser turns about the point its light comes from, since that point *is* the source, so the nose of the box stays put while it swings.
+**The beam is given as its waist, not as a q-parameter.** Four rows carry
+it: the waist size in each direction, in millimetres, and the position of
+that waist, in metres from the laser forward along the beam. A laser is
+specified by its waist, and mode matching is done in those terms.
 
-**The beam is given as its waist, not as a q-parameter.** Four rows carry it: the waist size in each direction, in millimetres, and where that waist sits, in metres from the laser forward along the beam. That is what a laser is specified by, and what mode matching is done in terms of. Python converts to and from the q-parameter, since what a waist means is the model's to say.
+The remaining rows are the wavelength (in nanometres), the power, the
+refractive index of the medium the laser fires into, and a **Free length**.
+Free length is how far a beam is drawn while it reaches nothing, which is
+the state a layout is in while you are building it. Once the beam hits
+something, the trace cuts the beam there and the number no longer matters.
 
-The remaining rows are the wavelength (in nanometres), the power, the refractive index of the medium it fires into, and a **Free length**: how far the beam is drawn while it reaches nothing, which is the state a layout is in while it is being built. Once the beam hits something, the trace cuts it there and the number stops mattering.
+Changing the wavelength keeps the waist and changes the divergence; see
+:ref:`editing-a-source`.
 
-Changing the wavelength keeps the waist and changes the divergence; see :ref:`editing-a-source`.
+Adding things
+--------------
 
-``+ Source`` adds a laser at the centre of the view, firing along +x, with a catalogue beam: 1064 nm, 1 W and a 0.2 mm waist at the laser. It copies nothing from the sources already there, since a q-parameter carried over would describe a waist measured from a point the new laser does not stand at.
+There is one add button for each kind of thing: ``+ Mirror``, ``+ Lens``,
+``+ Source``, ``+ Dump``, ``+ Mechanics``, ``+ Assembly`` and ``+ Shape``.
+Two of them have variants, spherical and cylindrical, and open a menu with
+that choice. A cylindrical mirror is a mirror, not a separate kind of thing.
 
-Tracing rules
-^^^^^^^^^^^^^^
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
 
-The side bar carries the three rules the trace runs under: the **Order**, the **Power threshold** and the **Open beam** length. These are the numbers to reach for when chasing stray light. Lowering the threshold finds fainter paths, and takes longer.
+   * - Button
+     - What it puts down
+   * - ``+ Mirror``
+     - A mirror. It takes the parameters it was not given from the optics
+       already registered, so an element added to a system of 10 cm optics
+       is a 10 cm optics.
+   * - ``+ Lens``
+     - A catalogue lens, 500 mm and one inch across, at the centre of the
+       view. It inherits nothing. A lens given the 99 % front face of a
+       mirror would not pass the main beam. Both faces reflect nothing, so
+       the lens makes no ghosts. Put a real coating in **Refl HR** and
+       **Refl AR** when you want the ghosts off a lens.
+   * - ``+ Source``
+     - A laser at the centre of the view, firing along +x, at 1064 nm, 1 W,
+       with a 0.2 mm waist at the laser. It copies nothing from the sources
+       already there.
+   * - ``+ Dump``
+     - A :ref:`beam dump <mechanics>` facing a beam that runs along +x:
+       two absorbing faces and the housing they sit in.
+   * - ``+ Mechanics``
+     - Opens on the model library. A mount, pedestal, fork, holder or
+       breadboard.
+   * - ``+ Assembly``
+     - An element **with the parts that hold it**.
+   * - ``+ Shape``
+     - One drawing primitive as a body of its own.
 
-Unlike the beam width controls, changing one of these re-traces, and the picture that comes back has more or fewer beams in it. See :py:class:`TraceRules<gtrace.layout.TraceRules>`.
+**What is added is named for what it is**: a mount comes down as ``MT1``, a
+pedestal as ``P1``, a fork as ``FK1``, a holder as ``HLD1`` and a breadboard
+as ``BB1``. The model says so, through its ``prefix``, and a model that says
+nothing gives ``H1``. A shape put down with ``+ Shape`` is named for the
+shape it is: ``CIRC1``, ``RECT1``, ``LINE1``, ``POLY1``, ``ARC1``,
+``TEXT1``.
 
-Aligning to a beam
-^^^^^^^^^^^^^^^^^^^
+``+ Assembly`` puts down a one inch or two inch mirror in its mount, or a
+lens in its holder, on a pedestal held down by a clamping fork. That is what
+is really bolted to a bench. Building it out of four adds and three
+attachments would be four steps of undo, and you would have to look up three
+offsets. One message makes all four parts, so it is **one step of undo**.
+The parts are attached to the element: drag the mirror, and the mount, the
+pedestal and the fork come with it. The names follow the same rule: ``M2``
+held by ``MT2`` on ``P2`` in ``FK2``.
 
-Almost every element on a bench is meant to sit square across a beam with the beam through its middle. Dragging gets an element approximately there and no closer, so **hold Ctrl while dragging**: drop it on a beam and it is turned to face that beam and slid onto its axis. The outline snaps as soon as Ctrl goes down, so you can see the result before releasing, and the status bar names the beam it is about to sit on.
+``+ Shape`` offers the six drawing primitives: rectangle, circle, line,
+polyline, arc and text. It puts one down as a body of that single shape, for
+example a tank wall, an aperture, the edge of a table, or a note on the
+drawing. It does the same thing as writing
+``Mechanics(shapes=[draw.Circle(...)])`` in a cell.
 
-What has to be over the beam is the *element*, not the cursor: a beam passing anywhere within the element's own footprint counts. An element is grabbed wherever you took hold of it, and zoomed in that can be a long way from its middle, so a rule about the cursor would stop working above a certain zoom.
+**A shape is sized to the view it is put down in.** The default sizes are
+bench sizes: a 20 mm plate, a 5 mm hole. Those are right when the screen
+shows a part, and invisible when it shows three kilometres of
+interferometer. The viewer therefore scales them by the width of the view.
+Type the number you want into the panel afterwards.
 
-Only the distance along the beam is taken from where you dropped it, which is the one of the three numbers a drag can usefully choose. The other two, the angle and the offset across the beam, are the ones a bench does not leave to chance.
+Placing things
+---------------
 
-Which point of the element lands on the axis is again what the anchor names: the apex of the front face for a mirror, since that is where the beam stops, and the middle of the substrate for a lens, since the beam goes through. Ctrl with no beam under the cursor is an ordinary move.
+Dragging an element moves it. An element turns about the point it is held
+by, and the outline that follows the cursor is drawn about that point too.
+What you see while dragging is where the element ends up.
 
-The geometry is Python's. The browser says which beam and where along it, and :py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` works it out from the traced beam itself rather than from the copy of it in the page::
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
 
-    layout.apply_edit({'op': 'align', 'target': 'L1',
-                       'beam': 'b0', 'beam_index': 0,
-                       'point': [0.4, 0.02]})
+   * - Gesture
+     - What it does
+   * - Drag
+     - Move.
+   * - Shift + drag
+     - Turn about the anchor point.
+   * - Ctrl + drag
+     - Drop it on a beam: square across that beam and on its axis.
+   * - Alt
+     - Use the exact cursor position, without snapping.
+   * - ``[`` and ``]``
+     - Turn the selected element by ∓45°.
+   * - ``a``
+     - Align: aim by a line through two places.
+   * - ``b``
+     - Align: aim by the bisector of three places.
+
+**Screw holes are snap points.** An element dragged near a hole puts its
+anchor point exactly on that hole, because optics go on the hole grid of a
+bench. A laser does the same, and puts the point its light leaves from on
+the hole. The measuring tool and Align also take the holes as marked points.
+
+Squaring onto a beam
+^^^^^^^^^^^^^^^^^^^^^
+
+Almost every element on a bench has to sit square across a beam, with the
+beam through its middle. Dragging only gets an element approximately there,
+so **hold Ctrl while dragging**. Drop the element on a beam: it is turned to
+face that beam and slid onto its axis. The outline snaps as soon as you
+press Ctrl, so you see the result before you release the button. The status
+bar names the beam the element is about to sit on.
+
+The *element* has to be over the beam, not the cursor. A beam that passes
+anywhere inside the footprint of the element counts. You grab an element
+wherever you took hold of it, and when you are zoomed in, that point can be
+far from its middle.
+
+Only the distance along the beam is taken from where you dropped the
+element. That is the one of the three numbers a drag can usefully choose.
+The other two, the angle and the offset across the beam, are the numbers a
+bench does not leave to chance. The anchor says which point of the element
+lands on the axis. Ctrl with no beam under the cursor is an ordinary move.
 
 .. _aiming-by-places:
 
 Aiming by places
 ^^^^^^^^^^^^^^^^^
 
-Ctrl-drag answers "square onto *that* beam". The other question a bench asks is which way a face should look when the beam that will strike it does not exist yet: the first mirror of a chain, or one whose beam only appears once it is aimed. **Align** answers that from places instead of beams, and it never moves the element, since where it stands is a separate question with three answers of its own.
+Ctrl + drag answers the question "square onto *that* beam". A bench asks
+another question: which way should a face look when the beam that will
+strike it does not exist yet? That happens with the first mirror of a chain,
+and with a mirror whose beam only appears once it is aimed. **Align**
+answers from places instead of from beams, and it never moves the element.
 
-**Line 2 points** (``a``) turns the face square across the line between two places you click, looking from the first towards the second. A line has two normals, and the click order says which one. Clicking the same two places the other way about turns the element right round, which is how a face is flipped.
+**Line 2 points** (``a``) turns the face square across the line between two
+places you click, looking from the first towards the second. A line has two
+normals, and the click order says which one. Clicking the same two places
+the other way about turns the element right round, which is how a face is
+flipped.
 
-**Bisect 3 points** (``b``) takes from, at, to. The face ends up on the bisector of that corner, which is where a mirror folding light from the first place to the last has to look. That is the law of reflection, said with three places instead of an angle.
+**Bisect 3 points** (``b``) takes from, at, to. The face ends up on the
+bisector of that corner. That is where a mirror must look to send light from
+the first place to the last one. It is the law of reflection, given as three
+places instead of an angle.
 
-**Turn ±45°** (``]`` and ``[``) is the quarter turn a steering mirror is specified by, from wherever it faces now.
+**Turn ±45°** (``]`` and ``[``) is the quarter turn a steering mirror is
+specified by, from wherever it faces now.
 
-The clicks land on the same marked points a measurement snaps to: the corners and apexes of a substrate, the ends of a beam, and **the screw holes of a breadboard**. The holes are what make this exact rather than approximate, since a mount goes on the hole pattern and the angle it should face is a question about two holes. The arms are drawn to the cursor as you go, the element is outlined as it would face, and the status bar names the angle it is about to take. It is a mode, like measuring, and Escape leaves it without letting go of the selection.
-
-Turning is about the anchor point, so the substrate centre travels with it. That is the model's own rule about pivots, not something Align decides.
+The clicks land on the same marked points a measurement snaps to: the
+corners and the apexes of a substrate, the ends of a beam, and **the screw
+holes of a breadboard**. The holes make this exact instead of approximate. A
+mount goes on the hole pattern, and the angle it should face is a question
+about two holes. The arms are drawn to the cursor while you work, the
+element is outlined as it would face, and the status bar names the angle it
+is about to take. Align is a mode, like measuring. Escape leaves it and
+keeps the selection.
 
 Moving along a beam by a number
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Aligning leaves one degree of freedom: how far along the beam the element sits. That one is not for a mouse, since a lens goes where the mode matching says it goes, so the properties panel offers it as a number. Two rows appear under **Angle** whenever a beam passes through the selected element.
+Aligning leaves one degree of freedom: how far along the beam the element
+sits. That one is not for a mouse. A lens goes where the mode matching says
+it goes, so the properties panel offers the distance as a number. Two rows
+appear under **Angle** whenever a beam passes through the selected element.
 
-**Along beam** picks which beam, from those that reach the element. That is the same footprint a Ctrl-drag snaps over, less the element's own internal reflections, which have no axis outside it to move along. The nearest is chosen to start with. A 45° mirror has both an incoming and an outgoing beam through it, so which one "along" means has to be said.
+**Along beam** picks which beam, from those that reach the element. A 45°
+mirror has both an incoming and an outgoing beam through it, so which one
+"along" means has to be said. The nearest is chosen to start with.
 
-The list is also a picker, but a name like ``b0:M1t1`` says nothing about which line in the picture it is. So **Ctrl + click a beam** to name it instead: the row follows, the element stays selected, and the beam is marked along its whole length in the drawing, so the name and the line are visibly the same thing. Ctrl already means "this element, against that beam" in a drag, and it means the same here. Click the beam clear of the element, because over the element a click grabs the element. Without Ctrl the click is the beam readout, exactly as before.
+The list is also a picker, but a name like ``b0:M1t1`` does not tell you
+which line in the picture it is. **Ctrl + click a beam** to choose it
+instead. The row follows your click and the element stays selected. The
+beam is marked along its whole length, so you can see that the name and the
+line are the same thing. Click the beam clear of the element: over the
+element, a click grabs the element. Ctrl + click the same place again to
+step to the next beam of the bundle.
 
-Ctrl + clicking the same place again steps to the next beam of the bundle, as clicking again does for the readout. Beams routinely lie on top of one another — a beam and its return share a line, and a stray often runs along a main beam — so pointing on its own cannot separate them, and the one you mean is often not the nearest. Ctrl + clicking somewhere else starts the cycle over.
+The mark carries an arrow halfway along it. The arrow shows which way the
+chosen beam travels, and that is the direction **Move by** counts as
+positive. Two beams that share one line often run in opposite directions.
+Without the arrow, stepping from one to the other would leave the picture
+unchanged while the sign of every move reversed.
 
-The mark carries an arrow halfway along it, showing which way the chosen beam travels. That is the direction **Move by** counts as positive. Two beams sharing one line commonly run opposite ways, so without the arrow, stepping from one to the other would leave the picture unchanged while the sign of every move reversed.
+**Move by [mm]** is a distance to move, not a position. Type it, press
+Enter, and the element slides that far, positive in the direction the beam
+travels. The field returns to zero at once, so holding Enter down does not
+walk the element along the bench. Nothing else moves: not the orientation,
+and not the offset across the beam.
 
-**Move by [mm]** is a distance to move, not a place to be. Type it, press Enter, and the element slides that far, positive in the direction the beam travels. The field returns to zero at once, so leaning on Enter does not walk the element down the bench. It is in millimetres, because an adjustment on a bench is spoken of in millimetres, and ``0.05`` invites a slip.
+.. _mechanics-in-the-viewer:
 
-Nothing else moves: not the orientation, not the offset across the beam. An element already square on the beam stays square and slides along it. The whole substrate translates, so which point of it is nominally being moved makes no difference::
+Mechanics on the bench
+-----------------------
 
-    layout.apply_edit({'op': 'slide', 'target': 'L1',
-                       'beam': 'b0', 'beam_index': 0,
-                       'distance': 0.05})       # metres, downstream
+Bodies are drawn on the ``mechanics`` layer: breadboards, mounts, clamps,
+the wall of a vacuum tank. They are picked, dragged and edited like
+everything else, with two differences.
 
-Since the layout holds optics by reference, the object you edited in the browser is the object your own variable names:
+.. figure:: tutorial/figures/viewer_mechanics.png
+   :width: 100%
+
+   A small bench: a lens and two steering mirrors, each in a mount, on a
+   breadboard. The selected mount is attached to its mirror, so its pose is
+   greyed out. The pose is derived from the host, not stored.
+
+**They are picked last.** A breadboard covers most of a bench, so a click
+lands first on the beam or the element in front of it. It reaches the board
+only where there is nothing else. Where several bodies overlap, the smallest
+one wins, so a board does not hide a mount standing on it. To reach a mount
+that is completely hidden under its own mirror, click the same place again.
+
+**They are dragged only once selected.** A press on an unselected board
+usually means "pan the view", not "move the bench". The first click
+therefore selects the board, and only after that does dragging move it. An
+attached body cannot be dragged at all, because it goes where its host goes.
+If its turn is free, Shift + drag swings it about the point it is held by.
+
+**A drag snaps to the marked points.** Every point a measurement can snap to
+is also a place where a part can go:
+
+* the screw holes of a breadboard;
+* the corners and centres of the other bodies;
+* the points a part names for itself, such as the hole under a mount, the
+  axis of a pedestal or the bore of a fork.
+
+Drop a pedestal near the hole under a mount and it lands on the hole
+exactly. Hold Alt to use the exact cursor position. The status bar names the
+point it caught on.
+
+Sizing a body
+^^^^^^^^^^^^^^
+
+A body that has a size carries four corner handles while it is selected. A
+breadboard is one, and so is anything else built with parameters. Dragging a
+handle cuts the body to a new size, with the opposite corner fixed. Python
+drills the hole grid again instead of scaling it, so the holes keep their
+diameter and their pitch.
+
+**A round board is cut to a diameter.** A vacuum tank is round, and so is
+the board in the bottom of it. Such a body has one size, not two. The panel
+offers a single **Diameter** row instead of Width and Height, and a dragged
+corner sets that one number. The centre stays where it is, because a disc
+has no opposite corner to hold still.
+
+**A body that is one shape drawn by hand is edited by that shape.** This is
+what ``+ Shape`` puts down. The panel shows the rows of the shape under the
+pose rows: a radius, a width and a height, the ends of a line, or the angle
+of a turned rectangle. The grips of the shape stand on the drawing. A drag
+on a grip is computed in the frame of the body, so the grip lands where you
+let it go, whatever the turn of the body. A part of several shapes is drawn
+in the :ref:`shape editor <the-shape-editor>` instead, where there is a list
+to pick from. An attached body is edited through its host.
+
+Attaching and assembling
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Attached to** in the panel of a body is a menu of the elements **and of
+the other bodies**. A bench stacks: a mount goes on a pedestal, and a
+pedestal is held by a fork. Choosing an optics seats the body at the place
+its model says. Choosing a body keeps the body where it already is, which is
+where the snap put it. ``(free)`` cuts it loose where it stands. **Offset
+x/y** and **Offset angle** move it away from that place on purpose. The pose
+of an attached body is shown greyed out, because it is derived from the
+host.
+
+**Fix rotation** decides whether the body may be turned while it is held.
+With it off, the ``Angle`` row and Shift + drag swing the body about the
+point it is pinned by, for example a fork about its post. The body still
+turns with the host.
+
+**Assembled to** in the element panel says what an *element* follows. The
+far face of a beam dump follows the near face, and the second mirror of a
+periscope follows the first. Pick an element or a body, and the selected
+element starts following it from where it stands. Pick **(free)** and it is
+on its own again. The menu does not offer the element itself, and it does
+not offer anything that already follows the element: a pose that comes from
+itself has no value.
+
+While an element follows something, **Center x**, **Center y**, **Angle**
+and **Move by** are decided by the host. They show where the host put the
+element, and they refuse the keyboard. A value accepted there would be
+overwritten at the next trace. The exception is the turn of the element when
+**Fix rotation** is off, which is how the opening of a V is set. **Joint
+x**, **Joint y** and **Joint angle** are where the element sits in the frame
+of the host. They move it without letting it go.
+
+**Remove takes what stands on the thing removed**: the mount on the mirror,
+the pedestal under the mount, the far face of a dump and its housing. If
+they were left behind, each one would derive its pose from something that is
+no longer in the layout. The removal is one step of undo, so a removal that
+took more than you meant is one Undo away. To keep something, let it go
+first with **(free)**.
+
+**Copy** in the element panel adds a second one of it, with everything
+standing on it, each pinned to the copy as its original is pinned to the
+original. The copy stands its own diameter away and is selected, so it can
+be dragged straight to where it belongs. See :ref:`mechanics` for what is
+and is not copied.
+
+Names are not drawn for a body. A bench has more bodies than optics, and a
+picture labelled with three mounts and a board is harder to read than one
+that is not. ``drawMechanicsNames=True`` puts them back.
+
+.. _the-shape-editor:
+
+Drawing a part
+---------------
+
+:py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens a part in
+an editor of its own:
+
+.. code-block:: python
+
+    from gtrace.mechanics import mirror_mount
+
+    part = mirror_mount(name='MY-MOUNT')
+    part.edit()
+
+.. figure:: tutorial/figures/viewer_editor.png
+   :width: 100%
+
+   A mirror mount open in the shape editor, with one of its plates picked.
+   The shapes are listed in the order they are drawn, and the picked one
+   stands on grips.
+
+It is the same viewer, given a scene of nothing but the shapes of one body,
+drawn in the frame they are written in, **with the origin marked**. When the
+part is attached, the origin comes to sit at the centre of the host's
+substrate. Seeing the origin is most of what makes a part right. Zoom, pan,
+undo, measuring and the layer panel come along unchanged.
+
+The side bar is different here. It has four parts:
+
+* buttons that put a rectangle, circle, line, polyline, arc or text down at
+  the origin;
+* the list of shapes, in the order they are drawn. You pick a shape here,
+  copy it, move it earlier or later, or take it away;
+* the numbers of the picked shape, in millimetres and degrees;
+* **Save to library**, which registers the part under a name, a line of
+  description and a name prefix.
+
+You can also work on a shape in the drawing. A click picks a shape, by its
+outline or by the area it encloses, and the smallest one wins. Click the
+same place again to step down through the shapes that overlap. Drag the
+picked shape to carry it.
+
+The picked shape stands on grips, one grip for one number:
+
+* the four corners of a rectangle, with the opposite corner staying put;
+* a point on the rim of a circle, for its radius;
+* the two ends of a line;
+* where an arc starts, where it stops, and how far out it runs;
+* one grip per vertex of an outline.
+
+A turned rectangle is gripped by the corners it really has. A drag on one of
+those corners is computed along the axes of the rectangle, so its width
+stays its width and its height stays its height. Shift + drag turns a shape
+about the middle of its box, and ``[`` and ``]`` turn it 45° at a time.
+
+A drag snaps to the marked points: the origin, and the corners, centres,
+vertices and edge midpoints of the other shapes, and the named points
+described below. Hold Alt to use the exact cursor position. A polyline is
+edited vertex by vertex. The rows work on the vertex the grips pick out.
+**+ Vertex** puts a new corner in halfway to the next one, and **− Vertex**
+takes the picked vertex away.
+
+**Named points** have a panel of their own. These are the points the part
+names for itself: ``'post'`` for the hole a mount is bolted down through,
+``'axis'`` for a pedestal, and ``'bore'`` for a fork. One part is stood on
+another by these points, so they belong to the part and not to any one
+shape. Each point is drawn as a small ring with its name beside it, in the
+amber of the origin cross.
+
+Pick a point from the list, or click its ring, and the rows give its
+**Name** and its position in millimetres. Drag the ring to carry the point;
+it snaps to the same marked points a shape does. A ring is picked before the
+shapes under it, because a ring is a small mark and a shape is an area. It
+is picked after the grips of the shape on show. **+ Point** names a point at
+the origin, under a placeholder to be typed over. **− Point** takes the
+picked point away.
+
+This is how you place a point that no drawing shows. A mount is bolted to
+its pedestal from underneath, so its post hole does not appear in a top
+view. The position of that hole still belongs in the top view.
+``mirror_mount()`` therefore names the point and also draws a circle at it.
+The two are separate things: the circle is a drawing, and the name is what a
+part is stood on.
+
+A part is stood on something by a name, so two points cannot share one name,
+and a point cannot go unnamed. Every gesture commits as one message, so each
+one is one step of undo. The editor works on the body itself, by reference,
+so a part already registered in a layout is redrawn there as soon as the
+layout is drawn again.
+
+Measuring
+----------
+
+**Measure**, or ``m``, arms the measuring tool. It takes three clicks: two
+to say what is being measured, and one to say where the line goes.
+
+.. figure:: tutorial/figures/viewer_measure.png
+   :width: 100%
+
+   A measurement across the substrate of ``M1``, from the apex of its HR
+   face to the apex of its AR face. The span runs inside the glass, so the
+   optical distance is written under the line as well. The line itself has
+   been carried clear of the element, with extension lines back to the two
+   points.
+
+The third click exists because the two points you want to measure are
+usually in the busiest part of the drawing: along a beam, or through an
+element. A line drawn straight between them lands on top of the thing it
+measures. There you can neither read it nor take hold of it. Where to carry
+it aside is a choice about the drawing, so you make it by eye. Extension
+lines then run back to the points, as on any engineering drawing.
+
+Between the first two clicks, a line follows the cursor and the status bar
+reports the distance so far. After the second click, the dimension is
+previewed as a dashed line, and the cursor sets how far aside it goes. Near
+the span itself the offset is zero, so you can still draw the line straight
+between the two points.
+
+**Esc** puts the tool away at any stage, and drops whatever was half placed.
+The tool disarms itself after the last click. The new dimension is then
+selected, so its numbers are in the panel straight away. While the tool is
+up, nothing else answers the mouse. That keeps a drag from moving the
+element you are measuring.
+
+Snapping
+^^^^^^^^^
+
+The first two clicks take the nearest marked point, if there is one within
+reach. If there is not, they take the cursor position. The marked point is
+shown as a ring before you commit to it. The third click snaps to nothing.
+The points being measured are exact, and where the line is drawn only
+depends on where there is room. What is on offer:
+
+* the four **corners** of each substrate, where the wedge and the sagitta of
+  a curved face put them;
+* the **apex of each face** and the **middle** of each substrate — the same
+  points :ref:`changing-a-curvature` calls the anchors;
+* both **ends of every beam** in the trace;
+* the **screw holes** of a breadboard and the points a part names for
+  itself.
+
+The reach is in screen pixels, so it looks the same however far the view is
+zoomed. Points on a hidden layer are not offered: you switched that layer
+off, so you are not looking at it. Where a beam ends on the face it hit, the
+point of the element wins. It is the exact value the model holds, and
+``M2 HR`` is a more useful label than ``b0 end``.
+
+The dimension panel
+^^^^^^^^^^^^^^^^^^^^
+
+Clicking a dimension line shows it in the panel. The rows are its name, both
+ends, and **Line offset**, which is where the line was carried to. Both ends
+are editable, so a measurement placed by eye can be given exact coordinates
+afterwards. Under **Measurement** come the distance, its two components
+**Δx** and **Δy**, and its direction. **Remove** takes the dimension off the
+layout.
+
+The components are there because a bench is built on axes. A mount goes 300
+along and 75 across, and that pair is wanted as often as the straight line
+between the points. The components are signed from the first point to the
+second.
+
+**Line offset** is in millimetres: it is nudged until the line clears
+whatever it was covering. Positive is to the left of the way the two points
+run, and zero puts the line straight between them. It changes nothing about
+what was measured.
+
+Three more rows appear when the whole span runs inside one substrate: which
+element it is inside, that element's refractive index, and the **optical
+distance**, which is the physical one times the index. They are absent
+otherwise; see :ref:`dimensions` for why an optical distance is reported for
+that case and no other.
+
+A dimension is picked by its **line**, not by the span between the measured
+points. That span usually runs along a beam or through an element. You
+carried the line aside so that you would not have to take hold of it there.
+
+Dimensions are part of the layout, not a scratch overlay. They are saved
+with it, come back with it, and are taken back by undo.
+
+.. _measuring-without-python:
+
+Measuring without Python
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**You can measure on the static HTML file too.** Everything the tool needs
+is already in the page. The points to snap to travel with the scene, and the
+distance between two of them is arithmetic. A colleague you send the file to
+can take dimensions off it.
+
+Such a page cannot do two things, because Python is what would have done
+them:
+
+* **No optical distance.** Whether a span runs inside a substrate is a
+  question about the surfaces, and the surfaces are in the model, not in
+  the drawing. The dimensions the layout carried keep their optical
+  distance, because Python computed it before the file was written. A
+  dimension drawn by the reader gets only its physical length.
+* **The measurement is not saved.** It lasts as long as the page. It is
+  also the reader's own: **Remove** offers to take back what the reader
+  drew, and nothing else. A read-only viewer therefore cannot appear to
+  change the layout it was given.
+
+The same applies to a widget made read-only with ``editable=False``, where a
+scene pushed by ``update()`` replaces the reader's measurements along with
+everything else.
+
+Changing what is traced
+------------------------
+
+Two groups of controls in the side bar change the picture. They differ in
+whether they re-trace.
+
+**Beam widths** choose how the envelope is drawn: the width in units of the
+1/e² radius (1 σ, 2.7 σ or 3 σ), and which transverse direction it shows (x,
+y or their average). The default is 2.7 σ in x. See :ref:`why-2.7-sigma` for
+what those numbers mean. Changing either one redraws the picture, and does
+not trace again: the display changed, the physics did not. These controls
+are absent from the static HTML, because redrawing needs Python. Choose
+there at write time with ``render_html(..., width_mode='y')``.
+
+**Tracing rules** are the three rules the trace runs under: the **Order**,
+the **Power threshold** and the **Open beam** length. These are the numbers
+to change when you look for stray light. Lower the threshold and the trace
+finds fainter paths, and takes longer. Changing one of these **re-traces**,
+and the picture that comes back has more or fewer beams in it. See
+:py:class:`TraceRules<gtrace.layout.TraceRules>`.
+
+Undo and redo
+--------------
+
+**Undo** in the side bar, or Ctrl + Z with the pointer over the viewer, puts
+the layout back as it was before the last edit. It is out of reach until
+there is an edit to take back, and it walks back one edit at a time up to
+:py:data:`UNDO_DEPTH<gtrace.layout.UNDO_DEPTH>` of them.
+
+**Redo**, or Ctrl + Shift + Z or Ctrl + Y, walks forward again through the
+edits that Undo took back. It is out of reach until an undo has put
+something aside for it. **The next edit you make discards what is waiting.**
+Once the layout has taken a different turn, there is no branch left to
+return to.
+
+The history belongs to the layout, not to the viewer, so it covers edits
+sent from a cell as well as edits made in the browser::
+
+    layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
+    layout.undo()               # or apply_edit({'op': 'undo'})
+    layout.can_undo             # False again
+    layout.redo()               # or apply_edit({'op': 'redo'})
+
+A step of the history holds the elements themselves alongside their values,
+so undoing restores those values onto those same objects. The ``M1`` of your
+own code and the selection in the panel go on naming the right thing,
+through a rename and through a removal.
+
+What it does not cover is an assignment made directly in Python:
+``M1.HRcenter = ...`` is not an edit the layout ever sees. It is captured by
+the snapshot taken before the *next* edit that does go through, so undoing
+that one restores it.
+
+A refused edit changes nothing and costs no step, so Undo after one takes
+back the edit before it.
+
+Working from a cell
+--------------------
+
+The layout holds its optics by reference, so the object you edited in the
+browser is the object your own variable names:
 
 .. code-block:: python
 
@@ -220,196 +841,58 @@ And in the other direction:
     PRM.HRcenter = [0.6, 0]
     w.update()              # re-traces and redraws in place
 
-``w.edits`` returns the edit messages received so far, oldest first, which is a convenient record of what you did by hand.
-
-Curvature is presented as a radius of curvature, not as the ``inv_ROC_HR`` the model stores, and converted on the way in and out. A flat surface is then ``inf`` instead of zero, and the number in the panel is the number written on the mirror's data sheet.
-
-Lenses
-^^^^^^^
-
-``+ Lens`` puts a lens at the centre of the view. Unlike a mirror, it inherits nothing from the elements already in the layout: a lens given a mirror's 99 % front face is one the main beam does not pass through, and an aperture taken from a large mirror gives a focal length the blank cannot be ground to. What appears is a catalogue lens, 500 mm and one inch across, which you then edit. Both its faces reflect nothing, so it makes no ghosts; put a real coating in the **Refl HR** and **Refl AR** rows when the ghosts off a lens are what you are after.
-
-Selecting a lens adds a **Focal length** row, directly under the type. It is first because for a lens it is the number that matters. Writing to it re-solves both curvatures together, keeping the shape of the lens and leaving it where it is, exactly as assigning to :py:attr:`f<gtrace.optcomp.Lens.f>` does in Python. The two radii further down follow it, and editing them instead is still allowed: they are the lens's real description, and the focal length is read back from them. The row is absent for anything that is not a lens.
-
-It is in millimetres, as the rows describing the substrate are. A lens is listed in a catalogue in millimetres and spoken of that way, and typing ``0.075`` for a 75 mm lens invites a slip. Where the element *stands* stays in metres, since that is a distance across the bench and not a dimension of the part, and the message that leaves the page is in metres like every other.
-
-A focal length the blank cannot be ground to is refused, with the reason shown in the panel, and the lens is left as it was. ``inf`` is refused before it is sent: a lens with no power is a flat window, which is a different element.
-
-The **Anchor** row says which point the element is held by: **HR center**, the apex of the front face, or **substrate center**, the middle of the glass. It is the point that stays put when a curvature changes, and the point the element turns about. A mirror pins its HR face, so sweeping a telescope's radii does not walk the beam spot off it. A lens pins its middle, since the beam goes through. See :ref:`changing-a-curvature` for what this moves.
-
-.. _mechanics-in-the-viewer:
-
-Mechanics
-^^^^^^^^^^
-
-Bodies drawn on the ``mechanics`` layer — breadboards, mounts, clamps, the wall of a vacuum tank — are picked, dragged and edited like anything else, with two differences.
-
-**They are picked last.** A breadboard covers most of a bench, so a click lands on the beam or the element in front of it first, and only reaches the board where nothing else is. Where several bodies overlap the smallest wins, so a mount standing on a board is not shadowed by it. A mount hidden entirely under its own mirror is reached by clicking the same place again: the cycle that steps from an element down through the beams under it ends on the body.
-
-**They are dragged only once selected.** A press on an unselected board usually means "pan the view" rather than "move the bench", so the first click selects and only then does dragging move it. An attached body is not dragged either, since it goes where its host goes, unless its turn is free; then Shift-drag swings it about the point it is held by.
-
-**A drag settles on the marked points.** Everything a measurement can snap to is somewhere a part can be placed: the screw holes of a breadboard, the corners and centres of the other bodies, and the points a part names for itself, such as the hole under a mount, the axis of a pedestal or the bore of a fork. Drop a pedestal near the hole under a mount and it lands on it exactly. Alt takes the cursor at its word instead. The status bar names what it caught on.
-
-A body with a size — a breadboard, or anything else built with parameters — carries four corner handles while it is selected. Dragging one cuts it to a new size, with the opposite corner fixed. Python re-drills the hole grid instead of scaling it, so the holes keep their diameter and their pitch.
-
-**A body that is one shape drawn by hand is edited by that shape.** This is what ``+ Shape`` puts down, and a wall that could be put down and not resized would not be worth putting down: the panel shows the shape's own rows under the pose rows — a radius, a width and a height, the ends of a line, the angle of a turned rectangle — and its grips stand on the drawing, the same grips the shape editor offers. A drag on one is worked out in the body's own frame, so it lands where it was let go however the body is turned. A part off the library shelf is cut to size by the corner handles instead, a part of several shapes is drawn in the :ref:`shape editor <the-shape-editor>` where there is a list to pick from, and an attached body is edited through its host.
-
-**A round board is cut to a diameter.** A vacuum tank is round and so is the board in the bottom of it. Such a body has one size, not two: the panel offers a single **Diameter** row instead of Width and Height, and a dragged corner sets that one number. Its centre stays where it is, since a disc has no opposite corner to hold still, and the handles stand on the square it is inscribed in, which follows the cursor.
-
-**Assembled to** in the element panel says what this element follows: the far face of a beam dump follows the near one, a periscope's second mirror the first. Pick an element or a body and it starts following it from where it stands. Pick **(free)** and it is its own again, exactly where it is. Neither the element itself nor anything that already follows it is offered, since a pose that comes from itself has no value.
-
-While it follows something, **Center x**, **Center y**, **Angle** and **Move by** are the host's doing. They show where the host put it and refuse the keyboard, because a value accepted there would be overwritten at the next trace. The element cannot be dragged either. The exception is its turn when **Fix rotation** is off, which is how the opening of a V is set. **Joint x**, **Joint y** and **Joint angle** are where it sits in the host's frame, in millimetres and degrees like every other adjustment, and they nudge it without letting it go.
-
-**Remove takes what stands on the thing removed**: the mount on the mirror, the pedestal under the mount, the far face of a dump and its housing. Those are things whose place is the removed element's place, and leaving them behind would leave each one deriving a pose from something no longer in the layout. It is one step of undo, so a removal that took more than you meant is one Undo away. To keep something, let it go first with **(free)**, or **Attached to** → **(free)** for a body.
-
-**Copy** in the element panel adds a second one of it, with everything standing on it — the mount, the pedestal under the mount, the fork over the pedestal — each pinned to the copy as its original is pinned to the original. The copy stands its own diameter away and is selected, so it can be dragged straight to where it belongs. See :ref:`mechanics` for what is and is not copied.
-
-**Screw holes are snap points.** An element dragged near one lands its anchor point exactly on it, which is what a bench offers: optics go on the grid. A laser does the same, landing the point its light leaves from on the hole, since a laser is bolted down like anything else and that point is the one the model keeps fixed when the beam is turned. Alt suppresses that. The measuring tool and Align take the holes as marked points too.
-
-The properties panel of an attached body shows what it is attached to, and its pose greyed out, since those numbers are derived from the host. **Attached to** is a menu of the elements **and of the other bodies**, because a bench stacks: a mount goes on a pedestal and a pedestal is held by a fork. Choosing an optics seats the body at its model's own place. Choosing a body keeps where it already is, which is where the snap put it. ``(free)`` cuts it loose where it stands. **Offset x/y** and **Offset angle** are the deliberate departure from that place.
-
-**Fix rotation** decides whether the body may be turned while it is held. With it off, the ``Angle`` row and Shift-drag swing the body about the point it is pinned by — a fork about its post — and it still turns with the host.
-
-Names are not drawn for a body. A bench has more bodies than optics, and a picture labelled with three mounts and a board is harder to read than one that is not. ``drawMechanicsNames=True`` puts them back.
-
-.. _the-shape-editor:
-
-The shape editor
-^^^^^^^^^^^^^^^^^
-
-:py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens a part in an editor of its own:
-
-.. code-block:: python
-
-    from gtrace.mechanics import mirror_mount
-
-    part = mirror_mount(name='MY-MOUNT')
-    part.edit()
-
-It is the same viewer, handed a scene of nothing but the shapes of one body, drawn in the frame they are written in **with the origin marked**. The origin is the point that comes to sit at the host's substrate centre when the part is attached, so seeing it is most of what makes a part right. Zoom, pan, undo, measuring and the layer panel come along unchanged.
-
-The side bar swaps: buttons that put a rectangle, circle, line, polyline, arc or text down at the origin; the list of shapes in the order they are drawn, which is where one is picked, copied, moved earlier or later and taken away; the numbers of whichever is picked, in millimetres and degrees — for a rectangle that is its corner, its width and height, its **Angle**, and the **Pivot** that angle is taken about, which reads its middle until it is typed over; and **Save to library**, which registers the part under a name, a line of description and a name prefix — what the parts built from it are called, ``MT`` giving ``MT1``, ``MT2``. Left empty they are named ``H1``, ``H2``.
-
-A shape is also worked on in the drawing. A click picks it, by its outline or by what it encloses, the smallest winning, and the same place clicked again steps down through what overlaps. The picked shape is carried by dragging it, and stands on grips, one grip to one number: the four corners of a rectangle with the opposite one staying put, a point on the rim of a circle for its radius, the two ends of a line, where an arc starts, stops and how far out it runs, and one grip per vertex of an outline. A turned rectangle is gripped by the corners it really has, and a drag on one is worked out along its own axes, so the width and the height stay its width and its height. Shift-drag turns it about the middle of its box, and ``[`` and ``]`` turn it 45° at a time.
-
-A drag settles on the marked points — the origin, the corners, centres, vertices and edge midpoints of the other shapes, and the named points below — unless Alt says to take the cursor at its word. A polyline is edited vertex by vertex: the rows work on the one the grips pick out, and **+ Vertex** and **− Vertex** put a corner in halfway along to the next one, or take the one in hand out.
-
-**Named points** have a panel of their own. These are the points the part names for itself: ``'post'`` for the hole a mount is bolted down through, ``'axis'`` for a pedestal, ``'bore'`` for a fork. They are what one part is stood on another by, so they belong to the part and not to any one shape. Each is drawn as a small ring with its name beside it, in the amber of the origin cross.
-
-Pick one from the list, or click its ring, and the rows give its **Name** and its place in millimetres. Drag the ring to carry it, settling on the same marked points a shape does, with Alt to take the cursor at its word. A ring is picked ahead of the shapes under it, since it is a small mark and a shape is an area, but behind the grips of the shape on show. **+ Point** names one at the origin under a placeholder to be typed over; **− Point** takes the picked one away.
-
-This is how a point that no drawing shows gets placed. A mount is bolted to its pedestal from underneath, so its post hole is in no top view, but where it is still belongs in one. ``mirror_mount()`` therefore both names the point and draws a circle at it. The two are separate things: the circle is a drawing, and the name is what a part is stood on.
-
-Names are how a part is stood on something, so two points cannot share one and a point cannot go unnamed. Renaming, moving, adding and removing all send the list as it is left, which makes each one step of undo.
-
-Every gesture commits as one message, so it is one step of undo and goes through the same constructor a typed row does. **A turned rectangle is still a rectangle**: it has an ``Angle`` of its own and a ``Pivot`` to take that angle about, both on the panel, so turning one leaves a width and a height to go on editing. The editor works on the body itself, by reference, so a part already registered in a layout is redrawn there as soon as the layout is drawn again.
-
-Measuring
-^^^^^^^^^^
-
-**Measure** arms the measuring tool. It takes three clicks: two to say what is being measured, and one to say where the line goes.
-
-.. figure:: tutorial/figures/viewer_measure.png
-   :width: 100%
-
-   A measurement across the substrate of ``M1``, from the apex of its HR face to the apex of its AR face. The span runs inside the glass, so the optical distance is written under the line as well. The line itself has been carried clear of the element, with extension lines back to the two points.
-
-The third click exists because the two points worth measuring between are usually the two the drawing is busiest around: along a beam, or through an element. A line drawn straight between them lands on top of the thing it measures, where it can be neither read nor taken hold of. Carrying it aside is a choice about the drawing, so it is made by eye. Extension lines then run back to the points, as on any engineering drawing.
-
-Between the first two clicks a line follows the cursor and the status bar reports the distance as it stands. After the second, the dimension itself is previewed, dashed, drawn by the same code that draws the finished ones, and the cursor sets how far aside it goes. Near the span itself the offset is zero, so a line drawn straight between the two points is still available without aiming at it exactly.
-
-**Esc** puts the tool away at any stage and drops whatever was half placed. **m** arms it from the keyboard. The tool disarms itself after the last click, and the new dimension is selected, so its numbers are in the panel straight away.
-
-While the tool is up, nothing else answers the mouse: no element is grabbed and no beam is pinned. A click means "measure here" and nothing else, which keeps a drag from moving the element being measured.
-
-Snapping
-"""""""""
-
-The first two clicks take the nearest marked point if there is one within reach, and the cursor position if not. The marked point is shown as a ring before you commit to it. The third click snaps to nothing: the points being measured are exact, while where the line is drawn is a matter of where there is room, and nothing in the model has an opinion about that. What is on offer:
-
-* the four **corners** of each substrate, where the wedge and the sagitta of a curved face put them;
-* the **apex of each face** and the **middle** of each substrate — the same points :ref:`changing-a-curvature` calls the anchors;
-* both **ends of every beam** in the trace.
-
-The reach is in screen pixels, so it is the same to the eye however far the view is zoomed. Points on a hidden layer are not offered: a layer switched off is one you have said you are not looking at, and snapping to an invisible point would put an end of the measurement somewhere nothing appears to be. Where a beam ends on the face it hit, the element's point wins, since it is the exact value the model holds and ``M2 HR`` is a more useful label than ``b0 end``.
-
-The dimension panel
-""""""""""""""""""""
-
-Clicking a dimension line shows it in the panel: its name, both ends — which are editable, so a measurement placed by eye can be given exact coordinates afterwards — **Line offset**, which is where the line was carried to, and under **Measurement** the distance, its two components **Δx** and **Δy**, and its direction. **Remove** takes it off the layout, as it does for an element.
-
-The components are there because a bench is built on axes: a mount goes 300 along and 75 across, and that pair is as often the number wanted as the straight line between the points. They are signed from the first point to the second, the way the direction reads, and the status bar shows them alongside the distance while the measurement is being taken.
-
-**Line offset** is in millimetres, like the other rows that are an adjustment rather than a place: it is nudged until the line clears whatever it was covering. Positive is to the left of the way the two points run, and zero puts the line straight between them. It changes nothing about what was measured.
-
-Three more rows appear when the whole span runs inside one substrate: which element it is inside, that element's refractive index, and the **optical distance**, which is the physical one times the index. They are absent otherwise; see :ref:`dimensions` for why an optical distance is reported for that case and no other.
-
-A dimension is picked by its **line**, not by the span between the measured points. That span usually runs along a beam or through an element, and taking hold of it there is what carrying the line aside was meant to avoid. The line is picked ahead of whatever lies under it, which costs little: it is a few pixels wide, and it was put where there was room.
-
-Dimensions are part of the layout, not a scratch overlay. They are saved with it, come back with it, and are taken back by undo.
-
-.. _measuring-without-python:
-
-Measuring without Python
-"""""""""""""""""""""""""
-
-**The static HTML file can be measured on too.** Everything the tool needs to place a measurement is already in the page: the points to snap to travel with the scene, and the distance between two of them is arithmetic. Being able to send a colleague a file they can take dimensions off is most of the reason to have one.
-
-Two things such a page cannot do, both because Python is what would have done them:
-
-* **no optical distance.** Whether a span runs inside a substrate is a question about the surfaces, and those live in the model rather than in the drawing. Dimensions the layout carried keep theirs, since Python worked it out before the file was written, but one drawn by the reader gets only its physical length.
-* **the measurement is not saved.** It lasts as long as the page. It is also the reader's own: **Remove** offers to take back what they drew and nothing else, so a read-only viewer cannot appear to change the layout it was handed.
-
-The same applies to a widget made read-only with ``editable=False``, which has nowhere to send edits. There, a scene pushed by ``update()`` replaces the reader's measurements along with everything else.
-
-Undo and redo
-^^^^^^^^^^^^^^
-
-**Undo** in the side bar, or Ctrl + Z with the pointer over the viewer, puts the layout back as it was before the last edit. It is out of reach until there is an edit to take back, and it walks back one edit at a time up to :py:data:`UNDO_DEPTH<gtrace.layout.UNDO_DEPTH>` of them.
-
-**Redo**, or Ctrl + Shift + Z or Ctrl + Y, walks forward again through the edits that Undo took back. It is out of reach until an undo has put something aside for it, and **the next edit you make discards what is waiting**: once the layout has taken a different turn there is no branch left to return to.
-
-The history belongs to the layout, not to the viewer, so it covers edits sent from a cell as well as edits made in the browser::
-
-    layout.apply_edit({'op': 'move', 'target': 'M1', 'HRcenter': [0.8, 0.3]})
-    layout.undo()               # or apply_edit({'op': 'undo'})
-    layout.can_undo             # False again
-    layout.redo()               # or apply_edit({'op': 'redo'})
-
-A step of the history holds the elements themselves alongside their values, so undoing restores those values onto those same objects. The ``M1`` of your own code and the selection in the panel go on naming the right thing, through a rename and through a removal, since an element taken out of the layout is put back as itself and not as a copy. That is stronger than :py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>` can offer, which has only names to match objects up by.
-
-What it does not cover is an assignment made directly in Python: ``M1.HRcenter = ...`` is not an edit the layout ever sees. It is captured by the snapshot taken before the *next* edit that does go through, so undoing that one restores it.
-
-A refused edit changes nothing and costs no step, so Undo after one takes back the edit before it. It also leaves anything waiting to be redone where it was, since nothing was decided.
+``w.edits`` returns the edit messages received so far, oldest first, which
+is a record of what you did by hand. :doc:`editing` describes those messages,
+which you can also send yourself.
 
 Read-only viewers
 ^^^^^^^^^^^^^^^^^^
 
-A widget constructed without a layout, or with ``editable=False``, shows the readout but no editing controls. The static HTML is always read-only: there is no Python behind it to re-trace, so an edit could not mean anything.
+A widget built without a layout, or with ``editable=False``, shows the
+readout but no editing controls. The static HTML is always read-only. There
+is no Python behind it to trace again, so an edit could not do anything.
+Measuring is the exception, because it asks nothing of the model.
 
-Measuring is the exception, since it asks nothing of the model. The tool is there in a read-only viewer, and what it draws stays in the page. See :ref:`measuring-without-python` for the two things it cannot do there.
-
-A rejected edit — an unknown attribute, a value outside the permitted set, a duplicate name — leaves the layout untouched and reports itself in the viewer, rather than raising somewhere nothing would see it.
+An edit is rejected when it names an unknown attribute, gives a value
+outside the permitted set, or uses a name that is already taken. A rejected
+edit leaves the layout untouched and reports itself in the viewer, where you
+can see it.
 
 Files
 ------
 
-The side bar has two file panels. All the reading and writing is done by Python, and the paths are relative to where the kernel is running; the page is never given access to your disk. Neither panel changes anything on screen, so the viewer says what it did in the status line.
+The side bar has two file panels. Python does all the reading and writing,
+and the paths are relative to the directory the kernel runs in. The page
+never gets access to your disk. Neither panel changes anything on screen, so
+the viewer reports what it did in the status line.
 
-**Optical layout (JSON)** — **Save** and **Load** write and read the layout itself. Loading updates it in place, so the names bound in the cells above keep pointing at the right objects. See :doc:`layout`.
+**Optical layout (JSON)** — **Save** and **Load** write and read the layout
+itself. Loading updates it in place, so the names bound in the cells above
+keep pointing at the right objects. See :doc:`layout`.
 
-**Drawing (DXF)** — **Export** writes a drawing of the layout for the rest of an engineering workflow.
+**Drawing (DXF)** — **Export** writes a drawing of the layout, for CAD
+software.
 
-They are kept apart, with a file name each, because they deal in two different things. The layout is the model, and saving it and loading it back gives you the same system. The DXF is a *picture* of the model, going out to something that will never send it back, so pressing Load on one could only be a mistake.
+The two panels are kept apart, with a file name each, because they deal with
+two different things. The layout is the model: save it and load it back, and
+you get the same system. The DXF file is a *picture* of the model. It goes
+out to software that will never send it back, so pressing Load on a DXF file
+could only be a mistake.
 
-The drawing's name starts from the layout's with the extension swapped, so the two match without being typed twice; from then on it is yours. An extension you type there is left alone, and one you leave out is filled in, since the panel has already said what kind of file it is. ``layout.widget(dxf_path=...)`` sets the starting name from Python.
+The name of the drawing starts from the name of the layout, with the
+extension swapped, so you do not type the name twice. After that the two
+names are independent. An extension you type there is left alone, and one
+you leave out is filled in. ``layout.widget(dxf_path=...)`` sets the
+starting name from Python.
 
 .. _dxf-export:
 
 DXF export
 -----------
 
-The button is sugar on :py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`, the companion of :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>`:
+The button is sugar on
+:py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`, the companion
+of :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>`:
 
 .. code-block:: python
 
@@ -417,16 +900,37 @@ The button is sugar on :py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_d
     layout.export_dxf('layout.dxf', dimensions=False)
     layout.export_dxf('layout.dxf', width_mode='y')   # as draw() takes
 
-**Dimensions are drawn, on a layer of their own.** A dimension is a note about the system rather than part of it, and a layer is what CAD offers for something you want to be able to switch off, so the drawing carries your measurements without imposing them on whoever opens it. Pass ``dimensions=False`` to leave them out entirely.
+**Dimensions are drawn, on a layer of their own.** A dimension is a note
+about the system, not a part of it. CAD software offers layers for exactly
+this, so the drawing carries your measurements and the person who opens it
+can switch them off. Pass ``dimensions=False`` to leave them out entirely.
 
-The ticks and the lettering are sized as fractions of the measurement, not in millimetres. A drawing has no fixed scale, and a label sized for a bench would be invisible across a substrate.
+The ticks and the lettering are sized as fractions of the measurement, not
+in millimetres. A drawing has no fixed scale, and a label sized for a bench
+would be invisible across a substrate.
 
-The underlying renderer is unchanged and still callable directly, which is what to use if you are not holding an :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`:
+Without a layout
+-----------------
+
+If you are not holding an
+:py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, both renderers are
+callable directly, and the HTML one can be dropped into ``drawOptSys`` in
+place of the DXF one:
 
 .. code-block:: python
 
+    from gtrace.draw.viewer import renderHTML, html_render_func
     import gtrace.draw.renderer as renderer
+
+    renderHTML(canvas, beams, 'trace.html', optics=optList)
+
+    drawOptSys(optList, beamList, 'trace.html',
+               render_func=html_render_func(beamList, optList))
 
     renderer.renderDXF(layout.draw(), 'layout.dxf')
 
-This route draws no dimensions. They belong to the layout, and ``draw()`` leaves them out, because the viewer draws them itself from the scene and would otherwise draw them twice.
+Pass ``optics`` if you want to be able to click the elements. Without it,
+the viewer draws them but cannot say which is which. This route draws no
+dimensions. Dimensions belong to the layout, and ``draw()`` leaves them out:
+the viewer draws them itself from the scene, and would otherwise draw them
+twice.

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-13 09:38+0900\n"
+"POT-Creation-Date: 2026-08-15 17:59+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -23,174 +23,291 @@ msgstr "ビームの伝搬"
 
 #: ../../../gtrace/docs/source/propagation.rst:4
 msgid ""
-"A beam can be propagated either by manually propagate for a certain "
-"distance or tell gtrace to propagate it until hitting a particular "
-"mirror."
-msgstr "ビームは、決まった距離だけ手で伝搬させることも、特定のミラーに当たるまで伝搬させるよう gtrace に頼むこともできる。"
+"There are three ways to move a beam, from the most manual to the most "
+"automatic:"
+msgstr "ビームを動かす方法は3つある。手動なものから自動なものへ順に:"
 
-#: ../../../gtrace/docs/source/propagation.rst:6
-msgid ""
-"The manual propagation can be performed by calling, ``beam.propagate(d)``"
-" where ``d`` is the distance to propagate."
-msgstr "手で伝搬させるには ``beam.propagate(d)`` を呼ぶ。\\ ``d`` は伝搬させる距離である。"
+#: ../../../gtrace/docs/source/propagation.rst:7
+msgid "advance the beam yourself by a distance;"
+msgstr "自分で距離を指定してビームを進める"
+
+#: ../../../gtrace/docs/source/propagation.rst:8
+msgid "give the beam to one element and collect the beams that come off it;"
+msgstr "ビームを1つの素子に渡し、そこから出てくるビームを受け取る"
 
 #: ../../../gtrace/docs/source/propagation.rst:9
-msgid "Hitting a mirror"
-msgstr "ミラーに当てる"
+msgid "let gtrace follow every beam through the whole system."
+msgstr "系全体について、全てのビームを gtrace に追跡させる"
+
+#: ../../../gtrace/docs/source/propagation.rst:11
+msgid "A layout does the third one, and it uses the first two to do it."
+msgstr "レイアウトは3番目を行う。そのために最初の2つを使う。"
 
 #: ../../../gtrace/docs/source/propagation.rst:14
-msgid ""
-"By calling ``Mirror.hitFromHR(beam)``, you can tell gtrace to propagate "
-"the beam until it hits the mirror. If the beam indeed hits the mirror, "
-"gtrace will generate a set of beam objects produced by the interactions "
-"(reflection and refraction) of the incident beam with the mirror."
-msgstr ""
-"``Mirror.hitFromHR(beam)`` を呼ぶと、gtrace "
-"はビームをそのミラーに当たるまで伝搬させる。ビームが実際にミラーに当たると、入射ビームとミラーの相互作用（反射と屈折）から生じる一連のビームオブジェクトが生成される。"
+msgid "Moving a beam by hand"
+msgstr "ビームを手で動かす"
 
 #: ../../../gtrace/docs/source/propagation.rst:16
 msgid ""
-"The generated beams are given the names indicated in the figure above. "
-"The beam objects will be returned as a dictionary with the name of a beam"
-" as a key."
-msgstr "生成されたビームには上の図に示した名前が付く。ビームオブジェクトは、ビーム名をキーとする辞書として返される。"
-
-#: ../../../gtrace/docs/source/propagation.rst:20
-msgid "Non-sequential trace"
-msgstr "非逐次トレース"
-
-#: ../../../gtrace/docs/source/propagation.rst:22
-msgid ""
-"Following every beam by hand works for a handful of surfaces. A real "
-"layout produces far more ghost beams than that. "
-":py:func:`non_seq_trace<gtrace.nonsequential.non_seq_trace>` follows them"
-" for you: give it a list of optics and one source beam, and it propagates"
-" every beam that is generated until a termination condition is met."
+":py:meth:`propagate(d)<gtrace.beam.GaussianBeam.propagate>` moves a beam "
+"``d`` metres along its own direction:"
 msgstr ""
-"面が数枚のうちは、すべてのビームを手で追ってもよい。しかし現実のレイアウトは、それでは追いきれない数のゴーストビームを生む。\\ "
-":py:func:`non_seq_trace<gtrace.nonsequential.non_seq_trace>` "
-"が代わりに追ってくれる。光学素子のリストとソースビームを1本渡すと、生成されるすべてのビームを、終了条件が満たされるまで伝搬させる。"
+":py:meth:`propagate(d)<gtrace.beam.GaussianBeam.propagate>` "
+"は、ビームを自身の進行方向へ ``d`` メートル進める:"
 
-#: ../../../gtrace/docs/source/propagation.rst:31
+#: ../../../gtrace/docs/source/propagation.rst:29
+msgid ""
+"This moves ``pos``, advances the q parameter, and adds to the accumulated"
+" optical distance ``optDist`` and Gouy phase ``Gouyx`` and ``Gouyy``. It "
+"changes the beam in place, so call "
+":py:meth:`copy()<gtrace.beam.GaussianBeam.copy>` first if you need the "
+"old one as well."
+msgstr ""
+"これは ``pos`` を移動し、q パラメータを進め、積算光路長 ``optDist`` と Gouy 位相 ``Gouyx``\\ ・\\ "
+"``Gouyy`` に加算する。ビームをその場で書き換えるので、元のビームも要る場合は先に "
+":py:meth:`copy()<gtrace.beam.GaussianBeam.copy>` を呼ぶ。"
+
+#: ../../../gtrace/docs/source/propagation.rst:34
+msgid ""
+"To ask what a beam will be doing further on without moving it, use "
+":py:meth:`width(d)<gtrace.beam.GaussianBeam.width>`, which returns the "
+"radius the beam would have ``d`` metres ahead::"
+msgstr ""
+"ビームを動かさずに、先の方でどうなるかを知りたいときは "
+":py:meth:`width(d)<gtrace.beam.GaussianBeam.width>` を使う。\\ ``d`` "
+"メートル先でのビーム半径を返す::"
+
+#: ../../../gtrace/docs/source/propagation.rst:42
+msgid "Hitting a mirror"
+msgstr "ミラーに当てる"
+
+#: ../../../gtrace/docs/source/propagation.rst:47
+msgid ""
+":py:meth:`hitFromHR(beam)<gtrace.optcomp.Mirror.hitFromHR>` propagates "
+"the beam until it reaches the mirror's HR face, then computes the "
+"reflections and refractions there and inside the substrate. "
+":py:meth:`hitFromAR<gtrace.optcomp.Mirror.hitFromAR>` does the same from "
+"the back face. Both return a dictionary of beams, keyed by the names in "
+"the figure::"
+msgstr ""
+":py:meth:`hitFromHR(beam)<gtrace.optcomp.Mirror.hitFromHR>` は、ビームをミラーの HR"
+" 面に届くまで伝搬させ、そこと基板の内部での反射と屈折を計算する。\\ "
+":py:meth:`hitFromAR<gtrace.optcomp.Mirror.hitFromAR>` "
+"は背面から同じことをする。どちらも、図の名前をキーとするビームの辞書を返す::"
+
+#: ../../../gtrace/docs/source/propagation.rst:62
+msgid "Key"
+msgstr "キー"
+
+#: ../../../gtrace/docs/source/propagation.rst:63
+msgid "Beam"
+msgstr "ビーム"
+
+#: ../../../gtrace/docs/source/propagation.rst:64
+msgid "``input``"
+msgstr "``input``"
+
+#: ../../../gtrace/docs/source/propagation.rst:65
+msgid "The incident beam, cut off at the surface it hit."
+msgstr "入射ビーム。当たった面で切り取られている。"
+
+#: ../../../gtrace/docs/source/propagation.rst:66
+msgid "``r1``"
+msgstr "``r1``"
+
+#: ../../../gtrace/docs/source/propagation.rst:67
+msgid "Reflected off the HR face, back the way it came."
+msgstr "HR 面で反射し、来た方向へ戻るビーム。"
+
+#: ../../../gtrace/docs/source/propagation.rst:68
+msgid "``s1``"
+msgstr "``s1``"
+
+#: ../../../gtrace/docs/source/propagation.rst:69
+msgid "Refracted into the substrate, on its way to the AR face."
+msgstr "基板の中へ屈折して入り、AR 面へ向かうビーム。"
+
+#: ../../../gtrace/docs/source/propagation.rst:70
+msgid "``t1``"
+msgstr "``t1``"
+
+#: ../../../gtrace/docs/source/propagation.rst:71
+msgid "Transmitted through both faces and out the far side."
+msgstr "両方の面を透過し、反対側へ出ていくビーム。"
+
+#: ../../../gtrace/docs/source/propagation.rst:72
+msgid "``s2``, ``s3``, …"
+msgstr "``s2``, ``s3``, …"
+
+#: ../../../gtrace/docs/source/propagation.rst:73
+msgid "Successive bounces inside the substrate."
+msgstr "基板の中での2回目以降の反射。"
+
+#: ../../../gtrace/docs/source/propagation.rst:74
+msgid "``r2``, ``t2``, …"
+msgstr "``r2``, ``t2``, …"
+
+#: ../../../gtrace/docs/source/propagation.rst:75
+msgid ""
+"What leaves after each of those bounces, through the HR and the AR face "
+"respectively."
+msgstr "その反射のたびに外へ出ていくビーム。それぞれ HR 面から、AR 面から出る。"
+
+#: ../../../gtrace/docs/source/propagation.rst:78
+#, python-format
+msgid ""
+"The powers say which of them are worth following. For a mirror of 90% "
+"reflectivity with a 0.5% AR coating, hit by a 1 W beam:"
+msgstr "どれを追う価値があるかは、パワーを見れば分かる。反射率 90%、AR コート 0.5% のミラーに 1 W のビームを当てた場合:"
+
+#: ../../../gtrace/docs/source/propagation.rst:90
+msgid ""
+"``order`` says how many round trips inside the substrate to follow, and "
+"``threshold`` drops beams below a given power. A beam that misses the "
+"mirror altogether gets an empty dictionary back."
+msgstr ""
+"``order`` は基板の中を何往復まで追うかを決める。\\ ``threshold`` "
+"は指定したパワーを下回るビームを捨てる。ミラーに全く当たらないビームを渡すと、空の辞書が返る。"
+
+#: ../../../gtrace/docs/source/propagation.rst:95
+msgid "Tracing a whole system"
+msgstr "系全体をトレースする"
+
+#: ../../../gtrace/docs/source/propagation.rst:97
+msgid ""
+"Calling ``hitFromHR`` by hand works for a few surfaces. A real layout "
+"produces many more beams than that. You do not want to work out which "
+"element each beam reaches next. "
+":py:func:`non_seq_trace<gtrace.nonsequential.non_seq_trace>` does that "
+"work for you. Give it a list of optics and one source beam. It follows "
+"every beam that is generated, until the beam stops."
+msgstr ""
+"面が数枚のうちは、\\ ``hitFromHR`` "
+"を手で呼んでもよい。しかし現実のレイアウトは、それよりずっと多くのビームを生む。どのビームが次にどの素子へ届くかを、自分で計算したくはないはずである。\\"
+" :py:func:`non_seq_trace<gtrace.nonsequential.non_seq_trace>` "
+"がその作業をしてくれる。光学素子のリストと光源ビーム1本を渡すと、生成される全てのビームを、そのビームが止まるまで追跡する。"
+
+#: ../../../gtrace/docs/source/propagation.rst:111
 msgid ""
 "A beam stops being followed when it hits nothing, when its power falls "
-"below ``power_threshold``, or when the number of internal reflections "
-"reaches ``order``. The return value is a flat list of the beams that were"
-" produced. Each carries a ``stray_order`` saying how many ghost "
-"reflections it took to make it, and the drawing uses that to tell the "
-"main beam from the ghosts."
+"below ``power_threshold``, or when its stray order reaches ``order``. The"
+" return value is a flat list of every beam produced. Each one carries a "
+"``stray_order`` saying how many ghost reflections it took to make it, and"
+" the drawing uses that to tell the main beam from the ghosts."
 msgstr ""
-"ビームの追跡が打ち切られるのは、何にも当たらなかったとき、パワーが ``power_threshold`` を下回ったとき、内部反射の回数が "
+"ビームの追跡が打ち切られるのは、何にも当たらなかったとき、パワーが ``power_threshold`` を下回ったとき、迷光次数が "
 "``order`` "
-"に達したときである。返り値は生成されたビームの平坦なリストである。各ビームは、そのビームができるまでに何回のゴースト反射を経たかを表す "
-"``stray_order`` を持ち、描画のときに主ビームとゴーストを分けるのはこの値である。"
+"に達したときである。返り値は、生成された全てのビームの平坦なリストである。各ビームは、そのビームができるまでに何回のゴースト反射を経たかを表す "
+"``stray_order`` を持つ。描画で主ビームとゴーストを分けるのは、この値である。"
 
-#: ../../../gtrace/docs/source/propagation.rst:33
+#: ../../../gtrace/docs/source/propagation.rst:117
 msgid ""
-"If you keep your system in an "
-":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, "
-"``layout.trace()`` runs this for every registered source with the "
-"layout's rules. See :doc:`layout`."
+":py:meth:`layout.trace()<gtrace.layout.OpticalLayout.trace>` runs this "
+"for every source registered in an "
+":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, with the layout's"
+" own rules. See :doc:`layout`."
 msgstr ""
-"系を :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` に入れてあるなら、\\ "
-"``layout.trace()`` が登録済みのすべてのソースについて、レイアウトのルールでこれを実行する。\\ :doc:`layout` "
-"を参照。"
+":py:meth:`layout.trace()<gtrace.layout.OpticalLayout.trace>` は、\\ "
+":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
+"に登録された全ての光源についてこれを実行する。使う規則は、そのレイアウト自身のものである。\\ :doc:`layout` を参照。"
 
-#: ../../../gtrace/docs/source/propagation.rst:38
-msgid "How the stray order is counted"
-msgstr "迷光次数の数え方"
+#: ../../../gtrace/docs/source/propagation.rst:125
+msgid "Ghost beams and the stray order"
+msgstr "ゴーストビームと迷光次数"
 
-#: ../../../gtrace/docs/source/propagation.rst:40
+#: ../../../gtrace/docs/source/propagation.rst:127
 msgid ""
-"Every beam carries a counter, ``stray_order``. The source starts at zero,"
-" and the counter goes up by one each time the beam does something its "
-"element is not coated for. Whatever the element *is* coated for is free: "
-"reflecting off the front of a mirror costs nothing, and neither does the "
-"main beam's passage through a lens. What costs one order each is"
+"Every beam carries a counter, ``stray_order``. A source beam starts at "
+"zero, and the counter goes up by one each time the beam does something "
+"its element is not coated for. What the element *is* coated for costs "
+"nothing: reflecting off the front of a mirror is free, and so is the main"
+" beam's passage through a lens. What costs one order each is"
 msgstr ""
-"すべてのビームはカウンタ ``stray_order`` を持つ。ソースは 0 "
+"全てのビームはカウンタ ``stray_order`` を持つ。光源ビームは 0 "
 "から始まり、その素子がコートされている役割から外れることをビームがするたびに、カウンタが1つ上がる。素子が\\ *そのために*\\ "
 "コートされている振る舞いは、カウントされない。ミラーの前面での反射は増えないし、レンズを抜けていく主ビームも増えない。1次ぶん増えるのは次の場合である。"
 
-#: ../../../gtrace/docs/source/propagation.rst:42
+#: ../../../gtrace/docs/source/propagation.rst:133
 msgid ""
-"reflecting at the AR face, from either side and every time — an AR "
-"coating is not meant to reflect;"
+"reflecting at the AR face, from either side and every time. An AR coating"
+" is not meant to reflect."
 msgstr "AR 面での反射。どちら側からでも、毎回1次増える。AR コーティングは反射するためのものではないからである。"
 
-#: ../../../gtrace/docs/source/propagation.rst:43
+#: ../../../gtrace/docs/source/propagation.rst:135
 msgid ""
-"passing through the HR face of a plain mirror — that coating is meant to "
-"send the beam back;"
+"passing through the HR face of a plain mirror. That coating is meant to "
+"send the beam back."
 msgstr "通常のミラーの HR 面の透過。このコーティングはビームを送り返すためのものだからである。"
 
-#: ../../../gtrace/docs/source/propagation.rst:44
+#: ../../../gtrace/docs/source/propagation.rst:137
 msgid ""
 "reflecting at the HR face of an element whose front is not meant to "
-"reflect either — a lens."
+"reflect either, such as a lens."
 msgstr "前面も反射するためのものではない素子、つまりレンズの HR 面での反射。"
 
-#: ../../../gtrace/docs/source/propagation.rst:46
+#: ../../../gtrace/docs/source/propagation.rst:140
 msgid ""
-"So a ghost pays one order per round trip inside a substrate, counted at "
-"its AR bounce, and one more if it leaves through the HR. Leaving through "
-"the AR is free, since that is what an AR face is for. In a lens, whose "
-"faces are both meant to transmit, a bounce off either face counts."
+"A ghost therefore pays one order per round trip inside a substrate, "
+"counted at its AR bounce, and one more if it leaves through the HR. "
+"Leaving through the AR is free. In a lens, where both faces are meant to "
+"transmit, a bounce off either face costs one."
 msgstr ""
 "したがってゴーストは、基板の中を1往復するごとに1次を支払う。数えるのは AR 面での反射のときで、HR から外に出るならさらに1次を支払う。AR"
-" から出るのは増えない。透過が AR 面の役割だからである。両面とも透過するためのものであるレンズでは、どちらの面での反射も数える。"
+" から出るのは増えない。両面とも透過するためのものであるレンズでは、どちらの面での反射も1次を支払う。"
 
-#: ../../../gtrace/docs/source/propagation.rst:48
+#: ../../../gtrace/docs/source/propagation.rst:145
 msgid ""
 "A branch of the trace is dropped as soon as its counter exceeds ``order``"
 " or its power falls below ``power_threshold``, whichever comes first. "
-"``order`` bounds how *deep* a ghost may be, ``power_threshold`` how "
+"``order`` limits how *deep* a ghost may be, ``power_threshold`` how "
 "*faint*."
 msgstr ""
 "トレースの枝は、カウンタが ``order`` を超えたか、パワーが ``power_threshold`` "
 "を下回った時点で、早いほうで打ち切られる。\\ ``order`` はゴーストがどこまで\\ *深く*\\ なれるかを、\\ "
 "``power_threshold`` はどこまで\\ *弱く*\\ なれるかを決める。"
 
-#: ../../../gtrace/docs/source/propagation.rst:50
+#: ../../../gtrace/docs/source/propagation.rst:150
 msgid ""
-"``order`` is a budget for the ghosts a call may **make**. It is not a "
-"test the arriving beam has to pass: a reflection off a face meant to "
-"reflect makes no ghost, so a beam that is already stray still bounces off"
-" a mirror, however deep it has got, and leaves at the order it arrived "
-"at."
+"``order`` is a budget for the ghosts a call may **make**. The arriving "
+"beam is not tested against it. A reflection off a face that is meant to "
+"reflect makes no ghost. A beam that is already stray therefore still "
+"bounces off a mirror, no matter how deep it has got. It leaves with the "
+"order it arrived with."
 msgstr ""
 "``order`` は、1回の呼び出しが\\ **作ってよい**\\ "
-"ゴーストの数の予算である。入射してきたビームが通らなければならない試験ではない。反射するためにある面での反射はゴーストを作らないので、すでに迷光になっているビームも、どれだけ深くなっていてもミラーで反射し、入ってきたときの次数のまま出ていく。"
+"ゴーストの数の予算である。入射してきたビームがこれで試験されるわけではない。反射するためにある面での反射は、ゴーストを作らない。したがって、すでに迷光になっているビームも、どれだけ深くなっていてもミラーで反射する。入ってきたときの次数のまま出ていく。"
 
-#: ../../../gtrace/docs/source/propagation.rst:52
+#: ../../../gtrace/docs/source/propagation.rst:156
 msgid ""
-"**The counter rides with the beam.** It is not reset when a beam leaves "
-"one element for the next, so ``order`` is a budget for the whole trace. A"
-" ghost made at one mirror and steered by another is still that ghost: it "
-"is drawn as stray and carries its count with it. The counter is also what"
-" bounds the recursion, since each branch ends once it has spent the "
-"budget, so a system of mirrors facing each other terminates on ``order`` "
-"instead of waiting for the power to run out."
+"**The counter travels with the beam.** It is not reset when a beam leaves"
+" one element for the next, so ``order`` is a budget for the whole trace. "
+"A ghost made at one mirror and steered by another is still that ghost: it"
+" is drawn as stray and keeps its count. The counter is also what bounds "
+"the recursion, since each branch ends once it has spent the budget. Two "
+"mirrors facing each other therefore terminate on ``order`` instead of "
+"running until the power runs out."
 msgstr ""
 "**カウンタはビームと一緒に運ばれる。** ビームが1つの素子から次の素子へ移るときにリセットされないので、\\ ``order`` "
-"はトレース全体に対する予算である。あるミラーで生まれたゴーストを別のミラーで曲げても、それは同じゴーストのままで、迷光として描かれ、カウントを持ったまま進む。再帰を止めているのもこのカウンタである。枝は予算を使い切ったところで終わるので、向かい合ったミラーの系はパワーが尽きるのを待たずに"
+"はトレース全体に対する予算である。あるミラーで生まれたゴーストを別のミラーで曲げても、それは同じゴーストのままで、迷光として描かれ、カウントを持ったまま進む。再帰を止めているのもこのカウンタである。枝は予算を使い切ったところで終わるので、向かい合ったミラーの系は、パワーが尽きるのを待たずに"
 " ``order`` で終わる。"
 
-#: ../../../gtrace/docs/source/propagation.rst:54
-msgid ""
-"Which face is meant for what is said by two flags on the optics, both "
-"named from the HR side:"
+#: ../../../gtrace/docs/source/propagation.rst:165
+msgid "Which face is meant for what"
+msgstr "どの面が何のためのものか"
+
+#: ../../../gtrace/docs/source/propagation.rst:167
+msgid "Two flags on the optics say it, both named from the HR side:"
 msgstr "どの面が何のためのものかは、光学素子の2つのフラグで宣言する。どちらも HR 側から名付けられている:"
 
-#: ../../../gtrace/docs/source/propagation.rst:56
+#: ../../../gtrace/docs/source/propagation.rst:169
 msgid "``HRtransmissive``"
 msgstr "``HRtransmissive``"
 
-#: ../../../gtrace/docs/source/propagation.rst:57
+#: ../../../gtrace/docs/source/propagation.rst:170
 msgid ""
 "The HR is meant to *transmit* as well as reflect, so the beam's first "
 "passage through it is free. False on a plain mirror. Set it True on a "
-"beam splitter or an input test mass. It defaults True on "
+"beam splitter or an input test mass. It defaults to True on "
 ":py:class:`Lens<gtrace.optcomp.Lens>`, whose main beam goes through; with"
 " it False, the trace would count that main beam as a ghost and drop it at"
 " a low order."
@@ -200,82 +317,90 @@ msgstr ""
 ":py:class:`Lens<gtrace.optcomp.Lens>` では既定で True "
 "である。主ビームが中を通り抜けるからで、False のままだとトレースはその主ビームをゴーストとして数え、低い次数で捨ててしまう。"
 
-#: ../../../gtrace/docs/source/propagation.rst:59
+#: ../../../gtrace/docs/source/propagation.rst:177
 msgid "``HRreflective``"
 msgstr "``HRreflective``"
 
-#: ../../../gtrace/docs/source/propagation.rst:60
+#: ../../../gtrace/docs/source/propagation.rst:178
 msgid ""
-"The mirror image: the HR is meant to *reflect*, so reflecting off it is "
-"free. True on a plain mirror, and still True on a beam splitter or an "
-"input test mass, where the reflection off the HR from inside the "
-"substrate is the interferometer's main return beam. It defaults False on "
-":py:class:`Lens<gtrace.optcomp.Lens>` and "
+"The opposite: the HR is meant to *reflect*, so reflecting off it is free."
+" True on a plain mirror. It stays True on a beam splitter or an input "
+"test mass. On those elements, the reflection off the HR from inside the "
+"substrate is the main return beam of the interferometer. It defaults to "
+"False on :py:class:`Lens<gtrace.optcomp.Lens>` and "
 ":py:class:`CyLens<gtrace.optcomp.CyLens>`, where a reflection off a face "
 "is a ghost and is counted as one."
 msgstr ""
-"その裏返しで、HR は\\ *反射*\\ するためのものである、という宣言。そこでの反射では次数が増えない。通常のミラーでは True "
-"で、ビームスプリッタや入射鏡でも True のままが正しい。基板の内側から HR で反射する光は、干渉計の主要な戻りビームだからである。\\ "
-":py:class:`Lens<gtrace.optcomp.Lens>` と "
+"その逆で、HR は\\ *反射*\\ するためのものである、という宣言。そこでの反射では次数が増えない。通常のミラーでは True "
+"である。ビームスプリッタや入射鏡でも True のままにする。これらの素子では、基板の内側から HR "
+"で反射する光が、干渉計の主要な戻りビームだからである。\\ :py:class:`Lens<gtrace.optcomp.Lens>` と "
 ":py:class:`CyLens<gtrace.optcomp.CyLens>` では既定で False "
 "である。レンズの面での反射はゴーストであり、そのように数える。"
 
-#: ../../../gtrace/docs/source/propagation.rst:62
-msgid "Two more attributes bound the unfolding rather than count it:"
-msgstr "さらに2つの属性が、数えるのではなく展開そのものを制限する:"
+#: ../../../gtrace/docs/source/propagation.rst:188
+msgid "Stopping a beam at a surface"
+msgstr "面でビームを止める"
 
-#: ../../../gtrace/docs/source/propagation.rst:64
+#: ../../../gtrace/docs/source/propagation.rst:190
+msgid "Two more attributes stop the unfolding, instead of counting it:"
+msgstr "さらに2つの属性が、数えるのではなく展開そのものを止める:"
+
+#: ../../../gtrace/docs/source/propagation.rst:192
 msgid "``max_stray_order``"
 msgstr "``max_stray_order``"
 
-#: ../../../gtrace/docs/source/propagation.rst:65
+#: ../../../gtrace/docs/source/propagation.rst:193
 msgid ""
 "Caps the count for this one element, overriding the trace-wide ``order``."
-" How deep the ghosts of one particular element are worth chasing is a "
+" How deep the ghosts of one particular element should be followed is a "
 "property of that element."
 msgstr ""
 "この素子1つについてカウントの上限を定め、トレース全体の ``order`` "
-"を上書きする。ある素子のゴーストをどこまで深く追う価値があるかは、その素子ごとの性質だからである。"
+"を上書きする。ある素子のゴーストをどこまで深く追うべきかは、その素子の性質だからである。"
 
-#: ../../../gtrace/docs/source/propagation.rst:67
+#: ../../../gtrace/docs/source/propagation.rst:197
 msgid "``term_on_HR``"
 msgstr "``term_on_HR``"
 
-#: ../../../gtrace/docs/source/propagation.rst:68
+#: ../../../gtrace/docs/source/propagation.rst:198
 msgid ""
-"Terminates a beam whose count is at most ``term_on_HR_order`` when it "
-"hits this HR, instead of reflecting it on. Without it, two facing high "
+"Ends a beam whose count is at most ``term_on_HR_order`` when it reaches "
+"this HR face, instead of reflecting it on. Without it, two facing high "
 "reflectors pass the main beam between them until the trace gives up. A "
-"cavity is the one configuration a non-sequential trace cannot finish on "
-"its own."
+"non-sequential trace cannot finish a cavity on its own, so you have to "
+"tell it where to stop."
 msgstr ""
 "カウントが ``term_on_HR_order`` 以下のビームがこの HR "
-"に当たったとき、反射させる代わりにそこで終端する。これが無いと、向かい合った2枚の高反射鏡は、トレースが諦めるまで主ビームを互いに渡し続ける。共振器は、非逐次トレースが自力では終われない唯一の配置である。"
+"面に当たったとき、反射させる代わりにそこで終端する。これが無いと、向かい合った2枚の高反射鏡は、トレースが諦めるまで主ビームを互いに渡し続ける。非逐次トレースは共振器を自力では終われないので、どこで止めるかを教える必要がある。"
 
-#: ../../../gtrace/docs/source/propagation.rst:70
+#: ../../../gtrace/docs/source/propagation.rst:204
 msgid "``term_on_HR_transmits``"
 msgstr "``term_on_HR_transmits``"
 
-#: ../../../gtrace/docs/source/propagation.rst:71
+#: ../../../gtrace/docs/source/propagation.rst:205
 msgid ""
-"What terminating stops. False, the default, stops the beam at the surface"
-" and computes nothing there. True stops only the reflection that would "
-"come back, and the element is hit as usual otherwise, so the beam "
-"transmitted through the substrate carries on and is drawn. A cavity "
-"mirror can then be looked through, which is what a detector behind one "
-"sees. What survives is counted and capped by ``order``, "
-"``max_stray_order`` and the power threshold like anything else, since it "
-"goes through the same code. Only the external reflection is dropped: a "
-"ghost leaving through the HR from inside the substrate is a ghost, and it"
-" is left to the budget. The gate is unchanged, so a beam above "
-"``term_on_HR_order`` reflects as it always did."
+"Says how much ``term_on_HR`` stops. False is the default. It stops the "
+"beam at the surface and computes nothing there. True stops only the "
+"reflection that would come back. The element is hit as usual otherwise, "
+"so the beam transmitted through the substrate carries on and is drawn. "
+"That is the beam a detector behind a cavity mirror sees."
 msgstr ""
-"終端させるとき、何を止めるか。既定の False は、ビームをその面で終わらせ、そこでは何も計算しない。True "
-"は、戻ってくる反射だけを止める。それ以外は普通に素子に当たったときと同じで、基板を横切るビームは追われて描かれ、反対側の面から出ていく。共振器のミラーを「透かして見る」ことができるようになり、その先に置いた検出器が見るビームが得られる。残ったものは"
-" ``order``\\ ・\\ ``max_stray_order``\\ "
-"・パワーのしきい値で、他の場所と同じように数えられ、打ち切られる。同じコードを通るからである。落とすのは外部反射だけで、基板の内側から HR "
-"を抜けていくゴーストは落とさない。それはゴーストであり、予算に任せる。関門も変わらない。\\ ``term_on_HR_order`` "
-"を超えて到着したビームは、これまでどおり反射する。"
+"``term_on_HR`` がどこまで止めるかを指定する。既定は False で、ビームを面で終わらせ、そこでは何も計算しない。True "
+"は、戻ってくる反射だけを止める。それ以外は普通に素子に当たったものとして扱うので、基板を透過したビームはそのまま進み、描かれる。これが、共振器のミラーの裏に置いた検出器が見るビームである。"
+
+#: ../../../gtrace/docs/source/propagation.rst:211
+msgid ""
+"The beams that survive go through the same code as any other beam. "
+"``order``, ``max_stray_order`` and the power threshold therefore count "
+"them and cap them. Only the external reflection is dropped. A ghost that "
+"leaves through the HR from inside the substrate is still a ghost, and the"
+" budget decides how far it goes. The gate itself is unchanged, so a beam "
+"above ``term_on_HR_order`` reflects as before."
+msgstr ""
+"生き残ったビームは、他のビームと同じコードを通る。したがって ``order``\\ 、\\ ``max_stray_order``\\ "
+"、パワーのしきい値が、それらを数え、打ち切る。落とされるのは外側の反射だけである。基板の内側から HR "
+"を抜けて出ていくゴーストはゴーストのままで、どこまで進むかは予算が決める。関門そのものは変わらないので、\\ "
+"``term_on_HR_order`` を超えたビームは従来どおり反射する。"
 
 #~ msgid ""
 #~ "A branch of the trace is dropped"
@@ -301,4 +426,76 @@ msgstr ""
 #~ "``order`` "
 #~ "が制限するのは1つの素子のゴーストをどこまで展開するかであって、ビームがいくつの素子を通れるかではない。返されたビームの "
 #~ "``stray_order`` は、最後に出会った素子でのカウントである。"
+
+#~ msgid ""
+#~ "A beam can be propagated either by"
+#~ " manually propagate for a certain "
+#~ "distance or tell gtrace to propagate "
+#~ "it until hitting a particular mirror."
+#~ msgstr "ビームは、決まった距離だけ手で伝搬させることも、特定のミラーに当たるまで伝搬させるよう gtrace に頼むこともできる。"
+
+#~ msgid ""
+#~ "The manual propagation can be performed"
+#~ " by calling, ``beam.propagate(d)`` where "
+#~ "``d`` is the distance to propagate."
+#~ msgstr "手で伝搬させるには ``beam.propagate(d)`` を呼ぶ。\\ ``d`` は伝搬させる距離である。"
+
+#~ msgid ""
+#~ "By calling ``Mirror.hitFromHR(beam)``, you can"
+#~ " tell gtrace to propagate the beam"
+#~ " until it hits the mirror. If "
+#~ "the beam indeed hits the mirror, "
+#~ "gtrace will generate a set of beam"
+#~ " objects produced by the interactions "
+#~ "(reflection and refraction) of the "
+#~ "incident beam with the mirror."
+#~ msgstr ""
+#~ "``Mirror.hitFromHR(beam)`` を呼ぶと、gtrace "
+#~ "はビームをそのミラーに当たるまで伝搬させる。ビームが実際にミラーに当たると、入射ビームとミラーの相互作用（反射と屈折）から生じる一連のビームオブジェクトが生成される。"
+
+#~ msgid ""
+#~ "The generated beams are given the "
+#~ "names indicated in the figure above. "
+#~ "The beam objects will be returned "
+#~ "as a dictionary with the name of"
+#~ " a beam as a key."
+#~ msgstr "生成されたビームには上の図に示した名前が付く。ビームオブジェクトは、ビーム名をキーとする辞書として返される。"
+
+#~ msgid "Non-sequential trace"
+#~ msgstr "非逐次トレース"
+
+#~ msgid "How the stray order is counted"
+#~ msgstr "迷光次数の数え方"
+
+#~ msgid ""
+#~ "What terminating stops. False, the "
+#~ "default, stops the beam at the "
+#~ "surface and computes nothing there. True"
+#~ " stops only the reflection that would"
+#~ " come back, and the element is "
+#~ "hit as usual otherwise, so the "
+#~ "beam transmitted through the substrate "
+#~ "carries on and is drawn. A cavity"
+#~ " mirror can then be looked through,"
+#~ " which is what a detector behind "
+#~ "one sees. What survives is counted "
+#~ "and capped by ``order``, ``max_stray_order``"
+#~ " and the power threshold like "
+#~ "anything else, since it goes through "
+#~ "the same code. Only the external "
+#~ "reflection is dropped: a ghost leaving"
+#~ " through the HR from inside the "
+#~ "substrate is a ghost, and it is"
+#~ " left to the budget. The gate "
+#~ "is unchanged, so a beam above "
+#~ "``term_on_HR_order`` reflects as it always "
+#~ "did."
+#~ msgstr ""
+#~ "終端させるとき、何を止めるか。既定の False は、ビームをその面で終わらせ、そこでは何も計算しない。True"
+#~ " "
+#~ "は、戻ってくる反射だけを止める。それ以外は普通に素子に当たったときと同じで、基板を横切るビームは追われて描かれ、反対側の面から出ていく。共振器のミラーを「透かして見る」ことができるようになり、その先に置いた検出器が見るビームが得られる。残ったものは"
+#~ " ``order``\\ ・\\ ``max_stray_order``\\ "
+#~ "・パワーのしきい値で、他の場所と同じように数えられ、打ち切られる。同じコードを通るからである。落とすのは外部反射だけで、基板の内側から"
+#~ " HR を抜けていくゴーストは落とさない。それはゴーストであり、予算に任せる。関門も変わらない。\\ "
+#~ "``term_on_HR_order`` を超えて到着したビームは、これまでどおり反射する。"
 

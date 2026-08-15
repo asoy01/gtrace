@@ -9,6 +9,41 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
+## Unreleased
+
+### Documentation
+
+- **The manual was rewritten.** Every page now puts the usage first and
+  the internals after it, so a first reader can follow how gtrace is
+  used before meeting the model behind it. Introduction, Basic
+  concepts, Propagation, Optical layouts, The viewer and the Tutorial
+  were all reworked, and the tutorial notebook was reordered along the
+  same line: build a bench, work on it in the viewer, save and export
+  it, and only then read about the coordinates, the objects, the ghost
+  beams and the edit messages.
+
+- **The edit protocol has a page of its own**, `editing.rst`, split out
+  of Optical layouts. It documents every message `apply_edit` accepts,
+  what each one may touch, and the ten channels `scene_dict` adds to a
+  scene.
+
+- **The prose was shortened for readers whose first language is not
+  English.** Long sentences were split, dash parentheticals were
+  removed, and vague words were replaced with the names of the things
+  they stood for.
+
+- **The Japanese translation was redone** for the rewritten pages.
+
+- Three statements that did not match the code were corrected: the
+  scene channel list said nine channels and omitted `assemblies`; the
+  `+ Shape` and library sections did not mention the pedestal and the
+  clamping fork that 0.6.0 added; and the model library listing in the
+  tutorial notebook was still the seven models of 0.5.0.
+
+- Three section headings in the mode matching notebook were written at
+  level 1, which produced extra top-level sections on the rendered
+  page. They are level 2 now.
+
 ## 0.6.0 — 2026-08-13
 
 ### Added

@@ -1,35 +1,62 @@
 Tutorial
 ===============================
 
-Two worked notebooks. The first introduces gtrace; the second applies
-it to a common bench task. Every cell on these pages was executed from
-the files in the repository, so what you see here is what you get when
-you run them.
+There are two notebooks. The first one teaches gtrace. The second one
+uses gtrace on a real bench problem: matching a laser into a cavity
+with two lenses.
+
+Every cell on these pages was run from the notebook files in the
+repository. The numbers and the figures you see here are the ones you
+get when you run the notebooks yourself.
+
+Running the notebooks
+---------------------
+
+Both notebooks need gtrace and nothing else from the repository.
+Install gtrace with the viewer as a Jupyter widget::
+
+    pip install "gtrace[notebook]"
+
+This does not install Jupyter itself. If you do not have Jupyter::
+
+    pip install jupyterlab
+
+Then download the notebook file from GitHub with the download button at
+the top right of the page:
+
+* `gtrace-tutorial.ipynb
+  <https://github.com/asoy01/gtrace/blob/master/docs/source/tutorial/gtrace-tutorial.ipynb>`__
+* `modematching.ipynb
+  <https://github.com/asoy01/gtrace/blob/master/docs/source/tutorial/modematching.ipynb>`__
+
+Open the file in JupyterLab, or in VS Code's notebook editor.
+
+You can also clone the repository, which is what you do when you want
+to change gtrace itself. See :doc:`intro`. The two notebooks are in
+``docs/source/tutorial/``.
 
 The gtrace tutorial
 -------------------
 
-A worked introduction to gtrace, built around the loop you work in:
-place something, look at what the beams do, move it.
+This notebook builds a bench of one laser and three mirrors, and then
+works on it in the viewer.
 
-It puts three mirrors and a laser into an
-:py:class:`OpticalLayout<gtrace.layout.OpticalLayout>`, opens the
-result in the viewer, and adjusts it there: reading a beam off the
-drawing, aiming an element by places, measuring across a substrate,
-standing the optics in mounts on a breadboard, and drawing a part of
-its own in the shape editor. Every gesture is also a message you can
-send from a cell, and the notebook shows both sides of that.
+It reads the beam parameters off a beam, moves an element by dragging
+it, aims an element at a beam, measures a distance across a substrate,
+puts the mirrors into mounts on a breadboard, and draws a new part in
+the shape editor. It then saves the layout, writes a single HTML page
+you can send to somebody, and exports the drawing to DXF.
 
-The last chapter is the KAGRA input mode cleaner, which shows the other
-half of the workflow. Where the optics go follows from what the system
-has to do, so the cavity is built and aligned in ordinary Python and
-only then registered in a layout and looked at. The notebook closes by
-writing the drawing out to DXF, which is how a finished layout is
-handed to the rest of an engineering workflow.
+The second half explains what is underneath: the coordinates, the
+beam and mirror objects, where the ghost beams come from, and the
+edit messages the viewer sends. Every action in the viewer sends one
+message, and you can send the same message from a notebook cell.
 
-:doc:`basic_concepts` and :doc:`propagation` describe the surfaces and
-the matrices underneath. :doc:`layout` and :doc:`viewer` are the
-reference pages for the two halves of the tutorial.
+The last chapter builds the KAGRA input mode cleaner. This cavity is
+not placed by hand. The three mirror positions and angles are computed
+in plain Python first, and the result is registered in a layout
+afterwards. Use this way of working when the geometry has to be
+computed.
 
 .. toctree::
    :maxdepth: 1
@@ -39,35 +66,26 @@ reference pages for the two halves of the tutorial.
 Worked example: mode matching a cavity
 --------------------------------------
 
-A laser is coupled into a Fabry-Perot cavity with two lenses picked
-from a stock of focal lengths. The eigenmode of the cavity is computed
-from its g parameters and then confirmed by ray tracing. The lens
-placement is searched as a contour map of the traced mode matching
-over the two positions, with a joblib-parallelised variant of the scan
-as a speed example. The best point of the map seeds an optimisation
-that reaches a perfect match. The result is checked in the viewer,
-where the beam ROC meets the mirror ROC on both cavity mirrors.
+A laser has to be coupled into a Fabry-Perot cavity, using two lenses
+picked from a stock of focal lengths.
+
+The notebook computes the eigenmode of the cavity from its g
+parameters, and then confirms the same answer by ray tracing. It scans
+the two lens positions and draws the mode matching as a contour map,
+first in a plain loop and then in a parallel version that uses joblib.
+The best point of the map is the starting point of an optimisation
+that reaches a perfect match. The result is checked in the viewer: on
+both cavity mirrors, the ROC of the beam is equal to the ROC of the
+mirror.
 
 .. toctree::
    :maxdepth: 1
 
    tutorial/modematching
 
-Running the notebooks
----------------------
+Reference pages
+---------------
 
-Both notebooks are self-contained: they need gtrace and nothing else
-from the repository. Install it with the viewer as a Jupyter widget::
-
-    pip install "gtrace[notebook]"
-
-Then download the notebook itself from GitHub —
-`gtrace-tutorial.ipynb
-<https://github.com/asoy01/gtrace/blob/master/docs/source/tutorial/gtrace-tutorial.ipynb>`__
-or `modematching.ipynb
-<https://github.com/asoy01/gtrace/blob/master/docs/source/tutorial/modematching.ipynb>`__,
-using the download button at the top right of the GitHub page — and
-open it in Jupyter or in VS Code's notebook editor.
-
-Cloning the repository works too, and is the way to go when you mean
-to change gtrace itself; see :doc:`intro`.
+:doc:`basic_concepts` and :doc:`propagation` describe the surfaces and
+the matrices underneath the tutorial. :doc:`layout` is the reference
+page for ``OpticalLayout``, and :doc:`viewer` for the viewer.

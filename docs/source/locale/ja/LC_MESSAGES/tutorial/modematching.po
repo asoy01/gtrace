@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 23:19+0900\n"
+"POT-Creation-Date: 2026-08-15 17:59+0900\n"
 "PO-Revision-Date: 2026-08-09 22:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -23,12 +23,12 @@ msgstr "レーザーを Fabry-Perot 共振器にモードマッチングさせ�
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:11
 msgid ""
-"We want to mode match a laser to a two-mirror Fabry-Perot cavity. The "
-"cavity sits 3 m from the laser, and the two lenses are picked from a "
-"stock of focal lengths."
+"A laser has to be coupled into a two-mirror Fabry-Perot cavity. The "
+"cavity sits 3 m from the laser, and the two lenses between them are "
+"picked from a stock of focal lengths."
 msgstr ""
-"レーザーを2枚鏡の Fabry-Perot 共振器にモードマッチングさせたい。共振器はレーザーから 3 m "
-"の位置にあり、2枚のレンズは手持ちの焦点距離の在庫から選ぶ。"
+"レーザーを2枚鏡のファブリ・ペロー共振器に結合させる。共振器はレーザーから 3 m "
+"のところにあり、間に置く2枚のレンズは、手持ちの焦点距離の中から選ぶ。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:14
 msgid "Cavity"
@@ -56,12 +56,12 @@ msgstr "2枚のレンズの位置と焦点距離"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:19
 msgid ""
-"The plan: find the eigenmode of the cavity first, then build the actual "
-"bench in gtrace, where the lenses have thickness and the input mirror is "
-"a real substrate, and let the trace itself say how good the coupling is."
+"The plan: find the eigenmode of the cavity first. Then build the real "
+"bench in gtrace, where the lenses have a thickness and the input mirror "
+"is a real substrate. The trace itself then says how good the coupling is."
 msgstr ""
-"方針としては、まず共振器の固有モードを求め、次に実際のベンチを gtrace "
-"で組む。ベンチではレンズに厚みがあり、入力鏡も実際の基板である。その上で、結合の良さはトレース自身に答えさせる。"
+"手順はこうである。まず共振器の固有モードを求める。次に gtrace "
+"で実際のベンチを組む。そこではレンズに厚みがあり、入射鏡は本物の基板である。結合の良し悪しは、トレース自身が教えてくれる。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:51
 msgid "The eigenmode of the cavity"
@@ -69,17 +69,17 @@ msgstr "共振器の固有モード"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:53
 msgid ""
-"Two mirrors of radii :math:`R_1`, :math:`R_2` a distance :math:`L` apart,"
-" with :math:`g_i = 1 - L/R_i`, form a stable cavity when :math:`0 < g_1 "
-"g_2 < 1`. The waist sits :math:`z_1 = "
+"Two mirrors of radii :math:`R_1`, :math:`R_2` stand a distance :math:`L` "
+"apart. Write :math:`g_i = 1 - L/R_i`. The cavity is stable when :math:`0 "
+"< g_1 g_2 < 1`. The waist sits :math:`z_1 = "
 "\\frac{g_2(1-g_1)}{g_1+g_2-2g_1g_2}L` from the input mirror, and the "
 "Rayleigh range is :math:`z_R = "
 "\\sqrt{\\frac{g_1g_2(1-g_1g_2)}{(g_1+g_2-2g_1g_2)^2}}\\,L`."
 msgstr ""
-"曲率半径 :math:`R_1`\\ 、\\ :math:`R_2` の2枚の鏡が距離 :math:`L` 離れて向かい合うとき、\\ "
-":math:`g_i = 1 - L/R_i` として、\\ :math:`0 < g_1 g_2 < 1` "
-"なら共振器は安定である。ウエストは入力鏡から :math:`z_1 = \\frac{g_2(1-g_1)}{g_1+g_2-2g_1g_2}L`"
-" の位置にあり、レイリー長は :math:`z_R = "
+"半径 :math:`R_1`\\ 、\\ :math:`R_2` の2枚のミラーが距離 :math:`L` を隔てて立っている。\\ "
+":math:`g_i = 1 - L/R_i` と書く。共振器が安定なのは :math:`0 < g_1 g_2 < 1` "
+"のときである。ウェストは入射鏡から :math:`z_1 = \\frac{g_2(1-g_1)}{g_1+g_2-2g_1g_2}L` "
+"の位置にあり、レイリー長は :math:`z_R = "
 "\\sqrt{\\frac{g_1g_2(1-g_1g_2)}{(g_1+g_2-2g_1g_2)^2}}\\,L` である。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:123
@@ -89,28 +89,35 @@ msgstr "固有モードを光線追跡で確認する"
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:125
 msgid ""
 "The formulas above are the textbook eigenmode of a two-mirror cavity. "
-"gtrace can pull the same answer out of a ray trace. A GaussianBeam object"
-" carries the attributes Mx and My: the ABCD transformations the beam has "
-"received while propagating, accumulated as a product. On a newly created "
-"beam they are initialised to the identity matrix."
-msgstr ""
-"上の式は、2枚鏡共振器の固有モードの教科書的な表式である。gtrace では、同じ答えを光線追跡から取り出せる。GaussianBeam "
-"オブジェクトは Mx と My という属性を持ち、伝搬の途中で受けた ABCD "
-"変換が積として積算されている。作ったばかりのビームでは単位行列に初期化されている。"
+"gtrace can produce the same answer from a ray trace."
+msgstr "上の式は、教科書に載っている2枚鏡共振器の固有モードである。gtrace は同じ答えを光線追跡から出せる。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:127
 msgid ""
-"So send such a beam once around the cavity and its Mx is the round-trip "
-"ABCD matrix. Put a fresh beam on the surface of the ITM, propagate it to "
-"the ETM and reflect it, reflect the returning beam at the ITM, and read "
-"Mx and My off the beam object right after that reflection. In a system "
-"without astigmatism the two must agree. Writing the matrix elements as"
+"A ``GaussianBeam`` object carries two attributes, ``Mx`` and ``My``. They"
+" hold the ABCD transformations the beam has received while propagating, "
+"multiplied together. On a new beam they are the identity matrix."
 msgstr ""
-"つまり、そのようなビームを共振器の中で1周させれば、Mx が1周ぶんの ABCD 行列になる。新しいビームを ITM の面に置き、ETM "
-"まで伝搬させて反射させ、戻ってきたビームを ITM で反射させて、その直後にビームオブジェクトから Mx と My "
-"を読む。非点収差の無い系なら、2つは一致しなければならない。行列の要素を"
+"``GaussianBeam`` オブジェクトは ``Mx`` と ``My`` の2つの属性を持つ。伝搬の間にビームが受けた ABCD "
+"変換を、掛け合わせた形で保持している。新しく作ったビームでは単位行列である。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:129
+msgid ""
+"So send such a beam once around the cavity, and its ``Mx`` is the round-"
+"trip ABCD matrix. Put a fresh beam on the surface of the ITM, propagate "
+"it to the ETM and reflect it there, then reflect the returning beam at "
+"the ITM. Read ``Mx`` and ``My`` off the beam object right after that "
+"second reflection. In a system without astigmatism the two must agree."
+msgstr ""
+"だから、そのようなビームを共振器の中で1周させれば、その ``Mx`` が1周分の ABCD 行列になる。ITM の面に新しいビームを置き、ETM"
+" まで伝搬させてそこで反射させ、戻ってきたビームを ITM で反射させる。2回目の反射の直後に、ビームオブジェクトから ``Mx`` と "
+"``My`` を読む。非点収差の無い系では、この2つは一致するはずである。"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:131
+msgid "Write the matrix elements as"
+msgstr "行列の要素を次のように書く"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:133
 #, python-brace-format
 msgid ""
 "\\begin{pmatrix}\n"
@@ -122,225 +129,237 @@ msgstr ""
 "A & B \\\\\n"
 "C & D\n"
 "\\end{pmatrix}"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:137
-msgid "the eigenmode is the mode that returns to itself after one round trip, so"
-msgstr "と書くと、固有モードは1周して自分自身に戻るモードなので、"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:139
-#, python-brace-format
-msgid ""
-"q = \\frac{Aq + B}{Cq + D}\n"
-"\n"
-msgstr ""
-"q = \\frac{Aq + B}{Cq + D}\n"
-"\n"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:141
-msgid ""
-"is to be solved for :math:`q` (the roots of :math:`Cq^2 + (D-A)q - B = "
-"0`). There are two; take the one whose imaginary part (= the Rayleigh "
-"range) is positive."
-msgstr ""
-"を :math:`q` について解けばよい（\\ :math:`Cq^2 + (D-A)q - B = 0` "
-"の根である）。根は2つあるので、虚部（= レイリー長）が正のほうを取る。"
+msgid "The eigenmode is the mode that returns to itself after one round trip, so"
+msgstr "固有モードとは、1周して自分自身に戻るモードである。したがって"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:143
+#, python-brace-format
 msgid ""
-"When Mx and My differ, the eigenmode carries a different q in the x and y"
-" directions."
-msgstr "Mx と My が違う場合、固有モードは x 方向と y 方向で異なる q を持つ。"
+"q = \\frac{Aq + B}{Cq + D}\n"
+"\n"
+msgstr ""
+"q = \\frac{Aq + B}{Cq + D}\n"
+"\n"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:247
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:145
 msgid ""
-"This way of extracting the eigenmode from a ray trace is general: it "
-"works just as well for three-mirror or bow-tie cavities."
-msgstr "光線追跡から固有モードを取り出すこの方法は一般的で、3枚鏡やボウタイ型の共振器でも同じように使える。"
+"has to be solved for :math:`q`. That is the quadratic :math:`Cq^2 + "
+"(D-A)q - B = 0`, which has two roots. Take the root whose imaginary part "
+"is positive, because the imaginary part is the Rayleigh range."
+msgstr ""
+"を :math:`q` について解けばよい。これは2次方程式 :math:`Cq^2 + (D-A)q - B = 0` "
+"であり、根は2つある。虚部が正のほうの根を取る。虚部がレイリー長だからである。"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:259
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:147
+msgid ""
+"When ``Mx`` and ``My`` differ, the eigenmode has a different q in the x "
+"and the y direction."
+msgstr "``Mx`` と ``My`` が違う場合、固有モードは x 方向と y 方向で違う q を持つ。"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:251
+msgid ""
+"This way of getting the eigenmode out of a ray trace is general. It works"
+" for three-mirror and bow-tie cavities as well."
+msgstr "光線追跡から固有モードを取り出すこのやり方は一般的である。3枚鏡の共振器やボウタイ共振器でも同じように使える。"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:263
 msgid "The optical bench"
 msgstr "光学ベンチ"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:261
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:265
 msgid ""
-"The FP cavity sits 3 m from the laser, with the two lenses in between. "
-"Call the distance from the laser to the first lens (L1) d1, and from L1 "
-"to the second lens (L2) d2."
+"The cavity sits 3 m from the laser, with the two lenses in between. Call "
+"the distance from the laser to the first lens (L1) d1, and the distance "
+"from L1 to the second lens (L2) d2."
 msgstr ""
-"FP 共振器はレーザーから 3 m の位置にあり、その間に2枚のレンズが入る。レーザーから1枚目のレンズ（L1）までの距離を d1、L1 "
-"から2枚目のレンズ（L2）までを d2 と呼ぶ。"
+"共振器はレーザーから 3 m のところにあり、間に2枚のレンズが入る。レーザーから1枚目のレンズ (L1) までの距離を d1、L1 "
+"から2枚目のレンズ (L2) までの距離を d2 と呼ぶ。"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:263
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:267
 msgid "Laser -d1-> L1 -d2-> L2 -> ITM - ETM"
 msgstr "Laser -d1-> L1 -d2-> L2 -> ITM - ETM"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:351
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:355
 msgid "Moving the lenses: a contour map of the mode matching"
 msgstr "レンズを動かす: モードマッチングの等高線図"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:353
-msgid ""
-"Once a pair of focal lengths (f1, f2) is chosen, the remaining freedom is"
-" the two lens positions, d1 (laser to L1) and d2 (L1 to L2). This section"
-" does the following:"
-msgstr ""
-"焦点距離の組（f1, f2）を決めてしまうと、残る自由度はレンズ2枚の位置、d1（レーザーから L1）と d2（L1 から "
-"L2）である。この節では次のことを行う:"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:355
-msgid ""
-"Scan d1 and d2 on a 0.05 m grid, under the constraint d1 + d2 < 3.0 so "
-"that L2 stays short of the ITM"
-msgstr "d1 と d2 を 0.05 m 刻みで走査する。L2 が ITM の手前に収まるよう、d1 + d2 < 3.0 の制約を付ける"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:356
-msgid ""
-"At each grid point, place the lenses and run ``layout.trace()``, and pick"
-" out the beam transmitted through the ITM, ``ITM:t1``"
-msgstr "各格子点でレンズを配置して ``layout.trace()`` を実行し、ITM を透過したビーム ``ITM:t1`` を取り出す"
-
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:357
 msgid ""
-"Compare that beam's qx with the cavity eigenmode ``q_rt`` found in the "
-"previous section, using ``gauss.modeMatching()``. ``ITM:t1`` starts on "
-"the HR surface of the ITM and ``q_rt`` lives on the same surface, so the "
-"two can be compared directly. 1 is a perfect match"
+"Once you choose a pair of focal lengths (f1, f2), the freedom left is the"
+" two lens positions: d1 from the laser to L1, and d2 from L1 to L2. This "
+"section does four things:"
 msgstr ""
-"そのビームの qx を、前節で求めた共振器の固有モード ``q_rt`` と ``gauss.modeMatching()`` で比較する。\\ "
-"``ITM:t1`` は ITM の HR 面から始まり、\\ ``q_rt`` も同じ面上の値なので、そのまま比較できる。1 が完全一致である"
+"焦点距離の組 (f1, f2) を選ぶと、残る自由度はレンズ2枚の位置である。レーザーから L1 までの d1 と、L1 から L2 までの d2"
+" である。この節では4つのことを行う:"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:358
-msgid "Draw the result as a contour map over the d1-d2 plane"
-msgstr "結果を d1-d2 平面上の等高線図として描く"
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:359
+msgid ""
+"Scan d1 and d2 on a 0.05 m grid, under the constraint d1 + d2 < 3.0, so "
+"that L2 stays short of the ITM"
+msgstr ""
+"d1 + d2 < 3.0 という制約のもとで、d1 と d2 を 0.05 m 刻みの格子で走査する。L2 が ITM "
+"の手前に留まるようにするためである"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:360
 msgid ""
-"The intended use: put focal lengths from your stock into f1, f2 at the "
-"top of the cell and re-run, looking for a pair that produces a bright "
-"region, meaning a placement with high matching. The map finds a starting "
-"point, and a candidate it turns up is pinned down by optimisation in a "
-"later section."
-msgstr ""
-"使い方としては、手持ちの在庫の焦点距離をセル先頭の f1、f2 "
-"に入れて再実行し、明るい領域（マッチングの高い配置）ができる組を探す。等高線図は出発点を見つけるためのもので、そこで見つかった候補は後の節の最適化で詰める。"
+"At each grid point, place the lenses, run ``layout.trace()``, and pick "
+"out the beam transmitted through the ITM, ``ITM:t1``"
+msgstr "各格子点でレンズを配置し、\\ ``layout.trace()`` を実行し、ITM を透過したビーム ``ITM:t1`` を取り出す"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:471
-msgid "Speeding it up: parallelising the scan"
-msgstr "速くする: 走査を並列化する"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:473
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:361
 msgid ""
-"The scan above calls ``layout.trace()`` once per grid point, which takes "
-"some ten seconds on the 0.05 m grid (about 1600 points). If the map is to"
-" be redrawn many times while changing lenses, joblib can spread the work "
-"over every CPU core for a several-fold speedup (measured on a 20-core "
-"machine: 10.6 s to 1.7 s, with results identical to the serial scan)."
+"Compare the qx of that beam with the cavity eigenmode ``q_rt`` from the "
+"previous section, using ``gauss.modeMatching()``. ``ITM:t1`` starts on "
+"the HR surface of the ITM, and ``q_rt`` lives on the same surface, so the"
+" two can be compared directly. 1 is a perfect match"
 msgstr ""
-"上の走査は格子点ごとに ``layout.trace()`` を呼ぶので、0.05 m 刻み（約 1600 "
-"点）で10秒ほどかかる。レンズを替えながら何度も描き直すなら、joblib で全 CPU コアに配ると数倍速くなる（20 コアのマシンでの実測で "
-"10.6 秒から 1.7 秒。結果は逐次の走査と一致する）。"
+"そのビームの qx を、前節で求めた共振器の固有モード ``q_rt`` と ``gauss.modeMatching()`` で比較する。\\ "
+"``ITM:t1`` は ITM の HR 面から始まり、\\ ``q_rt`` も同じ面の上にあるので、そのまま比べられる。1 が完全一致である"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:362
+msgid "Draw the result as a contour map over the d1-d2 plane"
+msgstr "結果を d1-d2 平面上の等高線図として描く"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:364
+msgid ""
+"How to use this: put focal lengths from your stock into f1 and f2 at the "
+"top of the cell and run it again. Look for a pair that produces a bright "
+"region, which means a placement with high matching. The map gives you a "
+"starting point, and a later section pins that candidate down by "
+"optimisation."
+msgstr ""
+"使い方はこうである。セルの先頭の f1 と f2 "
+"に手持ちの焦点距離を入れて、もう一度実行する。明るい領域ができる組を探す。それがマッチングの高い配置である。この図は出発点を与える。あとの節で、その候補を最適化によって詰める。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:475
-msgid "Three points:"
-msgstr "3点だけ注意がある:"
+msgid "Speeding it up: running the scan in parallel"
+msgstr "高速化: 走査を並列で走らせる"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:477
 msgid ""
-"In a notebook on Windows the standard ``multiprocessing`` cannot ship "
-"functions defined in the notebook to its workers. **joblib** (the loky "
-"backend) carries the function itself, so the code can be written as it "
-"reads"
+"The scan above calls ``layout.trace()`` once per grid point. On the 0.05 "
+"m grid that is about 1600 points and takes some ten seconds. If you "
+"redraw the map many times while trying different lenses, joblib can "
+"spread the work over every CPU core. On a 20-core machine this took the "
+"scan from 10.6 s to 1.7 s, and the results were identical to the serial "
+"scan."
 msgstr ""
-"Windows の notebook では、標準の ``multiprocessing`` は notebook "
-"内で定義した関数をワーカーへ送れない。\\ **joblib**\\ （loky "
-"バックエンド）は関数そのものを運ぶので、コードを読んだとおりに書ける"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:478
-msgid ""
-"Each worker builds **its own private bench** in ``build_bench()``, so no "
-"objects are shared between processes. The scan therefore never touches "
-"this notebook's ``layout`` or its viewer"
-msgstr ""
-"各ワーカーは ``build_bench()`` で\\ **自分専用のベンチ**\\ "
-"を組むので、プロセス間でオブジェクトを共有しない。おかげで走査は、この notebook の ``layout`` にもそのビューアにも触らない"
+"上の走査は、格子点ごとに ``layout.trace()`` を1回呼ぶ。0.05 m "
+"刻みの格子ではおよそ1600点あり、10秒ほどかかる。レンズを変えながら図を何度も描き直すなら、joblib で全ての CPU "
+"コアに仕事を分けられる。20コアのマシンでは、この走査が 10.6 秒から 1.7 秒になり、結果は逐次版と完全に一致した。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:479
-msgid ""
-"The unit of parallel work is **one column of the map** (``scan_row``), "
-"not one point. Handed out point by point, the interprocess overhead would"
-" beat the computation"
-msgstr ""
-"並列の単位は、1点ではなく\\ **図の1列**\\ （\\ ``scan_row``\\ "
-"）である。1点ずつ配ると、プロセス間のやり取りのほうが計算より重くなってしまう"
+msgid "Three points about the code below:"
+msgstr "下のコードについて3点:"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:481
 msgid ""
-"The worker processes take a few seconds to start the first time and are "
-"reused by later runs of the cell, so the second scan onwards, with a "
-"different f1, f2, is the fastest."
-msgstr "ワーカープロセスは初回だけ起動に数秒かかり、以後はセルを実行し直しても再利用される。だから f1、f2 を替えた2回目以降の走査がいちばん速い。"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:616
-msgid "Pinning down d1, d2 by optimisation"
-msgstr "d1、d2 を最適化で詰める"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:618
-msgid ""
-"The contour map is a 0.05 m grid, enough to find a starting point; from "
-"here the work goes to an optimiser. Starting from ``d1_init``, "
-"``d2_init`` read off the map, minimise 1 - matching with "
-"``scipy.optimize.minimize`` (Nelder-Mead)."
+"In a notebook on Windows, the standard ``multiprocessing`` cannot send "
+"functions defined in the notebook to its workers. **joblib** (the loky "
+"backend) sends the function itself, so you can write the code the way it "
+"reads"
 msgstr ""
-"等高線図は 0.05 m 刻みで、出発点を見つけるには十分である。ここから先は最適化に任せる。図から読んだ ``d1_init``\\ 、\\ "
-"``d2_init`` を初期値に、\\ ``scipy.optimize.minimize``\\ （Nelder-Mead）で 1 - "
-"matching を最小化する。"
+"Windows の notebook では、標準の ``multiprocessing`` は notebook "
+"の中で定義した関数をワーカーへ送れない。\\ **joblib**\\ （loky "
+"バックエンド）は関数そのものを送るので、読んだとおりのコードを書ける"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:482
+msgid ""
+"Each worker builds **its own private bench** in ``build_bench()``, so no "
+"objects are shared between processes. The scan therefore never touches "
+"the ``layout`` of this notebook or its viewer"
+msgstr ""
+"各ワーカーは ``build_bench()`` で\\ **自分専用のベンチ**\\ "
+"を組む。だからプロセス間でオブジェクトを共有しない。走査がこの notebook の ``layout`` やそのビューアに触ることは無い"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:483
+msgid ""
+"The unit of parallel work is **one column of the map** (``scan_row``), "
+"not one point. Handed out point by point, the cost of moving data between"
+" the processes would be larger than the computation"
+msgstr ""
+"並列の作業単位は1点ではなく、\\ **図の1列**\\ （\\ ``scan_row``\\ "
+"）である。1点ずつ配ると、プロセス間でデータを運ぶ費用のほうが計算より大きくなる"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:485
+msgid ""
+"The worker processes take a few seconds to start the first time, and "
+"later runs of the cell reuse them. The second scan and the ones after it "
+"are therefore the fastest."
+msgstr "ワーカープロセスは、最初の1回だけ起動に数秒かかり、以降のセル実行では再利用される。だから2回目以降の走査がいちばん速い。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:620
-msgid ""
-"The cost function reuses ``matching()`` from above. One trace takes a few"
-" milliseconds and the optimisation needs of the order of a hundred "
-"evaluations, so no parallelism is needed here"
-msgstr "コスト関数は上の ``matching()`` を使い回す。1回のトレースは数ミリ秒で、最適化に要る評価回数は百程度なので、ここでは並列化は要らない"
-
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:621
-msgid ""
-"Nelder-Mead uses no derivatives, which suits a cost that comes out of a "
-"trace and has no gradient formula"
-msgstr "Nelder-Mead は微分を使わない。トレースから出てきて勾配の式が無いコストに向いている"
+msgid "Pinning down d1 and d2 by optimisation"
+msgstr "最適化で d1 と d2 を詰める"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:622
 msgid ""
-"The constraints (positive lens separations, L2 short of the ITM) are a "
-"penalty: outside them the cost is the worst value, 1. **If the optimum "
-"comes back pinned to a constraint boundary**, that lens pair has no true "
-"optimum inside the constraints, and a different pair of focal lengths is "
-"the better move"
+"The contour map uses a 0.05 m grid, which is enough to find a starting "
+"point. From here an optimiser takes over. Start from the ``d1_init``, "
+"``d2_init`` you read off the map, and minimise 1 - matching with "
+"``scipy.optimize.minimize`` (Nelder-Mead)."
 msgstr ""
-"制約（レンズ間隔が正、L2 が ITM の手前）はペナルティで表す。制約の外ではコストを最悪値の 1 にする。\\ "
-"**最適解が制約の境界に張り付いて返ってきたら**\\ "
-"、そのレンズの組には制約の内側に真の最適点が無いということなので、焦点距離の組を替えたほうがよい"
+"等高線図は 0.05 m 刻みで、出発点を見つけるには十分である。ここから先は最適化に任せる。図から読み取った ``d1_init``\\ 、\\"
+" ``d2_init`` を初期値として、1 - matching を ``scipy.optimize.minimize``\\ "
+"（Nelder-Mead）で最小化する。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:624
 msgid ""
-"An example: with f1 = 500 mm, f2 = -500 mm the map is bright around d1 = "
-"1.4, d2 = 0.4. Started there, 64 traces reach matching = 1.000000, so "
+"The cost function reuses ``matching()`` from above. One trace takes a few"
+" milliseconds and the optimisation needs about a hundred evaluations, so "
+"it does not need to run in parallel"
+msgstr ""
+"コスト関数は上の ``matching()`` "
+"をそのまま使う。1回のトレースは数ミリ秒で、最適化に必要な評価は百回程度なので、並列で走らせる必要は無い"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:625
+msgid ""
+"Nelder-Mead uses no derivatives. That suits a cost which comes out of a "
+"trace and has no formula for its gradient"
+msgstr "Nelder-Mead は微分を使わない。トレースから出てくる、勾配の式が無いコストに向いている"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:626
+msgid ""
+"The constraints (positive lens separations, L2 short of the ITM) are a "
+"penalty: outside them the cost is the worst value, 1. **If the optimum "
+"comes back sitting on a constraint boundary**, this pair of lenses has no"
+" true optimum inside the constraints. Try a different pair of focal "
+"lengths"
+msgstr ""
+"制約（レンズ間隔が正であること、L2 が ITM の手前にあること）はペナルティで表す。制約の外ではコストを最悪値の 1 にする。\\ "
+"**最適解が制約の境界に張り付いて返ってきた場合**\\ 、そのレンズの組には制約の内側に真の最適解が無い。別の焦点距離の組を試すこと"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:628
+msgid ""
+"An example: with f1 = 500 mm and f2 = -500 mm the map is bright around d1"
+" = 1.4, d2 = 0.4. Started there, 64 traces reach matching = 1.000000, so "
 "this pair can be matched perfectly by positioning alone."
 msgstr ""
-"例として、f1 = 500 mm、f2 = -500 mm では d1 = 1.4、d2 = 0.4 のあたりが明るい。そこから始めると 64 "
-"回のトレースで matching = 1.000000 に達する。この組は配置だけで完全にマッチさせられる。"
+"例を挙げる。f1 = 500 mm、f2 = -500 mm では、図は d1 = 1.4、d2 = 0.4 "
+"のあたりが明るい。そこから始めると、64回のトレースで matching = 1.000000 "
+"に達する。この組は、配置だけで完全にマッチングできる。"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:706
-msgid "Checking in the GUI"
-msgstr "GUI で確認する"
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:710
+msgid "Checking the result in the viewer"
+msgstr "結果をビューアで確認する"
 
-#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:708
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:712
 msgid ""
-"Pick a beam near the ITM surface and confirm that its ROC is close to 2.5"
-" m, the ROC of the ITM. Do the same on the ETM: the mirror's ROC and the "
-"beam's ROC agree there too. (A beam that ends on a surface sits under the"
-" element itself; clicking the same spot repeatedly steps from the element"
-" to the beams under it.)"
+"Click a beam near the ITM surface and confirm that its ROC is close to "
+"2.5 m, the ROC of the ITM. Do the same on the ETM: the ROC of the mirror "
+"and the ROC of the beam agree there too."
 msgstr ""
-"ITM の面の近くでビームを選び、その曲率半径が ITM の曲率半径 2.5 m に近いことを確認する。ETM "
-"でも同じで、そこでも鏡の曲率半径とビームの曲率半径が一致している。（面で終わるビームは素子自身の下に隠れるので、同じ場所を繰り返しクリックすると、素子からその下のビームへと順に切り替わる。）"
+"ITM の面の近くでビームをクリックし、その ROC が ITM の ROC である 2.5 m に近いことを確かめる。ETM "
+"でも同じことをする。そちらでも、ミラーの ROC とビームの ROC が一致している。"
+
+#: ../../../gtrace/docs/source/tutorial/modematching.ipynb:714
+msgid ""
+"A beam that ends on a surface sits under the element itself. Click the "
+"same spot again to step from the element to the beams under it."
+msgstr "面で終わるビームは、素子そのものの下にある。同じ場所をもう一度クリックすると、素子からその下のビームへ進む。"
+
+#~ msgid "Three points:"
+#~ msgstr "3点だけ注意がある:"
 

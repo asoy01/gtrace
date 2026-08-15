@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 23:19+0900\n"
+"POT-Creation-Date: 2026-08-15 17:59+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -22,134 +22,378 @@ msgid "Basic Concepts"
 msgstr "基本概念"
 
 #: ../../../gtrace/docs/source/basic_concepts.rst:4
-msgid "In this section, basic concepts of gtrace will be introduced."
-msgstr "この節では gtrace の基本概念を紹介する。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:7
-msgid "2D plane"
-msgstr "2次元平面"
+msgid ""
+"This page describes the objects a layout is made of: the plane they sit "
+"on, the beams, and the elements the beams hit. :doc:`intro` shows how "
+"they work together. This page says what each one is."
+msgstr ""
+"このページは、レイアウトを構成するオブジェクトを説明する。それらが載る平面、ビーム、そしてビームが当たる素子である。\\ :doc:`intro`"
+" は、それらがどう組み合わさるかを示す。このページは、それぞれが何であるかを述べる。"
 
 #: ../../../gtrace/docs/source/basic_concepts.rst:9
-msgid ""
-"In gtrace world, an optical system will be placed on a two dimentional "
-"plane. A location on the plane is specified by a set of Cartesian "
-"coordinates (x, y). This just a normal x-y plane. The origin of the axes "
-"is at the lower left of the plane. The X-axis extends horizontally to the"
-" right. The Y-axis goes up vertically. Nothing more to add here."
-msgstr ""
-"gtrace の世界では、光学系は2次元平面の上に置かれる。平面上の位置はデカルト座標 (x, y) で指定する。ごく普通の x-y "
-"平面である。座標軸の原点は平面の左下にあり、X 軸は水平に右へ、Y 軸は垂直に上へ伸びる。それ以上のことは何もない。"
+msgid "The plane"
+msgstr "平面"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:12
-msgid "Direction"
-msgstr "方向"
+#: ../../../gtrace/docs/source/basic_concepts.rst:11
+msgid ""
+"An optical system lies on a two dimensional plane, and a place on it is a"
+" pair of Cartesian coordinates (x, y). The x axis runs to the right and "
+"the y axis upward. You decide where to put the origin. Coordinates on "
+"either side of it are equally good. A layout can run from x = -3 m to x ="
+" +3 m, if that is where its elements are."
+msgstr ""
+"光学系は2次元平面の上にある。平面上の位置は直交座標 (x, y) の組で表す。x 軸は右向き、y "
+"軸は上向きである。原点はどこに置いてもよい。原点のどちら側の座標も、同じように使える。素子がそこにあるなら、レイアウトが x = -3 m から "
+"x = +3 m まで広がっていてもよい。"
 
 #: ../../../gtrace/docs/source/basic_concepts.rst:17
 msgid ""
-"While working with optical layouts, one often has to specify a direction "
-"in the 2D plane such as the orientation of a mirror or the propagation "
-"direction of a beam. In gtrace, in most cases, a direction can be "
-"specified in two ways. One way is to use an angle measured from the "
-"X-axis in counter clockwise (``dirAngle`` in the figure above). The other"
-" way is to use a 2D vector of length 1. If a direction can be specified "
-"either way, you only have to specify it in one of those methods. For "
-"example, the :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` class has"
-" an attribute called ``dirVect``. It holds a 2D vector in the form of "
-"``numpy.Array``. The :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` "
-"class also has an attribute called ``dirAngle``, which holds the angle of"
-" the beam propagation direction measured from the X-axis in radian.  When"
-" one of the two attributes is changed, the other is updated automatically"
-" to be consistent with the modification. Therefore, you don't have to "
-"worry about the consistency. For the direction vector, it is also "
-"automatically normalized. Therefore, you can assign it a vector of any "
-"norm."
-msgstr ""
-"光学レイアウトを扱っていると、ミラーの向きやビームの伝搬方向など、2次元平面内の方向を指定する場面が多い。gtrace "
-"では、方向はたいてい2通りに指定できる。1つは X 軸から反時計回りに測った角度（上図の ``dirAngle``\\ "
-"）、もう1つは長さ1の2次元ベクトルである。どちらでも指定できる場合、片方を指定すれば足りる。たとえば "
-":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` クラスには ``dirVect`` "
-"という属性があり、\\ ``numpy.Array`` の形で2次元ベクトルを保持する。同じ "
-":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` クラスには ``dirAngle`` "
-"という属性もあり、ビームの伝搬方向を X "
-"軸から測った角度をラジアンで保持する。一方を変えるともう一方が自動的に更新されるので、整合性を気にする必要はない。方向ベクトルは自動的に正規化されるので、どんな長さのベクトルを代入してもよい。"
+"Lengths are in metres and angles are in radians. ``gtrace.unit`` holds "
+"multipliers so that you never write either in full::"
+msgstr "長さはメートル、角度はラジアンである。\\ ``gtrace.unit`` が倍率を持っているので、どちらも数値をそのまま書かずに済む::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:21
+#: ../../../gtrace/docs/source/basic_concepts.rst:27
+msgid "Direction"
+msgstr "方向"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:32
+msgid ""
+"A direction is the way a mirror faces, or the way a beam travels. You can"
+" give it in two ways: as an angle measured from the x axis "
+"counterclockwise, or as a 2D vector. Every object that has a direction "
+"has both. Setting one updates the other::"
+msgstr ""
+"方向とは、ミラーが向いている向きや、ビームが進む向きのことである。与え方は2通りある。x "
+"軸から反時計回りに測った角度で与えるか、2次元ベクトルで与えるかである。方向を持つオブジェクトは、その両方を持つ。片方を設定すると、もう片方が更新される::"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:47
+msgid ""
+"So you set whichever is convenient and read whichever is convenient. A "
+":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` holds ``dirAngle`` and"
+" ``dirVect``; a :py:class:`Mirror<gtrace.optcomp.Mirror>` holds "
+"``normAngleHR`` and ``normVectHR`` for the normal of its front face."
+msgstr ""
+"つまり、都合の良いほうで設定し、都合の良いほうで読めばよい。\\ "
+":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` は ``dirAngle`` と "
+"``dirVect`` を持つ。\\ :py:class:`Mirror<gtrace.optcomp.Mirror>` は、前面の法線について "
+"``normAngleHR`` と ``normVectHR`` を持つ。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:53
 msgid "Beam"
 msgstr "ビーム"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:26
+#: ../../../gtrace/docs/source/basic_concepts.rst:58
 msgid ""
-"A Gaussian beam is represented by an instance of "
-":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` class. The most "
-"fundamental properties of a beam is its position (``pos``) and the "
-"direction of propagation (``dirVect`` or ``dirAngle``)."
+"A Gaussian beam is an instance of "
+":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>`. It starts at ``pos``,"
+" travels along ``dirVect``, and is drawn for ``length`` metres::"
 msgstr ""
 "ガウシアンビームは :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` "
-"クラスのインスタンスとして表現される。ビームの最も基本的な性質は、位置（\\ ``pos``\\ ）と伝搬方向（\\ ``dirVect`` "
-"または ``dirAngle``\\ ）である。"
+"のインスタンスである。\\ ``pos`` から始まり、\\ ``dirVect`` の方向へ進み、\\ ``length`` "
+"メートルぶん描かれる::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:29
+#: ../../../gtrace/docs/source/basic_concepts.rst:65
+msgid ""
+"Its shape is the complex beam parameter q at the point it starts from. "
+"The x and y directions of the cross section are carried separately, as "
+"``qx`` and ``qy``. They do not stay equal. A tilted or wedged surface "
+"acts differently in the plane of incidence and out of it, so a beam that "
+"starts round does not stay round. x is the direction in the plane of the "
+"drawing, and y is out of it. ``q`` on its own reports the best matching "
+"circular mode."
+msgstr ""
+"ビームの形は、出発点における複素ビームパラメータ q である。断面の x 方向と y 方向は ``qx`` と ``qy`` "
+"として別々に持つ。この2つは等しいままではない。傾いた面やウェッジのある面は、入射面内と面外とで違う働きをするので、丸く出発したビームは丸いままではない。x"
+" は図の面内の方向、y はその面外の方向である。\\ ``q`` 単独では、最もよく一致する円形モードを返す。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:73
+msgid "The rest of what a beam carries follows from those:"
+msgstr "ビームが持つ残りの情報は、これらから導かれる:"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:79
+#: ../../../gtrace/docs/source/basic_concepts.rst:121
+msgid "Attribute"
+msgstr "属性"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:80
+#: ../../../gtrace/docs/source/basic_concepts.rst:122
+msgid "Meaning"
+msgstr "意味"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:81
+msgid "``wx``, ``wy``"
+msgstr "``wx``, ``wy``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:82
+msgid "The beam radius at ``pos``, computed from ``qx`` and ``qy``."
+msgstr "``pos`` でのビーム半径。\\ ``qx`` と ``qy`` から計算される。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:83
+msgid "``wl``, ``n``"
+msgstr "``wl``, ``n``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:84
+msgid ""
+"Wavelength in vacuum, and the refractive index of the medium the beam is "
+"travelling through."
+msgstr "真空中の波長と、ビームが進んでいる媒質の屈折率。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:86
+msgid "``P``"
+msgstr "``P``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:87
+msgid "Power."
+msgstr "パワー。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:88
+msgid "``optDist``"
+msgstr "``optDist``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:89
+msgid "Optical distance accumulated since the source, glass included."
+msgstr "光源からの積算光路長。ガラス中も含む。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:90
+msgid "``Gouyx``, ``Gouyy``"
+msgstr "``Gouyx``, ``Gouyy``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:91
+msgid "Accumulated Gouy phase."
+msgstr "積算した Gouy 位相。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:92
+msgid "``Mx``, ``My``"
+msgstr "``Mx``, ``My``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:93
+msgid "The product of every ABCD matrix applied to the beam so far."
+msgstr "そのビームにこれまで適用された ABCD 行列の積。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:94
+msgid "``name``, ``layer``"
+msgstr "``name``, ``layer``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:95
+msgid "What the beam is called, and which DXF layer it is drawn on."
+msgstr "ビームの名前と、描画先の DXF レイヤー。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:97
+msgid ""
+":py:meth:`waist()<gtrace.beam.GaussianBeam.waist>` reports where the "
+"waist of the beam is and how big it is, measured from ``pos``. A negative"
+" position means the beam has already passed the waist. :doc:`propagation`"
+" covers how to move a beam, and how to hit an element with it."
+msgstr ""
+":py:meth:`waist()<gtrace.beam.GaussianBeam.waist>` "
+"は、ビームのウェストがどこにあり、どれだけの大きさかを ``pos`` から測って返す。位置が負なら、ビームはすでにウェストを通り過ぎている。\\"
+" :doc:`propagation` は、ビームの動かし方と、素子への当て方を扱う。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:104
 msgid "Mirror"
 msgstr "ミラー"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:34
+#: ../../../gtrace/docs/source/basic_concepts.rst:109
 msgid ""
-"Mirror is a basic optical component in gtrace. Even though the name is "
-"\\\"Mirror\\\", it can represent a transparent optical window, a prism, a"
-" lens, a light absorbing plate (like black glass) and so on. A mirror "
-"object has two surfaces, called HR and AR. These surfaces can be flat or "
-"curved. Curved surfaces are spherical. If you need a cylindrical surface,"
-" use :py:class:`CyMirror<gtrace.optcomp.CyMirror>` instead, described "
-"under :ref:`cylindrical-surfaces` below. For a lens, "
-":py:class:`Lens<gtrace.optcomp.Lens>` is the same substrate ordered by "
-"its focal length instead of by the radii of its two faces."
+":py:class:`Mirror<gtrace.optcomp.Mirror>` is the basic optical element. "
+"The name is narrower than what the class does: it also serves for a "
+"transparent window, a prism, a lens, or a light absorbing plate such as "
+"black glass. In every case it is a piece of substrate with two surfaces."
 msgstr ""
-"Mirror は gtrace の基本的な光学素子である。名前は \\\"Mirror\\\" "
-"だが、透明な光学窓・プリズム・レンズ・光を吸収する板（黒ガラスなど）なども表現できる。Mirror オブジェクトは HR と AR "
-"と呼ばれる2つの面を持ち、それぞれ平面にも曲面にもできる。曲面は球面である。シリンドリカル面が必要なら、代わりに "
-":py:class:`CyMirror<gtrace.optcomp.CyMirror>` を使う（下の :ref:`cylindrical-"
-"surfaces` で説明する）。レンズには :py:class:`Lens<gtrace.optcomp.Lens>` "
+":py:class:`Mirror<gtrace.optcomp.Mirror>` "
+"は基本の光学素子である。名前はクラスの働きより狭い。透明な光学窓・プリズム・レンズ・黒ガラスのような光を吸収する板も、これで表せる。いずれの場合も、2つの面を持つ1枚の基板である。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:114
+msgid ""
+"The front surface is called HR and the back one AR, after the coatings "
+"they usually carry. Each has its own position, curvature and "
+"reflectivity:"
+msgstr "前面を HR、背面を AR と呼ぶ。普通そこに載せるコーティングから来た名前である。それぞれが独自の位置・曲率・反射率を持つ:"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:123
+msgid "``HRcenter``, ``ARcenter``"
+msgstr "``HRcenter``, ``ARcenter``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:124
+msgid ""
+"The apex of each face, where it crosses the optical axis. These are the "
+"points you place an element by."
+msgstr "各面の頂点。面が光軸と交わる点である。素子を配置するときは、この点を指定する。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:126
+msgid "``normAngleHR``, ``normVectHR``"
+msgstr "``normAngleHR``, ``normVectHR``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:127
+msgid ""
+"Which way the front face points. The back face follows it, turned by "
+"``wedgeAngle``."
+msgstr "前面が向く方向。背面は ``wedgeAngle`` だけ回した向きで、それに従う。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:129
+msgid "``inv_ROC_HR``, ``inv_ROC_AR``"
+msgstr "``inv_ROC_HR``, ``inv_ROC_AR``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:130
+msgid ""
+"Curvature, held as the *inverse* radius, so a flat surface is zero and "
+"needs no special case. The viewer shows you the radius itself and "
+"converts on the way in and out."
+msgstr ""
+"曲率。半径の\\ *逆数*\\ "
+"として保持する。こうすると平面はゼロになり、特別扱いが要らない。ビューアは半径そのものを表示し、出入りのところで変換する。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:133
+msgid "``diameter``, ``thickness``"
+msgstr "``diameter``, ``thickness``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:134
+msgid "The aperture, and the thickness of the substrate measured at the rim."
+msgstr "口径と、縁で測った基板の厚み。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:135
+msgid "``Refl_HR``, ``Trans_HR``, ``Refl_AR``, ``Trans_AR``"
+msgstr "``Refl_HR``, ``Trans_HR``, ``Refl_AR``, ``Trans_AR``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:136
+msgid ""
+"The fraction of the power each face reflects and transmits. A beam's "
+"power is multiplied by these as it goes. They are set independently, and "
+"gtrace does not require a pair of them to add up to 1."
+msgstr ""
+"各面が反射・透過するパワーの割合。ビームのパワーは、通過のたびにこれらを掛けられる。それぞれ独立に設定でき、gtrace "
+"は対になる2つの和が1になることを要求しない。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:139
+msgid "``n``"
+msgstr "``n``"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:140
+msgid "Refractive index of the substrate."
+msgstr "基板の屈折率。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:142
+msgid ""
+"Curved surfaces are spherical. For a cylindrical one, use "
+":py:class:`CyMirror<gtrace.optcomp.CyMirror>`, described under :ref"
+":`cylindrical-surfaces`. For a lens, "
+":py:class:`Lens<gtrace.optcomp.Lens>` is the same substrate ordered by "
+"focal length instead of by the radii of its two faces."
+msgstr ""
+"曲面は球面である。シリンドリカル面が必要なら :py:class:`CyMirror<gtrace.optcomp.CyMirror>` "
+"を使う。\\ :ref:`cylindrical-surfaces` で説明する。レンズには "
+":py:class:`Lens<gtrace.optcomp.Lens>` "
 "がある。これは同じ基板を、2面の曲率半径ではなく焦点距離で注文するものである。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:36
-msgid "The parameters of a Mirror object are shown in the figure above."
-msgstr "Mirror オブジェクトのパラメータを上の図に示す。"
+#: ../../../gtrace/docs/source/basic_concepts.rst:149
+msgid "Lens"
+msgstr "レンズ"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:38
+#: ../../../gtrace/docs/source/basic_concepts.rst:151
 msgid ""
-"The curvature of a surface is held as its *inverse* radius, "
-"``inv_ROC_HR`` and ``inv_ROC_AR``, so a flat surface is zero and needs no"
-" special case. The GUI viewer shows you the radius itself and converts on"
-" the way in and out."
+"A lens is a substrate whose two faces both refract, which a "
+":py:class:`Mirror<gtrace.optcomp.Mirror>` with two curved surfaces and a "
+"low reflectivity already is. What :py:class:`Lens<gtrace.optcomp.Lens>` "
+"adds is the way you order one: by focal length::"
 msgstr ""
-"面の曲率は半径の\\ *逆数*\\ （\\ ``inv_ROC_HR`` と ``inv_ROC_AR``\\ "
-"）として保持される。こうすると平面はゼロになり、特別扱いが要らない。GUI ビューアは半径そのものを表示し、出入りのところで変換する。"
+"レンズとは両面が屈折する基板である。2つの曲面を持ち反射率の低い "
+":py:class:`Mirror<gtrace.optcomp.Mirror>` は、すでにそれである。\\ "
+":py:class:`Lens<gtrace.optcomp.Lens>` が加えるのは注文の仕方で、焦点距離で指定できる::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:43
-msgid "Changing a curvature"
-msgstr "曲率を変える"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:45
+#: ../../../gtrace/docs/source/basic_concepts.rst:164
 msgid ""
-"A curved surface is an arc, and an arc has two natural reference points: "
-"the apex, where it crosses the optical axis, and the centre of the chord "
-"it spans, out at the rim. They lie a *sagitta* apart, and the sagitta "
+"``shape`` is spelt the way a catalogue spells it: the front face first, "
+"the back face second. ``'plano-convex'`` and ``'convex-plano'`` are "
+"therefore the same lens, turned around. If you leave ``shape`` out, you "
+"get an equiconvex lens for a positive focal length and an equiconcave one"
+" for a negative focal length. Asking for a shape that contradicts the "
+"sign of the focal length raises an error."
+msgstr ""
+"``shape`` の綴り方はカタログと同じで、前面が先、背面が後である。したがって ``'plano-convex'`` と "
+"``'convex-plano'`` は、同じレンズを裏返しただけである。\\ ``shape`` "
+"を省略すると、焦点距離が正なら等凸、負なら等凹になる。焦点距離の符号と矛盾する形を求めるとエラーになる。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:171
+msgid ""
+"The radii are solved as a *thick* lens, and gtrace then traces the same "
+"thing: the beam refracts at both faces, with the substrate in between. "
+"Radii taken from the thin lens formula would be a few parts in a thousand"
+" off, and much further off for a short focal length. ``thickness`` is the"
+" :py:class:`Mirror<gtrace.optcomp.Mirror>` thickness, measured between "
+"the two chord planes, so it is the thickness at the rim. "
+"``center_thickness`` reports the distance between the apexes that a "
+"catalogue would quote."
+msgstr ""
+"曲率半径は\\ *厚肉*\\ レンズとして解く。gtrace "
+"が実際に追跡するのもそれで、ビームは間に基板を挟んで両面で屈折する。薄肉レンズの式から取った半径では千分の数ほどずれ、焦点距離が短ければもっと大きくずれる。\\"
+" ``thickness`` は :py:class:`Mirror<gtrace.optcomp.Mirror>` "
+"の厚み、つまり2つの弦平面の間で測った縁の厚みである。カタログが載せる頂点間の距離は ``center_thickness`` が返す。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:180
+msgid ""
+"gtrace refuses a lens that cannot be made out of the blank it was given, "
+"and the message carries the number you need. Three cases are refused: two"
+" concave faces that would meet in the middle, a face steeper than its own"
+" aperture, and a focal length that no substrate of that thickness can "
+"reach."
+msgstr ""
+"与えられた素材から作れないレンズは、gtrace "
+"が拒否する。メッセージには必要な数値が入る。拒否されるのは3つの場合である。中央で交わってしまう2つの凹面、口径より急な面、そしてその厚みの基板では届かない焦点距離である。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:185
+msgid ""
+"Both faces reflect nothing by default, so a lens makes no ghost beams. A "
+"real lens does reflect. But several lenses together produce so many faint"
+" ghosts that the picture becomes unreadable and the trace becomes slow. "
+"Most of the time a lens is in a layout to bend the main beam. Ask for the"
+" ghosts when you want them::"
+msgstr "既定では両面とも反射しないので、レンズはゴーストビームを作らない。実物のレンズは反射する。しかしレンズが数枚あると、微弱なゴーストが大量に生まれて図が読めなくなり、トレースも遅くなる。それに、レンズをレイアウトに置く目的は、たいてい主ビームを曲げることである。ゴーストが必要なときは、次のように頼む::"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:194
+msgid ""
+"Those ghosts are counted as ghosts. A reflection off either face of a "
+"lens raises the stray order of the beam. A reflection off the HR face of "
+"a mirror does not. See :ref:`stray-order`."
+msgstr ""
+"それらのゴーストは、ゴーストとして数える。レンズのどちらの面での反射も、ビームの迷光次数を上げる。ミラーの HR 面での反射は上げない。\\ "
+":ref:`stray-order` を参照。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:198
+msgid ""
+"The focal length is not stored. Reading ``f`` computes it from the "
+"curvatures, the thickness and the index as they stand. Assigning to it "
+"reshapes the faces to match, keeping the shape of the lens and leaving it"
+" where it is. Tuning a lens against a mode matching target is therefore a"
+" loop::"
+msgstr ""
+"焦点距離は保存されない。\\ ``f`` "
+"を読むと、その時点の曲率・厚み・屈折率から計算される。そこに代入すると、それに合うように面が作り直される。レンズの形は保たれ、位置も動かない。だから、モードマッチングの目標に向けてレンズを調整する作業はループになる::"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:212
+msgid "Moving and reshaping an element"
+msgstr "素子を動かす・形を変える"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:214
+msgid ""
+"A curved surface is an arc. An arc has two natural reference points: the "
+"apex, where it crosses the optical axis, and the centre of the chord it "
+"spans, out at the rim. They lie a *sagitta* apart, and the sagitta "
 "depends on the radius. ``HRcenter`` is the apex and ``HRcenterC`` the "
 "chord centre; ``ARcenter`` and ``ARcenterC`` are the same pair on the "
 "back face. The thickness of the substrate is measured between the two "
 "chord planes, so it is the thickness at the rim."
 msgstr ""
-"曲面は円弧であり、円弧には自然な基準点が2つある。光軸と交わる頂点と、縁まで張った弦の中心である。両者は\\ *サジッタ*\\ "
+"曲面は円弧である。円弧には自然な基準点が2つある。光軸と交わる頂点と、縁まで張った弦の中心である。両者は\\ *サジッタ*\\ "
 "（矢高）だけ離れており、サジッタは半径で決まる。\\ ``HRcenter`` が頂点、\\ ``HRcenterC`` が弦の中心で、\\ "
-"``ARcenter`` と ``ARcenterC`` は裏面での同じ対である。基板の厚みは2つの弦平面の間で測るので、縁での厚みである。"
+"``ARcenter`` と ``ARcenterC`` は背面での同じ対である。基板の厚みは2つの弦平面の間で測るので、縁での厚みである。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:47
+#: ../../../gtrace/docs/source/basic_concepts.rst:222
 msgid ""
 "Assigning a new curvature therefore has to move one of the two points. "
 "Which one it should be depends on what you are doing::"
 msgstr "そのため、新しい曲率を代入すると、この2点のどちらかは動かざるをえない。どちらを動かすかは、何をしているかによる::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:51
+#: ../../../gtrace/docs/source/basic_concepts.rst:227
 msgid ""
 "By default the *apex stays put* and the substrate slides back behind it. "
 "This suits a reflective telescope, which is tuned by sweeping the radii "
@@ -161,7 +405,7 @@ msgstr ""
 "、基板がその後ろへ滑る。反射望遠鏡ではこれが望みの挙動である。この種の望遠鏡は、倍率を合わせるために鏡の曲率半径を掃引して調整する。レイアウトはビームスポットを"
 " HR 面の上に置いてあり、掃引の目的はビーム径を変えることで、ビームを動かすことではない::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:57
+#: ../../../gtrace/docs/source/basic_concepts.rst:237
 msgid ""
 "For an optics the beam passes *through*, that is the wrong choice. There "
 "is no spot on a surface to keep still, and what is bolted to the bench is"
@@ -171,7 +415,7 @@ msgstr ""
 "ビームが\\ *通り抜ける*\\ 素子では、これは適切でない。面の上に留めておくべきスポットは無く、ベンチに固定されているのは基板である。\\ "
 "``anchor_point`` を ``'center'`` にすると、基板の中心がその場に留まり、面のほうが動く::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:62
+#: ../../../gtrace/docs/source/basic_concepts.rst:245
 msgid ""
 ":py:class:`Lens<gtrace.optcomp.Lens>` defaults to ``'center'`` for this "
 "reason; :py:class:`Mirror<gtrace.optcomp.Mirror>` and "
@@ -181,7 +425,7 @@ msgstr ""
 ":py:class:`Mirror<gtrace.optcomp.Mirror>` と "
 ":py:class:`CyMirror<gtrace.optcomp.CyMirror>` の既定は ``'HRcenter'`` である。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:64
+#: ../../../gtrace/docs/source/basic_concepts.rst:249
 msgid ""
 "Either way the rest of the substrate follows. The far face, the sides and"
 " the centre are all recomputed, so the body stays closed and the tracer "
@@ -189,9 +433,9 @@ msgid ""
 "end of the sagitta is held fixed while that happens."
 msgstr "どちらの場合も基板の残りは追随する。反対側の面・側面・中心はすべて再計算されるので、基板は閉じた形のままで、トレーサと描画の位置も一致する。アンカーが決めるのは、その間サジッタのどちらの端を固定するかだけである。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:66
+#: ../../../gtrace/docs/source/basic_concepts.rst:254
 msgid ""
-"The anchor point is also what the optics *turns about*. Assigning "
+"The anchor point is also what the element *turns about*. Assigning "
 "``normAngleHR`` or ``normVectHR`` rotates the substrate rigidly about the"
 " anchor, and so does ``rotate()`` by default. A mirror pivots the apex of"
 " its HR face, so steering it does not walk the beam spot off it, which is"
@@ -201,13 +445,13 @@ msgid ""
 "``rotate(a, center=[x, y])`` a given point."
 msgstr ""
 "アンカー点は、素子が\\ *回転する支点*\\ でもある。\\ ``normAngleHR`` や ``normVectHR`` "
-"に代入すると基板はアンカーの回りに剛体回転し、\\ ``rotate()`` も既定でそう回す。ミラーは HR "
+"に代入すると、基板はアンカーの回りに剛体回転する。\\ ``rotate()`` も既定でそう回す。ミラーは HR "
 "面の頂点を支点に回るので、向きを振ってもビームスポットが面から外れない。\\ ``rotate()`` "
 "が昔からしてきた動作である。レンズは基板の中心を支点に回るので、回してもベンチの上を移動しない。\\ ``rotate(a, "
 "center=True)`` はアンカーが何であれ基板の中心回りに回し、\\ ``rotate(a, center=[x, y])`` "
 "は指定した点の回りに回す。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:68
+#: ../../../gtrace/docs/source/basic_concepts.rst:263
 msgid ""
 "Changing ``diameter`` goes through the same machinery, since the sagitta "
 "depends on the aperture as well as on the radius. Changing ``inv_ROC_AR``"
@@ -217,74 +461,11 @@ msgstr ""
 "``diameter`` の変更も同じ仕組みを通る。サジッタは半径だけでなく口径にも依存するからである。\\ ``inv_ROC_AR`` "
 "の変更は基板をまったく動かさない。裏面には留めておくべきスポットが無いので、弦平面はそのままで、頂点だけが動く。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:71
-msgid "Asking where the substrate is"
-msgstr "基板がどこにあるかを尋ねる"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:73
-msgid ""
-"Two methods answer questions about the body itself, not about a beam "
-"meeting it."
-msgstr "基板そのものについての問いに答えるメソッドが2つある。ビームが当たったときの話ではない。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:75
-msgid ""
-":py:meth:`get_corners<gtrace.optcomp.Mirror.get_corners>` gives the four "
-"corners, going round: the two ends of the HR chord, then the two ends of "
-"the AR chord. The wedge is in them, and it is what makes the two sides "
-"different lengths. So is the fact that a curved face meets the sides at "
-"its chord and not at its apex. "
-":py:meth:`get_side_info<gtrace.optcomp.Mirror.get_side_info>` describes "
-"the sides as centre, normal and length, which is what hit testing needs; "
-"this gives the points, which is what anything pointing at the element "
-"needs."
-msgstr ""
-":py:meth:`get_corners<gtrace.optcomp.Mirror.get_corners>` "
-"は4つの角を、一周する順で返す。HR の弦の両端、続いて AR "
-"の弦の両端である。ウェッジはこの4点に入っていて、2つの側面の長さが違うのはウェッジのためである。曲面が側面と接するのが頂点ではなく弦であることも、同じくこの4点に入っている。\\"
-" :py:meth:`get_side_info<gtrace.optcomp.Mirror.get_side_info>` "
-"は側面を中心・法線・長さで記述し、これはヒット判定が必要とする形である。こちらは点を返し、これは素子を指し示すものが必要とする形である。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:77
-msgid ""
-":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` says "
-"whether a straight span lies wholly inside the substrate::"
-msgstr ""
-":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` "
-"は、直線の区間が基板の中に丸ごと収まっているかどうかを答える::"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:81
-msgid ""
-"It asks the optics instead of describing its faces a second time. "
-":py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when"
-" it is approached from *outside*, and refuses any face the ray is leaving"
-" through, so from inside a substrate it finds nothing at all in any "
-"direction. That is the whole of the test. A face found partway along the "
-"span means the span starts outside. Ends lying exactly on a face count as"
-" inside, since that is where such a measurement is usually taken from."
-msgstr ""
-"これは面をもう一度記述するのではなく、素子自身に尋ねる。\\ "
-":py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` は\\ *外側から*\\ "
-"近づいた面だけを報告し、光線が抜け出ていく面は返さない。だから基板の内側からは、どの方向を見ても何も見つからない。判定の中身はこれだけである。区間の途中で面が見つかれば、その区間は外から始まっている。端がちょうど面の上にある場合は内側と数える。この種の測定はたいていそこから取るからである。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:83
-msgid ""
-"The hollow of a concave face is the case to keep in mind. It is enclosed "
-"by the substrate on three sides, and a test that only asked how far the "
-"material reaches along a line would call it inside. It is air, and a span"
-" across the front of a concave mirror is a span through air. "
-":py:meth:`contains_point<gtrace.optcomp.Optics.contains_point>` therefore"
-" looks *both* ways from the point before deciding."
-msgstr ""
-"注意が要るのは凹面のくぼみである。三方を基板に囲まれているので、「材料が線に沿ってどこまで続くか」だけを見る判定は、ここを内側と答えてしまう。実際そこは空気であり、凹面鏡の前を横切る区間は空気を通る区間である。\\"
-" :py:meth:`contains_point<gtrace.optcomp.Optics.contains_point>` "
-"が判定の前にその点から\\ *両方向*\\ を見るのは、このためである。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:88
+#: ../../../gtrace/docs/source/basic_concepts.rst:271
 msgid "Cylindrical surfaces"
 msgstr "シリンドリカル面"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:90
+#: ../../../gtrace/docs/source/basic_concepts.rst:273
 msgid ""
 ":py:class:`CyMirror<gtrace.optcomp.CyMirror>` is the same substrate with "
 "cylindrical faces instead of spherical ones. ``curve_direction`` says "
@@ -297,28 +478,33 @@ msgstr ""
 "は、シリンダーがどの面内で曲がっているかを表す。\\ ``'h'`` はトレースの面内、\\ ``'v'`` "
 "はその面外である。もう一方の面内は平坦で、そこを通ったビームは入ったときの発散角のまま出てくる。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:92
+#: ../../../gtrace/docs/source/basic_concepts.rst:279
 msgid ""
 "Two things follow from working in 2D. First, only ``'h'`` is visible in "
-"the drawing. A ``'v'`` mirror is drawn with straight faces, because a "
-"straight line is what the plane of the trace cuts out of it, and its "
-"focusing happens out of the page. Second, the two directions are not a "
-"relabelling of each other. At an angle of incidence :math:`\\theta` a "
-"curved surface presents an effective radius :math:`R\\cos\\theta` in the "
-"plane of incidence and :math:`R/\\cos\\theta` perpendicular to it, so an "
-"``'h'`` mirror has a focal length of :math:`R\\cos\\theta/2` and a "
-"``'v'`` mirror of the same radius :math:`R/2\\cos\\theta`. At 45 degrees "
-"they differ by a factor of two. Only at normal incidence do the two "
-"agree."
+"the drawing. A ``'v'`` mirror is drawn with straight faces. The plane of "
+"the trace cuts a straight line out of it, and its focusing happens out of"
+" the page."
 msgstr ""
-"2次元で扱っていることから2つのことが出てくる。第一に、図に見えるのは ``'h'`` だけである。\\ ``'v'`` "
-"のミラーはまっすぐな面で描かれる。トレースの面で切った断面は実際に直線であり、集光は紙面の外で起きるからである。第二に、2つの方向は呼び方の違いではない。入射角"
-" :math:`\\theta` のとき、曲面は入射面内では実効半径 :math:`R\\cos\\theta`\\ 、それに垂直な面内では "
-":math:`R/\\cos\\theta` を見せる。したがって ``'h'`` のミラーの焦点距離は "
-":math:`R\\cos\\theta/2` で、同じ半径の ``'v'`` のミラーは :math:`R/2\\cos\\theta` "
-"である。45度では2倍違う。両者が一致するのは垂直入射のときだけである。"
+"2次元で扱っていることから、2つのことが出てくる。第一に、図に見えるのは ``'h'`` だけである。\\ ``'v'`` "
+"のミラーはまっすぐな面で描かれる。トレースの面で切ると断面は直線になり、集光は紙面の外で起きるからである。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:94
+#: ../../../gtrace/docs/source/basic_concepts.rst:284
+msgid ""
+"Second, the two directions are not a relabelling of each other. At an "
+"angle of incidence :math:`\\theta`, a curved surface presents an "
+"effective radius :math:`R\\cos\\theta` in the plane of incidence, and "
+":math:`R/\\cos\\theta` perpendicular to it. An ``'h'`` mirror of radius "
+":math:`R` therefore has a focal length of :math:`R\\cos\\theta/2`, and a "
+"``'v'`` mirror of the same radius has :math:`R/2\\cos\\theta`. At 45 "
+"degrees they differ by a factor of two. Only at normal incidence do the "
+"two agree."
+msgstr ""
+"第二に、2つの方向は呼び方の違いではない。入射角 :math:`\\theta` のとき、曲面は入射面内では実効半径 "
+":math:`R\\cos\\theta` を、それに垂直な面内では :math:`R/\\cos\\theta` を見せる。したがって半径 "
+":math:`R` の ``'h'`` のミラーの焦点距離は :math:`R\\cos\\theta/2` で、同じ半径の ``'v'`` "
+"のミラーは :math:`R/2\\cos\\theta` である。45度では2倍違う。両者が一致するのは、垂直入射のときだけである。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:292
 msgid ""
 "Transmission through a cylindrical face is worth stating separately, "
 "because it is easy to assume more than is true. The uncurved plane loses "
@@ -331,7 +517,7 @@ msgstr ""
 " だけで、他は失われない。傾いた面は入射面内でビーム幅を変えるし、屈折率の変化も担う。曲がっていない面内が単位行列になるのは\\ *反射*\\ "
 "のときだけである。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:96
+#: ../../../gtrace/docs/source/basic_concepts.rst:299
 msgid ""
 "The ray matrices are those of Siegman, *Lasers*, Table 15.1, with the "
 "curvature given to one plane and zero to the other. "
@@ -342,147 +528,131 @@ msgstr ""
 "``tests/cymirror_verification.ipynb`` がこの比較を順に確かめ、\\ "
 "``tests/gui/verify_cylindrical.py`` が同じことを数え上げ式のアサーションとして実行する。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:98
-msgid ""
-"A lens with cylindrical faces is "
-":py:class:`CyLens<gtrace.optcomp.CyLens>`, ordered by focal length like "
-"any other lens; see :ref:`below <cylindrical-lens>`."
-msgstr ""
-"シリンドリカル面のレンズは :py:class:`CyLens<gtrace.optcomp.CyLens>` "
-"で、他のレンズと同じく焦点距離で注文する。\\ :ref:`下記 <cylindrical-lens>` を参照。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:101
-msgid "Lens"
-msgstr "レンズ"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:103
-msgid ""
-"A lens is a substrate whose two faces both refract, which a "
-":py:class:`Mirror<gtrace.optcomp.Mirror>` with two curved surfaces and a "
-"low reflectivity already is. What :py:class:`Lens<gtrace.optcomp.Lens>` "
-"adds is the way you order one: by focal length::"
-msgstr ""
-"レンズとは両面が屈折する基板である。2つの曲面を持ち反射率の低い "
-":py:class:`Mirror<gtrace.optcomp.Mirror>` は、すでにそれである。\\ "
-":py:class:`Lens<gtrace.optcomp.Lens>` が加えるのは注文の仕方で、焦点距離で指定できる::"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:116
-msgid ""
-"``shape`` is spelt the way a catalogue spells it, the front face first "
-"and the back face second, so ``'plano-convex'`` and ``'convex-plano'`` "
-"are the same lens the two ways round. Left out, it gives an equiconvex "
-"lens for a positive focal length and an equiconcave one for a negative "
-"one. Asking for a shape that contradicts the sign of the focal length "
-"raises an error."
-msgstr ""
-"``shape`` の綴り方はカタログと同じで、前面が先、裏面が後である。だから ``'plano-convex'`` と ``'convex-"
-"plano'`` "
-"は同じレンズを裏返しただけである。省略すると、焦点距離が正なら等凸、負なら等凹になる。焦点距離の符号と矛盾する形を求めるとエラーになる。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:118
-msgid ""
-"The radii are solved for as a *thick* lens, which is what gtrace then "
-"traces: the beam refracts at both faces with the substrate in between. "
-"Radii taken from the thin lens formula would land a few parts in a "
-"thousand off, and considerably further for a short focal length. "
-"``thickness`` is the :py:class:`Mirror<gtrace.optcomp.Mirror>` thickness,"
-" measured between the two chord planes, so it is the thickness at the "
-"rim. ``center_thickness`` reports the distance between the apexes that a "
-"catalogue would quote."
-msgstr ""
-"曲率半径は\\ *厚肉*\\ レンズとして解く。gtrace "
-"が実際に追跡するのもそれで、ビームは間に基板を挟んで両面で屈折する。薄肉レンズの式から取った半径では千分の数ほどずれ、焦点距離が短ければもっとずれる。\\"
-" ``thickness`` は :py:class:`Mirror<gtrace.optcomp.Mirror>` "
-"の厚み、つまり2つの弦平面の間で測った縁の厚みである。カタログが載せる頂点間の距離は ``center_thickness`` が返す。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:120
-msgid ""
-"A lens that cannot be made out of the blank it was given is refused, with"
-" the number you need in the message: two concave faces that would meet in"
-" the middle, a face steeper than its own aperture, or a focal length no "
-"substrate of that thickness can reach."
-msgstr "与えられた素材から作れないレンズは拒否され、必要な数値がメッセージに入る。中央で交わってしまう2つの凹面、口径より急な面、その厚みの基板では届かない焦点距離、といった場合である。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:122
-msgid ""
-"Both faces reflect nothing by default, so a lens makes no ghost beams. A "
-"real lens does reflect, but a system of them produces so many faint "
-"ghosts that the picture becomes unreadable and the trace slow, and most "
-"of the time a lens is in a layout to bend the main beam. Ask for those "
-"ghosts when you want them::"
-msgstr "既定では両面とも反射しないので、レンズはゴーストビームを作らない。実物のレンズは反射するが、レンズが数枚ある系では微弱なゴーストが大量に生まれて図が読めなくなり、トレースも遅くなる。それに、レンズをレイアウトに置く目的はたいてい主ビームを曲げることである。ゴーストが必要なときは、次のように頼む::"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:127
-msgid ""
-"The ghosts so ordered are counted as ghosts: a reflection off either face"
-" of a lens raises the beam's stray order, where the reflection off a "
-"mirror's HR does not. See :ref:`stray-order`."
-msgstr ""
-"こうして注文したゴーストは、ゴーストとして数える。レンズのどちらの面での反射も、ビームの迷光次数を上げる。ミラーの HR での反射は上げない。\\"
-" :ref:`stray-order` を参照。"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:129
-msgid ""
-"The focal length is not stored. Reading ``f`` computes it from the "
-"curvatures, the thickness and the index as they stand. Assigning to it "
-"reshapes the faces to match, keeping the shape of the lens and leaving it"
-" where it is. Tuning a lens against a mode matching target is therefore a"
-" loop::"
-msgstr ""
-"焦点距離は保存されない。\\ ``f`` を読むと、その時点の曲率・厚み・屈折率から計算される。\\ ``f`` "
-"に代入すると、それに合うように面が作り直される。レンズの形は保たれ、位置も動かない。だからモードマッチングの目標に向けてレンズを調整する作業は、ループになる::"
-
-#: ../../../gtrace/docs/source/basic_concepts.rst:139
+#: ../../../gtrace/docs/source/basic_concepts.rst:307
 msgid "Cylindrical lens"
 msgstr "シリンドリカルレンズ"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:141
+#: ../../../gtrace/docs/source/basic_concepts.rst:309
 msgid ""
 ":py:class:`CyLens<gtrace.optcomp.CyLens>` is ordered exactly like a "
-":py:class:`Lens<gtrace.optcomp.Lens>` — same ``f``, same shapes, same "
-"solver, same refusals — and shaped like a "
+":py:class:`Lens<gtrace.optcomp.Lens>`, with the same ``f``, the same "
+"shapes, the same solver and the same refusals. It is shaped like a "
 ":py:class:`CyMirror<gtrace.optcomp.CyMirror>`: both faces are cylinders "
-"sharing one ``curve_direction``, so the focal length lives in that plane "
-"and the other plane sees a plain window::"
+"that share one ``curve_direction``. The focal length is therefore in that"
+" plane, and the other plane is a plain window::"
 msgstr ""
 ":py:class:`CyLens<gtrace.optcomp.CyLens>` の注文の仕方は "
 ":py:class:`Lens<gtrace.optcomp.Lens>` と全く同じで、\\ ``f`` "
 "も形もソルバも拒否の条件も共通である。形は :py:class:`CyMirror<gtrace.optcomp.CyMirror>` "
 "と同じで、両面が1つの ``curve_direction`` "
-"を共有するシリンダーである。したがって焦点距離はその面内にだけあり、もう一方の面内から見ればただの窓である::"
+"を共有するシリンダーである。したがって焦点距離はその面内にあり、もう一方の面内から見ればただの窓である::"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:153
+#: ../../../gtrace/docs/source/basic_concepts.rst:321
 msgid ""
-"Everything said about :ref:`cylindrical surfaces <cylindrical-surfaces>` "
-"applies. A ``'v'`` lens is drawn as the rectangle the plane of the trace "
-"cuts out of it, and its focusing happens out of the page, carried by the "
-"beam's ``qy``. The quoted ``f`` is the normal-incidence value, and at a "
-"tilt the two planes scale differently. In the flat plane the lens is a "
-"window rather than nothing: a tilted flat face still rescales the beam "
-"width in its plane of incidence, and the substrate is still a length of "
-"glass."
+"Everything said about cylindrical surfaces above applies here. A ``'v'`` "
+"lens is drawn as the rectangle that the plane of the trace cuts out of "
+"it. Its focusing happens out of the page, carried by the ``qy`` of the "
+"beam. The quoted ``f`` is the value at normal incidence. At a tilt, the "
+"two planes scale differently."
 msgstr ""
-":ref:`シリンドリカル面 <cylindrical-surfaces>` について述べたことがすべて当てはまる。\\ ``'v'`` "
-"のレンズは、トレースの面で切り出した長方形として描かれ、集光は紙面の外で、ビームの ``qy`` に担われて起きる。表示される ``f`` "
-"は垂直入射での値で、傾けると2つの面内で倍率が違ってくる。平坦な面内でも、レンズは何も無いのではなく窓である。傾いた平面は入射面内でビーム幅を変えるし、基板はガラスの厚みぶんの光路である。"
+"上のシリンドリカル面について述べたことが、そのまま当てはまる。\\ ``'v'`` "
+"のレンズは、トレースの面で切り出した長方形として描かれる。集光は紙面の外で、ビームの ``qy`` に担われて起きる。表示される ``f`` "
+"は垂直入射での値である。傾けると、2つの面内で倍率が違ってくる。"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:163
+#: ../../../gtrace/docs/source/basic_concepts.rst:327
+msgid ""
+"The flat plane is a window, not nothing. A tilted flat face still "
+"rescales the beam width in its plane of incidence, and the substrate is "
+"still a length of glass."
+msgstr "平坦な面内でも、レンズは何も無いのではなく窓である。傾いた平面は入射面内でビーム幅を変えるし、基板は依然としてガラスの厚みぶんの光路である。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:332
+msgid "Asking where the substrate is"
+msgstr "基板がどこにあるかを尋ねる"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:334
+msgid ""
+"These methods answer questions about the body of an element. They are not"
+" about a beam meeting it."
+msgstr "これらのメソッドは、素子の本体についての問いに答える。ビームがそこに当たったときの話ではない。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:337
+msgid ""
+":py:meth:`get_corners<gtrace.optcomp.Mirror.get_corners>` gives the four "
+"corners, going round: the two ends of the HR chord, then the two ends of "
+"the AR chord. The wedge is included, which is why the two sides come out "
+"with different lengths. A curved face meets the sides at its chord, not "
+"at its apex, and that is included too."
+msgstr ""
+":py:meth:`get_corners<gtrace.optcomp.Mirror.get_corners>` "
+"は4つの角を、一周する順で返す。HR の弦の両端、続いて AR "
+"の弦の両端である。ウェッジはこの4点に含まれていて、2つの側面の長さが違うのはそのためである。曲面が側面と接するのは頂点ではなく弦であり、それもこの4点に含まれている。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:343
+msgid ""
+":py:meth:`get_side_info<gtrace.optcomp.Mirror.get_side_info>` describes "
+"the sides as centre, normal and length, which is the form the hit test "
+"needs. ``get_corners`` gives the points instead, for code that has to "
+"point at the element."
+msgstr ""
+":py:meth:`get_side_info<gtrace.optcomp.Mirror.get_side_info>` "
+"は側面を中心・法線・長さで記述する。これはヒット判定が必要とする形である。\\ ``get_corners`` "
+"は代わりに点を返す。素子を指し示す必要があるコードのためである。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:348
+msgid ""
+":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` says "
+"whether a straight span lies wholly inside the substrate::"
+msgstr ""
+":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` "
+"は、直線の区間が基板の中に丸ごと収まっているかどうかを答える::"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:353
+msgid ""
+"It asks the optics itself, instead of describing its faces a second time."
+" :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only "
+"when the ray approaches it from *outside*. It refuses any face that the "
+"ray is leaving through. From inside a substrate it therefore finds "
+"nothing, in any direction. That is all the test does. A face found "
+"partway along the span means that the span starts outside. Ends that lie "
+"exactly on a face count as inside, because that is where such a "
+"measurement is usually taken from."
+msgstr ""
+"これは面をもう一度記述するのではなく、素子自身に尋ねる。\\ "
+":py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` は、光線が\\ *外側から*\\ "
+"近づいた面だけを報告する。光線が抜け出ていく面は返さない。だから基板の内側からは、どの方向を見ても何も見つからない。判定の中身はこれだけである。区間の途中で面が見つかれば、その区間は外から始まっている。端がちょうど面の上にある場合は内側と数える。この種の測定は、たいていそこから取るからである。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:361
+msgid ""
+"The hollow of a concave face is the case to keep in mind. It is enclosed "
+"by the substrate on three sides, and a test that only asked how far the "
+"material reaches along a line would call it inside. It is air, and a span"
+" across the front of a concave mirror is a span through air. "
+":py:meth:`contains_point<gtrace.optcomp.Optics.contains_point>` therefore"
+" looks *both* ways from the point before deciding."
+msgstr ""
+"注意が要るのは凹面のくぼみである。三方を基板に囲まれているので、「材料が線に沿ってどこまで続くか」だけを見る判定は、ここを内側と答えてしまう。実際そこは空気であり、凹面鏡の前を横切る区間は空気を通る区間である。\\"
+" :py:meth:`contains_point<gtrace.optcomp.Optics.contains_point>` "
+"が判定の前にその点から\\ *両方向*\\ を見るのは、このためである。"
+
+#: ../../../gtrace/docs/source/basic_concepts.rst:369
 msgid "Optical systems"
 msgstr "光学系"
 
-#: ../../../gtrace/docs/source/basic_concepts.rst:165
+#: ../../../gtrace/docs/source/basic_concepts.rst:371
 msgid ""
-"Mirrors and beams are enough on their own, and the :doc:`tutorial` uses "
-"nothing else. When a system grows to the point where carrying lists of "
-"optics and beams around becomes the bulk of the code, "
+"Mirrors and beams are enough on their own. The :doc:`tutorial` uses "
+"nothing else to build its cavity. In a larger system, carrying lists of "
+"optics and beams around becomes most of the code. "
 ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` collects the "
-"optics, the source beams and the tracing rules into one object that can "
-"be traced, drawn, saved and edited interactively. See :doc:`layout`."
+"optics, the source beams and the tracing rules into one object. That "
+"object can be traced, drawn, saved, and edited in the viewer. See "
+":doc:`layout`."
 msgstr ""
-"ミラーとビームだけでも足りるし、\\ :doc:`tutorial` "
-"はそれ以外を使わない。系が育って、素子とビームのリストを持ち回るのがコードの大半になってきたら、\\ "
+"ミラーとビームだけでも足りる。\\ :doc:`tutorial` "
+"は、共振器を組むのにそれ以外を使わない。系が大きくなると、素子とビームのリストを持ち回るのがコードの大半になる。\\ "
 ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
-"が素子・ソースビーム・トレースのルールを1つのオブジェクトにまとめる。このオブジェクトはトレース・描画・保存・対話的な編集ができる。\\ "
+"は、素子・光源ビーム・トレースの規則を1つのオブジェクトにまとめる。そのオブジェクトは、トレース・描画・保存ができ、ビューアで編集できる。\\ "
 ":doc:`layout` を参照。"
 
 #~ msgid ""
@@ -492,4 +662,87 @@ msgstr ""
 #~ "one is a question about what you"
 #~ " are doing::"
 #~ msgstr "ということは、新しい曲率を代入したとき、両方の点をそのままにはできない。どちらかが動かねばならず、どちらを動かすかは「何をしているのか」に依る問いである::"
+
+#~ msgid "In this section, basic concepts of gtrace will be introduced."
+#~ msgstr "この節では gtrace の基本概念を紹介する。"
+
+#~ msgid ""
+#~ "In gtrace world, an optical system "
+#~ "will be placed on a two "
+#~ "dimentional plane. A location on the "
+#~ "plane is specified by a set of "
+#~ "Cartesian coordinates (x, y). This just"
+#~ " a normal x-y plane. The origin "
+#~ "of the axes is at the lower "
+#~ "left of the plane. The X-axis "
+#~ "extends horizontally to the right. The"
+#~ " Y-axis goes up vertically. Nothing "
+#~ "more to add here."
+#~ msgstr ""
+#~ "gtrace の世界では、光学系は2次元平面の上に置かれる。平面上の位置はデカルト座標 (x, y)"
+#~ " で指定する。ごく普通の x-y 平面である。座標軸の原点は平面の左下にあり、X "
+#~ "軸は水平に右へ、Y 軸は垂直に上へ伸びる。それ以上のことは何もない。"
+
+#~ msgid ""
+#~ "While working with optical layouts, one"
+#~ " often has to specify a direction "
+#~ "in the 2D plane such as the "
+#~ "orientation of a mirror or the "
+#~ "propagation direction of a beam. In "
+#~ "gtrace, in most cases, a direction "
+#~ "can be specified in two ways. One"
+#~ " way is to use an angle "
+#~ "measured from the X-axis in counter "
+#~ "clockwise (``dirAngle`` in the figure "
+#~ "above). The other way is to use"
+#~ " a 2D vector of length 1. If"
+#~ " a direction can be specified either"
+#~ " way, you only have to specify "
+#~ "it in one of those methods. For"
+#~ " example, the "
+#~ ":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` class "
+#~ "has an attribute called ``dirVect``. It"
+#~ " holds a 2D vector in the form"
+#~ " of ``numpy.Array``. The "
+#~ ":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` class "
+#~ "also has an attribute called "
+#~ "``dirAngle``, which holds the angle of"
+#~ " the beam propagation direction measured"
+#~ " from the X-axis in radian.  When "
+#~ "one of the two attributes is "
+#~ "changed, the other is updated "
+#~ "automatically to be consistent with the"
+#~ " modification. Therefore, you don't have"
+#~ " to worry about the consistency. For"
+#~ " the direction vector, it is also "
+#~ "automatically normalized. Therefore, you can"
+#~ " assign it a vector of any "
+#~ "norm."
+#~ msgstr ""
+#~ "光学レイアウトを扱っていると、ミラーの向きやビームの伝搬方向など、2次元平面内の方向を指定する場面が多い。gtrace "
+#~ "では、方向はたいてい2通りに指定できる。1つは X 軸から反時計回りに測った角度（上図の "
+#~ "``dirAngle``\\ "
+#~ "）、もう1つは長さ1の2次元ベクトルである。どちらでも指定できる場合、片方を指定すれば足りる。たとえば "
+#~ ":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` クラスには "
+#~ "``dirVect`` という属性があり、\\ ``numpy.Array`` "
+#~ "の形で2次元ベクトルを保持する。同じ "
+#~ ":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` クラスには "
+#~ "``dirAngle`` という属性もあり、ビームの伝搬方向を X "
+#~ "軸から測った角度をラジアンで保持する。一方を変えるともう一方が自動的に更新されるので、整合性を気にする必要はない。方向ベクトルは自動的に正規化されるので、どんな長さのベクトルを代入してもよい。"
+
+#~ msgid "The parameters of a Mirror object are shown in the figure above."
+#~ msgstr "Mirror オブジェクトのパラメータを上の図に示す。"
+
+#~ msgid "Changing a curvature"
+#~ msgstr "曲率を変える"
+
+#~ msgid ""
+#~ "A lens with cylindrical faces is "
+#~ ":py:class:`CyLens<gtrace.optcomp.CyLens>`, ordered by "
+#~ "focal length like any other lens; "
+#~ "see :ref:`below <cylindrical-lens>`."
+#~ msgstr ""
+#~ "シリンドリカル面のレンズは :py:class:`CyLens<gtrace.optcomp.CyLens>` "
+#~ "で、他のレンズと同じく焦点距離で注文する。\\ :ref:`下記 <cylindrical-lens>`"
+#~ " を参照。"
 

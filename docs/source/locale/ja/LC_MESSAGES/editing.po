@@ -1,0 +1,694 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2019-2026, Yoichi Aso
+# This file is distributed under the same license as the gtrace package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: gtrace \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-15 17:59+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: ja\n"
+"Language-Team: ja <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../../gtrace/docs/source/editing.rst:2
+msgid "The edit protocol"
+msgstr "編集プロトコル"
+
+#: ../../../gtrace/docs/source/editing.rst:4
+msgid ""
+"The viewer changes a layout by sending it messages. This page is the "
+"reference for those messages: what they may say, what they may touch, and"
+" what comes back when one is refused. You do not need it to use the "
+"viewer, which is described in :doc:`viewer`, nor to use a layout from "
+"Python, which is :doc:`layout`. Read it when you want to drive a layout "
+"from code the way the viewer does, or when you are writing a front end of"
+" your own."
+msgstr ""
+"ビューアは、メッセージを送ることでレイアウトを変更する。このページは、そのメッセージのリファレンスである。何を書いてよいか、何に触れてよいか、拒否されたときに何が返るかを説明する。ビューアを使うだけなら、このページは要らない。ビューアの説明は"
+" :doc:`viewer` にある。Python からレイアウトを使うだけでも要らない。それは :doc:`layout` "
+"である。ビューアと同じようにコードからレイアウトを操作したいとき、あるいは自分のフロントエンドを書くときに読む。"
+
+#: ../../../gtrace/docs/source/editing.rst:12
+msgid "The message form"
+msgstr "メッセージの形"
+
+#: ../../../gtrace/docs/source/editing.rst:14
+msgid ""
+"Every message is a plain dict, handed to "
+":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>`:"
+msgstr ""
+"メッセージは全て素の dict であり、\\ "
+":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` に渡す:"
+
+#: ../../../gtrace/docs/source/editing.rst:24
+msgid ""
+"The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, "
+"``add``, ``copy``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``,"
+" ``load``, ``export``, ``undo`` and ``redo``. Because a message is a "
+"plain dict, the same protocol travels over a notebook widget's comm as "
+"over any other transport."
+msgstr ""
+"操作は ``move``\\ 、\\ ``rotate``\\ 、\\ ``set``\\ 、\\ ``align``\\ 、\\ "
+"``slide``\\ 、\\ ``add``\\ 、\\ ``copy``\\ 、\\ ``remove``\\ 、\\ "
+"``rename``\\ 、\\ ``rules``\\ 、\\ ``draw``\\ 、\\ ``save``\\ 、\\ ``load``\\"
+" 、\\ ``export``\\ 、\\ ``undo``\\ 、\\ ``redo`` である。メッセージが素の dict "
+"なので、同じプロトコルが notebook ウィジェットの comm でも、他のどんな転送路でもそのまま通る。"
+
+#: ../../../gtrace/docs/source/editing.rst:30
+msgid ""
+"The set of attributes a message may touch is an explicit whitelist "
+"(``EDITABLE_OPTIC_ATTRS``), and some attributes are further restricted to"
+" a set of permitted values (``ATTR_CHOICES``). Messages arrive from a "
+"browser, so \"anything ``setattr`` accepts\" is not a safe rule. An "
+"operation, target or attribute outside those sets raises "
+":py:class:`EditError<gtrace.layout.EditError>` and leaves the layout "
+"untouched."
+msgstr ""
+"メッセージが触れてよい属性は明示的なホワイトリスト（\\ ``EDITABLE_OPTIC_ATTRS``\\ "
+"）で決まる。属性によっては、取れる値の集合もさらに制限される（\\ ``ATTR_CHOICES``\\ "
+"）。メッセージはブラウザから届くので、「\\ ``setattr`` "
+"が受け付けるものは何でもよい」という規則は安全ではない。これらの集合の外にある操作・対象・属性は "
+":py:class:`EditError<gtrace.layout.EditError>` を起こし、レイアウトには何も起きない。"
+
+#: ../../../gtrace/docs/source/editing.rst:38
+msgid ""
+"An attribute on the whitelist may still be one the target does not have, "
+"or one that refuses the value it is given. ``f`` is both: only a "
+":py:class:`Lens<gtrace.optcomp.Lens>` has a focal length, and assigning "
+"to it re-solves both curvatures, which not every blank can be ground to. "
+"Either refusal comes back as an ``EditError`` with the reason, and the "
+"optics is left as it was."
+msgstr ""
+"ホワイトリストに載っている属性でも、対象がその属性を持たないことや、渡された値を拒否することはある。\\ ``f`` "
+"はその両方である。焦点距離を持つのは :py:class:`Lens<gtrace.optcomp.Lens>` "
+"だけであり、そこへ代入すると両面の曲率を解き直すが、どんな素材でもその形に削れるわけではない。どちらの拒否も、理由を添えた "
+"``EditError`` として返り、素子は元のままである。"
+
+#: ../../../gtrace/docs/source/editing.rst:45
+msgid ""
+"A ``set`` may carry several attributes at once. They are not applied in "
+"the order the message lists them. The anchor is applied before the "
+"curvatures it governs, and the orientation before the position that is "
+"measured from it. A message is a JSON object, so you cannot rely on the "
+"order of its keys."
+msgstr ""
+"1通の ``set`` "
+"は複数の属性を運べる。適用の順序は、メッセージに並んでいる順ではない。アンカーは、それが支配する曲率より先に適用される。向きは、そこから測る位置より先に適用される。メッセージは"
+" JSON オブジェクトなので、キーの順序に頼ることはできない。"
+
+#: ../../../gtrace/docs/source/editing.rst:52
+msgid "Elements"
+msgstr "素子"
+
+#: ../../../gtrace/docs/source/editing.rst:54
+msgid ""
+"``move`` and ``rotate`` place an element, and ``set`` changes its "
+"attributes. Two more operations cover what a drag cannot say precisely."
+msgstr ""
+"``move`` と ``rotate`` が素子を配置し、\\ ``set`` "
+"がその属性を変える。ドラッグでは正確に言えないことのために、操作がさらに2つある。"
+
+#: ../../../gtrace/docs/source/editing.rst:57
+msgid ""
+"``align`` puts an element square across a beam, which is where almost "
+"every element on a bench is meant to sit. It names the beam by its index "
+"in the last trace, with the name as a check, and gives a point. The "
+"element is turned to face the beam and slid onto its axis at the "
+"projection of that point. See :doc:`viewer` for the Ctrl-drag that sends "
+"it."
+msgstr ""
+"``align`` "
+"は素子をビームに正対させる。ベンチ上のほとんどの素子は、そこに座るべきものである。ビームは直前のトレースでの添字で指定し、名前を検査に使う。さらに点を1つ渡す。素子はビームに正対するよう回され、その点を射影した位置でビームの軸に載せられる。これを送る"
+" Ctrl ドラッグについては :doc:`viewer` を参照。"
+
+#: ../../../gtrace/docs/source/editing.rst:63
+msgid ""
+"``slide`` is the degree of freedom aligning leaves. It moves an element "
+"along a beam's axis by a distance in metres, positive downstream, and "
+"touches nothing else. It names the beam the same way::"
+msgstr ""
+"``slide`` "
+"は、正対させたあとに残る自由度である。素子をビームの軸に沿ってメートル単位で動かす。正の値が下流方向で、他には何も触らない。ビームの指定の仕方は上と同じである::"
+
+#: ../../../gtrace/docs/source/editing.rst:70
+msgid ""
+"``add`` builds a :py:class:`Mirror<gtrace.optcomp.Mirror>`, a "
+":py:class:`CyMirror<gtrace.optcomp.CyMirror>` or a "
+":py:class:`Lens<gtrace.optcomp.Lens>` (``CREATABLE_OPTIC_TYPES``). A "
+"mirror takes the parameters it was not given from the optics already "
+"registered. An element added to a system of 10 cm optics is therefore a "
+"10 cm optics. A lens does not do this. Its coatings, aperture and wedge "
+"are its own, and it is built from catalogue defaults at "
+"``DEFAULT_LENS_F``. It also accepts the parameters only a lens has "
+"(``CREATABLE_LENS_PARAMS``: ``f``, ``shape`` and ``ROC_HR``):"
+msgstr ""
+"``add`` は :py:class:`Mirror<gtrace.optcomp.Mirror>`\\ 、\\ "
+":py:class:`CyMirror<gtrace.optcomp.CyMirror>`\\ 、\\ "
+":py:class:`Lens<gtrace.optcomp.Lens>` を作る（\\ ``CREATABLE_OPTIC_TYPES``\\ "
+"）。ミラーは、与えられなかったパラメータを、すでに登録されている素子から取る。したがって 10 cm の素子でできた系に足した素子は 10 cm "
+"の素子になる。レンズはこれをしない。コーティング・口径・ウェッジはレンズ自身のもので、\\ ``DEFAULT_LENS_F`` "
+"にあるカタログの既定値から作られる。レンズだけが持つパラメータも受け取る（\\ ``CREATABLE_LENS_PARAMS``: "
+"``f``\\ 、\\ ``shape``\\ 、\\ ``ROC_HR``\\ ）:"
+
+#: ../../../gtrace/docs/source/editing.rst:86
+msgid ""
+"Renaming has its own operation instead of being an editable attribute. "
+"The name is the identity that edits are resolved by, so changing it needs"
+" a uniqueness check."
+msgstr "改名は、編集可能な属性ではなく専用の操作になっている。名前は編集の対象を解決する識別子なので、変えるときに一意性の検査が要る。"
+
+#: ../../../gtrace/docs/source/editing.rst:90
+#, python-brace-format
+msgid ""
+"``copy`` — ``{'op': 'copy', 'target': 'M1'}`` — adds a second one of an "
+"element with the whole stack standing on it. See :ref:`mechanics`."
+msgstr ""
+"``copy``\\ （\\ ``{'op': 'copy', 'target': 'M1'}``\\ "
+"）は、素子と、その上に立つ組み立て全体をもう1組作る。\\ :ref:`mechanics` を参照。"
+
+#: ../../../gtrace/docs/source/editing.rst:96
+msgid "Sources"
+msgstr "光源"
+
+#: ../../../gtrace/docs/source/editing.rst:98
+msgid ""
+"The same operations reach the source beams, and mean for a laser what "
+"they mean for an element: ``move`` says where it stands, ``rotate`` which"
+" way it fires, ``set`` what light it puts out."
+msgstr ""
+"同じ操作が光源ビームにも届き、レーザーに対して素子と同じ意味を持つ。\\ ``move`` はどこに立つか、\\ ``rotate`` "
+"はどちらへ撃つか、\\ ``set`` はどんな光を出すかである。"
+
+#: ../../../gtrace/docs/source/editing.rst:113
+msgid ""
+"A source stands at a point and is aimed, so it has its own whitelist "
+"(``EDITABLE_SOURCE_ATTRS``). ``move`` and ``rotate`` name ``pos`` and "
+"``dirAngle``, instead of the centre and the face of an element. ``align``"
+" and ``slide`` do not apply. There is no beam to put a laser square "
+"across; the laser is where the beams start."
+msgstr ""
+"光源は1点に立って狙いを向けるものなので、独自のホワイトリスト（\\ ``EDITABLE_SOURCE_ATTRS``\\ ）を持つ。\\ "
+"``move`` と ``rotate`` は、素子の中心と面ではなく ``pos`` と ``dirAngle`` を指定する。\\ "
+"``align`` と ``slide`` は当てはまらない。レーザーを正対させる相手のビームが無いからである。ビームはレーザーから始まる。"
+
+#: ../../../gtrace/docs/source/editing.rst:119
+msgid ""
+"**A laser is specified by its waist, not by a q-parameter.** "
+"``waist_size_x``, ``waist_size_y``, ``waist_pos_x`` and ``waist_pos_y`` "
+"are not attributes a :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` "
+"has. Each stands for one half of one q-parameter and is converted here. "
+"Setting a size does not move the waist, moving it does not resize it, and"
+" the two directions are independent. ``qx`` and ``qy`` may still be set "
+"directly, as ``[real, imag]``; "
+":py:func:`q_from_waist<gtrace.layout.q_from_waist>` and "
+":py:meth:`waist<gtrace.beam.GaussianBeam.waist>` convert between the two "
+"descriptions."
+msgstr ""
+"**レーザーは q パラメータではなく、ウェストで指定する。** ``waist_size_x``\\ 、\\ "
+"``waist_size_y``\\ 、\\ ``waist_pos_x``\\ 、\\ ``waist_pos_y`` は "
+":py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` が持つ属性ではない。それぞれが1つの q "
+"パラメータの半分に当たり、ここで変換される。大きさを設定してもウェストは動かず、ウェストを動かしても大きさは変わらない。2つの方向は独立である。\\"
+" ``qx`` と ``qy`` を ``[real, imag]`` の形で直接設定することもできる。\\ "
+":py:func:`q_from_waist<gtrace.layout.q_from_waist>` と "
+":py:meth:`waist<gtrace.beam.GaussianBeam.waist>` が2つの表現を相互に変換する。"
+
+#: ../../../gtrace/docs/source/editing.rst:129
+msgid ""
+"A waist position is the distance from the laser forward along the beam, "
+"positive downstream, which is how "
+":py:meth:`waist<gtrace.beam.GaussianBeam.waist>` reports it."
+msgstr ""
+"ウェスト位置は、レーザーからビームに沿って前方へ測った距離である。下流が正で、\\ "
+":py:meth:`waist<gtrace.beam.GaussianBeam.waist>` もこの向きで報告する。"
+
+#: ../../../gtrace/docs/source/editing.rst:133
+msgid ""
+"**Through this protocol, changing the wavelength keeps the waist and "
+"changes the divergence.** A q-parameter alone does not say how wide the "
+"beam is; the width also depends on the wavelength. Changing one of the "
+"two therefore has to keep the other. The waist is what a laser is "
+"specified by. The model already works this way for the refractive index: "
+"that handler holds the reduced q fixed. Assigning ``b.wl`` directly in a "
+"cell is unchanged, and keeps the q-parameter instead."
+msgstr ""
+"**このプロトコルで波長を変えると、ウェストは保たれ、発散角が変わる。** q "
+"パラメータだけでは、ビームがどれだけ広いかは決まらない。幅は波長にも依存する。したがって、2つのうち片方を変えるときは、もう片方を保つ必要がある。レーザーを指定するものはウェストである。モデルは屈折率については既にこの動きをする。そのハンドラは"
+" reduced q を固定する。セルで ``b.wl`` に直接代入する経路は変わっておらず、そちらは q パラメータを保つ。"
+
+#: ../../../gtrace/docs/source/editing.rst:141
+msgid ""
+"A new source inherits nothing from the sources already registered, and a "
+"new mirror does. A laser is not cut to match the one beside it. A "
+"q-parameter carried over would also be wrong: it describes a waist "
+"measured from a point where the new source does not stand. "
+"``DEFAULT_SOURCE_WAIST`` and ``DEFAULT_SOURCE_WL`` are used instead. "
+"``waist_size`` and ``waist_pos`` given to ``add`` stand for both "
+"directions at once (``CREATABLE_SOURCE_PARAMS``)."
+msgstr ""
+"新しい光源は、すでに登録されている光源から何も引き継がない。新しいミラーは引き継ぐ。レーザーは隣のレーザーに合わせて削るものではない。q "
+"パラメータを引き継ぐのも誤りである。それは、新しい光源が立っていない点から測ったウェストを表すからである。代わりに "
+"``DEFAULT_SOURCE_WAIST`` と ``DEFAULT_SOURCE_WL`` を使う。\\ ``add`` に渡す "
+"``waist_size`` と ``waist_pos`` は、2つの方向を同時に表す（\\ "
+"``CREATABLE_SOURCE_PARAMS``\\ ）。"
+
+#: ../../../gtrace/docs/source/editing.rst:149
+msgid ""
+"**Optics, sources and dimensions share one namespace.** An edit message "
+"names its target and nothing else. A name that meant one thing in one "
+"message and another thing in the next message would be dangerous. "
+":py:meth:`add_source<gtrace.layout.OpticalLayout.add_source>` therefore "
+"refuses a name an optics or a dimension has taken, as it always did for "
+"another source."
+msgstr ""
+"**素子・光源・寸法線は1つの名前空間を共有する。** "
+"編集メッセージは対象を名前だけで指定する。ある名前が1通目のメッセージと2通目のメッセージで別のものを指すとしたら、危険である。したがって "
+":py:meth:`add_source<gtrace.layout.OpticalLayout.add_source>` "
+"は、素子や寸法線が取っている名前を拒否する。別の光源が取っている名前を拒否してきたのと同じである。"
+
+#: ../../../gtrace/docs/source/editing.rst:157
+msgid "Dimensions"
+msgstr "寸法線"
+
+#: ../../../gtrace/docs/source/editing.rst:159
+msgid ""
+"A dimension is added and changed by the same operations, and it shares "
+"the namespace above. ``remove``, ``rename`` and ``set`` therefore resolve"
+" their target across optics and dimensions alike. A front end has a name "
+"under the cursor, not a class."
+msgstr ""
+"寸法線も同じ操作で追加・変更でき、上の名前空間を共有する。したがって ``remove``\\ 、\\ ``rename``\\ 、\\ "
+"``set`` は、素子と寸法線をまたいで対象を解決する。フロントエンドがカーソルの下に持っているのは名前であって、クラスではない。"
+
+#: ../../../gtrace/docs/source/editing.rst:173
+msgid ""
+"``move`` and ``rotate`` do not apply. A dimension is two points, not a "
+"body, and either end moves on its own. What a dimension measures, and "
+"what ``offset`` does to the drawing, are in :ref:`dimensions`."
+msgstr ""
+"``move`` と ``rotate`` は当てはまらない。寸法線は本体ではなく2つの点であり、どちらの端も単独で動く。寸法線が何を測るか、\\"
+" ``offset`` が図に何をするかは :ref:`dimensions` にある。"
+
+#: ../../../gtrace/docs/source/editing.rst:178
+msgid "Bodies"
+msgstr "周辺物"
+
+#: ../../../gtrace/docs/source/editing.rst:180
+msgid ""
+"The same operations reach a body, with its own whitelist "
+"(``EDITABLE_MECHANICS_ATTRS``: ``center``, ``rotationAngle``, "
+"``attached_to``, ``offset``, ``offset_angle``, ``fix_rotation``, "
+"``width`` and ``height``):"
+msgstr ""
+"同じ操作が周辺物にも届く。ホワイトリストは独自である（\\ ``EDITABLE_MECHANICS_ATTRS``: ``center``\\ "
+"、\\ ``rotationAngle``\\ 、\\ ``attached_to``\\ 、\\ ``offset``\\ 、\\ "
+"``offset_angle``\\ 、\\ ``fix_rotation``\\ 、\\ ``width``\\ 、\\ "
+"``height``\\ ）:"
+
+#: ../../../gtrace/docs/source/editing.rst:195
+msgid ""
+"An ``add`` naming a ``model`` and no ``shapes`` is built from the "
+"library; one carrying ``shapes`` is built from them. ``attached_to`` "
+"takes the name of an optics **or of another body**, or ``None``. Seating "
+"a body on an *optics* puts it at the model's place, since where a mount "
+"belongs on a mirror is the library's business and not the cursor's. "
+"Seating it on a *body* keeps where it already is, since which hole of a "
+"mount a pedestal sits in is a choice made on the bench. Setting ``width``"
+" or ``height`` goes through ``resize``, which says so when the body has "
+"no size to set. A ``rotate`` on an attached body is refused unless its "
+"turn is free."
+msgstr ""
+"``model`` を指定して ``shapes`` を持たない ``add`` は、ライブラリから組み立てられる。\\ ``shapes`` "
+"を持つものは、その図形から組み立てられる。\\ ``attached_to`` は素子の名前、\\ **または他の周辺物の名前**\\ 、あるいは"
+" ``None`` を取る。\\ *素子*\\ "
+"の上に座らせると、モデルが決めた定位置に置かれる。マウントがミラーのどこに付くかはライブラリが決めることで、カーソルが決めることではないからである。\\"
+" *周辺物*\\ の上に座らせると、いま居る場所を保つ。ペデスタルがマウントのどの穴に入るかは、ベンチの上で決めることだからである。\\ "
+"``width`` や ``height`` の設定は ``resize`` "
+"を通る。設定できる大きさを持たない周辺物には、そう返る。取り付けられている周辺物への ``rotate`` は、回転が自由でない限り拒否される。"
+
+#: ../../../gtrace/docs/source/editing.rst:205
+msgid ""
+"Attaching through this protocol takes the attach point from the drawing. "
+"The point of the body that already coincides with a point of the host is "
+"the point the body is pinned by. So \"drop it on the hole, then attach "
+"it\" pins the body by that hole. See :ref:`mechanics`."
+msgstr ""
+"このプロトコルで取り付けると、吸着する点は図から取られる。宿主のいずれかの点とすでに一致している周辺物の点が、留められる点になる。つまり「穴の上に落としてから取り付ける」と、その穴で留まる。\\"
+" :ref:`mechanics` を参照。"
+
+#: ../../../gtrace/docs/source/editing.rst:210
+msgid ""
+"An assembly and a beam dump are each one ``add``, so each is one step of "
+"undo::"
+msgstr "組み立てとビームダンプは、それぞれ1通の ``add`` である。したがってそれぞれが undo の1段になる::"
+
+#: ../../../gtrace/docs/source/editing.rst:219
+msgid ""
+"Neither one is a model in the library, and neither one can be. A model "
+"holds shapes only, and the first piece of an assembly or of a dump is an "
+"element. On a dump, a front end may set ``center``, ``angle`` and "
+"``reflectivity``. The rest comes from the drawing."
+msgstr ""
+"どちらもライブラリのモデルではないし、モデルにはできない。モデルが持てるのは図形だけであり、組み立てとダンプの最初の1つは素子だからである。ダンプについてフロントエンドが設定してよいのは"
+" ``center``\\ 、\\ ``angle``\\ 、\\ ``reflectivity`` である。残りは図面から来る。"
+
+#: ../../../gtrace/docs/source/editing.rst:225
+msgid "Shapes"
+msgstr "図形"
+
+#: ../../../gtrace/docs/source/editing.rst:227
+msgid ""
+":py:class:`ShapeEditor<gtrace.draw.viewer.editor.ShapeEditor>` is the "
+"model behind the shape editor. It is drivable without a browser and "
+"speaks a protocol of its own:"
+msgstr ""
+":py:class:`ShapeEditor<gtrace.draw.viewer.editor.ShapeEditor>` "
+"は、形状エディタの背後にあるモデルである。ブラウザ無しでも動かせて、独自のプロトコルを話す:"
+
+#: ../../../gtrace/docs/source/editing.rst:244
+msgid ""
+"The operations are ``add_shape``, ``set_shape``, ``remove_shape``, "
+"``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``set_points``, "
+"``save_model``, ``undo`` and ``redo``. A shape is edited in three steps: "
+"take it apart into the dict that "
+":py:func:`shape_to_dict<gtrace.draw.serialize.shape_to_dict>` writes, "
+"change what the message names, and build the shape again. The "
+"constructors are therefore the only rule about what a shape is. A few "
+"things they do not catch are refused on the way out: a size of zero or "
+"less, a coordinate at infinity, and an outline with one vertex. An index "
+"is a **place in the list**, which is also the order the shapes are drawn "
+"in, so removing one shape renumbers the shapes after it."
+msgstr ""
+"操作は ``add_shape``\\ 、\\ ``set_shape``\\ 、\\ ``remove_shape``\\ 、\\ "
+"``duplicate_shape``\\ 、\\ ``move_shape``\\ 、\\ ``rotate_shape``\\ 、\\ "
+"``set_points``\\ 、\\ ``save_model``\\ 、\\ ``undo``\\ 、\\ ``redo`` "
+"である。図形の編集は3段階で行う。\\ "
+":py:func:`shape_to_dict<gtrace.draw.serialize.shape_to_dict>` が書く dict "
+"に分解し、メッセージが指定するものを変え、図形を作り直す。したがって、図形とは何かを決める規則はコンストラクタだけである。コンストラクタが捕まえないものは、出口で拒否する。0以下の大きさ、無限大の座標、頂点が1つしかない輪郭である。添字は\\"
+" **リストの中の位置**\\ であり、これは図形が描かれる順序でもある。1つ取り除くと、それ以降の番号がずれる。"
+
+#: ../../../gtrace/docs/source/editing.rst:256
+msgid ""
+"A turn is the one edit that is not a set of attributes, because turning "
+"means something different for each kind of shape. The two angles of an "
+"arc move. A text turns with its own rotation. A ``Rectangle`` carries a "
+"turn of its own, an ``angle`` and the ``pivot`` it is taken about, so it "
+"stores those and stays a rectangle. It keeps a width and a height you can"
+" go on editing. Every other kind goes through "
+":py:func:`turned_shape<gtrace.mechanics.turned_shape>`. ``pivot`` "
+"defaults to :py:func:`shape_centre<gtrace.mechanics.shape_centre>`, the "
+"middle of the bounding box of the shape."
+msgstr ""
+"回転は、属性の集合にならない唯一の編集である。回すという操作の意味が、図形の種類ごとに違うからである。円弧は2つの角度が動く。テキストは自身の回転角で回る。\\"
+" ``Rectangle`` は自身の回転を持ち、\\ ``angle`` と、その回転の支点である ``pivot`` "
+"を保存して長方形のままでいる。編集できる幅と高さもそのまま残る。それ以外の種類は "
+":py:func:`turned_shape<gtrace.mechanics.turned_shape>` を通る。\\ ``pivot`` "
+"の既定値は :py:func:`shape_centre<gtrace.mechanics.shape_centre>`\\ "
+"、つまり図形のバウンディングボックスの中心である。"
+
+#: ../../../gtrace/docs/source/editing.rst:266
+msgid ""
+"The turn of a **body** is a different question, and it is not written "
+"into the shapes. The pose of a body says where it stands and which way it"
+" faces, and the shapes are read in the frame of the body. A rectangle "
+"carried by a turned body therefore still reaches the bench as the closed "
+"polyline of its four corners. That is what a DXF file holds in either "
+"case."
+msgstr ""
+"**周辺物**\\ "
+"の回転は別の問題であり、図形には書き込まれない。周辺物の姿勢が、どこに立ちどちらを向いているかを表し、図形は周辺物の座標系で読まれる。したがって、回転した周辺物が持つ長方形も、ベンチ上には4隅を結んだ閉じたポリラインとして届く。DXF"
+" ファイルが持つのも、どちらの場合も同じものである。"
+
+#: ../../../gtrace/docs/source/editing.rst:272
+#, python-brace-format
+msgid ""
+"``set_points`` carries the **whole list** of named points, not one point."
+" No index survives a rename: a point is known by its name, and the name "
+"is the thing being edited. Renaming a point, moving one, adding one and "
+"taking one away are all the same message, which also makes each of them "
+"one step of undo. Two points cannot share a name, and a point cannot go "
+"unnamed. The scene channel is ``points``, a list of ``{'name': str, "
+"'point': [x, y], 'index': int}``."
+msgstr ""
+"``set_points`` は、名前付き点を1つではなく\\ **リスト全体**\\ "
+"で運ぶ。改名をまたいで生き残る添字が無いからである。点は名前で呼ばれ、その名前こそが編集の対象である。点の改名・移動・追加・削除は全て同じメッセージであり、そのおかげでそれぞれが"
+" undo の1段になる。2つの点が同じ名前を持つことはできず、名前の無い点も作れない。シーンチャネルは ``points`` で、\\ "
+"``{'name': str, 'point': [x, y], 'index': int}`` のリストである。"
+
+#: ../../../gtrace/docs/source/editing.rst:280
+msgid ""
+"The editor holds the ``Mechanics`` **by reference**, like everything else"
+" here. A body already registered in a layout is therefore redrawn at the "
+"next draw of that layout. Its attachment, its pose and its builder "
+"parameters are untouched."
+msgstr ""
+"エディタは、ここにある他のものと同じく ``Mechanics`` を\\ **参照で**\\ "
+"持つ。したがって、すでにレイアウトに登録されている周辺物は、そのレイアウトの次の描画で描き直される。取り付け・姿勢・ビルダーのパラメータには手を触れない。"
+
+#: ../../../gtrace/docs/source/editing.rst:286
+msgid "Rules, drawing and files"
+msgstr "規則・描画・ファイル"
+
+#: ../../../gtrace/docs/source/editing.rst:288
+msgid ""
+"The tracing rules have their own operation, and each value is checked. "
+"``order`` is a whole number no greater than ``MAX_RULE_ORDER``, since "
+"each order is another round of reflections at every element::"
+msgstr ""
+"トレースの規則には専用の操作があり、値はそれぞれ検査される。\\ ``order`` は ``MAX_RULE_ORDER`` "
+"以下の整数である。1次増えるごとに、全ての素子でもう一巡の反射が起きるからである::"
+
+#: ../../../gtrace/docs/source/editing.rst:295
+msgid ""
+"Three operations do *not* invalidate the trace result: ``draw`` changes "
+"display settings, and ``save`` and ``export`` write a file. None of them "
+"changes the physics, so none causes a re-trace. Nor does anything done to"
+" a dimension."
+msgstr ""
+"3つの操作は、トレース結果を\\ *無効にしない*\\ 。\\ ``draw`` は表示の設定を変え、\\ ``save`` と "
+"``export`` はファイルを書く。どれも物理を変えないので、再トレースを起こさない。寸法線に対する操作も同様である。"
+
+#: ../../../gtrace/docs/source/editing.rst:300
+#, python-brace-format
+msgid ""
+"``export`` writes the drawing, not the model. Today that is only ``{'op':"
+" 'export', 'format': 'dxf', 'path': ...}``, which is "
+":py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`. See :ref"
+":`dxf-export`."
+msgstr ""
+"``export`` はモデルではなく図面を書く。現在それは ``{'op': 'export', 'format': 'dxf', "
+"'path': ...}`` だけであり、\\ "
+":py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>` を呼ぶ。\\ :ref"
+":`dxf-export` を参照。"
+
+#: ../../../gtrace/docs/source/editing.rst:306
+msgid "Scene channels"
+msgstr "シーンチャネル"
+
+#: ../../../gtrace/docs/source/editing.rst:308
+msgid ""
+":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds ten "
+"entries to what "
+":py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` builds:"
+msgstr ""
+":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` は、\\ "
+":py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` "
+"が作るものに10個の項目を足す:"
+
+#: ../../../gtrace/docs/source/editing.rst:316
+msgid "Channel"
+msgstr "チャネル"
+
+#: ../../../gtrace/docs/source/editing.rst:317
+msgid "What it carries"
+msgstr "何を運ぶか"
+
+#: ../../../gtrace/docs/source/editing.rst:318
+msgid "``can_undo``, ``can_redo``"
+msgstr "``can_undo``, ``can_redo``"
+
+#: ../../../gtrace/docs/source/editing.rst:319
+msgid "Whether the front end's Undo and Redo have anything to work with."
+msgstr "フロントエンドの Undo と Redo に、戻す先があるかどうか。"
+
+#: ../../../gtrace/docs/source/editing.rst:320
+msgid "``dimensions``"
+msgstr "``dimensions``"
+
+#: ../../../gtrace/docs/source/editing.rst:321
+msgid "The dimensions, with their measurements."
+msgstr "寸法線と、その測定値。"
+
+#: ../../../gtrace/docs/source/editing.rst:322
+msgid "``snap``"
+msgstr "``snap``"
+
+#: ../../../gtrace/docs/source/editing.rst:323
+msgid "The points a front end may snap a measurement to."
+msgstr "フロントエンドが測定を吸着させてよい点。"
+
+#: ../../../gtrace/docs/source/editing.rst:324
+msgid "``sources``"
+msgstr "``sources``"
+
+#: ../../../gtrace/docs/source/editing.rst:325
+msgid "The laser sources."
+msgstr "レーザー光源。"
+
+#: ../../../gtrace/docs/source/editing.rst:326
+msgid "``rules``"
+msgstr "``rules``"
+
+#: ../../../gtrace/docs/source/editing.rst:327
+msgid "The tracing rules."
+msgstr "トレースの規則。"
+
+#: ../../../gtrace/docs/source/editing.rst:328
+msgid "``mechanics``"
+msgstr "``mechanics``"
+
+#: ../../../gtrace/docs/source/editing.rst:329
+msgid "The bodies that are registered in the layout."
+msgstr "レイアウトに登録されている周辺物。"
+
+#: ../../../gtrace/docs/source/editing.rst:330
+msgid "``mechlib``"
+msgstr "``mechlib``"
+
+#: ../../../gtrace/docs/source/editing.rst:331
+msgid "The model library a new body can be built from."
+msgstr "新しい周辺物を作れるモデルライブラリ。"
+
+#: ../../../gtrace/docs/source/editing.rst:332
+msgid "``assemblies``"
+msgstr "``assemblies``"
+
+#: ../../../gtrace/docs/source/editing.rst:333
+msgid "The assemblies a front end can offer."
+msgstr "フロントエンドが提示できる組み立て。"
+
+#: ../../../gtrace/docs/source/editing.rst:334
+msgid "``newshapes``"
+msgstr "``newshapes``"
+
+#: ../../../gtrace/docs/source/editing.rst:335
+msgid "What a new shape of each kind looks like."
+msgstr "各種類の図形を新しく置いたときの姿。"
+
+#: ../../../gtrace/docs/source/editing.rst:337
+msgid ""
+"``sources`` says which of the beams the user put there. Nothing else in "
+"the scene can say it. A source is traced from a *copy* of itself, so its "
+"own beam sits in ``beams`` and looks like the beams the trace made from "
+"it. Each entry carries where the laser stands, which way it fires, and "
+"the light it emits. The waist is included. It is computed here and not "
+"stored, for the same reason the length of a dimension is. ``rules`` "
+"carries the tracing rules. They belong to no element, but they decide how"
+" much of the picture there is."
+msgstr ""
+"``sources`` は、ビームのうちどれをユーザーが置いたものかを伝える。シーンの他の何もそれを伝えられない。光源は自分自身の\\ "
+"*コピー*\\ からトレースされるので、光源自身のビームも ``beams`` "
+"の中にあり、トレースが作ったビームと同じように見える。各項目は、レーザーがどこに立ち、どちらへ撃ち、どんな光を出すかを持つ。ウェストも含む。ウェストはここで計算していて保存しない。寸法線の長さと同じ理由である。\\"
+" ``rules`` はトレースの規則を運ぶ。これはどの素子のものでもないが、絵がどこまで描かれるかを決める。"
+
+#: ../../../gtrace/docs/source/editing.rst:346
+msgid ""
+"Each dimension carries a ``line``: the two ends the line lands on once "
+"the offset is applied. Only one place therefore decides which side the "
+"offset goes to."
+msgstr ""
+"各寸法線は ``line`` "
+"を持つ。オフセットを適用したあとに線が着地する両端である。したがって、オフセットをどちら側に取るかを決める場所は1箇所だけになる。"
+
+#: ../../../gtrace/docs/source/editing.rst:350
+#, python-brace-format
+msgid ""
+"``mechanics`` carries the pose of each body, what it is attached to, and "
+"the outline a front end picks it by. A body that is one shape drawn by "
+"hand also carries that ``shape``, in the frame the body is written in. "
+"Such a body is a drawing, not a part, so its own numbers are what you "
+"edit: ``{'op': 'set', 'target': ..., 'attrs': {'shape': {...}}}`` sets "
+"them, through the same rules the shape editor applies. A part from the "
+"library is cut to size with ``width`` and ``height`` instead. A body of "
+"several shapes is edited with "
+":py:meth:`edit<gtrace.mechanics.Mechanics.edit>`. Both refuse a "
+"``shape``, instead of guessing which shape was meant. The outline is "
+"computed here. It is the same polygon "
+":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` tests against, "
+"and a browser has no reason to hold a second description of it."
+msgstr ""
+"``mechanics`` "
+"は、各周辺物の姿勢、何に取り付けられているか、フロントエンドがそれを拾うための輪郭を運ぶ。手描きの図形1つでできた周辺物は、その "
+"``shape`` も、周辺物の座標系のまま運ぶ。そういう周辺物は部品ではなく図なので、編集の対象はその図形自身の数値である。\\ "
+"``{'op': 'set', 'target': ..., 'attrs': {'shape': {...}}}`` "
+"がそれを設定する。適用される規則は形状エディタと同じである。ライブラリから来た部品は、代わりに ``width`` と ``height`` "
+"で寸法を変える。図形が複数ある周辺物は :py:meth:`edit<gtrace.mechanics.Mechanics.edit>` "
+"で編集する。どちらも ``shape`` を拒否する。どの図形のことか推測しないためである。輪郭はここで計算する。これは "
+":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` "
+"が判定に使う多角形と同じもので、ブラウザが第二の記述を持つ理由が無い。"
+
+#: ../../../gtrace/docs/source/editing.rst:363
+msgid ""
+"``mechlib`` is the model library, as names, descriptions and name "
+"prefixes. The ``+ Mechanics`` menu shows those names, and it uses the "
+"prefixes to name the bodies it adds. The shapes stay on the Python side "
+"until a model is chosen. ``assemblies`` is what "
+":py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` lists, so a front"
+" end can offer an element together with the parts that hold it, by name. "
+"Python builds them."
+msgstr ""
+"``mechlib`` はモデルライブラリを、名前・説明・名前の接頭辞として運ぶ。\\ ``+ Mechanics`` "
+"メニューはこの名前を表示し、追加する周辺物の名前に接頭辞を使う。図形は、モデルが選ばれるまで Python 側に留まる。\\ "
+"``assemblies`` は :py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` "
+"が並べるものである。これでフロントエンドは、素子とそれを保持する部品をまとめて名前で提示できる。組み立てるのは Python である。"
+
+#: ../../../gtrace/docs/source/editing.rst:371
+msgid ""
+"``newshapes`` says what a shape of each kind looks like when it is first "
+"put down. It is the same "
+":py:data:`NEW_SHAPES<gtrace.draw.serialize.NEW_SHAPES>` that a shape "
+"editor draws from. ``+ Shape`` can therefore add a body of one shape, and"
+" a front end does not need its own answer to the question \"how big is a "
+"new circle\". The sizes are bench sizes. A front end that shows "
+"kilometres is expected to scale them to what it shows."
+msgstr ""
+"``newshapes`` は、各種類の図形を最初に置いたときにどんな姿になるかを伝える。形状エディタが参照するものと同じ "
+":py:data:`NEW_SHAPES<gtrace.draw.serialize.NEW_SHAPES>` である。これで ``+ "
+"Shape`` "
+"は図形1つの周辺物を追加でき、フロントエンドは「新しい円はどれくらいの大きさか」という問いに自前の答えを持たずに済む。大きさはベンチの寸法である。キロメートルを表示しているフロントエンドは、表示しているものに合わせて拡大縮小することが期待される。"
+
+#: ../../../gtrace/docs/source/editing.rst:379
+msgid ""
+"``snap`` carries, for each substrate, its four corners, the apex of each "
+"face, and its middle. It also carries the points a body names for itself,"
+" and the centre of every screw hole a body has."
+msgstr "``snap`` は、各基板について4隅・各面の頂点・中心を運ぶ。さらに、周辺物が自分で名前を付けている点と、周辺物が持つ全てのネジ穴の中心も運ぶ。"
+
+#: ../../../gtrace/docs/source/editing.rst:383
+msgid ""
+"The named points come before the holes. Two marks at the same place count"
+" as one point, and the first one wins. The post hole of a mount is both a"
+" circle in the drawing and the point the mount stands on its pedestal by,"
+" and ``MT post`` is a more useful label than ``MT hole``."
+msgstr ""
+"名前付き点は穴より先に来る。同じ場所にある2つの印は1つの点として数え、先に来たほうが勝つからである。マウントのポスト穴は、図の上では円であり、同時にマウントがペデスタルの上に立つ点でもある。\\"
+" ``MT post`` のほうが ``MT hole`` より役に立つラベルである。"
+
+#: ../../../gtrace/docs/source/editing.rst:388
+msgid ""
+"These points come from Python because they are geometry: a corner is "
+"where the wedge and the sagitta of a curved face put it. Beam ends are "
+"deliberately *not* in ``snap``. The scene already carries the ends of "
+"every beam, so a front end can offer those directly."
+msgstr ""
+"これらの点が Python から来るのは、それが幾何だからである。角がどこにあるかは、ウェッジと曲面のサジッタが決める。ビームの端は意図的に "
+"``snap`` に\\ *入れていない*\\ 。シーンは既に全てのビームの端点を運んでいるので、フロントエンドはそちらを直接使える。"
+

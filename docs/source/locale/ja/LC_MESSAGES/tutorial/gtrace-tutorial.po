@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-13 16:50+0900\n"
+"POT-Creation-Date: 2026-08-15 17:59+0900\n"
 "PO-Revision-Date: 2026-08-09 22:30+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -23,946 +23,1047 @@ msgstr "gtrace チュートリアル"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:20
 msgid ""
-"gtrace traces Gaussian beams through an optical system laid out on a "
-"bench, and shows you the result in a browser: the geometry to scale, and "
-"the beam parameters everywhere along it."
+"gtrace traces Gaussian beams through an optical system on a bench. It "
+"draws the result in your browser: the geometry to scale, and the beam "
+"parameters at every point of every beam."
 msgstr ""
 "gtrace "
-"は、ベンチ上に並べた光学系の中をガウシアンビームが伝わる様子を追跡し、その結果をブラウザで見せる。幾何は実寸で、ビームパラメータは経路上のどこでも読める。"
+"は、ベンチ上の光学系の中をガウシアンビームが進む様子を追跡する。結果はブラウザに描かれる。実寸の幾何と、全てのビームの全ての点でのビームパラメータである。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:22
 msgid ""
-"This notebook builds a small system, opens it in the viewer, and adjusts "
-"it there. Working with gtrace is a loop: place something, look at what "
-"the beams do, move it. The viewer is where that loop closes. Writing a "
-"drawing out to DXF and opening it in CAD software comes at the end, and "
-"that is how you hand a finished layout to the rest of an engineering "
-"workflow."
+"This notebook builds a small system, opens it in the viewer, and changes "
+"it there. You work in a loop: place an element, look at what the beams "
+"do, move the element. The second half of the notebook explains the model "
+"behind the picture. At the end the drawing is written to a DXF file, "
+"which is the format CAD software reads."
 msgstr ""
-"この notebook では、小さな系を組み立て、それをビューアで開き、その場で調整する。gtrace "
-"での作業はループになる。何かを置き、ビームがどうなるかを見て、動かす。そのループが閉じる場所がビューアである。図面を DXF に書き出して CAD"
-" で開く話は最後に出てくる。完成したレイアウトを、エンジニアリングの残りの工程へ渡す手段である。"
+"この notebook "
+"は、小さな系を組み、ビューアで開き、そこで変更を加える。作業はループになる。素子を置き、ビームがどうなるかを見て、素子を動かす。notebook "
+"の後半は、絵の背後にあるモデルを説明する。最後に図面を DXF ファイルへ書き出す。DXF は CAD ソフトウェアが読む形式である。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:24
-msgid "You need gtrace with the notebook extras, which bring in the widget:"
-msgstr "gtrace は notebook 用の extras 付きで入れる。これでウィジェットが入る:"
+msgid "Install gtrace with the viewer as a Jupyter widget:"
+msgstr "ビューアを Jupyter ウィジェットとして使える形で gtrace をインストールする:"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:40
-msgid "A bench in a dozen lines"
-msgstr "十数行のベンチ"
+msgid "Building a bench"
+msgstr "ベンチを組む"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:42
 msgid ""
-"Three mirrors and a laser. The mirrors are large and thick, and their "
-"front faces are wedged by a quarter of a degree, so the faint reflections"
-" off their back faces come off at a visible angle. A real 1 inch steering"
-" mirror does the same thing, but it is too small to see on a drawing of a"
-" whole bench."
+"One laser and three mirrors. The mirrors here are large and thick, and "
+"the front face of each one is tilted by a quarter of a degree against the"
+" back face. This tilt is the wedge angle. It sends the faint reflection "
+"from the back face away at a visible angle. A real 1 inch steering mirror"
+" is wedged in the same way, but it is too small to show this on a drawing"
+" of a whole bench."
 msgstr ""
-"ミラー3枚とレーザー1台。ミラーは大きく厚く、前面には 0.25° "
-"のウェッジが付いている。裏面からの弱い反射が、目に見える角度で出てくるようにするためである。実物の1インチのステアリングミラーも同じことをしているが、ベンチ全体の図では小さすぎて見えない。"
+"レーザー1台とミラー3枚である。ここで使うミラーは大きくて厚く、それぞれ前面が背面に対して 0.25 "
+"度だけ傾いている。この傾きをウェッジ角と呼ぶ。ウェッジ角があると、背面からの弱い反射が目に見える角度で外れていく。実物の1インチのステアリングミラーにも同じウェッジが付いているが、小さすぎてベンチ全体の図では見えない。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:125
 msgid ""
 "``OpticalLayout`` is the whole system in one object: the optics, the "
-"source beams (the ones that start somewhere instead of being produced by "
-"a reflection), and the rules the trace runs under. ``trace()`` releases "
-"each source beam and follows it wherever the geometry takes it; gtrace "
-"works out which surface it hits next, and you do not declare it. Sixty-"
-"two beams come back from three mirrors, because every surface reflects a "
-"little of what it transmits and transmits a little of what it reflects."
+"source beams, and the rules the trace runs under. A source beam is a beam"
+" that starts somewhere, instead of being produced by a reflection."
 msgstr ""
 "``OpticalLayout`` "
-"は系全体を1つのオブジェクトにまとめたものである。素子、ソースビーム（反射で生まれたのではなく、どこかから始まるビーム）、そしてトレースが従うルールが入っている。\\"
-" ``trace()`` は各ソースビームを放ち、幾何が導くところまで追う。次にどの面に当たるかは gtrace "
-"が計算するので、こちらが宣言する必要はない。ミラー3枚から 62 "
-"本のビームが返ってくるのは、どの面も透過する光を少し反射し、反射する光を少し透過するからである。"
+"は、光学系全体を1つのオブジェクトにまとめたものである。素子、光源ビーム、そしてトレースが従う規則を持つ。光源ビームとは、反射で生まれるのではなく、どこかから始まるビームのことである。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:128
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:127
+msgid ""
+"``trace()`` releases each source beam and follows it through the system. "
+"gtrace works out which surface the beam hits next; you do not declare it."
+" Sixty-two beams come back from three mirrors, because every surface "
+"reflects a part of what it transmits and transmits a part of what it "
+"reflects."
+msgstr ""
+"``trace()`` は各光源ビームを放ち、系の中を追跡する。ビームが次にどの面に当たるかは gtrace "
+"が計算する。こちらが宣言するのではない。ミラー3枚から62本のビームが返ってくるのは、どの面も透過する光の一部を反射し、反射する光の一部を透過するからである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:130
 msgid "``TraceRules``"
 msgstr "``TraceRules``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:130
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:132
 msgid "``order``"
 msgstr "``order``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:130
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:132
 msgid "how many internal reflections are followed when a beam enters a substrate"
 msgstr "ビームが基板に入ったとき、内部反射を何回まで追うか"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:132
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:134
 msgid "``power_threshold``"
 msgstr "``power_threshold``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:132
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:134
 msgid "beams weaker than this are not propagated further"
 msgstr "これより弱いビームは、それ以上伝搬させない"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:134
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:136
 msgid "``open_beam_length``"
 msgstr "``open_beam_length``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:134
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:136
 msgid "how long a beam that hits nothing is drawn (default 1.0)"
 msgstr "何にも当たらなかったビームをどれだけの長さで描くか（既定は 1.0）"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:137
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:139
 msgid ""
-"``power_threshold`` is the knob to turn when chasing ghost beams. "
-"Lowering it finds fainter paths and takes longer. How deep to chase the "
-"ghosts of *one particular* element belongs to that element, so it lives "
-"there, as its ``max_stray_order``."
+"``power_threshold`` is the value to change when you look for ghost beams."
+" Lower it to find fainter paths; the trace then takes longer."
 msgstr ""
-"``power_threshold`` は、ゴーストビームを追うときに回すつまみである。下げるとより暗い経路が見つかり、その分時間がかかる。\\ "
-"*ある1つの*\\ 素子のゴーストをどこまで追うかは、その素子に属する話なので、素子側の ``max_stray_order`` として持つ。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:149
-msgid "Looking at it"
-msgstr "見てみる"
+"``power_threshold`` "
+"は、ゴーストビームを探すときに変える値である。下げると、より暗い経路まで見つかる。その分だけトレースに時間がかかる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:151
-msgid ""
-"``layout.widget()`` puts the viewer in the cell output. The Python kernel"
-" is still alive behind it, so the viewer can edit the model and re-trace."
-msgstr ""
-"``layout.widget()`` は、セル出力にビューアを置く。背後で Python "
-"カーネルが生きているので、ビューアからモデルを編集して再トレースできる。"
+msgid "Showing the result"
+msgstr "結果を表示する"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:153
 msgid ""
-"The cell below renders the viewer when you run this notebook yourself. On"
-" the documentation page it shows nothing, since there is no kernel there."
-" The figures below are what it looks like."
+"``layout.widget()`` puts the viewer in the cell output. The Python kernel"
+" is still running behind it, so the viewer can change the model and trace"
+" it again."
 msgstr ""
-"下のセルは、この notebook "
-"を自分で実行するとビューアを描く。ドキュメントのページでは何も出ない。そこにはカーネルが無いからである。下に並ぶ図が、実際の見た目である。"
+"``layout.widget()`` は、セルの出力にビューアを出す。背後では Python "
+"カーネルが動いたままなので、ビューアはモデルを変更して再トレースできる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:155
 msgid ""
+"The cell below shows the viewer when you run this notebook yourself. On "
+"the documentation page it shows nothing, because there is no kernel "
+"there. The figures below are what it looks like."
+msgstr ""
+"下のセルは、この notebook "
+"を自分で実行したときにビューアを表示する。ドキュメントのページでは何も表示されない。そこにはカーネルが無いからである。下の図が、実際の見た目である。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:157
+msgid ""
 "A notebook cell is wide and short, and a bench drawing usually is not. "
-"Drag the grip along the bottom edge to make the viewer taller; the height"
+"Drag the grip along the bottom edge to make the viewer taller. The height"
 " it ends at is written back to ``w.height``. The small button at the top "
 "right of the drawing folds the side panel away and gives the drawing the "
-"whole width. With no height asked for, the viewer sizes itself from the "
-"width of the cell, so the drawing comes out as tall as it is wide, capped"
-" to the window. ``layout.widget(height=700)`` fixes the height instead."
+"whole width."
 msgstr ""
-"notebook のセルは横長で、ベンチの図面はたいていそうではない。ビューアを高くするには、下辺のグリップをドラッグする。そこで決まった高さは "
-"``w.height`` "
-"に書き戻される。図の右上の小さなボタンでサイドパネルを畳むと、図が幅いっぱいを使える。高さを指定しなければ、ビューアはセルの幅から高さを決めるので、図は縦横が同じ大きさになる（ウィンドウの大きさで頭打ちになる）。\\"
-" ``layout.widget(height=700)`` とすれば高さを固定できる。"
+"notebook のセルは横長で、ベンチの図面はたいてい違う。下辺のグリップをドラッグすると、ビューアが高くなる。行き着いた高さは "
+"``w.height`` に書き戻される。図の右上の小さなボタンはサイドパネルを畳み、図に幅いっぱいを与える。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:179
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:159
+msgid ""
+"If you do not ask for a height, the viewer takes its height from the "
+"width of the cell, so the drawing comes out as tall as it is wide. The "
+"window height is the upper limit. ``layout.widget(height=700)`` sets the "
+"height in pixels instead."
+msgstr ""
+"高さを指定しなければ、ビューアはセルの幅から高さを取るので、図は縦横が同じ大きさになる。上限はウィンドウの高さである。\\ "
+"``layout.widget(height=700)`` を使えば、高さをピクセルで指定できる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:182
 msgid "Reading a beam"
 msgstr "ビームを読む"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:181
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:184
 msgid ""
-"Click anywhere along a beam, not only at a vertex. The point is projected"
-" onto the beam, the q-parameter is advanced to that distance, and the "
-"panel reports what the beam is doing *there*: the radius ``w``, the "
-"wavefront ROC, the complex ``q`` itself, the waist radius and how far "
-"away the waist is, the Rayleigh range, the accumulated Gouy phase, the "
-"power, the wavelength, the refractive index, the optical path length so "
-"far, and how many ghost reflections produced this beam."
+"Click anywhere along a beam, not only at a vertex. gtrace projects the "
+"point onto the beam and advances the q parameter to that distance. The "
+"panel then reports what the beam is doing **at that point**:"
 msgstr ""
-"ビームの上のどこでもクリックできる。頂点だけではない。その点をビームに射影し、q パラメータをその距離まで進めて、パネルが\\ *その点で*\\ "
-"のビームの状態を報告する。半径 ``w``\\ 、波面の曲率半径、複素数の ``q`` "
-"そのもの、ウエスト半径とウエストまでの距離、レイリー長、積算した Gouy "
-"位相、パワー、波長、屈折率、そこまでの光路長、そしてこのビームが何回のゴースト反射でできたかである。"
+"ビームの上ならどこをクリックしてもよい。頂点である必要はない。gtrace はその点をビームに射影し、q "
+"パラメータをその距離まで進める。パネルは、ビームが\\ **その点で**\\ 何をしているかを報告する:"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:183
-msgid ""
-"The x and y columns are separate because a beam is not round in general: "
-"after a wedged substrate at non-normal incidence the two waists differ."
-msgstr "x と y の列が分かれているのは、ビームが一般に真円ではないからである。ウェッジのある基板を斜めに通ると、2つの方向のウエストが違ってくる。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:185
-msgid "|f88559a0babf426aad7749d4608368e4|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:191
-msgid "f88559a0babf426aad7749d4608368e4"
-msgstr ""
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:186
+msgid "the radius ``w`` and the wavefront ROC"
+msgstr "半径 ``w`` と波面の ROC"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:187
-msgid ""
-"``pinned 1/6`` in the corner of the panel means six beams pass through "
-"the point that was clicked; clicking the same place again steps through "
-"them. Without that counter a bundle of beams returning along their own "
-"path would be impossible to tell apart."
-msgstr ""
-"パネルの隅の ``pinned 1/6`` "
-"は、クリックした点を6本のビームが通っていることを意味する。同じ場所をもう一度クリックすると、順に切り替わる。このカウンタが無いと、来た道を戻ってくるビームの束を見分けられない。"
+msgid "the complex ``q`` itself"
+msgstr "複素数 ``q`` そのもの"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:188
+msgid "the waist radius, and the distance to the waist"
+msgstr "ウェスト半径と、ウェストまでの距離"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:189
+msgid "the Rayleigh range and the accumulated Gouy phase"
+msgstr "レイリー長と、積算した Gouy 位相"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:190
+msgid "the power, the wavelength and the refractive index"
+msgstr "パワー、波長、屈折率"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:191
+msgid "the optical path length so far"
+msgstr "そこまでの光路長"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:192
+msgid "how many ghost reflections produced this beam"
+msgstr "このビームができるまでに経たゴースト反射の回数"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:194
 msgid ""
-"A drawing cannot do this. A DXF is geometry, with nothing in it to ask "
-"about the beam. The readout needs the beam objects themselves, so the "
-"viewer works from the model and not from a drawing."
-msgstr ""
-"図面ではこれができない。DXF "
-"は幾何であって、ビームについて尋ねられるものが入っていない。読み出しにはビームオブジェクトそのものが要るので、ビューアは図面ではなくモデルから動いている。"
+"The x and y columns are separate, because a beam is not round in general."
+" After a wedged substrate at non-normal incidence the two waists are "
+"different."
+msgstr "x と y の列が分かれているのは、ビームが一般には丸くないからである。ウェッジのある基板を斜めに通ったあとでは、2つのウェストは違う値になる。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:203
-msgid "Coordinates and directions"
-msgstr "座標と方向"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:196
+msgid "|c7fde6bd183b4bd1b433777fd94c3d66|"
+msgstr "|c7fde6bd183b4bd1b433777fd94c3d66|"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:205
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:202
+msgid "c7fde6bd183b4bd1b433777fd94c3d66"
+msgstr "c7fde6bd183b4bd1b433777fd94c3d66"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:198
 msgid ""
-"Everything is on a 2D plane, in a Cartesian coordinate system with an x "
-"and a y axis. Distances are in metres; ``gtrace.unit`` gives you ``mm``, "
-"``cm``, ``inch`` and the rest as multipliers, so ``25*cm`` reads as it "
-"should."
+"``pinned 1/8`` in the corner of the panel means that eight beams pass "
+"through the point you clicked. Click the same place again to step through"
+" them."
 msgstr ""
-"すべては2次元平面の上、x 軸と y 軸のデカルト座標系にある。距離はメートルである。\\ ``gtrace.unit`` が ``mm``\\ "
-"・\\ ``cm``\\ ・\\ ``inch`` などを倍率として提供するので、\\ ``25*cm`` はそのまま読める。"
+"パネルの隅の ``pinned 1/8`` "
+"は、クリックした点を8本のビームが通っていることを表す。同じ場所をもう一度クリックすると、順に切り替わる。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:207
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:200
 msgid ""
-"A direction, which way a beam travels or which way a mirror faces, is "
-"given either as a unit vector or as an angle. An angle is always measured"
-" from the x axis, counterclockwise, so the direction :math:`\\theta` is "
-"the vector :math:`(\\cos\\theta, \\sin\\theta)`. Angles are in radians in"
-" the model and in degrees everywhere a person reads them: in the "
-"properties panel, in the status bar, and through ``deg2rad`` in your own "
-"code."
-msgstr ""
-"方向（ビームの進む向き、ミラーの向く向き）は、単位ベクトルか角度で与える。角度は常に x 軸から反時計回りに測るので、方向 "
-":math:`\\theta` はベクトル :math:`(\\cos\\theta, \\sin\\theta)` "
-"である。モデルの中ではラジアン、人が読むところ（プロパティのパネル、ステータスバー、自分のコードでの ``deg2rad``\\ ）では度である。"
+"A DXF file holds geometry only, so this readout is not available in CAD "
+"software. The viewer works from the beam objects themselves."
+msgstr "DXF ファイルが持つのは幾何だけなので、この読み出しは CAD ソフトウェアでは得られない。ビューアはビームオブジェクトそのものから読んでいる。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:219
-msgid "The objects behind the picture"
-msgstr "絵の裏にあるオブジェクト"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:214
+msgid "Changing the bench by hand"
+msgstr "ベンチを手で変更する"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:216
+msgid ""
+"Click an element and the panel switches from the beam readout to the "
+"properties of that element. The rows show the numbers a data sheet gives "
+"you, not the numbers the model stores: angles in degrees, diameters and "
+"thicknesses in millimetres, and curvature as a radius instead of the "
+"``inv_ROC_HR`` underneath. A flat face therefore reads ``inf``."
+msgstr ""
+"素子をクリックすると、パネルはビームの読み出しからその素子のプロパティに切り替わる。行に出るのは、モデルが保持している数値ではなく、データシートが載せる数値である。角度は度、直径と厚みはミリメートル、曲率は下にある"
+" ``inv_ROC_HR`` ではなく半径で表す。だから平面は ``inf`` と読める。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:218
+msgid "|71b40414904b435bbf2efcf41fa50c4c|"
+msgstr "|71b40414904b435bbf2efcf41fa50c4c|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:264
+msgid "71b40414904b435bbf2efcf41fa50c4c"
+msgstr "71b40414904b435bbf2efcf41fa50c4c"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:221
-msgid ""
-"A **Gaussian beam** is a q-parameter, a place and a direction. The "
-"q-parameter carries the width and the wavefront curvature together, and "
-"tracing a beam means propagating it."
-msgstr ""
-"**ガウシアンビーム**\\ は、q パラメータと位置と方向である。q "
-"パラメータは幅と波面の曲率をまとめて持っていて、ビームを追跡するとは、これを伝搬させることである。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:223
-msgid "|ee3e1d4a30564ec0993d15b6828dbccc|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
-msgid "ee3e1d4a30564ec0993d15b6828dbccc"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:236
-msgid ""
-"A **mirror** is a substrate with two faces: HR, the coated one the beam "
-"is meant to bounce off, and AR, the back. Each face has its own "
-"curvature, reflectivity and transmission. The wedge angle between the two"
-" faces sends the back-face ghost off at an angle of its own."
-msgstr ""
-"**ミラー**\\ は、2つの面を持つ基板である。HR はコートされた面で、ビームを反射させる側、AR "
-"はその裏である。それぞれの面が独自の曲率・反射率・透過率を持つ。2面の間のウェッジ角が、裏面からのゴーストを固有の角度で送り出す。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:238
-msgid ""
-"``HRcenter`` is the apex of the HR face, the point on the surface rather "
-"than the middle of the glass, and ``normAngleHR`` is the direction that "
-"face looks in. ``center`` is the middle of the substrate, and that is "
-"where the drawing puts the box."
-msgstr ""
-"``HRcenter`` は HR 面の頂点である。ガラスの中央ではなく、面の上の点である。\\ ``normAngleHR`` "
-"はその面が向いている方向である。\\ ``center`` は基板の中央で、図の四角形はそこに置かれる。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:240
-msgid "|9b2fd9abe95544678dae412c7fafddb1|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:242
-msgid "9b2fd9abe95544678dae412c7fafddb1"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:307
-msgid ""
-"The layout holds *your* objects, not copies of them. There is exactly one"
-" model, and your code and the browser are both looking at it: the mirror "
-"you drag in the viewer is the object ``M1`` names here."
-msgstr ""
-"レイアウトが持つのは\\ *こちらの*\\ "
-"オブジェクトそのもので、コピーではない。モデルは1つしかなく、コードとブラウザはその同じものを見ている。ビューアでドラッグしたミラーは、ここで "
-"``M1`` が指しているオブジェクトである。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:309
-msgid ""
-"``trace()`` is the one exception. It traces a *copy* of each source beam,"
-" so the registered source is not consumed by tracing and stays where you "
-"put it."
-msgstr ""
-"``trace()`` だけが例外である。各ソースビームの\\ *コピー*\\ "
-"をトレースするので、登録したソースはトレースで消費されず、置いた場所に残る。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:321
-msgid "Adjusting it by hand"
-msgstr "手で調整する"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:323
-msgid ""
-"Click an element and the panel switches from the beam readout to its "
-"properties. The rows show the numbers a data sheet would give you, not "
-"the ones the model stores: angles in degrees, diameters and thicknesses "
-"in millimetres, and curvature as a radius instead of the ``inv_ROC_HR`` "
-"underneath, so a flat face reads ``inf``."
-msgstr ""
-"素子をクリックすると、パネルがビームの読み出しからその素子のプロパティに切り替わる。並ぶのはデータシートに載る数値で、モデルが保持している値ではない。角度は度、直径と厚みはミリメートル、曲率は裏側の"
-" ``inv_ROC_HR`` ではなく半径である。だから平面は ``inf`` と表示される。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:325
-msgid "|4c0190d514934bcb8c1dc70b2dc4d7ad|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:370
-msgid "4c0190d514934bcb8c1dc70b2dc4d7ad"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:328
 msgid "in the viewer"
 msgstr "ビューアでの操作"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:328
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:221
 msgid "what happens"
 msgstr "起きること"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:330
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:223
 msgid "click an element"
 msgstr "素子をクリック"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:330
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:223
 msgid "its properties, and its outline marked"
 msgstr "プロパティが開き、輪郭に印が付く"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:332
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
 msgid "drag it"
 msgstr "ドラッグ"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:332
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
 msgid "it moves"
 msgstr "動く"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:334
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:227
 msgid "Ctrl + drag"
 msgstr "Ctrl + ドラッグ"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:334
-msgid "dropped over a beam, it is put square across that beam and centred on it"
-msgstr "ビームの上で放すと、そのビームに直交し、ビームが中心を通る位置に置かれる"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:227
+msgid "drop it on a beam: it is placed square across that beam, centred on it"
+msgstr "ビームの上で放す。そのビームに正対し、中心がビームに載る"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:336
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:229
 msgid "Shift + drag"
 msgstr "Shift + ドラッグ"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:336
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:229
 msgid ""
-"it turns about the point it is held by - the HR apex of a mirror, the "
-"middle of a lens"
-msgstr "支点にしている点の回りに回る（ミラーなら HR 面の頂点、レンズなら基板の中心）"
+"it turns about its anchor point: the HR apex of a mirror, the centre of a"
+" lens"
+msgstr "アンカー点の回りに回る。ミラーなら HR の頂点、レンズなら中心である"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:338
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:231
 msgid "``Align``, or ``a``"
 msgstr "``Align``\\ 、または ``a``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:338
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:231
 msgid "face square across the line between two places you click"
 msgstr "クリックした2つの場所を結ぶ線に、面を直交させる"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:340
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:233
 msgid "``Align``, or ``b``"
 msgstr "``Align``\\ 、または ``b``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:340
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:233
 msgid "face the bisector of three places: from, at, to"
 msgstr "3つの場所（始点・頂点・終点）の二等分線の向きに面を向ける"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:342
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:235
 msgid "``[`` and ``]``"
 msgstr "``[`` と ``]``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:342
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:235
 msgid "turn it 45 degrees"
 msgstr "45度回す"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:344
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:237
 msgid "Ctrl + click a beam"
 msgstr "Ctrl + ビームをクリック"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:344
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:237
 msgid "with an element selected, that beam becomes the one it moves along"
 msgstr "素子を選択した状態で、沿って動かす対象のビームをそれにする"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:346
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:239
 msgid "edit a property row"
 msgstr "プロパティの行を編集"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:346
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:239
 msgid "that value is applied"
 msgstr "その値が適用される"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:348
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:241
 msgid "``+ Mirror`` / ``+ Lens`` / ``+ Source``"
 msgstr "``+ Mirror`` / ``+ Lens`` / ``+ Source``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:348
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:241
 msgid ""
 "a new one at the centre of the view; the arrow opens the cylindrical "
 "variants"
 msgstr "表示の中心に1つ追加する。矢印でシリンドリカル版を選べる"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:350
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:243
 msgid "``+ Mechanics``"
 msgstr "``+ Mechanics``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:350
-msgid "a part from the model library - see below"
-msgstr "モデルライブラリから部品を1つ（下記参照）"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:243
+msgid "a part from the model library (see below)"
+msgstr "モデルライブラリの部品（下記参照）"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:352
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:245
 msgid "``Remove``"
 msgstr "``Remove``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:352
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:245
 msgid "the selection goes"
 msgstr "選択中のものを消す"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:354
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:247
 msgid "``Undo``, or Ctrl + Z"
 msgstr "``Undo``\\ 、または Ctrl + Z"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:354
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:247
 msgid "the last edit is taken back; ``Redo``, or Ctrl + Shift + Z"
 msgstr "直前の編集を取り消す。\\ ``Redo`` は Ctrl + Shift + Z"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:356
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:249
 msgid "``Measure``, or ``m``"
 msgstr "``Measure``\\ 、または ``m``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:356
-msgid "two clicks say what to measure, a third where to draw the line"
-msgstr "2回のクリックで何を測るか、3回目で線をどこに引くかを指定する"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:249
+msgid "two clicks say what to measure, a third one where to draw the line"
+msgstr "2回のクリックで何を測るかを、3回目で線をどこに引くかを指定する"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:358
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:251
 msgid "``Save`` / ``Load`` / ``DXF``"
 msgstr "``Save`` / ``Load`` / ``DXF``"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:358
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:251
 msgid "write the layout, read it back, export a drawing"
 msgstr "レイアウトを書く、読み戻す、図面を書き出す"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:360
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:253
 msgid "drag the background"
 msgstr "背景をドラッグ"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:360
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:253
 msgid "pan; the wheel zooms about the cursor; ``f`` fits"
 msgstr "パンする。ホイールはカーソルを中心にズーム、\\ ``f`` で全体表示"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:363
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:256
 msgid ""
-"**Ctrl + drag** is worth the habit. Almost every element on a bench is "
-"meant to sit square across a beam with the beam through its middle. That "
-"settles two of the three numbers that say where it goes and leaves one "
-"for you: how far along the beam it sits. Hold Ctrl and the drag sets only"
-" that one, and the outline snaps as you drag so you can see what you are "
-"about to get."
+"**Ctrl + drag** is the gesture to learn first. Almost every element on a "
+"bench has to sit square across a beam, with the beam through its middle. "
+"Three numbers say where an element goes: its angle, its sideways offset "
+"from the beam, and its distance along the beam. Ctrl + drag settles the "
+"first two and leaves the third one to you. The outline snaps while you "
+"drag, so you see the result before you release the button."
 msgstr ""
 "**Ctrl + ドラッグ**\\ "
-"は覚える価値がある。ベンチ上のほとんどの素子は、ビームに直交し、ビームが中心を通るように置くものである。それで、置き場所を表す3つの数のうち2つが決まり、残るのは1つ、ビームに沿ってどこに座るかである。Ctrl"
-" を押しながらドラッグすると、決まるのはその1つだけになる。ドラッグ中に輪郭が吸い付くので、結果が先に見える。"
+"は、最初に覚える操作である。ベンチ上のほとんどの素子は、ビームに直交し、ビームが中心を通るように置かれる。素子の位置は3つの数で決まる。角度、ビームからの横方向のずれ、ビームに沿った距離である。Ctrl"
+" + ドラッグは最初の2つを決め、3つ目をこちらに残す。ドラッグ中に輪郭が吸い付くので、ボタンを放す前に結果が見える。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:365
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:258
 msgid ""
-"Sometimes that last number wants typing instead of dragging. Whenever a "
+"Sometimes you want to type that distance instead of dragging it. When a "
 "beam passes through the selected element, two rows appear under "
-"**Angle**. **Along beam** chooses which beam, since a 45° mirror has an "
-"incoming one and an outgoing one. **Move by [mm]** slides the element "
-"that far along the chosen beam, positive downstream. The field is a "
-"distance to move, not a place to be, so it returns to zero as soon as it "
-"is applied."
+"**Angle**. **Along beam** selects the beam, because a 45 degree mirror "
+"has an incoming beam and an outgoing beam. **Move by [mm]** slides the "
+"element along the selected beam, and a positive number moves it "
+"downstream. The field is a distance to move, not a position, so it "
+"returns to zero as soon as it is applied."
 msgstr ""
-"最後の1つは、ドラッグより打ち込むほうが向いていることもある。選択した素子をビームが通っていれば、\\ **Angle** "
-"の下に行が2つ現れる。\\ **Along beam** はどのビームかを選ぶ。45° のミラーには入るビームと出るビームがあるからである。\\ "
-"**Move by [mm]** "
-"は、選んだビームに沿ってその距離だけ素子を滑らせる。下流向きが正である。この欄は行き先ではなく移動量なので、適用されるとすぐ 0 に戻る。"
+"その距離をドラッグではなく打ち込みたいこともある。選択した素子をビームが通っていれば、\\ **Angle** の下に2つの行が現れる。\\ "
+"**Along beam** はビームを選ぶ。45度のミラーには入るビームと出るビームがあるからである。\\ **Move by [mm]** "
+"は、選んだビームに沿って素子を滑らせる。正の値で下流へ動く。この欄は行き先ではなく移動量なので、適用されるとすぐ 0 に戻る。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:367
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:260
 msgid ""
-"**Align** aims an element when the beam that will strike it does not "
-"exist yet. Press ``a`` and click two places (the middle of a mount, a "
-"screw hole, the corner of a breadboard) and the element turns square "
-"across the line between them, looking from the first towards the second. "
-"Click them in the other order and it faces the opposite way, which is how"
-" you flip a face. Press ``b`` and click three places, from, at, to, and "
-"it takes the bisector of that corner, which is the direction a mirror "
-"folding light from the first place to the last has to look. Neither one "
-"moves the element; where it stands is a separate question, with three "
-"answers of its own."
+"**Align** aims an element when the beam that will hit it does not exist "
+"yet. Press ``a`` and click two places, for example the centre of a mount,"
+" a screw hole, or the corner of a breadboard. The element turns square "
+"across the line between the two places, looking from the first place "
+"towards the second one. Click them in the other order and it faces the "
+"opposite way, which is how you turn a face around."
 msgstr ""
-"**Align** は、これから当たるビームがまだ存在しないときに素子の向きを決める。\\ ``a`` "
-"を押して2つの場所（マウントの中心、ねじ穴、ブレッドボードの角など）をクリックすると、素子はその2点を結ぶ線に直交し、1つ目から2つ目のほうを向く。逆順にクリックすると反対を向くので、面を裏返せる。\\"
-" ``b`` "
-"を押して3つの場所（始点・頂点・終点）をクリックすると、その角の二等分線の向きになる。最初の場所から最後の場所へ光を折り返すミラーが向くべき方向である。どちらも素子を動かさない。どこに立つかは別に決める。"
+"**Align** は、これから当たるビームがまだ存在しないときに、素子の向きを決める。\\ ``a`` "
+"を押して2つの場所をクリックする。たとえばマウントの中心、ネジ穴、ブレッドボードの角である。素子は2つの場所を結ぶ線に直交する向きに回り、1つ目から2つ目を見る向きになる。逆の順にクリックすると反対を向く。面を裏返すときはこれを使う。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:382
-msgid "The loop runs both ways"
-msgstr "ループは両方向に回る"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:384
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:262
 msgid ""
-"With the viewer cell still on screen, running the next one re-traces and "
-"redraws it **in place**, keeping the current zoom, pan and layer "
-"visibility so the picture does not jump underneath you."
+"Press ``b`` and click three places: from, at, to. The element takes the "
+"bisector of that corner. That is the direction a mirror must look in to "
+"send light from the first place to the last one. Neither ``a`` nor ``b`` "
+"moves the element."
 msgstr ""
-"ビューアのセルを画面に出したまま次のセルを実行すると、\\ **その場で**\\ "
-"再トレースして描き直す。今のズーム・パン・レイヤーの表示状態は保たれるので、絵が足元で跳ねることはない。"
+"``b`` "
+"を押して3つの場所をクリックする。始点・頂点・終点の順である。素子はその角の二等分線の向きになる。最初の場所から最後の場所へ光を送るために、ミラーが向くべき方向である。\\"
+" ``a`` も ``b`` も、素子を動かさない。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:447
-msgid "Every gesture is one message"
-msgstr "どの操作も1つのメッセージ"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:276
+msgid "Changing the bench from a cell"
+msgstr "セルからベンチを変更する"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:449
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:278
 msgid ""
-"Each interaction in the viewer sends exactly one message, and "
-"``apply_edit`` receives it. So anything the GUI can do, you can do from a"
-" cell, and the messages below are the whole of what the browser sends."
+"The viewer and your code work on the same objects, so you can also change"
+" the bench in a cell. Keep the widget in a variable and call ``update()``"
+" after the change. The viewer redraws **in place** and keeps the current "
+"zoom, pan and layer visibility, so the picture does not jump while you "
+"work."
 msgstr ""
-"ビューアでの操作はどれも、ちょうど1つのメッセージを送る。それを受け取るのが ``apply_edit`` である。だから GUI "
-"でできることはセルからもできるし、ブラウザが送るのは以下のメッセージだけである。"
+"ビューアと自分のコードは同じオブジェクトを扱うので、セルからベンチを変更することもできる。ウィジェットを変数に入れておき、変更のあとで "
+"``update()`` を呼ぶ。ビューアは\\ **その場で**\\ "
+"描き直し、今のズーム・パン・レイヤーの表示状態を保つので、作業中に絵が跳ねることはない。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:518
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:341
+msgid "Measuring a distance"
+msgstr "距離を測る"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:343
+msgid ""
+"``Measure`` takes three clicks: two clicks say what to measure, and the "
+"third one says where to draw the line."
+msgstr "``Measure`` はクリック3回で使う。2回のクリックで何を測るかを、3回目で線をどこに引くかを指定する。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:345
+msgid "|d696f00b25ce4fb6b0df767a81b36af8|"
+msgstr "|d696f00b25ce4fb6b0df767a81b36af8|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:361
+msgid "d696f00b25ce4fb6b0df767a81b36af8"
+msgstr "d696f00b25ce4fb6b0df767a81b36af8"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:347
+msgid ""
+"The third click is needed because the two points you want to measure are "
+"usually in the busiest part of the drawing. A line drawn straight between"
+" them would lie on top of what it measures, so you carry it aside by eye."
+" Extension lines then run back to the two points."
+msgstr "3回目のクリックが要るのは、測りたい2点が、たいてい図のいちばん混み合っているところにあるからである。2点を直線で結ぶと、線は測っている当のものの上に載ってしまう。そこで、目で見ながら横へ寄せる。あとは2点まで補助線が伸びる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:349
+msgid "The first two clicks snap to:"
+msgstr "最初の2回のクリックは、次の点に吸着する:"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:351
+msgid "the corners of a substrate"
+msgstr "基板の角"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:352
+msgid "the apex of either face of an element"
+msgstr "素子のどちらかの面の頂点"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:353
+msgid "the centre of an element"
+msgstr "素子の中心"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:354
+msgid "the end of any beam"
+msgstr "任意のビームの端"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:355
+msgid "the screw holes of a breadboard"
+msgstr "ブレッドボードのネジ穴"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:357
+msgid ""
+"When the whole span lies inside one substrate, the **optical distance** "
+"is written under the line as well. It is the physical distance times the "
+"refractive index. The main use is the optical thickness of a substrate, "
+"measured between the apexes of its two faces."
+msgstr ""
+"区間全体が1つの基板の中に収まっているときは、線の下に\\ **光学的距離**\\ "
+"も書かれる。物理的な距離に屈折率を掛けたものである。主な用途は、基板の光学的な厚みを、2つの面の頂点の間で測ることである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:359
+msgid ""
+"Dimensions are part of the layout. They are saved with it, they come back"
+" with it, and undo takes them back."
+msgstr "寸法線はレイアウトの一部である。レイアウトと一緒に保存され、一緒に戻り、undo で取り消せる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:373
+msgid "Mounts, holders and breadboards"
+msgstr "マウント・ホルダー・ブレッドボード"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:375
+msgid ""
+"A layout is not only light. The parts that hold the optics take up room, "
+"bump into each other and have to be bolted somewhere, so gtrace carries "
+"them too. A ``Mechanics`` object is a named body made of drawing "
+"primitives. The trace never sees it, and beams pass straight through it. "
+"It is drawn, picked, measured, saved and exported like everything else."
+msgstr ""
+"レイアウトは光だけではない。素子を保持する部品は場所を取り、互いにぶつかり、どこかにボルトで留めなければならない。だから gtrace "
+"はそれも運ぶ。\\ ``Mechanics`` "
+"オブジェクトは、描画プリミティブからできた名前付きの物体である。トレースはこれを見ないので、ビームはそのまま通り抜ける。描画・選択・測定・保存・書き出しは、他のものと同じようにできる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:377
+msgid ""
+"The small bench below has a lens and two steering mirrors on a 450 x 300 "
+"mm breadboard, with a mount under each optic. A mount is **attached** to "
+"the optic it holds. It has no position of its own; gtrace computes its "
+"position from its host every time it is asked. Move the mirror and the "
+"mount follows."
+msgstr ""
+"下の小さなベンチには、450 x 300 mm "
+"のブレッドボードの上にレンズ1枚とステアリングミラー2枚があり、それぞれの素子の下にマウントがある。マウントは、保持する素子に\\ "
+"**取り付けられている**\\ 。自分の位置を持たず、gtrace "
+"が聞かれるたびに宿主から位置を計算する。ミラーを動かせば、マウントが付いてくる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:468
+msgid "|b9c9ac50e7d64b9cb5d07b5d12d74f8c|"
+msgstr "|b9c9ac50e7d64b9cb5d07b5d12d74f8c|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:478
+msgid "b9c9ac50e7d64b9cb5d07b5d12d74f8c"
+msgstr "b9c9ac50e7d64b9cb5d07b5d12d74f8c"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:470
+msgid ""
+"A click picks a body last, after the beams and the optics. A breadboard "
+"covers most of the bench, so a click on it lands on the beam or the optic"
+" in front of it. Where several bodies overlap, the smallest one wins, so "
+"a board does not hide a mount standing on it. You can drag a board only "
+"after you select it: the first click selects it, and dragging before that"
+" pans the view."
+msgstr "クリックが周辺物を選ぶのは最後で、ビームと素子の後である。ブレッドボードはベンチのほとんどを覆うので、その上をクリックしても、手前のビームか素子に当たる。複数の周辺物が重なっていれば小さいほうが勝つので、ボードの上に立つマウントがボードに隠されることはない。ボードをドラッグできるのは選択したあとである。最初のクリックが選択で、その前のドラッグは表示のパンになる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:472
+msgid ""
+"The corner handles of a breadboard cut it to a new size. Python drills "
+"the hole grid again at the new size, instead of scaling the holes. An "
+"element dragged near a screw hole puts its anchor point exactly on the "
+"hole; hold Alt to switch this off."
+msgstr ""
+"ブレッドボードの四隅のハンドルで、新しい寸法に切り出せる。Python "
+"は穴を拡大縮小するのではなく、新しい寸法で格子を開け直す。ネジ穴の近くでドラッグした素子は、アンカー点をちょうどその穴の上に載せる。Alt "
+"を押すとこれを切れる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:474
+msgid ""
+"``+ Mechanics`` in the viewer lists the model library. A model is plain "
+"data: the shapes, a layer and a description. A model can come from this "
+"package, from a file, or from a cell of your own."
+msgstr ""
+"ビューアの ``+ Mechanics`` "
+"はモデルライブラリを一覧する。モデルは素のデータで、形状・レイヤー・説明からなる。モデルは、このパッケージから来ることも、ファイルから来ることも、自分のセルから来ることもある。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:476
+msgid ""
+"A part can also stand on another part. The library holds a pedestal post "
+"and a clamping fork. A mirror, its mount, a pedestal and a fork then make"
+" one stack: move the mirror and the whole stack follows. `Optical layouts"
+" <../layout.rst>`__ describes how the stack is built."
+msgstr ""
+"部品は、別の部品の上にも立てられる。ライブラリにはペデスタルポストとクランピングフォークがある。ミラー・そのマウント・ペデスタル・フォークで1つの積み重ねになる。ミラーを動かせば、積み重ね全体が付いてくる。積み重ねの組み方は"
+" `Optical layouts <../layout.rst>`__ にある。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:555
+msgid "Drawing a part of your own"
+msgstr "自分の部品を描く"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:557
+msgid ""
+"The stock models are generic on purpose. gtrace does not invent the "
+"dimensions of a vendor's part. Measure the part in front of you and "
+"register it, either from a cell or by drawing it."
+msgstr ""
+"同梱のモデルが汎用的なのは意図的である。gtrace "
+"は特定のベンダーの部品の寸法を勝手に決めない。目の前にある部品を実測し、それを登録する。セルからでも、描いてからでもよい。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:559
+msgid ""
+"``Mechanics.edit()`` opens the shape editor. It is the same viewer, but "
+"it shows only the shapes of one part, drawn in the frame of that part, "
+"with the origin marked."
+msgstr ""
+"``Mechanics.edit()`` "
+"は形状エディタを開く。同じビューアだが、1つの部品の形状だけを、その部品自身の座標系で、原点を示して表示する。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:561
+msgid ""
+"Choose the origin carefully. When the part is attached to an optic, the "
+"origin comes to sit at the centre of the substrate of that optic. A mount"
+" is therefore drawn around the mirror it will hold."
+msgstr "原点をどこに置くかは慎重に決める。部品を素子に取り付けると、原点はその素子の基板の中心に来る。だからマウントは、これから保持するミラーを囲むように描かれる。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:563
+msgid "|c3541a2829a543dda4acabd732b8fb64|"
+msgstr "|c3541a2829a543dda4acabd732b8fb64|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:569
+msgid "c3541a2829a543dda4acabd732b8fb64"
+msgstr "c3541a2829a543dda4acabd732b8fb64"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:565
+msgid ""
+"The top row puts a new shape at the origin. Pick a shape in the drawing "
+"or in the list, and give it exact numbers in millimetres and degrees."
+msgstr "一番上の行が、新しい図形を原点に置く。図の中かリストで図形を選び、ミリメートルと度で正確な数値を与える。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:567
+msgid ""
+"You can drag a shape. You can also take hold of its grips: a corner of a "
+"rectangle, the rim of a circle, an end of a line, or a vertex of an "
+"outline. Turn a shape with Shift + drag, or with ``[`` and ``]``. A drag "
+"snaps to the origin, and to the corners, centres and edge midpoints of "
+"the other shapes; hold Alt to switch this off. **Save to library** "
+"registers the result under a name."
+msgstr ""
+"図形はドラッグできる。グリップを掴むこともできる。矩形の角、円の周、線の端、輪郭の頂点である。図形を回すには Shift + ドラッグか、\\ "
+"``[`` と ``]`` を使う。ドラッグは原点と、他の図形の角・中心・辺の中点に吸着する。Alt を押すとこれを切れる。\\ **Save "
+"to library** は、結果を名前を付けて登録する。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:633
+msgid ""
+"A body keeps the shapes themselves, not a reference to the model it was "
+"built from. A saved layout is therefore complete, and a library that has "
+"changed since cannot change a drawing you already made. Call "
+"``layout.relink_mechanics()`` when you do want the newer definition."
+msgstr ""
+"周辺物は、元になったモデルへの参照ではなく、形状そのものを持つ。だから保存したレイアウトはそれだけで完結していて、その後で変わったライブラリが、既に作った図面を変えてしまうことはない。新しい定義が欲しいときは"
+" ``layout.relink_mechanics()`` を呼ぶ。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:645
+msgid "Saving, sending and exporting"
+msgstr "保存・送付・書き出し"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:647
+msgid ""
+"``layout.save`` writes the optics, the source beams, the tracing rules, "
+"the bodies and the dimensions to a JSON file. It does not write the "
+"traced beams, because ``trace()`` produces them again. The **Layout "
+"file** panel in the side bar does the same thing from the viewer. Python "
+"reads and writes the file, and the path is relative to the directory the "
+"kernel runs in. The page in the browser never gets access to your disk."
+msgstr ""
+"``layout.save`` は、素子・光源ビーム・トレースの規則・周辺物・寸法線を JSON "
+"ファイルに書く。トレースしたビームは書かない。\\ ``trace()`` がまた作るからである。サイドバーの **Layout file** "
+"パネルが、ビューアから同じことをする。ファイルを読み書きするのは Python "
+"で、パスはカーネルが動いているディレクトリからの相対である。ブラウザのページにディスクへのアクセスは渡さない。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:701
+msgid ""
+"``update_from_file`` loads the file **in place**. Elements whose name and"
+" type match are updated, not replaced. If they were replaced, the ``M1`` "
+"in the cells above would point at an object that is no longer in the "
+"layout, and assignments to it would stop having any effect. "
+"``OpticalLayout.load(...)`` returns a new layout instead, when that is "
+"what you want."
+msgstr ""
+"``update_from_file`` はファイルを\\ **その場に**\\ "
+"読み込む。名前と型が一致する素子は、置き換えではなく更新される。もし置き換えていたら、上のセルの ``M1`` "
+"はレイアウトにもう無いオブジェクトを指すことになり、そこへの代入は何の効果も持たなくなる。新しいレイアウトが欲しいときは、代わりに "
+"``OpticalLayout.load(...)`` を使う。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:704
+msgid "A page you can send"
+msgstr "送れるページ"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:706
+msgid ""
+"``render_html`` writes the scene, the viewer code and the styling into a "
+"single HTML file. You can mail that file to a collaborator. They open it "
+"in a browser, read the beam parameters off it and measure distances on "
+"it. They cannot change the layout, because there is no Python kernel "
+"behind the page to apply an edit and trace again."
+msgstr ""
+"``render_html`` は、シーン・ビューアのコード・スタイルを1つの HTML "
+"ファイルに書き出す。そのファイルは共同研究者にメールで送れる。相手はブラウザで開き、ビームパラメータを読み取り、距離を測れる。レイアウトを変えることはできない。編集を適用して再トレースする"
+" Python カーネルが、ページの背後に無いからである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:764
+msgid "Exporting a DXF drawing"
+msgstr "DXF 図面を書き出す"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:766
+msgid ""
+"``export_dxf`` writes the drawing to a DXF file, which is the format CAD "
+"software reads. The ``DXF`` button in the side bar calls the same method."
+" Beams, optics, bodies and dimensions each go on a layer of their own, so"
+" the person who opens the drawing can switch them off. Pass "
+"``dimensions=False`` to leave the dimensions out completely."
+msgstr ""
+"``export_dxf`` は図面を DXF ファイルに書き出す。DXF は CAD ソフトウェアが読む形式である。サイドバーの ``DXF``"
+" "
+"ボタンも同じメソッドを呼ぶ。ビーム・素子・周辺物・寸法線は、それぞれ専用のレイヤーに載るので、図面を開いた人はそれらを消せる。寸法線をまったく入れたくなければ"
+" ``dimensions=False`` を渡す。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:768
+msgid "|b4cfda1c95e7427594b38afe8f53af3a|"
+msgstr "|b4cfda1c95e7427594b38afe8f53af3a|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:770
+msgid "b4cfda1c95e7427594b38afe8f53af3a"
+msgstr "b4cfda1c95e7427594b38afe8f53af3a"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:817
+msgid "What is underneath"
+msgstr "その下では何が起きているか"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:819
+msgid ""
+"The rest of the notebook explains the model behind the picture: the "
+"coordinates, the objects, where the ghost beams come from, and the "
+"messages the viewer sends."
+msgstr ""
+"notebook "
+"の残りは、絵の背後にあるモデルを説明する。座標系、オブジェクト、ゴーストビームがどこから来るか、そしてビューアが送るメッセージである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:822
+msgid "Coordinates and directions"
+msgstr "座標と方向"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:824
+msgid ""
+"Everything lies on one 2D plane, in a Cartesian coordinate system with an"
+" x axis and a y axis. Distances are in metres. ``gtrace.unit`` gives you "
+"``mm``, ``cm``, ``inch`` and the rest as multipliers, so ``25*cm`` reads "
+"as it should."
+msgstr ""
+"全ては1つの2次元平面の上にあり、x 軸と y 軸を持つ直交座標系で表す。距離はメートルである。\\ ``gtrace.unit`` が "
+"``mm``\\ 、\\ ``cm``\\ 、\\ ``inch`` などを倍率として与えるので、\\ ``25*cm`` をそのまま書ける。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:826
+msgid ""
+"A direction is the way a beam travels, or the way a mirror faces. You "
+"give it as a unit vector or as an angle. An angle is always measured from"
+" the x axis, counterclockwise, so the direction :math:`\\theta` is the "
+"vector :math:`(\\cos\\theta, \\sin\\theta)`. The model stores angles in "
+"radians. People read them in degrees: in the properties panel, in the "
+"status bar, and through ``deg2rad`` in your own code."
+msgstr ""
+"方向とは、ビームが進む向きや、ミラーが向いている向きのことである。単位ベクトルか角度で与える。角度は常に x 軸から反時計回りに測るので、方向 "
+":math:`\\theta` はベクトル :math:`(\\cos\\theta, \\sin\\theta)` "
+"である。モデルは角度をラジアンで保持する。人が読むときは度である。プロパティパネルでも、ステータスバーでも、自分のコードでは "
+"``deg2rad`` を通してである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:838
+msgid "The objects behind the picture"
+msgstr "絵の裏にあるオブジェクト"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:840
+msgid ""
+"A **Gaussian beam** is a q parameter, a position and a direction. The q "
+"parameter carries the width and the wavefront curvature together, and "
+"tracing a beam means propagating that q parameter."
+msgstr ""
+"**ガウシアンビーム**\\ は、q パラメータ・位置・方向である。q パラメータは幅と波面の曲率をまとめて持つ。ビームをトレースするとは、その "
+"q パラメータを伝搬させることである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:842
+msgid "|c77fc485e1ad4aba95f2f12eb0ce5a83|"
+msgstr "|c77fc485e1ad4aba95f2f12eb0ce5a83|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:844
+msgid "c77fc485e1ad4aba95f2f12eb0ce5a83"
+msgstr "c77fc485e1ad4aba95f2f12eb0ce5a83"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:855
+msgid ""
+"A **mirror** is a substrate with two faces. HR is the coated face the "
+"beam is meant to bounce off, and AR is the back face. Each face has its "
+"own curvature, reflectivity and transmission. The wedge angle between the"
+" two faces sends the ghost from the back face off in its own direction."
+msgstr ""
+"**ミラー**\\ は、2つの面を持つ基板である。HR はコートされた面で、ビームはそこで反射することを想定している。AR "
+"は背面である。各面は、独自の曲率・反射率・透過率を持つ。2つの面の間のウェッジ角が、背面からのゴーストを独自の方向へ送り出す。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:857
+msgid ""
+"``HRcenter`` is the apex of the HR face. It is the point on the surface, "
+"not the middle of the glass. ``normAngleHR`` is the direction that face "
+"looks in. ``center`` is the middle of the substrate, and that is where "
+"the drawing puts the box."
+msgstr ""
+"``HRcenter`` は HR 面の頂点である。ガラスの中心ではなく、面の上の点である。\\ ``normAngleHR`` "
+"は、その面が向く方向である。\\ ``center`` は基板の中心で、図の箱が置かれるのはこの点である。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:859
+msgid "|c037643ef9d04ebc84edd9a412728b99|"
+msgstr "|c037643ef9d04ebc84edd9a412728b99|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:861
+msgid "c037643ef9d04ebc84edd9a412728b99"
+msgstr "c037643ef9d04ebc84edd9a412728b99"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:926
+msgid ""
+"The layout holds **your** objects, not copies of them. There is exactly "
+"one model, and your code and the browser both look at it. The mirror you "
+"drag in the viewer is the object ``M1`` names here."
+msgstr ""
+"レイアウトが持つのは\\ **あなたの**\\ "
+"オブジェクトであって、そのコピーではない。モデルはちょうど1つで、自分のコードとブラウザは、その同じものを見ている。ビューアでドラッグしたミラーは、ここで"
+" ``M1`` が指しているオブジェクトそのものである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:928
+msgid ""
+"``trace()`` is the one exception. It traces a *copy* of each source beam,"
+" so tracing does not consume the registered source and does not move it."
+msgstr ""
+"``trace()`` だけが例外である。各光源ビームの\\ *コピー*\\ "
+"をトレースするので、トレースしても登録された光源は消費されず、動かない。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:940
+msgid "Ghost beams"
+msgstr "ゴーストビーム"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:942
+msgid ""
+"Every beam in the picture carries the name of the beam it came from and "
+"the surface that produced it, so ``b0:M1t1`` reads back as a path. The "
+"letters are fixed:"
+msgstr ""
+"図の中の全てのビームは、元になったビームの名前と、それを生んだ面の名前を持つ。だから ``b0:M1t1`` "
+"は経路として読み戻せる。文字の意味は決まっている:"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:944
+msgid "|9a9a23ffd0cf428f98efcfbfe89b0162|"
+msgstr "|9a9a23ffd0cf428f98efcfbfe89b0162|"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:946
+msgid "9a9a23ffd0cf428f98efcfbfe89b0162"
+msgstr "9a9a23ffd0cf428f98efcfbfe89b0162"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:957
+msgid ""
+"``s`` is a beam reflected off the surface it arrived at, and ``t`` is a "
+"beam transmitted through that surface. The number counts how many times "
+"the beam bounced inside the substrate before it came out. The **Layers** "
+"panel switches all the ghost beams on and off. The answer to \"what is "
+"that faint line\" is usually \"the fourth bounce inside M2\"."
+msgstr ""
+"``s`` は、到着した面で反射したビームである。\\ ``t`` "
+"は、その面を透過したビームである。数字は、外に出るまでに基板の中で何回反射したかを数える。\\ **Layers** "
+"パネルで、ゴーストビームをまとめて表示・非表示にできる。「あの薄い線は何か」の答えは、たいてい「M2 の中での4回目の反射」である。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:959
+msgid ""
+"Lower ``power_threshold`` to find fainter paths. The trace then takes "
+"longer:"
+msgstr "``power_threshold`` を下げると、より暗い経路まで見つかる。その分だけトレースに時間がかかる:"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1024
+msgid ""
+"``HRreflective`` decides whether the reflection off the HR face counts as"
+" a stray beam. On a steering mirror that reflection is the main beam, so "
+"it does not count. On a lens the HR face is meant to transmit, so a "
+"reflection off it is a ghost like any other."
+msgstr ""
+"``HRreflective`` は、HR "
+"面での反射を迷光として数えるかどうかを決める。ステアリングミラーではその反射が主ビームなので、数えない。レンズでは HR "
+"面は透過するためのものなので、そこでの反射は他と同じくゴーストである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1026
+msgid ""
+"How deep the ghosts of one particular element are followed belongs to "
+"that element, as its ``max_stray_order``. ``order`` and "
+"``power_threshold`` apply to the whole layout, and the **Tracing rules** "
+"panel in the viewer holds them."
+msgstr ""
+"ある素子のゴーストをどこまで深く追うかは、その素子に属し、\\ ``max_stray_order`` として持つ。\\ ``order`` と "
+"``power_threshold`` はレイアウト全体に効き、ビューアの **Tracing rules** パネルがこれを持つ。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1038
+msgid "The edit messages"
+msgstr "編集メッセージ"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1040
+msgid ""
+"Every action in the viewer sends exactly one message, and ``apply_edit`` "
+"receives it. Anything the viewer can do, you can do from a cell. The "
+"messages below are the same ones the browser sends."
+msgstr ""
+"ビューア上の操作は、どれもちょうど1通のメッセージを送り、\\ ``apply_edit`` "
+"がそれを受け取る。ビューアにできることは、セルからもできる。下のメッセージは、ブラウザが送るものと同じである。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1109
 msgid ""
 "The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``, "
 "``add``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``, ``load``,"
-" ``export``, ``undo`` and ``redo``. A rejected edit (an unknown "
-"attribute, a value outside the permitted set, a duplicate name) leaves "
-"the layout untouched and reports itself in the viewer, where you can see "
-"it. ``w.edits`` returns the messages received so far, oldest first, which"
-" is a record of what you did by hand."
+" ``export``, ``undo`` and ``redo``. An edit is rejected when it names an "
+"unknown attribute, gives a value outside the permitted set, or uses a "
+"name that is already taken. A rejected edit leaves the layout untouched "
+"and reports itself in the viewer, where you can see it. ``w.edits`` "
+"returns the messages received so far, oldest first, which is a record of "
+"what you did by hand."
 msgstr ""
 "操作は ``move``\\ 、\\ ``rotate``\\ 、\\ ``set``\\ 、\\ ``align``\\ 、\\ "
 "``slide``\\ 、\\ ``add``\\ 、\\ ``remove``\\ 、\\ ``rename``\\ 、\\ "
 "``rules``\\ 、\\ ``draw``\\ 、\\ ``save``\\ 、\\ ``load``\\ 、\\ ``export``\\"
 " 、\\ ``undo``\\ 、\\ ``redo`` "
-"である。拒否された編集（未知の属性、許されない値、名前の重複）は、レイアウトを変えずにビューアの中でその旨を伝える。\\ ``w.edits`` "
-"は、それまでに受け取ったメッセージを古い順に返すので、手で行った操作の記録になる。"
+"である。編集が拒否されるのは、未知の属性を指定したとき、許された集合の外の値を渡したとき、すでに使われている名前を使ったときである。拒否された編集はレイアウトを変えず、ビューアの中でその旨を伝えるので、目に見える。\\"
+" ``w.edits`` は、それまでに受け取ったメッセージを古い順に返す。手で行った操作の記録になる。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:520
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1112
 msgid ""
 "Every edit that goes through keeps the state before it, and **Undo** "
-"restores that state; the state an undo steps out of is kept in turn for "
+"restores that state. The state that an undo steps out of is kept for "
 "**Redo**. The history belongs to the layout, so it covers what you did in"
-" a cell as well as what you did in the browser, and it restores the "
-"values onto the objects you already hold instead of replacing them:"
+" a cell as well as what you did in the browser. It restores the values "
+"onto the objects you already hold, instead of replacing those objects:"
 msgstr ""
-"通った編集はすべて、その直前の状態を保持する。\\ **Undo** はその状態に戻す。undo が抜け出した状態も保持されるので、\\ "
-"**Redo** "
-"で戻れる。履歴はレイアウトに属するので、セルで行った操作もブラウザで行った操作も対象になる。復元するときは、手元に持っているオブジェクトを置き換えるのではなく、そこに値を書き戻す:"
+"通った編集はそれぞれ、その直前の状態を保持し、\\ **Undo** がその状態を復元する。undo が抜け出した状態は **Redo** "
+"のために保持される。履歴はレイアウトに属するので、セルで行ったこともブラウザで行ったことも同じように扱う。復元は、オブジェクトを置き換えるのではなく、いま手元にあるオブジェクトに値を書き戻す形で行う:"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:584
-msgid "Measuring"
-msgstr "測る"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:586
-msgid ""
-"``Measure`` takes three clicks: two to say what is being measured, and "
-"one to say where the line goes."
-msgstr "``Measure`` はクリック3回である。2回で何を測るかを、3回目で線をどこに引くかを指定する。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:588
-msgid "|b8ddb8022e2f4272bdd6a9159628d9bb|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:596
-msgid "b8ddb8022e2f4272bdd6a9159628d9bb"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:590
-msgid ""
-"The third click is there because the two points worth measuring between "
-"are usually the two the drawing is busiest around, and a line drawn "
-"straight between them lands on top of what it measures. Where to carry it"
-" aside is a question about how the drawing looks, so you answer it by "
-"eye. Extension lines then run back to the points."
-msgstr "3回目のクリックがあるのは、測る価値のある2点が、たいてい図のいちばん混み合っているところにあり、2点を直線で結ぶと線が測っている当のものの上に載ってしまうからである。どこへ寄せるかは図の見え方の問題なので、目で決める。あとは2点まで補助線が伸びる。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:592
-msgid ""
-"The first two clicks snap: to the corners of a substrate, to the apex of "
-"either face, to the middle of an element, to the end of any beam, and to "
-"the screw holes of a breadboard. When the whole span runs inside one "
-"substrate the **optical distance** is written under the line as well: the"
-" physical distance times the refractive index. The main use for that is "
-"the optical thickness of a substrate, taken between the apexes of its two"
-" faces."
-msgstr ""
-"最初の2回のクリックは吸着する。基板の角、どちらかの面の頂点、素子の中心、ビームの端、ブレッドボードのねじ穴である。区間全体が1つの基板の中に収まっている場合は、線の下に\\"
-" **光学的距離**\\ "
-"も書かれる。物理的な距離に屈折率を掛けたものである。このツールの主な用途はそれで、基板の光学的な厚みを2つの面の頂点の間で測る。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:594
-msgid ""
-"Dimensions are part of the layout: they are saved with it, come back with"
-" it, and are taken back by undo."
-msgstr "寸法線はレイアウトの一部である。一緒に保存され、一緒に戻り、undo でも取り消せる。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:608
-msgid "Ghosts, and how deep to chase them"
-msgstr "ゴーストと、どこまで追うか"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:610
-msgid ""
-"Every beam in the picture carries the name of the beam it came from and "
-"the surface that made it, so ``b0:M1t1`` reads back as a path. The "
-"letters are fixed:"
-msgstr ""
-"図の中のどのビームも、元になったビームの名前と、それを作った面の名前を持っている。だから ``b0:M1t1`` "
-"は経路として読める。文字の意味は決まっている:"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:612
-msgid "|34f53bd6c3f64fb9a2c3697a6ab1139d|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:614
-msgid "34f53bd6c3f64fb9a2c3697a6ab1139d"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:625
-msgid ""
-"``s`` is a beam reflected off the surface it arrived at, ``t`` one "
-"transmitted through it, and the number counts how many times the beam has"
-" bounced around inside the substrate before coming out. The **Layers** "
-"panel switches the whole ghost population on and off, since the answer to"
-" \"what is that faint line\" is usually \"the fourth bounce inside M2\"."
-msgstr ""
-"``s`` は当たった面で反射したビーム、\\ ``t`` はそこを透過したビームで、数字は基板の中で何回跳ね回ってから出てきたかを表す。\\ "
-"**Layers** のパネルでゴースト全体をまとめて表示・非表示できる。「あの薄い線は何か」の答えはたいてい「M2 "
-"の中の4回目の反射」だからである。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:627
-msgid "Lowering ``power_threshold`` finds fainter paths and takes longer:"
-msgstr "``power_threshold`` を下げると、より暗い経路が見つかり、その分時間がかかる:"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:692
-msgid ""
-"``HRreflective`` decides whether the reflection off the HR face counts as"
-" a stray beam. On a steering mirror that reflection is the main beam, so "
-"it does not. On a lens, whose HR face is meant to transmit, a reflection "
-"off it is a ghost like any other. The **Tracing rules** panel holds "
-"``order`` and ``power_threshold`` for the layout as a whole."
-msgstr ""
-"``HRreflective`` は、HR "
-"面での反射を迷光として数えるかどうかを決める。ステアリングミラーではその反射が主ビームなので、数えない。透過するためにある HR "
-"面を持つレンズでは、そこでの反射は他と同じゴーストである。\\ **Tracing rules** のパネルは、レイアウト全体の "
-"``order`` と ``power_threshold`` を持つ。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:704
-msgid "Mechanics: what holds the optics"
-msgstr "Mechanics: 光学素子を支えるもの"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:706
-msgid ""
-"A layout is not only light. What holds the optics takes up room, bumps "
-"into things and has to be bolted somewhere, so gtrace carries it too. "
-"``Mechanics`` is a named body of drawing primitives that the trace never "
-"sees. It is drawn, picked, measured, saved and exported like anything "
-"else, and the beams pass straight through it."
-msgstr ""
-"レイアウトにあるのは光だけではない。光学素子を支えるものは場所を取り、他とぶつかり、どこかに固定しなければならない。だから gtrace "
-"はそれも持つ。\\ ``Mechanics`` "
-"は、描画プリミティブでできた名前付きの部品で、トレースからは一切見えない。他と同じように描かれ、選択され、測られ、保存され、書き出されるが、ビームは素通りする。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:708
-msgid ""
-"The small bench below has a lens and two steering mirrors on a 450 × 300 "
-"breadboard, with a mount under each optic. A mount is **attached** to the"
-" optic it holds: it has no pose of its own, and where it stands is worked"
-" out from its host every time it is asked. Move the mirror and the mount "
-"follows, with nothing for you to keep in step."
-msgstr ""
-"下の小さなベンチには、450 × 300 "
-"のブレッドボードの上にレンズ1枚とステアリングミラー2枚があり、各素子の下にマウントが1つずつある。マウントは、保持する素子に\\ "
-"**取り付けて**\\ "
-"ある。自分の姿勢を持たず、どこに立つかは尋ねられるたびに宿主から計算される。ミラーを動かせばマウントもついてくる。同期させる手間は無い。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:799
-msgid "|9309f9aa82e541dbb19fa482a7a5df4c|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:807
-msgid "9309f9aa82e541dbb19fa482a7a5df4c"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:801
-msgid ""
-"A body is picked after everything else, because a breadboard covers most "
-"of the bench: a click lands on the beam or the optic in front of it. "
-"Where several bodies overlap the smallest wins, so a mount standing on a "
-"board is not shadowed by it. A board is dragged only once it is selected;"
-" the first click selects, and dragging before that pans the view."
-msgstr "部品の選択は最後になる。ブレッドボードがベンチのほとんどを覆うからで、クリックはまず手前のビームや素子に当たる。複数の部品が重なっていれば小さいほうが勝つので、ボードの上に立つマウントがボードに隠されることはない。ボードは、選択してからでないとドラッグできない。最初のクリックが選択で、その前のドラッグは表示のパンになる。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:803
-msgid ""
-"The corner handles of a breadboard cut it to a new size. Python re-drills"
-" the hole grid at the new dimensions rather than scaling the holes. An "
-"element dragged near a screw hole lands its anchor point exactly on it, "
-"and Alt suppresses that."
-msgstr ""
-"ブレッドボードの四隅のハンドルをドラッグすると、新しい寸法に切り出される。Python "
-"は穴の格子を拡大縮小するのではなく、新しい寸法で開け直す。ねじ穴の近くでドラッグを放した素子は、アンカー点をちょうどその上に載せる。Alt "
-"を押すと吸着しない。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:805
-msgid ""
-"``+ Mechanics`` in the viewer lists the model library. Everything in it "
-"is a plain value - shapes, a layer and a description - so a model can "
-"come from this package, from a file, or from a cell of your own."
-msgstr ""
-"ビューアの ``+ Mechanics`` "
-"は、モデルライブラリの一覧を出す。ライブラリの中身はただの値（形状・レイヤー・説明）なので、モデルはこのパッケージから来てもよいし、ファイルからでも、自分のセルからでもよい。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:872
-msgid "Drawing a part of your own"
-msgstr "自分の部品を描く"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:874
-msgid ""
-"The stock models are generic on purpose: gtrace does not invent a "
-"vendor's dimensions. Measure the part in front of you and register it, "
-"either from a cell or by drawing it."
-msgstr ""
-"同梱のモデルが汎用的なのは意図的である。gtrace "
-"は特定のベンダーの寸法を勝手に決めない。手元の部品を実測して登録する。セルからでも、描いてでもよい。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:876
-msgid ""
-"``Mechanics.edit()`` opens the editor: the same viewer, showing nothing "
-"but the shapes of one part, drawn in the part's own frame with the origin"
-" marked. Watch where you put that origin. It is the point that comes to "
-"sit at the host's substrate centre when the part is attached, so a mount "
-"is drawn around the mirror it will hold."
-msgstr ""
-"``Mechanics.edit()`` "
-"はエディタを開く。同じビューアに、1つの部品の形状だけを、その部品自身の座標系で原点を示して描いたものである。この原点の位置に注意すること。部品を取り付けたときに宿主の基板中心に来る点なので、マウントは、これから保持するミラーを囲むように描く。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:878
-msgid "|d4b8c58aa5a144818d536b4a994a194a|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:883
-msgid "d4b8c58aa5a144818d536b4a994a194a"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:880
-msgid ""
-"Shapes are put down at the origin from the top row, picked in the drawing"
-" or in the list, and given exact numbers in millimetres and degrees. They"
-" are dragged, taken hold of by their grips (a corner of a rectangle, the "
-"rim of a circle, an end of a line, a vertex of an outline), and turned "
-"with Shift + drag or with ``[`` and ``]``. A drag settles on the origin "
-"and on the corners, centres and edge midpoints of the other shapes, "
-"unless Alt says to take the cursor at its word. **Save to library** "
-"registers the result under a name."
-msgstr ""
-"形状は、上の行のボタンで原点に置き、図の上かリストで選び、ミリメートルと度で正確な数値を与える。ドラッグで運べて、グリップ（矩形の角、円の周、線の端、輪郭の頂点）で掴める。Shift+ドラッグか"
-" ``[`` ``]`` で回る。ドラッグは原点と、他の形状の角・中心・辺の中点に吸着する。Alt を押すとカーソルの位置をそのまま使う。\\ "
-"**Save to library** で、名前を付けて登録できる。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:947
-msgid ""
-"A body keeps the shapes themselves, not a reference to the model it came "
-"from. A saved layout is therefore complete, and a library that has moved "
-"on since cannot change a drawing you already made. "
-"``layout.relink_mechanics()`` asks for the newer definition when you want"
-" it."
-msgstr ""
-"部品が持つのは形状そのもので、元になったモデルへの参照ではない。だから保存したレイアウトはそれだけで完結していて、ライブラリが先に進んでも、既に作った図面は変わらない。新しい定義を使いたいときに呼ぶのが"
-" ``layout.relink_mechanics()`` である。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:959
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1176
 msgid "A worked example: the KAGRA input mode cleaner"
 msgstr "実例: KAGRA の入力モードクリーナ"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:961
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1178
 msgid ""
-"Everything so far has been placed by hand. In a real system, where the "
-"optics go follows from what the system has to do, and working that out is"
-" ordinary Python. This is the first half of the workflow gtrace is built "
-"around."
+"Everything above was placed by hand. In a real system the positions of "
+"the optics follow from what the system has to do, and you compute them in"
+" ordinary Python. gtrace is built around this order of work:"
 msgstr ""
-"ここまでは、すべて手で置いてきた。現実の系では、光学素子をどこに置くかは系が何をすべきかから決まり、それを求めるのは普通の Python "
-"である。これが、gtrace が想定するワークフローの前半にあたる。"
+"ここまでは全て手で配置してきた。実際の系では、素子の位置は系が果たすべき役割から決まり、それを普通の Python で計算する。gtrace "
+"は、この作業の順序を前提に作られている:"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:963
-msgid "**Build and align** with code - this section."
-msgstr "コードで\\ **組み立てて整列させる**\\ 。この節がそれである。"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1180
+msgid "**Build and align** the system with code. That is this section."
+msgstr "コードで系を\\ **組み立てて調整する**\\ 。この節がそれである。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:964
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1181
 msgid ""
-"**Register** the result in a layout, and from then on trace, look, adjust"
-" and export it as a whole."
-msgstr "結果をレイアウトに\\ **登録する**\\ 。以後は、全体としてトレースし、眺め、調整し、書き出す。"
+"**Register** the result in a layout. From then on you trace, look at, "
+"adjust and export the system as a whole."
+msgstr "結果をレイアウトに\\ **登録する**\\ 。以後は、系全体としてトレースし、眺め、調整し、書き出す。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:966
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1183
 msgid ""
-"The KAGRA input mode cleaner is a triangular ring cavity: two flat "
-"mirrors a half metre apart and a curved one twenty-six metres away. Each "
-"mirror is aimed by the bisector of the two arms that meet on it, which is"
-" the law of reflection written as a vector."
+"The KAGRA input mode cleaner is a triangular ring cavity. Two flat "
+"mirrors stand half a metre apart, and a curved mirror stands twenty-six "
+"metres away. Each mirror faces the bisector of the two arms that meet on "
+"it, which follows from the law of reflection."
 msgstr ""
-"KAGRA の入力モードクリーナは三角リング共振器である。平面鏡2枚が 0.5 m 離れて向かい合い、曲率を持つ鏡が 26 m "
-"先にある。各ミラーは、そこで交わる2本の腕の二等分線の向きに向ける。ベクトルで書いた反射の法則である。"
+"KAGRA の入力モードクリーナーは、三角形のリング共振器である。平面鏡2枚が 0.5 m "
+"離れて立ち、曲面鏡が26メートル先に立つ。各ミラーは、そこで交わる2本のアームの二等分線を向く。これは反射の法則から出てくる。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1045
-msgid "The eigenmode"
-msgstr "固有モード"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1262
+msgid "The eigenmode of the cavity"
+msgstr "共振器の固有モード"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1047
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1264
 msgid ""
-"The cavity decides its own beam. Send any beam once around the ring and "
-"the round-trip ABCD matrix comes back accumulated in ``Mx`` and ``My``; "
-"the mode that reproduces itself is the fixed point of that matrix."
+"A cavity has one beam that reproduces itself. Send any beam once around "
+"the ring: the round-trip ABCD matrix comes back accumulated in ``Mx`` and"
+" ``My``. The mode that reproduces itself is the fixed point of that "
+"matrix."
 msgstr ""
-"共振器は自分のビームを自分で決める。適当なビームをリングを1周させると、1周ぶんの ABCD 行列が ``Mx`` と ``My`` "
-"に積算されて返る。自分自身に戻ってくるモードが、その行列の不動点である。"
+"共振器には、自分自身を再現するビームが1つある。どんなビームでもよいので、リングを1周させる。1周分の ABCD 行列が ``Mx`` と "
+"``My`` に積算されて返ってくる。自分自身を再現するモードは、その行列の不動点である。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1049
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1266
 msgid ""
-"``hitFromHR`` is the sequential half of gtrace: you say which surface the"
-" beam strikes, and get back a dictionary of everything that leaves it. "
-"``r1`` is the reflection, ``t1`` the transmission, and ``s1``, ``s2``, "
-"... the beams that bounced inside first."
+"``hitFromHR`` is the sequential half of gtrace. You say which surface the"
+" beam strikes, and you get back a dictionary of everything that leaves "
+"the surface. ``r1`` is the reflection, ``t1`` the transmission, and "
+"``s1``, ``s2``, ... are the beams that bounced inside the substrate "
+"first."
 msgstr ""
-"``hitFromHR`` は gtrace "
-"の逐次的な側である。ビームがどの面に当たるかをこちらが指定すると、そこから出ていくものすべてが辞書で返る。\\ ``r1`` は反射、\\ "
-"``t1`` は透過、\\ ``s1``\\ 、\\ ``s2``\\ 、... は基板の中で跳ねてから出てきたビームである。"
+"``hitFromHR`` は gtrace の逐次側である。ビームがどの面に当たるかを指定すると、その面から出ていく全てのものが辞書で返る。\\"
+" ``r1`` が反射、\\ ``t1`` が透過、\\ ``s1``\\ 、\\ ``s2``\\ 、... "
+"が基板の中で先に反射したビームである。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1121
-msgid "A cavity is a loop"
-msgstr "共振器はループである"
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1338
+msgid "Stopping the trace in a cavity"
+msgstr "共振器でトレースを止める"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1123
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1340
 msgid ""
-"Registering that in a layout is the second half of the workflow, with one"
-" complication: a non-sequential trace cannot finish on its own here. Two "
-"facing high reflectors pass the beam back and forth until the trace gives"
-" up, and at 99.37 % per bounce that takes a very long time."
+"Registering the cavity in a layout is the second half of the work, and "
+"there is one problem to solve. A non-sequential trace cannot finish on "
+"its own here. Two facing high reflectors pass the beam back and forth "
+"until the trace gives up. At 99.37 % per bounce, that takes a very long "
+"time."
 msgstr ""
-"これをレイアウトに登録するのがワークフローの後半だが、1つ厄介な点がある。ここでは非逐次トレースが自力で終われない。高反射鏡2枚が向かい合っていると、トレースが諦めるまでビームを渡し合い、1回の反射で"
+"共振器をレイアウトに登録するのが作業の後半で、解くべき問題が1つある。ここでは非逐次トレースが自力で終われない。向かい合った2枚の高反射鏡は、トレースが諦めるまでビームを互いに渡し続ける。1回の反射で"
 " 99.37 % 残るので、それには非常に長い時間がかかる。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1125
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1342
 msgid ""
-"``term_on_HR`` handles it: a beam that lands on this HR face ends there "
+"``term_on_HR`` solves it. A beam that lands on this HR face ends there, "
 "instead of being reflected on. Put it on the input coupler and the trace "
 "draws one round trip, which is the picture you want of a cavity."
 msgstr ""
-"そこで使うのが ``term_on_HR`` である。この HR "
-"面に当たったビームは、反射させずにそこで終端する。入力カプラに設定すれば、トレースは1周ぶんだけ描く。共振器の絵として欲しいのはそれである。"
+"``term_on_HR`` がこれを解決する。この HR "
+"面に当たったビームは、反射せずにそこで終わる。入射カプラにこれを付ければ、トレースは1周分を描く。共振器の絵として見たいのは、これである。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1178
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1395
 msgid ""
-"Click along the long arm and the readout says how wide the beam is up "
-"there, twenty-six metres from the near mirrors: the number the aperture "
-"of MCe has to be chosen against."
-msgstr "長い腕の上をクリックすると、近い側の鏡から 26 m 離れたそこでビームがどれだけ太いかが読める。MCe の口径を決めるときに要る数値である。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1190
-msgid "Saving, sending and exporting"
-msgstr "保存・送付・書き出し"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1192
-msgid ""
-"``layout.save`` writes the optics, the sources, the tracing rules, the "
-"bodies and the dimensions to JSON. It does not write the trace, since "
-"``trace()`` regenerates it. The **Layout file** panel in the side bar "
-"does the same thing from the viewer. Python does the reading and writing,"
-" and the path is relative to where the kernel is running, so the page is "
-"never given access to your disk."
+"Click along the long arm. The readout says how wide the beam is up there,"
+" twenty-six metres from the near mirrors. That is the number you choose "
+"the aperture of MCe against."
 msgstr ""
-"``layout.save`` は、素子・光源・トレースのルール・部品・寸法線を JSON に書く。トレース結果は書かない。\\ "
-"``trace()`` が作り直せるからである。サイドバーの **Layout file** のパネルが、ビューアから同じことをする。読み書きは "
-"Python が行い、パスはカーネルが動いているディレクトリからの相対なので、ページにディスクへのアクセスは渡らない。"
+"長いアームに沿ってクリックしてみる。手前のミラーから26メートル離れたその場所で、ビームがどれだけ太いかが読み出される。MCe "
+"の口径を決めるときに使う数値である。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1246
-msgid ""
-"``update_from_file`` loads **in place**: elements whose name and type "
-"match are updated rather than replaced. Replacing them would leave the "
-"``M1`` bound in the cells above pointing at an object no longer in the "
-"layout, and assignments to it would quietly stop having any effect. "
-"``OpticalLayout.load(...)`` returns a new layout instead, when that is "
-"what you want."
-msgstr ""
-"``update_from_file`` は\\ **その場で**\\ "
-"読み込む。名前と型が一致する素子は、置き換えではなく更新される。置き換えてしまうと、上のセルで束縛した ``M1`` "
-"がレイアウトに無いオブジェクトを指すことになり、そこへの代入が黙って効かなくなる。新しいレイアウトが欲しいときは "
-"``OpticalLayout.load(...)`` を使う。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1249
-msgid "A page you can send"
-msgstr "送れるページ"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1251
-msgid ""
-"``render_html`` writes the scene, the viewer code and the styling into a "
-"single file. There is no server and nothing to install, so you can mail "
-"it to a collaborator, who can read the beam parameters off it and take "
-"dimensions on it, and it will still open in ten years. It cannot edit the"
-" layout: there is no kernel behind it to apply an edit and re-trace."
-msgstr ""
-"``render_html`` "
-"は、シーンとビューアのコードとスタイルを1つのファイルに書く。サーバも要らず、インストールするものも無いので、共同研究者にメールで送れる。相手はビームパラメータを読み取り、寸法を測れる。10年後でも開ける。できないのは編集である。背後に、編集を適用して再トレースするカーネルが無い。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1309
-msgid "DXF has not gone anywhere"
-msgstr "DXF も健在である"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1311
-msgid ""
-"``export_dxf`` is the companion of ``render_html``, and the ``DXF`` "
-"button in the side bar calls it. Beams, optics, bodies and dimensions "
-"each go on a layer of their own, so whoever opens the drawing can switch "
-"them off; ``dimensions=False`` leaves the dimensions out altogether."
-msgstr ""
-"``export_dxf`` は ``render_html`` と対になるもので、サイドバーの ``DXF`` "
-"ボタンはこれを呼ぶ。ビーム・素子・部品・寸法線はそれぞれ専用のレイヤーに入るので、図面を開いた人が個別に切り替えられる。\\ "
-"``dimensions=False`` を渡せば寸法線は入らない。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1313
-msgid "|611c0789330644bf87c42c7f90320b7f|"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1315
-msgid "611c0789330644bf87c42c7f90320b7f"
-msgstr ""
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1361
-msgid ""
-"The viewer is for looking and adjusting; DXF remains the way to hand a "
-"layout to the rest of an engineering workflow."
-msgstr "ビューアは眺めて調整するためのもので、DXF は今も、レイアウトをエンジニアリングの残りの工程へ渡す手段である。"
-
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1364
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1407
 msgid "Where to go next"
 msgstr "次に読むもの"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1366
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1409
 msgid ""
-"`Optical layouts <../layout.rst>`__ - the layout object and the edit "
-"protocol in reference detail, mechanics included."
-msgstr "`光学レイアウト <../layout.rst>`__ — レイアウトのオブジェクトと編集プロトコルのリファレンス。部品も含む。"
+"`Optical layouts <../layout.rst>`__ - the layout object in reference "
+"detail, mechanics included."
+msgstr "`Optical layouts <../layout.rst>`__ — レイアウトオブジェクトのリファレンス。周辺物も含む。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1367
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1410
+msgid "`The edit protocol <../editing.rst>`__ - every message, and what it does."
+msgstr "`The edit protocol <../editing.rst>`__ — 全てのメッセージと、その働き。"
+
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1411
 msgid "`The viewer <../viewer.rst>`__ - every control, and what each one sends."
 msgstr "`ビューア <../viewer.rst>`__ — すべての操作と、それぞれが何を送るか。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1368
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1412
 msgid ""
 "`Basic concepts <../basic_concepts.rst>`__ and `Beam propagation "
 "<../propagation.rst>`__ - the surfaces, the matrices and the tracing "
@@ -971,14 +1072,13 @@ msgstr ""
 "`基本概念 <../basic_concepts.rst>`__ と `ビームの伝搬 <../propagation.rst>`__ — "
 "この下にある面・行列・トレースのルール。"
 
-#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1369
+#: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1413
 msgid ""
 "`Worked example: mode matching a cavity <modematching.ipynb>`__ - two "
-"lenses chosen from a catalogue to match a laser into a cavity, checked in"
-" the viewer."
+"lenses chosen from a catalogue, to match a laser into a cavity."
 msgstr ""
 "`実例: 共振器へのモードマッチング <modematching.ipynb>`__ — "
-"カタログから選んだ2枚のレンズでレーザーを共振器に結合させ、ビューアで確認する。"
+"カタログから選んだレンズ2枚で、レーザーを共振器に結合させる。"
 
 #~ msgid "|73f66e7740fe49c18a5cad5f981a588d|"
 #~ msgstr ""
@@ -2338,4 +2438,183 @@ msgstr ""
 
 #~ msgid "1f2c5f6735124e75b65f5a94eac316c8"
 #~ msgstr ""
+
+#~ msgid ""
+#~ "This notebook builds a small system, "
+#~ "opens it in the viewer, and "
+#~ "adjusts it there. Working with gtrace"
+#~ " is a loop: place something, look "
+#~ "at what the beams do, move it. "
+#~ "The viewer is where that loop "
+#~ "closes. Writing a drawing out to "
+#~ "DXF and opening it in CAD software"
+#~ " comes at the end, and that is"
+#~ " how you hand a finished layout "
+#~ "to the rest of an engineering "
+#~ "workflow."
+#~ msgstr ""
+#~ "この notebook では、小さな系を組み立て、それをビューアで開き、その場で調整する。gtrace "
+#~ "での作業はループになる。何かを置き、ビームがどうなるかを見て、動かす。そのループが閉じる場所がビューアである。図面を DXF"
+#~ " に書き出して CAD "
+#~ "で開く話は最後に出てくる。完成したレイアウトを、エンジニアリングの残りの工程へ渡す手段である。"
+
+#~ msgid "You need gtrace with the notebook extras, which bring in the widget:"
+#~ msgstr "gtrace は notebook 用の extras 付きで入れる。これでウィジェットが入る:"
+
+#~ msgid "A bench in a dozen lines"
+#~ msgstr "十数行のベンチ"
+
+#~ msgid ""
+#~ "``power_threshold`` is the knob to turn"
+#~ " when chasing ghost beams. Lowering "
+#~ "it finds fainter paths and takes "
+#~ "longer. How deep to chase the "
+#~ "ghosts of *one particular* element "
+#~ "belongs to that element, so it "
+#~ "lives there, as its ``max_stray_order``."
+#~ msgstr ""
+#~ "``power_threshold`` "
+#~ "は、ゴーストビームを追うときに回すつまみである。下げるとより暗い経路が見つかり、その分時間がかかる。\\ *ある1つの*\\"
+#~ " 素子のゴーストをどこまで追うかは、その素子に属する話なので、素子側の ``max_stray_order`` "
+#~ "として持つ。"
+
+#~ msgid "Looking at it"
+#~ msgstr "見てみる"
+
+#~ msgid ""
+#~ "Click anywhere along a beam, not "
+#~ "only at a vertex. The point is "
+#~ "projected onto the beam, the q-parameter"
+#~ " is advanced to that distance, and"
+#~ " the panel reports what the beam "
+#~ "is doing *there*: the radius ``w``, "
+#~ "the wavefront ROC, the complex ``q`` "
+#~ "itself, the waist radius and how "
+#~ "far away the waist is, the "
+#~ "Rayleigh range, the accumulated Gouy "
+#~ "phase, the power, the wavelength, the"
+#~ " refractive index, the optical path "
+#~ "length so far, and how many ghost"
+#~ " reflections produced this beam."
+#~ msgstr ""
+#~ "ビームの上のどこでもクリックできる。頂点だけではない。その点をビームに射影し、q パラメータをその距離まで進めて、パネルが\\"
+#~ " *その点で*\\ のビームの状態を報告する。半径 ``w``\\ 、波面の曲率半径、複素数の"
+#~ " ``q`` そのもの、ウエスト半径とウエストまでの距離、レイリー長、積算した Gouy "
+#~ "位相、パワー、波長、屈折率、そこまでの光路長、そしてこのビームが何回のゴースト反射でできたかである。"
+
+#~ msgid "|f88559a0babf426aad7749d4608368e4|"
+#~ msgstr ""
+
+#~ msgid "f88559a0babf426aad7749d4608368e4"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "A drawing cannot do this. A DXF"
+#~ " is geometry, with nothing in it "
+#~ "to ask about the beam. The readout"
+#~ " needs the beam objects themselves, "
+#~ "so the viewer works from the model"
+#~ " and not from a drawing."
+#~ msgstr ""
+#~ "図面ではこれができない。DXF "
+#~ "は幾何であって、ビームについて尋ねられるものが入っていない。読み出しにはビームオブジェクトそのものが要るので、ビューアは図面ではなくモデルから動いている。"
+
+#~ msgid "|ee3e1d4a30564ec0993d15b6828dbccc|"
+#~ msgstr ""
+
+#~ msgid "ee3e1d4a30564ec0993d15b6828dbccc"
+#~ msgstr ""
+
+#~ msgid "|9b2fd9abe95544678dae412c7fafddb1|"
+#~ msgstr ""
+
+#~ msgid "9b2fd9abe95544678dae412c7fafddb1"
+#~ msgstr ""
+
+#~ msgid "|4c0190d514934bcb8c1dc70b2dc4d7ad|"
+#~ msgstr ""
+
+#~ msgid "4c0190d514934bcb8c1dc70b2dc4d7ad"
+#~ msgstr ""
+
+#~ msgid "The loop runs both ways"
+#~ msgstr "ループは両方向に回る"
+
+#~ msgid ""
+#~ "With the viewer cell still on "
+#~ "screen, running the next one re-"
+#~ "traces and redraws it **in place**, "
+#~ "keeping the current zoom, pan and "
+#~ "layer visibility so the picture does "
+#~ "not jump underneath you."
+#~ msgstr ""
+#~ "ビューアのセルを画面に出したまま次のセルを実行すると、\\ **その場で**\\ "
+#~ "再トレースして描き直す。今のズーム・パン・レイヤーの表示状態は保たれるので、絵が足元で跳ねることはない。"
+
+#~ msgid "Every gesture is one message"
+#~ msgstr "どの操作も1つのメッセージ"
+
+#~ msgid "|b8ddb8022e2f4272bdd6a9159628d9bb|"
+#~ msgstr ""
+
+#~ msgid "b8ddb8022e2f4272bdd6a9159628d9bb"
+#~ msgstr ""
+
+#~ msgid "Ghosts, and how deep to chase them"
+#~ msgstr "ゴーストと、どこまで追うか"
+
+#~ msgid "|34f53bd6c3f64fb9a2c3697a6ab1139d|"
+#~ msgstr ""
+
+#~ msgid "34f53bd6c3f64fb9a2c3697a6ab1139d"
+#~ msgstr ""
+
+#~ msgid "Mechanics: what holds the optics"
+#~ msgstr "Mechanics: 光学素子を支えるもの"
+
+#~ msgid "|9309f9aa82e541dbb19fa482a7a5df4c|"
+#~ msgstr ""
+
+#~ msgid "9309f9aa82e541dbb19fa482a7a5df4c"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "``Mechanics.edit()`` opens the editor: the "
+#~ "same viewer, showing nothing but the "
+#~ "shapes of one part, drawn in the"
+#~ " part's own frame with the origin "
+#~ "marked. Watch where you put that "
+#~ "origin. It is the point that comes"
+#~ " to sit at the host's substrate "
+#~ "centre when the part is attached, "
+#~ "so a mount is drawn around the "
+#~ "mirror it will hold."
+#~ msgstr ""
+#~ "``Mechanics.edit()`` "
+#~ "はエディタを開く。同じビューアに、1つの部品の形状だけを、その部品自身の座標系で原点を示して描いたものである。この原点の位置に注意すること。部品を取り付けたときに宿主の基板中心に来る点なので、マウントは、これから保持するミラーを囲むように描く。"
+
+#~ msgid "|d4b8c58aa5a144818d536b4a994a194a|"
+#~ msgstr ""
+
+#~ msgid "d4b8c58aa5a144818d536b4a994a194a"
+#~ msgstr ""
+
+#~ msgid "A cavity is a loop"
+#~ msgstr "共振器はループである"
+
+#~ msgid "DXF has not gone anywhere"
+#~ msgstr "DXF も健在である"
+
+#~ msgid "|611c0789330644bf87c42c7f90320b7f|"
+#~ msgstr ""
+
+#~ msgid "611c0789330644bf87c42c7f90320b7f"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "The viewer is for looking and "
+#~ "adjusting; DXF remains the way to "
+#~ "hand a layout to the rest of "
+#~ "an engineering workflow."
+#~ msgstr "ビューアは眺めて調整するためのもので、DXF は今も、レイアウトをエンジニアリングの残りの工程へ渡す手段である。"
 

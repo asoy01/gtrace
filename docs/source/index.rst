@@ -15,6 +15,7 @@ Welcome to gtrace's documentation!
    propagation
    layout
    viewer
+   editing
    tutorial
 
 Indices and tables

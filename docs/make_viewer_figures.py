@@ -9,16 +9,20 @@ model of the kind anywidget provides, and screenshotted. Run this again
 whenever the viewer's appearance changes, so that the tutorial does not
 end up describing a version of the interface that no longer exists.
 
-The layouts are the ones the tutorial builds - the three mirrors it
-opens with, and the small bench it stands in mounts - so the pictures
-and the text agree. The last figure is of the shape editor, which is
-the same front end handed a part instead of a bench.
+The layouts are the ones the pages build: the bench of the introduction,
+the three mirrors the tutorial opens with, and the small bench it stands
+in mounts, so the pictures and the text agree. One figure is of the shape
+editor, which is the same front end handed a part instead of a bench.
+
+Figures go to docs/source/tutorial/figures by default, and the two of
+the introduction go next to that page instead.
 '''
 
 import json
 import os
 import subprocess
 import sys
+import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO)
@@ -43,6 +47,10 @@ from gtrace.mechanics import (from_model, lens_holder,           # noqa: E402
 from gtrace.unit import *                                        # noqa: E402
 
 OUT = os.path.join(REPO, 'docs', 'source', 'tutorial', 'figures')
+
+#: The introduction has figures of its own, of the bench it builds, and
+#: they sit next to that page instead of under the tutorial.
+OUT_INTRO = os.path.join(REPO, 'docs', 'source', 'imgs')
 
 #: Size of the viewer in CSS pixels, and the scale the browser renders
 #: it at. The figures are shown at half width in the notebook, so the
@@ -86,6 +94,32 @@ def make_layout():
     return OpticalLayout(optics=[M1, M2, M3], sources=[b0],
                          rules=TraceRules(order=30, power_threshold=1e-6),
                          name='Tutorial')
+
+
+def make_intro():
+    '''
+    The bench the introduction builds: a laser, a lens and two steering
+    mirrors, with nothing on it that the first page has not explained.
+
+    Same numbers as the code block on that page, so the reader can put
+    the picture and the listing side by side.
+    '''
+    laser = beam.GaussianBeam(q0=q_from_waist(0.4 * mm, 0.0, 1064 * nm),
+                              wl=1064 * nm, pos=[0.10, 0.0], dirAngle=0.0,
+                              P=1.0, name='in')
+    L1 = opt.Lens(f=250 * mm, center=[0.28, 0.0], normAngleHR=np.pi,
+                  diameter=1 * inch, thickness=6 * mm, n=1.45, name='L1')
+    S1 = opt.Mirror(HRcenter=[0.42, 0.0], normAngleHR=deg2rad(135),
+                    diameter=1 * inch, thickness=6 * mm,
+                    Refl_HR=0.99, Trans_HR=0.01, n=1.45, name='S1')
+    S2 = opt.Mirror(HRcenter=[0.42, 0.20], normAngleHR=deg2rad(-135),
+                    diameter=1 * inch, thickness=6 * mm,
+                    Refl_HR=0.99, Trans_HR=0.01, n=1.45, name='S2')
+
+    return OpticalLayout(optics=[L1, S1, S2], sources=[laser],
+                         rules=TraceRules(order=2, power_threshold=1e-4,
+                                          open_beam_length=15 * cm),
+                         name='Bench')
 
 
 def make_bench():
@@ -203,26 +237,33 @@ __ACTIONS__
 '''
 
 
-def build_page(scene, actions):
+def build_page(scene, actions, size=None):
+    w, h = size or (WIDTH, HEIGHT)
     css = viewer_css()
     page = PAGE.replace('__CSS__', css)
     page = page.replace('__ESM__', json.dumps(widget_esm()))
     page = page.replace('__SCENE__', json.dumps(scene).replace('</', '<\\/'))
     page = page.replace('__ACTIONS__', actions)
-    page = page.replace('__W__', str(WIDTH)).replace('__H__', str(HEIGHT))
+    page = page.replace('__W__', str(w)).replace('__H__', str(h))
     return page
 
 
-def shoot(chrome, page, name):
-    html = os.path.join(OUT, '_shot.html')
+def shoot(chrome, page, name, size=None, out=OUT):
+    w, h = size or (WIDTH, HEIGHT)
+    os.makedirs(out, exist_ok=True)
+    # The scratch page goes to a temporary directory rather than beside
+    # the figures: the output folders are inside a synced Dropbox tree,
+    # and a file written and deleted there can be locked by the syncing
+    # client just long enough to fail the run.
+    html = os.path.join(tempfile.mkdtemp(prefix='gtrace_fig_'), '_shot.html')
     with open(html, 'w', encoding='utf-8') as f:
         f.write(page)
-    png = os.path.join(OUT, name)
+    png = os.path.join(out, name)
     if os.path.exists(png):
         os.remove(png)
 
     cmd = [chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars',
-           '--window-size=%d,%d' % (WIDTH, HEIGHT),
+           '--window-size=%d,%d' % (w, h),
            '--force-device-scale-factor=%d' % SCALE,
            '--virtual-time-budget=6000',
            '--screenshot=' + png,
@@ -242,6 +283,25 @@ def shoot(chrome, page, name):
 #: and two nearly identical screenshots cost the reader more attention
 #: than the second one returns.
 FIGURES = [
+    ('intro_bench.png', 'intro', '''
+    /* What the introduction's bench looks like on opening: the side
+       panel folded away, since the first picture is there to show the
+       drawing, and the whole thing fitted into the frame. */
+    v.toggleSide(false);
+    v.fit();
+''', {'size': (940, 720), 'out': OUT_INTRO}),
+    ('intro_readout.png', 'intro', '''
+    /* The same bench with the beam between the two steering mirrors
+       clicked, which is what the reader does first and what the
+       readout panel is for. */
+    var t = v.scene.beams.filter(function (b) {
+        return b.name === 'S1:r1';
+    })[0];
+    var p = screenOf(t.pos[0] + t.dirVect[0] * t.length * 0.5,
+                     t.pos[1] + t.dirVect[1] * t.length * 0.5);
+    v._onHover(p[0], p[1]);
+    v._onClick(p[0], p[1]);
+''', {'out': OUT_INTRO}),
     ('viewer_readout.png', 'layout', '''
     /* Pin the readout partway along the longest main beam, which is
        what a reader sees after clicking one. */
@@ -339,7 +399,8 @@ def main():
         raise SystemExit('No Chrome-like browser found. Set GTRACE_CHROME '
                          'to the executable to regenerate the figures.')
 
-    scenes = {'layout': make_layout().scene_dict(),
+    scenes = {'intro': make_intro().scene_dict(),
+              'layout': make_layout().scene_dict(),
               'bench': make_bench().scene_dict(),
               'editor': make_part().scene_dict()}
     for key, sc in scenes.items():
@@ -349,8 +410,12 @@ def main():
     print('browser: %s' % chrome)
 
     os.makedirs(OUT, exist_ok=True)
-    for name, which, actions in FIGURES:
-        shoot(chrome, build_page(scenes[which], actions), name)
+    for entry in FIGURES:
+        name, which, actions = entry[:3]
+        opts = entry[3] if len(entry) > 3 else {}
+        size = opts.get('size')
+        shoot(chrome, build_page(scenes[which], actions, size), name,
+              size=size, out=opts.get('out', OUT))
 
 
 if __name__ == '__main__':
