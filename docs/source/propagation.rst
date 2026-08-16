@@ -4,11 +4,15 @@ Propagation of a beam
 There are three ways to move a beam, from the most manual to the most
 automatic:
 
-1. advance the beam yourself by a distance;
-2. give the beam to one element and collect the beams that come off it;
-3. let gtrace follow every beam through the whole system.
+1. :py:meth:`GaussianBeam.propagate<gtrace.beam.GaussianBeam.propagate>`
+   advances the beam yourself, by a distance you give;
+2. :py:meth:`Mirror.hitFromHR<gtrace.optcomp.Mirror.hitFromHR>` gives the
+   beam to one element and returns the beams that come off it;
+3. :py:func:`non_seq_trace<gtrace.nonsequential.non_seq_trace>` follows
+   every beam through the whole system.
 
-A layout does the third one, and it uses the first two to do it.
+:py:meth:`layout.trace()<gtrace.layout.OpticalLayout.trace>` calls
+``non_seq_trace``, which calls the other two.
 
 Moving a beam by hand
 ----------------------
@@ -49,11 +53,39 @@ beam until it reaches the mirror's HR face, then computes the reflections
 and refractions there and inside the substrate.
 :py:meth:`hitFromAR<gtrace.optcomp.Mirror.hitFromAR>` does the same from
 the back face. Both return a dictionary of beams, keyed by the names in
-the figure::
+the figure.
 
-    >>> beams = M.hitFromHR(src, order=2)
-    >>> sorted(beams)
-    ['input', 'r1', 's1', 's2', 's3', 't1', 't2']
+Here is a mirror that reflects 90% of the power at its HR face and 0.5% at
+its AR face, hit by a 1 W beam:
+
+.. code-block:: python
+
+    import numpy as np
+    import gtrace.optcomp as opt
+
+    M = opt.Mirror(HRcenter=[0.5, 0.0], normAngleHR=np.pi,
+                   diameter=1*inch, thickness=6*mm, wedgeAngle=0.0,
+                   Refl_HR=0.9, Trans_HR=0.1,
+                   Refl_AR=0.005, Trans_AR=0.995,
+                   n=1.45, name='M')
+
+    src = GaussianBeam(q0=q_from_waist(0.4*mm, 0.0, 1064*nm), wl=1064*nm,
+                       pos=[0.0, 0.0], dirAngle=0.0, P=1.0, name='src')
+
+    beams = M.hitFromHR(src, order=2)
+
+    for key in sorted(beams):
+        print('%-6s %-8s %.7g W' % (key, beams[key].name, beams[key].P))
+
+::
+
+    input  src      1 W
+    r1     M:r1     0.9 W
+    s1     M:s1     0.1 W
+    s2     M:s2     0.0005 W
+    s3     M:s3     0.00045 W
+    t1     M:t1     0.0995 W
+    t2     M:t2     0.00044775 W
 
 .. list-table::
    :header-rows: 1
@@ -75,20 +107,16 @@ the figure::
      - What leaves after each of those bounces, through the HR and the
        AR face respectively.
 
-The powers say which of them are worth following. For a mirror of 90%
-reflectivity with a 0.5% AR coating, hit by a 1 W beam:
+The powers say which of them are worth following. Here ``t1`` carries almost
+as much as ``s1``, while ``t2`` is two thousand times weaker.
 
-::
-
-    r1   0.9        W
-    s1   0.1        W
-    t1   0.0995     W
-    s2   0.0005     W
-    s3   0.00045    W
-    t2   0.0004478  W
-
-``order`` says how many round trips inside the substrate to follow, and
-``threshold`` drops beams below a given power. A beam that misses the
+``order`` is the largest stray order a beam produced here may have, and
+``threshold`` drops beams below a given power. ``src`` above is a fresh
+beam, whose count is zero, so ``order=2`` follows two round trips inside
+the substrate. A beam that arrives already stray brings its count with it
+and gets less than that. This is the same ``order`` that
+:py:class:`TraceRules<gtrace.layout.TraceRules>` carries, and
+:ref:`stray-order` describes what raises the count. A beam that misses the
 mirror altogether gets an empty dictionary back.
 
 Tracing a whole system
@@ -105,11 +133,30 @@ every beam that is generated, until the beam stops.
 
     from gtrace.nonsequential import non_seq_trace
 
-    beams = non_seq_trace([PRM, PR2, PR3], src,
-                          order=10, power_threshold=1e-3)
+    S1 = opt.Mirror(HRcenter=[1.0, 0.0], normAngleHR=deg2rad(135),
+                    diameter=1*inch, thickness=6*mm, wedgeAngle=0.0,
+                    Refl_HR=0.9, Trans_HR=0.1,
+                    Refl_AR=0.005, Trans_AR=0.995,
+                    n=1.45, name='S1')
+
+    beams = non_seq_trace([M, S1], src.copy(), order=2,
+                          power_threshold=1e-3, open_beam_length=0.2)
+
+    for b in beams:
+        print('%-8s stray_order %d  %.5g W' % (b.name, b.stray_order, b.P))
+
+::
+
+    src      stray_order 0  1 W
+    M:s1     stray_order 1  0.1 W
+    M:r1     stray_order 0  0.9 W
+    M:t1     stray_order 1  0.0995 W
+    S1:s1    stray_order 2  0.00995 W
+    S1:r1    stray_order 1  0.08955 W
+    S1:t1    stray_order 2  0.0099003 W
 
 A beam stops being followed when it hits nothing, when its power falls
-below ``power_threshold``, or when its stray order reaches ``order``. The
+below ``power_threshold``, or when its stray order goes past ``order``. The
 return value is a flat list of every beam produced. Each one carries a
 ``stray_order`` saying how many ghost reflections it took to make it, and
 the drawing uses that to tell the main beam from the ghosts.
@@ -125,10 +172,11 @@ Ghost beams and the stray order
 --------------------------------
 
 Every beam carries a counter, ``stray_order``. A source beam starts at
-zero, and the counter goes up by one each time the beam does something its
-element is not coated for. What the element *is* coated for costs nothing:
-reflecting off the front of a mirror is free, and so is the main beam's
-passage through a lens. What costs one order each is
+zero. The counter goes up by one each time the beam does something its
+element is not coated for. It does not go up when the beam does what the
+coating is there for: reflecting off the front of a mirror leaves the
+counter alone, and so does the main beam's passage through a lens. These
+three raise it by one:
 
 - reflecting at the AR face, from either side and every time. An AR
   coating is not meant to reflect.
@@ -137,29 +185,36 @@ passage through a lens. What costs one order each is
 - reflecting at the HR face of an element whose front is not meant to
   reflect either, such as a lens.
 
-A ghost therefore pays one order per round trip inside a substrate,
-counted at its AR bounce, and one more if it leaves through the HR.
-Leaving through the AR is free. In a lens, where both faces are meant to
-transmit, a bounce off either face costs one.
+So a ghost gains one order per round trip inside a substrate, counted at
+its AR bounce, and one more if it leaves through the HR. Leaving through
+the AR does not raise it. In a lens, where both faces are meant to
+transmit, a bounce off either face raises it by one.
 
-A branch of the trace is dropped as soon as its counter exceeds ``order``
+A branch of the trace is dropped as soon as its counter goes past ``order``
 or its power falls below ``power_threshold``, whichever comes first.
-``order`` limits how *deep* a ghost may be, ``power_threshold`` how
-*faint*.
+``order`` limits how many ghost reflections a beam may go through, and
+``power_threshold`` how weak it may become.
 
-``order`` is a budget for the ghosts a call may **make**. The arriving beam
-is not tested against it. A reflection off a face that is meant to reflect
-makes no ghost. A beam that is already stray therefore still bounces off a
-mirror, no matter how deep it has got. It leaves with the order it arrived
-with.
+``order`` limits the ghosts a call may **make**. The arriving beam is not
+tested against it. A reflection off a face that is meant to reflect makes no
+ghost, so a beam that is already stray still bounces off a mirror, whatever
+its count. It leaves with the count it arrived with.
 
 **The counter travels with the beam.** It is not reset when a beam leaves
-one element for the next, so ``order`` is a budget for the whole trace. A
-ghost made at one mirror and steered by another is still that ghost: it is
-drawn as stray and keeps its count. The counter is also what bounds the
-recursion, since each branch ends once it has spent the budget. Two mirrors
+one element for the next, so ``order`` limits the whole trace. A ghost made
+at one mirror and steered by another is still that ghost: it is drawn as
+stray and keeps its count. The counter is also what ends the recursion,
+since each branch stops once its count goes past ``order``. Two mirrors
 facing each other therefore terminate on ``order`` instead of running until
 the power runs out.
+
+Follow one path through the two-mirror trace above. The source starts at 0.
+It goes through the HR face of ``M``, which is a plain mirror, so ``M:s1``
+is at 1. It leaves through the AR face, which does not raise the count, so
+``M:t1`` is still at 1. It reaches ``S1`` and goes through that HR face
+too, so ``S1:s1`` is at 2, and ``S1:t1`` leaves at 2 as well. The next
+beam inside that substrate, ``S1:s2``, would come from an AR reflection and
+would be at 3. With ``order=2`` it is not followed.
 
 Which face is meant for what
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-09 20:24+0900\n"
+"POT-Creation-Date: 2026-08-16 15:55+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -17,27 +17,50 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: ../../source/index.rst:9
+#: ../../../gtrace/docs/source/index.rst:17
 msgid "Contents:"
 msgstr "目次:"
 
-#: ../../source/index.rst:7
+#: ../../../gtrace/docs/source/index.rst:2
 msgid "Welcome to gtrace's documentation!"
 msgstr "gtrace のドキュメントへようこそ！"
 
-#: ../../source/index.rst:21
+#: ../../../gtrace/docs/source/index.rst:4
+msgid ""
+"gtrace traces Gaussian beams through an optical system laid out on a "
+"bench. You place mirrors and lenses in Python and trace the beams. You "
+"look at the result in a browser and move the elements until the layout is"
+" right. When the layout is finished, you export the drawing to DXF."
+msgstr ""
+"gtrace はベンチ上に組んだ光学系を通るガウシアンビームをトレースする。ミラーとレンズを Python "
+"で置き、ビームをトレースする。結果はブラウザで見て、レイアウトが決まるまで素子を動かす。レイアウトができあがったら、図面を DXF に書き出す。"
+
+#: ../../../gtrace/docs/source/index.rst:9
+msgid "Install it with::"
+msgstr "インストールは次のとおり::"
+
+#: ../../../gtrace/docs/source/index.rst:13
+msgid ""
+"Then read :doc:`intro`, which builds a bench of a laser, a lens and two "
+"mirrors, and opens it in the viewer. :doc:`tutorial` works through a "
+"larger example."
+msgstr ""
+"次に :doc:`intro` を読む。レーザー1台・レンズ1枚・ミラー2枚のベンチを組み、ビューアで開くところまでを扱う。より大きな例は "
+":doc:`tutorial` にある。"
+
+#: ../../../gtrace/docs/source/index.rst:30
 msgid "Indices and tables"
 msgstr "索引と表"
 
-#: ../../source/index.rst:23
+#: ../../../gtrace/docs/source/index.rst:32
 msgid ":ref:`genindex`"
 msgstr ":ref:`genindex`"
 
-#: ../../source/index.rst:24
+#: ../../../gtrace/docs/source/index.rst:33
 msgid ":ref:`modindex`"
 msgstr ":ref:`modindex`"
 
-#: ../../source/index.rst:25
+#: ../../../gtrace/docs/source/index.rst:34
 msgid ":ref:`search`"
 msgstr ":ref:`search`"
 

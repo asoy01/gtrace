@@ -14,6 +14,12 @@ That is all you need to call. In a Jupyter notebook it puts the viewer in
 the cell output. Anywhere else it writes a self-contained HTML file and
 opens it in your browser.
 
+The viewer inside a notebook is an ``anywidget`` widget, which
+``pip install "gtrace[notebook]"`` installs. That command does not install
+Jupyter itself; ``pip install jupyterlab`` does. A plain
+``pip install gtrace`` leaves the widget out, and ``show()`` then always
+writes the HTML file.
+
 .. figure:: tutorial/figures/viewer_readout.png
    :width: 100%
 
@@ -74,19 +80,21 @@ A notebook cell is wide and short, and a bench drawing usually is not.
 There are three ways to give the drawing more room.
 
 **Drag the bottom edge.** A grip runs along the bottom of the widget. Drag
-it down to make the viewer taller. The new height is written back to the
-``height`` traitlet, so it survives a re-render, and ``w.height`` reports
-the height you dragged to. Dragging does not reframe the view: you are
-already looking where you meant to look.
+it down to make the viewer taller.
 
 **Fold the side panel away** with the small button at the top right of the
 drawing, which gives the drawing the whole width. The button stays where it
 was, turned round, to bring the panel back.
 
 **Ask for a height in Python**: ``layout.show(height=700)``, or
-``w.height = 700`` afterwards, which also reframes the drawing to suit.
-Setting the height from Python reframes because a height chosen there is
-usually a request to see the whole thing at that size.
+``w.height = 700`` afterwards.
+
+The three differ in whether they reframe the drawing. Dragging the grip does
+not: you are already looking where you meant to look. It writes the new
+height back to the ``height`` traitlet, so the height survives a re-render
+and ``w.height`` reports what you dragged to. Setting the height from Python
+does reframe, because a height chosen there is usually a request to see the
+whole thing at that size.
 
 With no height given, the widget takes its height from the width of the
 output area, so the drawing starts as tall as it is wide. It measures the
@@ -664,12 +672,13 @@ to say what is being measured, and one to say where the line goes.
    been carried clear of the element, with extension lines back to the two
    points.
 
-The third click exists because the two points you want to measure are
-usually in the busiest part of the drawing: along a beam, or through an
-element. A line drawn straight between them lands on top of the thing it
-measures. There you can neither read it nor take hold of it. Where to carry
-it aside is a choice about the drawing, so you make it by eye. Extension
-lines then run back to the points, as on any engineering drawing.
+The third click sets how far aside the dimension line is carried. It exists
+because the two points you want to measure are usually in the busiest part
+of the drawing: along a beam, or through an element. A line drawn straight
+between them lands on top of that beam or that element, where you can
+neither read it nor take hold of it. How far to carry it aside is a choice
+about the drawing, so you make it by eye. Extension lines then run back to
+the two points, as on any engineering drawing.
 
 Between the first two clicks, a line follows the cursor and the status bar
 reports the distance so far. After the second click, the dimension is
@@ -745,22 +754,19 @@ Measuring without Python
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **You can measure on the static HTML file too.** Everything the tool needs
-is already in the page. The points to snap to travel with the scene, and the
-distance between two of them is arithmetic. A colleague you send the file to
-can take dimensions off it.
+is already in the page, so a colleague you send the file to can take
+dimensions off it. Two things are missing there, because Python is what
+would have done them:
 
-Such a page cannot do two things, because Python is what would have done
-them:
-
-* **No optical distance.** Whether a span runs inside a substrate is a
-  question about the surfaces, and the surfaces are in the model, not in
-  the drawing. The dimensions the layout carried keep their optical
-  distance, because Python computed it before the file was written. A
-  dimension drawn by the reader gets only its physical length.
+* **No optical distance.** A dimension drawn by the reader gets only its
+  physical length. Whether a span runs inside a substrate is a question
+  about the surfaces, and the surfaces are in the model, not in the
+  drawing. The dimensions the layout already carried keep their optical
+  distance, because Python computed it before the file was written.
 * **The measurement is not saved.** It lasts as long as the page. It is
-  also the reader's own: **Remove** offers to take back what the reader
-  drew, and nothing else. A read-only viewer therefore cannot appear to
-  change the layout it was given.
+  also the reader's own: **Remove** takes back what the reader drew, and
+  nothing else. A read-only viewer therefore cannot appear to change the
+  layout it was given.
 
 The same applies to a widget made read-only with ``editable=False``, where a
 scene pushed by ``update()`` replaces the reader's measurements along with
@@ -875,9 +881,9 @@ software.
 
 The two panels are kept apart, with a file name each, because they deal with
 two different things. The layout is the model: save it and load it back, and
-you get the same system. The DXF file is a *picture* of the model. It goes
-out to software that will never send it back, so pressing Load on a DXF file
-could only be a mistake.
+you get the same system. The DXF file is a *picture* of the model, and DXF
+is an export format only. There is no Load button beside Export, because
+gtrace cannot read a layout back from a DXF file.
 
 The name of the drawing starts from the name of the layout, with the
 extension swapped, so you do not type the name twice. After that the two
@@ -890,7 +896,7 @@ starting name from Python.
 DXF export
 -----------
 
-The button is sugar on
+The button calls
 :py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>`, the companion
 of :py:meth:`render_html<gtrace.layout.OpticalLayout.render_html>`:
 
@@ -906,8 +912,9 @@ this, so the drawing carries your measurements and the person who opens it
 can switch them off. Pass ``dimensions=False`` to leave them out entirely.
 
 The ticks and the lettering are sized as fractions of the measurement, not
-in millimetres. A drawing has no fixed scale, and a label sized for a bench
-would be invisible across a substrate.
+in millimetres. One drawing can hold a 3 m span across the bench and a 10 mm
+span across a substrate. Lettering fixed at the size that suits the 3 m span
+would cover the whole substrate.
 
 Without a layout
 -----------------

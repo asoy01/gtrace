@@ -27,8 +27,7 @@ What it does:
   sent to somebody as a single HTML page, or exported to DXF for CAD.
 
 gtrace works in two dimensions: everything lies on one plane. That covers
-a bench layout, the case gtrace was written for. The limitation may be
-lifted in the future.
+a bench layout, the case gtrace was written for.
 
 Installation
 -------------
@@ -36,6 +35,9 @@ Installation
 Python 3.9 or newer::
 
     pip install "gtrace[notebook]"
+
+Write the quotes around ``gtrace[notebook]``. In zsh, brackets without
+quotes are read as a glob.
 
 This installs gtrace and both viewers: the widget that runs inside a
 Jupyter notebook, and the standalone HTML page that opens in a web browser.
@@ -49,9 +51,6 @@ file and select the interpreter you installed gtrace into.
 
 If you do not use notebooks, ``pip install gtrace`` installs gtrace and the
 HTML viewer, and leaves out the widget.
-
-The quotes around ``gtrace[notebook]`` matter in zsh, which would otherwise
-read the brackets as a glob.
 
 A first layout
 ---------------
@@ -132,8 +131,10 @@ has three of those:
      - How faint a beam has to get before it stops being followed.
        Lower it to chase more ghosts, at the cost of time.
    * - ``order``
-     - How many internal reflections are followed when a beam enters a
-       substrate.
+     - How many ghost reflections a beam may go through before it stops
+       being followed. Every beam carries the count, and the count is not
+       reset when the beam leaves one element for the next, so ``order``
+       is a limit on the whole trace. See :ref:`stray-order`.
    * - ``open_beam_length``
      - How long a beam that hits nothing is drawn. The default is 1 m;
        15 cm keeps this small bench from being lost in its own stray
@@ -269,20 +270,16 @@ Where to go next
        front end of your own
      - :doc:`editing`
 
-Two of those pages are worth reading early. :doc:`propagation` explains
-where the ghost beams come from and how they are counted. Read it so that
-you can choose ``order`` and ``power_threshold`` on purpose, instead of
-turning them until the picture looks right. :doc:`layout` covers what a
-layout holds besides optics: the mounts, pedestals and breadboards a real
-bench needs, and the drawing options that decide what goes into a DXF
-file.
+Read :doc:`propagation` early. It explains where the ghost beams come from
+and how they are counted, so that you can choose ``order`` and
+``power_threshold`` on purpose instead of turning them until the picture
+looks right.
 
-There is also a lower level to gtrace, underneath ``OpticalLayout``. Mirrors
-and beams work on their own: you can hand a beam to a mirror, get the
-reflected and transmitted beams back, and carry them yourself. Anything a
-layout does can be done that way, and the last chapter of the
-:doc:`tutorial` builds a cavity like that before registering it in a layout.
-Use it when the geometry has to be computed instead of placed by hand.
+Mirrors and beams also work without a layout. You can hand a beam to a
+mirror, get the reflected and transmitted beams back, and carry them
+yourself. The last chapter of the :doc:`tutorial` builds a cavity that way
+and registers it in a layout afterwards. Work like this when the positions
+of the elements have to be computed instead of typed in.
 
 Installing from a git clone
 ----------------------------

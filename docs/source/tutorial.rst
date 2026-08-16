@@ -21,6 +21,12 @@ This does not install Jupyter itself. If you do not have Jupyter::
 
     pip install jupyterlab
 
+The first notebook needs nothing more. The mode matching notebook draws
+contour maps with Matplotlib, runs one scan in parallel with joblib, and
+optimises with SciPy::
+
+    pip install matplotlib joblib scipy
+
 Then download the notebook file from GitHub with the download button at
 the top right of the page:
 
@@ -71,12 +77,12 @@ picked from a stock of focal lengths.
 
 The notebook computes the eigenmode of the cavity from its g
 parameters, and then confirms the same answer by ray tracing. It scans
-the two lens positions and draws the mode matching as a contour map,
-first in a plain loop and then in a parallel version that uses joblib.
-The best point of the map is the starting point of an optimisation
-that reaches a perfect match. The result is checked in the viewer: on
-both cavity mirrors, the ROC of the beam is equal to the ROC of the
-mirror.
+the two lens positions and draws the mode matching as a contour map with
+Matplotlib, first in a plain loop and then in a parallel version that
+uses joblib. The best point of the map is the starting point of a SciPy
+optimisation that reaches a perfect match. The result is checked in the
+viewer: on both cavity mirrors, the ROC of the beam is equal to the ROC
+of the mirror.
 
 .. toctree::
    :maxdepth: 1

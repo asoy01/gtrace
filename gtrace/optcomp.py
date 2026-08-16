@@ -165,8 +165,9 @@ class Optics(HasTraits):
         beam : gtrace.beam.GaussianBeam
             A GaussianBeam object to be interacted by the optics.
         order : int, optional
-            An integer to specify how many times the internal reflections
-            are computed.
+            The largest stray_order a beam produced here may have.
+            The count is carried over from the incident beam, not
+            started afresh.
             Defaults 0.
         threshold : float, optional
             The power threshold for internal reflection calculation.
@@ -997,8 +998,9 @@ class Mirror(Optics):
         beam : gtrace.beam.GaussianBeam
             A GaussianBeam object to be interacted by the optics.
         order : int, optional
-            An integer to specify how many times the internal reflections
-            are computed.
+            The largest stray_order a beam produced here may have.
+            The count is carried over from the incident beam, not
+            started afresh.
             Defaults 0.
         threshold : float, optional
             The power threshold for internal reflection calculation.
@@ -1063,17 +1065,19 @@ class Mirror(Optics):
         Compute the reflected and deflected beams when
         an input beam hit the HR surface.
 
-        The internal reflections are computed as long as the number
-        of internal reflections are below the ``order`` and the power
-        of the reflected beams is over the threshold.
+        A beam is produced as long as its stray_order is not above
+        ``order`` and its power is over the threshold. The stray_order
+        of the incident beam is carried over, so a beam that is already
+        stray leaves less of the allowance for the ghosts made here.
 
         Parameters
         ----------
         beam : gtrace.beam.GaussianBeam
             A GaussianBeam object to be interacted by the optics.
         order : int, optional
-            An integer to specify how many times the internal reflections
-            are computed.
+            The largest stray_order a beam produced here may have.
+            The count is carried over from the incident beam, not
+            started afresh.
             Defaults 0.
         threshold : float, optional
             The power threshold for internal reflection calculation.
@@ -1413,17 +1417,19 @@ class Mirror(Optics):
         Compute the reflected and deflected beams when
         an input beam hit the AR surface.
 
-        The internal reflections are computed as long as the number
-        of internal reflections are below the ``order`` and the power
-        of the reflected beams is over the threshold.
+        A beam is produced as long as its stray_order is not above
+        ``order`` and its power is over the threshold. The stray_order
+        of the incident beam is carried over, so a beam that is already
+        stray leaves less of the allowance for the ghosts made here.
 
         Parameters
         ----------
         beam : gtrace.beam.GaussianBeam
             A GaussianBeam object to be interacted by the optics.
         order : int, optional
-            An integer to specify how many times the internal reflections
-            are computed.
+            The largest stray_order a beam produced here may have.
+            The count is carried over from the incident beam, not
+            started afresh.
             Defaults 0.
         threshold : float, optional
             The power threshold for internal reflection calculation.
@@ -2395,17 +2401,19 @@ class CyMirror(Mirror):
         Compute the reflected and deflected beams when
         an input beam hit the HR surface.
 
-        The internal reflections are computed as long as the number
-        of internal reflections are below the ``order`` and the power
-        of the reflected beams is over the threshold.
+        A beam is produced as long as its stray_order is not above
+        ``order`` and its power is over the threshold. The stray_order
+        of the incident beam is carried over, so a beam that is already
+        stray leaves less of the allowance for the ghosts made here.
 
         Parameters
         ----------
         beam : gtrace.beam.GaussianBeam
             A GaussianBeam object to be interacted by the optics.
         order : int, optional
-            An integer to specify how many times the internal reflections
-            are computed.
+            The largest stray_order a beam produced here may have.
+            The count is carried over from the incident beam, not
+            started afresh.
             Defaults 0.
         threshold : float, optional
             The power threshold for internal reflection calculation.
@@ -2769,17 +2777,19 @@ class CyMirror(Mirror):
         Compute the reflected and deflected beams when
         an input beam hit the AR surface.
 
-        The internal reflections are computed as long as the number
-        of internal reflections are below the ``order`` and the power
-        of the reflected beams is over the threshold.
+        A beam is produced as long as its stray_order is not above
+        ``order`` and its power is over the threshold. The stray_order
+        of the incident beam is carried over, so a beam that is already
+        stray leaves less of the allowance for the ghosts made here.
 
         Parameters
         ----------
         beam : gtrace.beam.GaussianBeam
             A GaussianBeam object to be interacted by the optics.
         order : int, optional
-            An integer to specify how many times the internal reflections
-            are computed.
+            The largest stray_order a beam produced here may have.
+            The count is carried over from the incident beam, not
+            started afresh.
             Defaults 0.
         threshold : float, optional
             The power threshold for internal reflection calculation.

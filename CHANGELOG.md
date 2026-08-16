@@ -44,6 +44,72 @@ across them.
   level 1, which produced extra top-level sections on the rendered
   page. They are level 2 now.
 
+- **`order` was described wrongly on three pages.** Introduction,
+  Optical layouts and the tutorial notebook all called it the number of
+  internal reflections followed when a beam enters a substrate. It is
+  the number of ghost reflections a beam may go through in total: every
+  beam carries the count, and the count is not reset when the beam
+  leaves one element for the next. The three now say so and point at
+  the stray order section of Propagation.
+
+- **The tutorial named the wrong beams.** It said `s` was a reflection
+  and `t` a transmission, and did not mention `r` at all, which
+  contradicted both the figure beside it and the chapter further down.
+  `r` leaves back on the side the beam came from, `s` travels inside
+  the substrate, and `t` comes out of the far side. The same section
+  gave `b0:M1t1` as a beam name; a beam is named `M1:t1`, after the
+  element that produced it and the beam it left as.
+
+- **A printed label in the tutorial said the opposite of its value.**
+  `print('HR counts as stray :', M2.HRreflective)` printed `True` for a
+  mirror whose HR reflection is the main beam and is *not* counted as
+  stray. The label reads `HR meant to reflect` now.
+
+- **The mode matching notebook disagreed with itself about the laser.**
+  The opening table quoted a waist diameter of 0.2 mm while the code
+  used 0.2 mm as the radius, which is what the printed output reports.
+  The table says radius.
+
+- **The prerequisites of the notebooks are written down.** The mode
+  matching notebook needs Matplotlib, joblib and SciPy on top of
+  gtrace, and said so only at the import lines. The Tutorial page and
+  the notebook now give the `pip install` line, and the parallel scan
+  says it can be skipped.
+
+- **Code examples that could not be run were completed.** The
+  `hitFromHR` and `non_seq_trace` examples in Propagation used a mirror
+  and a source that were never defined; they now build both and show
+  the output they produce. Basic concepts uses `GaussianBeam` and
+  `q_from_waist` without importing them, so the imports were added to
+  the first block of the page. The edit protocol shows what setting one
+  waist does to the other three.
+
+- The landing page carried the `sphinx-quickstart` template comment and
+  nothing but a table of contents. It says what gtrace does, how to
+  install it and where to start.
+
+- **The docstrings said the same wrong thing about `order`.**
+  `TraceRules`, `non_seq_trace` and the ten `hit` / `hitFromHR` /
+  `hitFromAR` docstrings described it as the number of internal
+  reflections computed at an element. It is the largest `stray_order` a
+  produced beam may have, and the count is carried over from the
+  incident beam. These docstrings are published as the API reference,
+  so the manual repeated the error in two places at once.
+
+- **The focal length of a `'v'` cylindrical mirror was written
+  ambiguously.** `R/2\cos\theta` renders as *R*/2·cos θ, which is not
+  what is meant. It is now `R/(2\cos\theta)`.
+
+- **The Japanese translation was brought back in line with the English**
+  and reviewed as whole pages rather than message by message. Wording
+  that was a word-for-word transposition of the English was rewritten:
+  metaphors that had been carried over literally (「予算」「関門」
+  「焼き付ける」「ページを閉じるまでの命」), 無生物主語, and phrases
+  whose meaning could not be recovered without the English beside them.
+  Three terms were unified across the manual: 光源ビーム for a source
+  beam, ウェスト for a waist, and ウェスト半径 for a waist size, which
+  one page had as ウェスト径 although the value is a radius.
+
 ## 0.6.0 — 2026-08-13
 
 ### Added

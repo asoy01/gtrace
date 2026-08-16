@@ -18,10 +18,14 @@ Lengths are in metres and angles are in radians. ``gtrace.unit`` holds
 multipliers so that you never write either in full::
 
     import gtrace.optcomp as opt
+    from gtrace.beam import GaussianBeam
+    from gtrace.layout import q_from_waist
     from gtrace.unit import *        # mm, cm, inch, nm, um, ppm, deg2rad, ...
 
     M = opt.Mirror(HRcenter=[30*cm, 0.0], diameter=2*inch,
                    thickness=10*mm, normAngleHR=deg2rad(170))
+
+The examples on the rest of this page use these imports.
 
 Direction
 -----------
@@ -44,10 +48,12 @@ updates the other::
     >>> b.dirAngle
     0.0
 
-So you set whichever is convenient and read whichever is convenient. A
-:py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` holds ``dirAngle`` and
-``dirVect``; a :py:class:`Mirror<gtrace.optcomp.Mirror>` holds
-``normAngleHR`` and ``normVectHR`` for the normal of its front face.
+Write to the angle and the vector changes with it. Write to the vector and
+the angle changes with it. A
+:py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` holds this pair as
+``dirAngle`` and ``dirVect``. A :py:class:`Mirror<gtrace.optcomp.Mirror>`
+holds it as ``normAngleHR`` and ``normVectHR``, for the normal of its front
+face.
 
 Beam
 -----------
@@ -106,10 +112,11 @@ Mirror
 .. image:: imgs/Mirror.png
    :height: 10cm
 
-:py:class:`Mirror<gtrace.optcomp.Mirror>` is the basic optical element. The
-name is narrower than what the class does: it also serves for a transparent
-window, a prism, a lens, or a light absorbing plate such as black glass. In
-every case it is a piece of substrate with two surfaces.
+:py:class:`Mirror<gtrace.optcomp.Mirror>` is the basic optical element. It
+is a piece of substrate with two surfaces, so it also serves for a
+transparent window, a prism, a lens, or a light absorbing plate such as
+black glass. Set the reflectivity and the transmission of each surface to
+say which of those you mean.
 
 The front surface is called HR and the back one AR, after the coatings they
 usually carry. Each has its own position, curvature and reflectivity:
@@ -168,12 +175,12 @@ equiconvex lens for a positive focal length and an equiconcave one for a
 negative focal length. Asking for a shape that contradicts the sign of the
 focal length raises an error.
 
-The radii are solved as a *thick* lens, and gtrace then traces the same
-thing: the beam refracts at both faces, with the substrate in between.
-Radii taken from the thin lens formula would be a few parts in a thousand
-off, and much further off for a short focal length. ``thickness`` is
-the :py:class:`Mirror<gtrace.optcomp.Mirror>` thickness, measured between
-the two chord planes, so it is the thickness at the rim.
+The radii are solved as a *thick* lens, which is what the trace then sees:
+the beam refracts at both faces, with the substrate in between. Radii taken
+from the thin lens formula would be a few parts in a thousand off, and much
+further off for a short focal length. ``thickness`` is the
+:py:class:`Mirror<gtrace.optcomp.Mirror>` thickness, measured between the
+two chord planes, so it is the thickness at the rim.
 ``center_thickness`` reports the distance between the apexes that a
 catalogue would quote.
 
@@ -286,8 +293,8 @@ of incidence :math:`\theta`, a curved surface presents an effective radius
 :math:`R\cos\theta` in the plane of incidence, and :math:`R/\cos\theta`
 perpendicular to it. An ``'h'`` mirror of radius :math:`R` therefore has a
 focal length of :math:`R\cos\theta/2`, and a ``'v'`` mirror of the same
-radius has :math:`R/2\cos\theta`. At 45 degrees they differ by a factor of
-two. Only at normal incidence do the two agree.
+radius has :math:`R/(2\cos\theta)`. At 45 degrees they differ by a factor
+of two. Only at normal incidence do the two agree.
 
 Transmission through a cylindrical face is worth stating separately,
 because it is easy to assume more than is true. The uncurved plane loses

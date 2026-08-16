@@ -3,16 +3,18 @@ The edit protocol
 
 The viewer changes a layout by sending it messages. This page is the
 reference for those messages: what they may say, what they may touch, and
-what comes back when one is refused. You do not need it to use the viewer,
-which is described in :doc:`viewer`, nor to use a layout from Python, which
-is :doc:`layout`. Read it when you want to drive a layout from code the way
-the viewer does, or when you are writing a front end of your own.
+what comes back when one is refused. Read it when you want to drive a layout
+from code the way the viewer does, or when you are writing a front end of
+your own. To work the viewer itself, read :doc:`viewer`; to work a layout
+from Python, read :doc:`layout`.
 
 The message form
 -----------------
 
 Every message is a plain dict, handed to
-:py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>`:
+:py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>`. ``target``
+is the name of something registered in the layout. The examples below use
+``PRM``, the mirror of the layout built at the top of :doc:`layout`:
 
 .. code-block:: python
 
@@ -21,11 +23,27 @@ Every message is a plain dict, handed to
     layout.apply_edit({'op': 'set', 'target': 'PRM',
                        'attrs': {'diameter': 0.15}})
 
-The operations are ``move``, ``rotate``, ``set``, ``align``, ``slide``,
-``add``, ``copy``, ``remove``, ``rename``, ``rules``, ``draw``, ``save``,
-``load``, ``export``, ``undo`` and ``redo``. Because a message is a plain
-dict, the same protocol travels over a notebook widget's comm as over any
-other transport.
+Because a message is a plain dict, the same protocol travels over a notebook
+widget's comm as over any other transport. There are sixteen operations:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 66
+
+   * - Operations
+     - What they are for
+   * - ``move``, ``rotate``, ``align``, ``slide``
+     - Place something.
+   * - ``set``
+     - Change the attributes of something.
+   * - ``add``, ``copy``, ``remove``, ``rename``
+     - Change what the layout holds.
+   * - ``rules``, ``draw``
+     - Change the tracing rules and the drawing options.
+   * - ``save``, ``load``, ``export``
+     - Read and write files.
+   * - ``undo``, ``redo``
+     - Step through the history, which is described in :doc:`layout`.
 
 The set of attributes a message may touch is an explicit whitelist
 (``EDITABLE_OPTIC_ATTRS``), and some attributes are further restricted to a
@@ -97,7 +115,8 @@ Sources
 
 The same operations reach the source beams, and mean for a laser what they
 mean for an element: ``move`` says where it stands, ``rotate`` which way it
-fires, ``set`` what light it puts out.
+fires, ``set`` what light it puts out. ``b0`` below is the name of a source
+registered in the layout.
 
 .. code-block:: python
 
@@ -121,14 +140,37 @@ the laser is where the beams start.
 not attributes a :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` has.
 Each stands for one half of one q-parameter and is converted here. Setting a
 size does not move the waist, moving it does not resize it, and the two
-directions are independent. ``qx`` and ``qy`` may still be set directly, as
-``[real, imag]``; :py:func:`q_from_waist<gtrace.layout.q_from_waist>` and
-:py:meth:`waist<gtrace.beam.GaussianBeam.waist>` convert between the two
-descriptions.
+directions are independent:
+
+.. code-block:: python
+
+    b0 = layout.get_source('b0')
+
+    def report():
+        w = b0.waist()
+        print('size %.3f / %.3f mm   at %.3f / %.3f m'
+              % (w['Waist Size'][0]/mm, w['Waist Size'][1]/mm,
+                 w['Waist Position'][0], w['Waist Position'][1]))
+
+    report()
+    layout.apply_edit({'op': 'set', 'target': 'b0',
+                       'attrs': {'waist_size_x': 0.35e-3}})
+    report()
+
+::
+
+    size 0.400 / 0.400 mm   at 0.000 / 0.000 m
+    size 0.350 / 0.400 mm   at 0.000 / 0.000 m
+
+The x waist changed size, the y waist did not, and neither one moved.
 
 A waist position is the distance from the laser forward along the beam,
 positive downstream, which is how
-:py:meth:`waist<gtrace.beam.GaussianBeam.waist>` reports it.
+:py:meth:`waist<gtrace.beam.GaussianBeam.waist>` reports it. ``qx`` and
+``qy`` may still be set directly, as ``[real, imag]``;
+:py:func:`q_from_waist<gtrace.layout.q_from_waist>` and
+:py:meth:`waist<gtrace.beam.GaussianBeam.waist>` convert between the two
+descriptions.
 
 **Through this protocol, changing the wavelength keeps the waist and
 changes the divergence.** A q-parameter alone does not say how wide the

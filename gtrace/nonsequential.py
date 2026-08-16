@@ -61,10 +61,14 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1,
     src_beam: gtrace.beam.GaussianBeam
         The source beam object.
     order: int, optional
-        An integer to specify how many times the internal reflections
-        are computed. An optics whose max_stray_order is set overrides
-        this for itself, since how deep its ghosts are worth chasing is
-        a property of the element rather than of the trace.
+        Number of ghost reflections a beam may go through before it
+        stops being followed. Every beam carries the count as its
+        stray_order, and this function does not reset it when the beam
+        leaves one element for the next, so the limit applies to the
+        whole trace rather than to one element. An optics whose
+        max_stray_order is set overrides this for itself, since how
+        deep its ghosts are worth chasing is a property of the element
+        rather than of the trace.
         Defaults to 10.
     power_threshold: float, optional
         The power threshold for internal reflection calculation.

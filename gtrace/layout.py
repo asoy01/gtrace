@@ -102,8 +102,11 @@ class TraceRules(object):
     Attributes
     ----------
     order : int
-        Number of internal reflections computed when a beam hits an
-        optics. Defaults to 10.
+        Number of ghost reflections a beam may go through before it
+        stops being followed. Every beam carries the count as its
+        stray_order, and the count is not reset when the beam leaves
+        one element for the next, so this limits the whole trace rather
+        than one element. Defaults to 10.
     power_threshold : float
         Beams with power below this threshold are not propagated
         further. Defaults to 0.1.

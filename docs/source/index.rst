@@ -1,10 +1,18 @@
-.. gtrace documentation master file, created by
-   sphinx-quickstart on Sun Sep  1 22:19:08 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to gtrace's documentation!
 ==================================
+
+gtrace traces Gaussian beams through an optical system laid out on a bench.
+You place mirrors and lenses in Python and trace the beams. You look at the
+result in a browser and move the elements until the layout is right. When
+the layout is finished, you export the drawing to DXF.
+
+Install it with::
+
+    pip install "gtrace[notebook]"
+
+Then read :doc:`intro`, which builds a bench of a laser, a lens and two
+mirrors, and opens it in the viewer. :doc:`tutorial` works through a larger
+example.
 
 .. toctree::
    :maxdepth: 2
