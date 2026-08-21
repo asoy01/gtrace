@@ -876,10 +876,18 @@ class Mirror(Optics):
         Returned value is a list of two tuples like [(center1, normVect1, length1), (center2, normVect2, length2)]
         Each tuple corresponds to a side. center1 is the coordinates of the center of the side line. normVect1 is the normal vector of the side line. length1 is the length of the side line.
 
+        **Do not write into what this returns.** The same list and the
+        same arrays are handed to every caller until the shape or the
+        pose of the optics changes. A trace asks for this once per beam
+        per element, which is thousands of times for the same answer.
+
         Returns
         -------
         [(float, float, float), (float, float, float)]
         '''
+        info = self._geometry().get('side_info')
+        if info is not None:
+            return info
 
         r = self.diameter/2
 
@@ -903,7 +911,9 @@ class Mirror(Optics):
         normVect2 = vn2/np.linalg.norm(vn2)
         length2 = np.linalg.norm(v2h - v2a)
 
-        return [(center1, normVect1, length1), (center2, normVect2, length2)]
+        info = [(center1, normVect1, length1), (center2, normVect2, length2)]
+        self._geometry()['side_info'] = info
+        return info
 
 #}}}
 
@@ -2339,10 +2349,18 @@ class CyMirror(Mirror):
         Returned value is a list of two tuples like [(center1, normVect1, length1), (center2, normVect2, length2)]
         Each tuple corresponds to a side. center1 is the coordinates of the center of the side line. normVect1 is the normal vector of the side line. length1 is the length of the side line.
 
+        **Do not write into what this returns.** The same list and the
+        same arrays are handed to every caller until the shape or the
+        pose of the optics changes. A trace asks for this once per beam
+        per element, which is thousands of times for the same answer.
+
         Returns
         -------
         [(float, float, float), (float, float, float)]
         '''
+        info = self._geometry().get('side_info')
+        if info is not None:
+            return info
 
         if self.curve_direction == 'v':
             center_of_HR =self.HRcenter
@@ -2369,7 +2387,9 @@ class CyMirror(Mirror):
         length2 = np.linalg.norm(p2 - p3)
 
 
-        return [(center1, normVect1, length1), (center2, normVect2, length2)]
+        info = [(center1, normVect1, length1), (center2, normVect2, length2)]
+        self._geometry()['side_info'] = info
+        return info
 
 #}}}
 

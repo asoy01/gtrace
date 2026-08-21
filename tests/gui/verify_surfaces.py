@@ -512,13 +512,74 @@ m.inv_ROC_HR = 1.0/0.10
 check('a curved face is allowed for', m._bounding_radius() > R0,
       '(%.6f mm)' % (m._bounding_radius()/mm))
 
-m = opt.Mirror(HRcenter=[0.0, 0.0], normAngleHR=0.0, diameter=DIAM,
-               thickness=THICK, wedgeAngle=0.0, inv_ROC_HR=0.0, name='S')
-m.get_side_info()
-before = m._geometry_key()
-m.center[0] = 5.0          # in place: no notification is sent
-check('an in-place write to center is noticed all the same',
-      m._geometry_key() != before)
+#get_side_info() is kept in the same store, and it is the one a trace
+#asks for thousands of times. Every way of moving or reshaping the
+#optics has to reach it.
+def sides_of(m):
+    return [(np.array(c), np.array(n), float(l)) for c, n, l in m.get_side_info()]
+
+def same_sides(a, b):
+    return all(close(x[0], y[0]) and close(x[1], y[1]) and close(x[2], y[2])
+               for x, y in zip(a, b))
+
+for what, move in [
+        ('translate', lambda m: m.translate([0.4, -0.2])),
+        ('rotate', lambda m: m.rotate(0.3)),
+        ('a new normAngleHR', lambda m: setattr(m, 'normAngleHR', 1.1)),
+        ('a new HRcenter', lambda m: setattr(m, 'HRcenter', [0.7, 0.3])),
+        ('a new diameter', lambda m: setattr(m, 'diameter', 2*DIAM)),
+        ('a new thickness', lambda m: setattr(m, 'thickness', 3*THICK)),
+        ('a new wedgeAngle', lambda m: setattr(m, 'wedgeAngle', 2*np.pi/180)),
+        ('an in-place write to center',
+         lambda m: m.center.__setitem__(0, 5.0))]:
+    m = opt.Mirror(HRcenter=[0.0, 0.0], normAngleHR=0.0, diameter=DIAM,
+                   thickness=THICK, wedgeAngle=0.0, inv_ROC_HR=0.0, name='S')
+    before = sides_of(m)
+    move(m)
+    check('get_side_info follows %s' % what,
+          not same_sides(before, sides_of(m)))
+    #And against the answer of an optics that never had a stale one.
+    fresh = opt.Mirror(HRcenter=m.HRcenter, normAngleHR=m.normAngleHR,
+                       diameter=m.diameter, thickness=m.thickness,
+                       wedgeAngle=m.wedgeAngle, inv_ROC_HR=m.inv_ROC_HR,
+                       name='S')
+    fresh.center = np.array(m.center)
+    check('and gives what an untouched copy gives after %s' % what,
+          same_sides(sides_of(fresh), sides_of(m)))
+
+#A cylinder puts its faces in different places depending on which way it
+#is turned, so that too has to reach the store.
+cy = opt.CyMirror(HRcenter=[0.0, 0.0], normAngleHR=0.0, diameter=DIAM,
+                  thickness=THICK, wedgeAngle=0.0, inv_ROC_HR=1.0/0.10,
+                  curve_direction='h', name='S')
+before = sides_of(cy)
+cy._bounding_radius()
+cy.curve_direction = 'v'
+fresh = opt.CyMirror(HRcenter=[0.0, 0.0], normAngleHR=0.0, diameter=DIAM,
+                     thickness=THICK, wedgeAngle=0.0, inv_ROC_HR=1.0/0.10,
+                     curve_direction='v', name='S')
+check('get_side_info follows a new curve_direction',
+      not same_sides(before, sides_of(cy)))
+check('and agrees with an untouched copy', same_sides(sides_of(cy),
+                                                      sides_of(fresh)))
+check('and so does the bounding radius',
+      cy._bounding_radius() == fresh._bounding_radius(),
+      '(%.9f mm)' % (cy._bounding_radius()/mm))
+
+#Whatever else it is, the radius has to cover the corners of the
+#substrate the optics currently has.
+for cd in ['h', 'v']:
+    for wedge in [0.0, 3.0*np.pi/180]:
+        c = opt.CyMirror(HRcenter=[0.2, 0.1], normAngleHR=0.9, diameter=DIAM,
+                         thickness=THICK, wedgeAngle=wedge,
+                         inv_ROC_HR=1.0/0.10, curve_direction=cd, name='S')
+        worst = max(np.linalg.norm(np.asarray(k) - c.center)
+                    for k in c.get_corners())
+        check('CyMirror %s wedge=%.1fdeg: the radius covers the corners'
+              % (cd, wedge*180/np.pi),
+              c._bounding_radius() >= worst - 1e-15,
+              '(%.6f mm against %.6f mm)'
+              % (c._bounding_radius()/mm, worst/mm))
 
 print()
 print('%d passed, %d failed' % (npass, nfail))
