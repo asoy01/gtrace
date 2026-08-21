@@ -878,8 +878,9 @@ class Mirror(Optics):
 
         **Do not write into what this returns.** The same list and the
         same arrays are handed to every caller until the shape or the
-        pose of the optics changes. A trace asks for this once per beam
-        per element, which is thousands of times for the same answer.
+        pose of the optics changes. Tracing a layout asks for this once
+        per beam per element, which is thousands of times for the same
+        answer.
 
         Returns
         -------
@@ -2351,8 +2352,9 @@ class CyMirror(Mirror):
 
         **Do not write into what this returns.** The same list and the
         same arrays are handed to every caller until the shape or the
-        pose of the optics changes. A trace asks for this once per beam
-        per element, which is thousands of times for the same answer.
+        pose of the optics changes. Tracing a layout asks for this once
+        per beam per element, which is thousands of times for the same
+        answer.
 
         Returns
         -------

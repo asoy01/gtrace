@@ -13,11 +13,11 @@ across them.
 
 ### Changed
 
-- **A trace is about sixteen times faster.** Tracing the KAGRA
-  interferometer with ghost beams - 45 elements, 482 beams - went from
-  1.58 s to 0.099 s, and the tutorial layout from 0.076 s to 0.005 s.
-  Nothing about how gtrace is used has changed. Four things were done,
-  in the order they matter:
+- **Tracing a layout takes about a sixteenth of the time it did.**
+  Tracing the KAGRA interferometer with ghost beams - 45 elements, 482
+  beams - went from 1.58 s to 0.099 s, and the tutorial layout from
+  0.076 s to 0.005 s. Nothing about how gtrace is used has changed.
+  Four things were done, in the order they matter:
 
   - **`isHit` asks whether a beam comes near an element before testing
     its faces.** It used to intersect all four faces of every element
@@ -36,8 +36,9 @@ across them.
     arrays are handed to every caller.
 
   - **`GaussianBeam.copy()` copies the beam's dictionary** instead of
-    running `copy.deepcopy` over a traits object. A trace copies a beam
-    at every surface it meets, and each copy took 121 microseconds.
+    running `copy.deepcopy` over a traits object. Tracing a layout
+    copies a beam at every surface it meets, and each copy took 121
+    microseconds.
     This also removes the garbage the deepcopy left behind: the same
     trace run three times used to take 1.09, 1.09 and 3.81 seconds, and
     now takes the same time every run.
@@ -47,7 +48,7 @@ across them.
     floating point operations, and were spending their time in call
     overhead: a two-element `np.linalg.norm` costs a microsecond and a
     2x2 `np.linalg.solve` calls into LAPACK. gtrace no longer calls
-    LAPACK anywhere in a trace.
+    LAPACK while tracing.
 
 - **Changed results.** The last digits move. Two of the four changes
   above are exact - a trace of the KAGRA layout comes out bit for bit
@@ -85,8 +86,9 @@ across them.
 
 ### Added
 
-- **`tests/bench_trace.py`**, which times a trace and prints the beam
-  count and the sum of the optical path lengths, so the same command
+- **`tests/bench_trace.py`**, which measures how long a trace takes and
+  prints the beam count and the sum of the optical path lengths, so the
+  same command
   that reports the time also reports whether the physics moved. It
   takes the tutorial layout or a pickled one.
 

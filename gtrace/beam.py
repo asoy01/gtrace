@@ -288,9 +288,9 @@ class GaussianBeam(HasTraits):
         attributes pointing at the originals - and the docstring used to
         call it a deep copy, which it is not.
 
-        A trace copies a beam at every surface it meets, tens of
-        thousands of times over a layout of any size, so this is written
-        to be cheap: the values are written straight into the new
+        Tracing a layout copies a beam at every surface it meets, tens
+        of thousands of times over a layout of any size, so this is
+        written to be cheap: the values are written straight into the new
         object's dictionary, where traits keeps them anyway.
 
         Copying the dictionary rather than listing the fields is what

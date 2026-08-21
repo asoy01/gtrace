@@ -67,8 +67,8 @@ def line_plane_intersection(pos,
     Notes
     -----
     The vectors are read element by element and the arithmetic is done
-    on plain floats. Every hit test in a trace comes through here, and
-    at this size numpy costs more in call overhead than the twenty
+    on plain floats. Every hit test comes through here, and at this
+    size numpy costs more in call overhead than the twenty
     floating point operations are worth: a two-element ``norm`` alone
     takes a microsecond, and a 2x2 ``solve`` calls into LAPACK. The
     inputs may still be a list, a tuple or an array of any numeric
