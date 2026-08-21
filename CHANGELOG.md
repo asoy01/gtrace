@@ -11,6 +11,94 @@ across them.
 
 ## Unreleased
 
+### Changed
+
+- **A trace is about sixteen times faster.** Tracing the KAGRA
+  interferometer with ghost beams - 45 elements, 482 beams - went from
+  1.58 s to 0.099 s, and the tutorial layout from 0.076 s to 0.005 s.
+  Nothing about how gtrace is used has changed. Four things were done,
+  in the order they matter:
+
+  - **`isHit` asks whether a beam comes near an element before testing
+    its faces.** It used to intersect all four faces of every element
+    for every beam. On the KAGRA layout it is called 12,825 times and
+    271 of those are hits; a single test against the circle that holds
+    the substrate rejects 95% of the rest. On its own this is a
+    four-fold speed-up, and it is the one that matters more the more
+    elements a layout has, since the work grows as beams x elements x
+    four faces.
+
+  - **`get_side_info` is worked out once per element rather than once
+    per beam per element.** It takes no arguments and follows from the
+    shape and the pose, and a KAGRA trace asked for the same answer
+    12,842 times. It is now kept until the shape or the pose changes.
+    **Do not write into what it returns**: the same list and the same
+    arrays are handed to every caller.
+
+  - **`GaussianBeam.copy()` copies the beam's dictionary** instead of
+    running `copy.deepcopy` over a traits object. A trace copies a beam
+    at every surface it meets, and each copy took 121 microseconds.
+    This also removes the garbage the deepcopy left behind: the same
+    trace run three times used to take 1.09, 1.09 and 3.81 seconds, and
+    now takes the same time every run.
+
+  - **The geometry is worked out on plain floats** rather than on
+    two-element numpy arrays. The intersection routines do about twenty
+    floating point operations, and were spending their time in call
+    overhead: a two-element `np.linalg.norm` costs a microsecond and a
+    2x2 `np.linalg.solve` calls into LAPACK. gtrace no longer calls
+    LAPACK anywhere in a trace.
+
+- **Changed results.** The last digits move. Two of the four changes
+  above are exact - a trace of the KAGRA layout comes out bit for bit
+  identical after the culling and the caching - and two of them reorder
+  floating point arithmetic:
+
+  `copy()` no longer re-derives the beam it is copying. The old one
+  went through the traits machinery, which recomputed `q` from `qx` and
+  `qy`, re-normalized `dirVect` and rebuilt it from `dirAngle` on the
+  way. The copy now carries the values the beam actually has.
+
+  The geometry no longer solves a 2x2 system with a solver, but with
+  Cramer's rule, which rounds differently. Held against the old
+  routines over 60,000 random cases the two agree to within one part in
+  1e13 of the larger coordinate, and the worst cases are all at an
+  inverse ROC of 1/7000 - the KAGRA arm mirrors - where the centre of
+  the arc is 7000 m away and the intersection is the difference of two
+  quantities that size.
+
+  Across the whole KAGRA layout every optic position, every beam name,
+  every beam count and every entity count is unchanged, and eight of
+  the nine exported drawings move by at most 2.2e-10 mm on coordinates
+  of 20 m. The ninth, the input optics with its ghost beams, moves by
+  up to 3.2e-4 mm - and moves by 0.0275 mm, eighty-five times further,
+  under the two exact changes alone. That drawing turns a change in the
+  last digit into a tenth of a micron whichever direction the last
+  digit goes, so what it measures is its own conditioning rather than
+  the size of anything done here.
+
+- **`GaussianBeam.copy()` was never a deep copy**, whatever its
+  docstring said. It duplicated the traits and left plain attributes
+  pointing at the originals, so a list attached to a beam was the same
+  list on the copy. That is still what happens - arrays duplicated,
+  everything else shared - and the docstring now says so.
+
+### Added
+
+- **`tests/bench_trace.py`**, which times a trace and prints the beam
+  count and the sum of the optical path lengths, so the same command
+  that reports the time also reports whether the physics moved. It
+  takes the tutorial layout or a pickled one.
+
+- **`tests/gui/verify_geometry.py`** (439 checks), covering the
+  geometry kernel now that it is written on floats: the two
+  intersection routines against a circle and a line worked out in the
+  suite rather than taken from them, `vector_rotation_2D` over both of
+  its paths including the array shapes the drawing code sends, and
+  `_surface_matrices` giving nan transmission past the critical angle,
+  which is how a caller tells total internal reflection from an
+  ordinary refraction.
+
 ### Documentation
 
 - **The manual was rewritten.** Every page now puts the usage first and
