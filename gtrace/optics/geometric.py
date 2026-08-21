@@ -1,4 +1,5 @@
 #{{{ Import
+import math
 import numpy as np
 pi = np.pi
 #}}}
@@ -62,48 +63,78 @@ def line_plane_intersection(pos,
         "isHit": A boolean value of whether the line intersects with the plane or not.
         "distance": Distance between the origin of the line and the intersection point.
         "distance from center": Distance between the center of the plane and the intersection point.
+
+    Notes
+    -----
+    The vectors are read element by element and the arithmetic is done
+    on plain floats. Every hit test in a trace comes through here, and
+    at this size numpy costs more in call overhead than the twenty
+    floating point operations are worth: a two-element ``norm`` alone
+    takes a microsecond, and a 2x2 ``solve`` calls into LAPACK. The
+    inputs may still be a list, a tuple or an array of any numeric
+    type - nothing here does more than take ``[0]`` and ``[1]``.
     '''
 
-    #Make sure the inputs are ndarrays
-    pos = np.array(pos, dtype='float64')
-    dirVect = np.array(dirVect, dtype='float64')
-    plane_center = np.array(plane_center, dtype='float64')
-    normalVector = np.array(normalVector, dtype='float64')
+    px = pos[0]
+    py = pos[1]
+    dx = dirVect[0]
+    dy = dirVect[1]
+    cx = plane_center[0]
+    cy = plane_center[1]
+    nx = normalVector[0]
+    ny = normalVector[1]
     diameter = float(diameter)
 
-    #Get a normalized vector along the plane
-    plVect = np.array([-normalVector[1], normalVector[0]])
-    plVect = plVect/np.linalg.norm(plVect)
-
-    #Normalize
-    dirVect = dirVect/np.linalg.norm(dirVect)
-
-    #Make sure that the plVect and dirVect are not parallel
-    if np.abs(np.dot(dirVect, plVect)) > 1 - 1e-10:
-        return {'Intersection Point': np.array((0.,0.)), 'isHit': False,
+    miss = {'Intersection Point': np.array((0.,0.)), 'isHit': False,
             'distance': 0.0,
             'distance from center': 0.0}
 
+    #Get a normalized vector along the plane
+    nlen = math.hypot(nx, ny)
+    if nlen == 0.0:
+        #A plane with no normal is not a plane.
+        return miss
+    lx = -ny/nlen
+    ly = nx/nlen
 
-    #Solve line equations to get the intersection point
-    M = np.vstack((dirVect, -plVect)).T
-    ans = np.linalg.solve(M, plane_center - pos)
-    intersection_point = pos + ans[0]*dirVect
+    #Normalize
+    dlen = math.hypot(dx, dy)
+    if dlen == 0.0:
+        #A line that goes nowhere reaches nothing.
+        return miss
+    dx = dx/dlen
+    dy = dy/dlen
+
+    #Make sure that the plVect and dirVect are not parallel
+    if abs(dx*lx + dy*ly) > 1 - 1e-10:
+        return miss
+
+    #Solve the line equations to get the intersection point. Writing
+    #pos + a*dirVect = plane_center + b*plVect as a 2x2 system and
+    #applying Cramer's rule, which is what a solver does to a matrix
+    #this small anyway.
+    det = -dx*ly + lx*dy
+    bx = cx - px
+    by = cy - py
+    a = (-bx*ly + lx*by)/det
+    b = (dx*by - dy*bx)/det
+
+    intersection_point = np.array((px + a*dx, py + a*dy))
 
     #How far the intersection point is from the center
     #of the plane
-    dist_from_center = np.abs(ans[1])
+    dist_from_center = abs(b)
     if dist_from_center > diameter/2.0\
-           or ans[0] < 0.\
-           or np.dot(dirVect, normalVector) > 0.:
+           or a < 0.\
+           or dx*nx + dy*ny > 0.:
 
         hit = False
     else:
         hit = True
 
     return {'Intersection Point': intersection_point, 'isHit': hit,
-            'distance': np.abs(ans[0]),
-            'distance from center': ans[1]}
+            'distance': abs(a),
+            'distance from center': b}
 
 
 #}}}
@@ -147,29 +178,43 @@ def line_arc_intersection(pos,
         "distance": Distance between the origin of the line and the intersection point.
         "localNormVect": localNormVect,
         "localNormAngle": localNormAngle.
+
+    Notes
+    -----
+    Read element by element and worked out on plain floats, for the
+    reason given in line_plane_intersection.
     '''
-    #Make sure the inputs are ndarrays
-    pos = np.array(pos, dtype='float64')
-    dirVect = np.array(dirVect, dtype='float64')
-    chord_center = np.array(chord_center, dtype='float64')
-    chordNormVect = np.array(chordNormVect, dtype='float64')
+    px = pos[0]
+    py = pos[1]
+    dx = dirVect[0]
+    dy = dirVect[1]
+    ccx = chord_center[0]
+    ccy = chord_center[1]
+    cnx = chordNormVect[0]
+    cny = chordNormVect[1]
     invROC = float(invROC)
     diameter = float(diameter)
 
     #Normalize
-    dirVect = dirVect/np.linalg.norm(dirVect)
-    chordNormVect = chordNormVect/np.linalg.norm(chordNormVect)
+    dlen = math.hypot(dx, dy)
+    if dlen == 0.0:
+        #A line that goes nowhere reaches nothing.
+        return {'isHit': False}
+    dx = dx/dlen
+    dy = dy/dlen
+    cnlen = math.hypot(cnx, cny)
+    if cnlen == 0.0:
+        return {'isHit': False}
+    cnx = cnx/cnlen
+    cny = cny/cnlen
 
     #Check if the ROC is too large.
-    if np.abs(invROC) < 1e-5:
+    if abs(invROC) < 1e-5:
         #It is almost a plane
-        ans = line_plane_intersection(pos, dirVect, chord_center, chordNormVect, diameter)
-        localNormVect = chordNormVect
-        localNormAngle = np.mod(np.arctan2(localNormVect[1],
-                                           localNormVect[0]), 2*pi)
-
-        ans['localNormVect'] = localNormVect
-        ans['localNormAngle'] = localNormAngle
+        ans = line_plane_intersection((px, py), (dx, dy), (ccx, ccy),
+                                      (cnx, cny), diameter)
+        ans['localNormVect'] = np.array((cnx, cny))
+        ans['localNormAngle'] = math.atan2(cny, cnx) % (2*pi)
 
         return ans
 
@@ -177,12 +222,20 @@ def line_arc_intersection(pos,
 
 
     #Compute the center of the arc
-    theta = np.arcsin(diameter/(2*ROC))
-    l = ROC*np.cos(theta)
-    arc_center = chord_center + chordNormVect*l
+    sin_theta = diameter/(2*ROC)
+    if -1.0 <= sin_theta <= 1.0:
+        theta = math.asin(sin_theta)
+    else:
+        #A face of more than a hemisphere. numpy answered that with a
+        #nan and the tests below then let the point through; keep it
+        #that way rather than raising where nothing used to raise.
+        theta = float('nan')
+    l = ROC*math.cos(theta)
+    acx = ccx + cnx*l
+    acy = ccy + cny*l
 
     #For convex surface, pos has to be outside the circle.
-    if ROC < 0 and np.linalg.norm(pos - arc_center) < np.abs(ROC):
+    if ROC < 0 and math.hypot(px - acx, py - acy) < abs(ROC):
         if verbose:
             print('The line does not hit the arc.')
         return {'isHit': False}
@@ -193,14 +246,16 @@ def line_arc_intersection(pos,
     # s is the component in the orthogonal direction and t is the one along
     #the line.
     #A vector orthogonal to the line
-    k = np.array([-dirVect[1], dirVect[0]])
-    #Solve the equation to decompose the vector pos-arc_center
-    M = np.vstack((k, -dirVect)).T
-    ans = np.linalg.solve(M, pos - arc_center)
-    s = ans[0]
-    t = ans[1]
+    kx = -dy
+    ky = dx
+    #Decompose the vector pos-arc_center. It is a 2x2 system whose
+    #determinant is the squared length of the direction vector, and
+    #only the orthogonal component is used.
+    bx = px - acx
+    by = py - acy
+    s = (dx*by - dy*bx)/(dx*dx + dy*dy)
 
-    if np.abs(s) > np.abs(ROC):
+    if abs(s) > abs(ROC):
         if verbose:
             print('The line does not hit the arc.')
         return {'isHit': False}
@@ -208,42 +263,58 @@ def line_arc_intersection(pos,
     #Compute two cross points
     #Work with the chord formed by the line and the circle.
     #d is half the length of the chord.
-    d = np.sqrt(ROC**2 - s**2)
+    d = math.sqrt(ROC*ROC - s*s)
     if ROC > 0:
-        intersection_point = k*s+arc_center + d*dirVect
-        localNormVect = arc_center - intersection_point
+        ipx = kx*s + acx + d*dx
+        ipy = ky*s + acy + d*dy
+        lnx = acx - ipx
+        lny = acy - ipy
     else:
-        intersection_point = k*s+arc_center - d*dirVect
-        localNormVect = intersection_point - arc_center
+        ipx = kx*s + acx - d*dx
+        ipy = ky*s + acy - d*dy
+        lnx = ipx - acx
+        lny = ipy - acy
 
     #Check if dirVect and the vector connecting from pos to intersection_point
     #are pointing the same direction.
-    if np.dot(dirVect, intersection_point - pos) < 0:
+    if dx*(ipx - px) + dy*(ipy - py) < 0:
         if verbose:
             print('The line does not hit the arc.')
         return {'isHit': False}
 
     #Normalize
-    localNormVect = localNormVect/np.linalg.norm(localNormVect)
-    localNormAngle = np.mod(np.arctan2(localNormVect[1],
-                                       localNormVect[0]), 2*pi)
+    lnlen = math.hypot(lnx, lny)
+    lnx = lnx/lnlen
+    lny = lny/lnlen
+    localNormAngle = math.atan2(lny, lnx) % (2*pi)
 
     #Check if the intersection point is within the
     #diameter
-    v0 = - np.sign(ROC) * chordNormVect*(1-1e-16)  #(1-1e-16) is necessary to avoid rounding error
-    v1 = intersection_point - arc_center
-    v1 = v1/np.linalg.norm(v1)*(1-1e-16)
-    if np.arccos(np.dot(v0,v1)) > np.abs(theta):
+    sgn = 1.0 if ROC > 0 else -1.0
+    v0x = -sgn*cnx*(1-1e-16)   #(1-1e-16) is necessary to avoid rounding error
+    v0y = -sgn*cny*(1-1e-16)
+    v1len = math.hypot(ipx - acx, ipy - acy)
+    v1x = (ipx - acx)/v1len*(1-1e-16)
+    v1y = (ipy - acy)/v1len*(1-1e-16)
+    cosine = v0x*v1x + v0y*v1y
+    #Those factors keep this inside the domain of acos, but only just;
+    #hold it there so that rounding cannot raise where numpy used to
+    #return a nan.
+    if cosine > 1.0:
+        cosine = 1.0
+    elif cosine < -1.0:
+        cosine = -1.0
+    if math.acos(cosine) > abs(theta):
         if verbose:
             print('The line does not hit the arc.')
         return {'isHit': False}
 
-    distance = np.linalg.norm(intersection_point - pos)
+    distance = math.hypot(ipx - px, ipy - py)
 
 
 
-    return {'Intersection Point': intersection_point, 'isHit': True,
-            'distance': distance, 'localNormVect': localNormVect,
+    return {'Intersection Point': np.array((ipx, ipy)), 'isHit': True,
+            'distance': distance, 'localNormVect': np.array((lnx, lny)),
             'localNormAngle': localNormAngle}
 
 #}}}
@@ -264,13 +335,29 @@ def vector_rotation_2D(vect, angle):
     -------
     numpy.ndarray
         The rotated vector.
-    """
-    vect = np.array(vect)
-    angle = float(angle)
 
-    M = np.array([[np.cos(angle), -np.sin(angle)],
-                  [np.sin(angle),np.cos(angle)]])
-    return np.dot(M, vect)
+    Notes
+    -----
+    A single 2-vector is turned with four multiplications, which is far
+    cheaper than building a matrix to multiply it by. Anything else -
+    an array of shape (2, N), which is how the drawing code hands over
+    a whole outline at once - goes through the matrix as before.
+    """
+    ca = math.cos(angle)
+    sa = math.sin(angle)
+
+    try:
+        plain = len(vect) == 2 and not hasattr(vect[0], '__len__')
+    except TypeError:
+        plain = False
+    if plain:
+        x = vect[0]
+        y = vect[1]
+        return np.array((ca*x - sa*y, sa*x + ca*y))
+
+    M = np.array([[ca, -sa],
+                  [sa, ca]])
+    return np.dot(M, np.array(vect))
 
 #}}}
 
@@ -338,10 +425,11 @@ def _surface_angles(beamAngle, normAngle):
     curvature, and everything else - these angles and the matrices in
     _surface_matrices - is common to both.
     '''
-    beamAngle = np.mod(beamAngle, 2*pi)
-    normAngle = np.mod(normAngle, 2*pi)
-    incidentAngle = np.mod(beamAngle - normAngle, 2*pi) - pi
-    reflAngle = np.mod(normAngle - incidentAngle, 2*pi)
+    two_pi = 2*pi
+    beamAngle = beamAngle % two_pi
+    normAngle = normAngle % two_pi
+    incidentAngle = (beamAngle - normAngle) % two_pi - pi
+    reflAngle = (normAngle - incidentAngle) % two_pi
     return incidentAngle, reflAngle
 
 def _surface_matrices(theta1, n1, n2, invROC_x, invROC_y):
@@ -377,21 +465,37 @@ def _surface_matrices(theta1, n1, n2, invROC_x, invROC_y):
     Returns
     -------
     (Mrx, Mry, Mtx, Mty)
+
+    Notes
+    -----
+    Past the critical angle there is no transmitted ray, and the two
+    transmission matrices come back full of nan. That is how a caller
+    tells total internal reflection from an ordinary refraction, so it
+    is produced deliberately here: math.asin raises on an argument
+    outside [-1, 1], where the numpy call this replaces returned a nan.
     '''
+    cos1 = math.cos(theta1)
+
     #For reflection. R_e = R*cos(theta) in the plane of incidence and
     #R/cos(theta) perpendicular to it, so the same curvature focuses
     #more strongly in the plane of incidence.
-    Mrx = np.array([[1., 0.], [-2*n1*invROC_x/np.cos(theta1), 1.]])
-    Mry = np.array([[1., 0.], [-2*n1*invROC_y*np.cos(theta1), 1.]])
+    Mrx = np.array([[1., 0.], [-2*n1*invROC_x/cos1, 1.]])
+    Mry = np.array([[1., 0.], [-2*n1*invROC_y*cos1, 1.]])
 
     #For transmission
-    theta2 = np.arcsin(n1*np.sin(theta1)/n2)
+    sin2 = n1*math.sin(theta1)/n2
+    if -1.0 <= sin2 <= 1.0:
+        theta2 = math.asin(sin2)
+        cos2 = math.cos(theta2)
+    else:
+        #Total internal reflection: nothing is transmitted.
+        cos2 = float('nan')
 
-    nex = (n2*np.cos(theta2)-n1*np.cos(theta1))/(np.cos(theta1)*np.cos(theta2))
-    Mtx = np.array([[np.cos(theta2)/np.cos(theta1), 0.],
-                    [nex*invROC_x, np.cos(theta1)/np.cos(theta2)]])
+    nex = (n2*cos2-n1*cos1)/(cos1*cos2)
+    Mtx = np.array([[cos2/cos1, 0.],
+                    [nex*invROC_x, cos1/cos2]])
 
-    ney = n2*np.cos(theta2)-n1*np.cos(theta1)
+    ney = n2*cos2-n1*cos1
     Mty = np.array([[1., 0.], [ney*invROC_y, 1.]])
 
     return Mrx, Mry, Mtx, Mty

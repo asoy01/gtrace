@@ -25,6 +25,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = [
     ('verify_beam.py',
      "a beam's width and reduced q agree with the q it was given"),
+    ('verify_geometry.py',
+     'the geometry kernel: intersections, rotation, and the surface matrices'),
     ('verify_surfaces.py',
      'where the two faces of a substrate are, against an independent arc'),
     ('verify_lens.py',
