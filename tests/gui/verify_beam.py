@@ -132,8 +132,8 @@ for _ in range(3):
 check('three steps land where one step of the sum lands',
       close(one.qx, many.qx, 1e-12), '%s vs %s' % (one.qx, many.qx))
 
-# copy() re-copies the reduced q after the deepcopy, and the copy has
-# to be as consistent as the original.
+# A copy has to be as consistent as the original, in glass as well,
+# which is where the reduced q and the circular q differ from q.
 b = GaussianBeam(q0=1j, wl=1064 * nm, n=1.45)
 c = b.copy()
 derived_agree('a copy', c)
@@ -143,6 +143,64 @@ c.propagate(0.2)
 check('and propagates on its own',
       close(c.qx, 0.2 + 1j, 1e-12) and b.qx == 1j,
       '%s, original %s' % (c.qx, b.qx))
+
+# copy() writes the values straight into the new object rather than
+# assigning them one at a time, which is what a trace needs it to do.
+# The things that has to leave intact:
+b = GaussianBeam(q0=1j, wl=1064 * nm, n=1.45, pos=[0.3, -0.1],
+                 dirAngle=0.7, P=0.4, name='src', layer='aux')
+b.propagate(0.35)
+b.stray_order = 2
+b.departSurfAngle = 1.2
+c = b.copy()
+
+FIELDS = ['name', 'wl', 'P', 'q', 'qx', 'qy', 'qrx', 'qry', 'Gouyx',
+          'Gouyy', 'wx', 'wy', 'n', 'pos', 'length', 'layer', 'dirVect',
+          'dirAngle', 'optDist', 'Mx', 'My', 'stray_order',
+          'departSurfAngle', 'departSurfInvROC', 'incSurfAngle',
+          'incSurfInvROC']
+differ = [f for f in FIELDS
+          if not np.array_equal(getattr(b, f), getattr(c, f))]
+check('a copy carries every field of the beam', not differ, str(differ))
+
+check('and is of the same class', type(c) is type(b), type(c).__name__)
+
+# Arrays are duplicated. Everything else is shared, which is what this
+# has always done - the docstring calling it a deep copy was wrong.
+check('its arrays are its own',
+      c.pos is not b.pos and c.Mx is not b.Mx)
+was = b.pos[0]
+c.pos[0] = 99.0
+check('so writing into them does not reach the original',
+      b.pos[0] == was, str(b.pos))
+b.tag = ['a list put on the beam by hand']
+check('an attribute added by hand comes along', b.copy().tag is b.tag)
+
+# The copy is a live object, not a record of one: handlers still run
+# and the traits still refuse the wrong type.
+c = b.copy()
+w = c.wx
+c.qx = c.qx + 0.1j
+check('a handler still runs on a copy', c.wx != w, '%g -> %g' % (w, c.wx))
+c.dirAngle = 1.0
+check('and the derived direction still follows',
+      np.allclose(c.dirVect, [np.cos(1.0), np.sin(1.0)], atol=1e-15),
+      str(c.dirVect))
+try:
+    c.wl = 'not a number'
+    refused = False
+except Exception:
+    refused = True
+check('and a copy still refuses a value of the wrong type', refused)
+
+
+class _SubBeam(GaussianBeam):
+    pass
+
+
+sub = _SubBeam(q0=1j, wl=1064 * nm, name='sub')
+check('a subclass copies as itself', type(sub.copy()) is _SubBeam,
+      type(sub.copy()).__name__)
 
 # The waist, read back. A beam at its waist reports the distance to it
 # as zero, and one propagated a way past it reports how far back it is.

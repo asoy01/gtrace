@@ -19,7 +19,6 @@ from .unit import *
 import gtrace.optics as optics
 import gtrace.optics.geometric
 from gtrace.optics.gaussian import q2zr, q2w, q2R, optimalMatching
-import copy
 #import gtrace.sdxf as sdxf
 import gtrace.draw as draw
 import scipy.optimize as sopt
@@ -279,19 +278,43 @@ class GaussianBeam(HasTraits):
 
     def copy(self):
         '''
-        Make a deep copy.
+        Another beam with the same values.
+
+        Arrays are duplicated, so writing into the position or the ABCD
+        matrix of the copy does not reach the original. Anything else
+        the beam carries is shared with it: a list attached to a beam is
+        the same list on the copy. That is what this has always done -
+        the traits machinery duplicated the traits and left plain
+        attributes pointing at the originals - and the docstring used to
+        call it a deep copy, which it is not.
+
+        A trace copies a beam at every surface it meets, tens of
+        thousands of times over a layout of any size, so this is written
+        to be cheap: the values are written straight into the new
+        object's dictionary, where traits keeps them anyway.
+
+        Copying the dictionary rather than listing the fields is what
+        makes the rest true. An attribute put on a beam by hand comes
+        along, a subclass of GaussianBeam copies as itself, and a trait
+        added here later needs nothing doing to it. The values still
+        arrive validated, because they were validated when they were
+        first set.
+
+        Nothing is assigned through a trait, so no change handler runs,
+        and that is the point. Assigning them one at a time is what used
+        to leave the reduced q, and the circular q of a beam in glass,
+        derived from a half-built beam and needing to be put back
+        afterwards. Here the finished values are simply carried over.
+
+        Returns
+        -------
+        GaussianBeam
+            Of the same class as this beam.
         '''
-        b = copy.deepcopy(self)
-        # deepcopy assigns the traits in its own order, so what a handler
-        # derived along the way can be left describing a half-built beam:
-        # the reduced q, and the circular q of a beam in glass. Copy the
-        # q-parameters over verbatim and derive the rest from them, as
-        # the constructor does.
-        b.trait_set(trait_change_notify=False,
-                    qx=self.qx, qy=self.qy,
-                    qrx=self.qrx, qry=self.qry)
-        b._qx_changed(None, b.qx)
-        b._qy_changed(None, b.qy)
+        b = type(self).__new__(type(self))
+        dst = b.__dict__
+        for key, value in self.__dict__.items():
+            dst[key] = value.copy() if isinstance(value, np.ndarray) else value
         return b
 
 #}}}
