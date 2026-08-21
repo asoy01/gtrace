@@ -78,6 +78,20 @@ var SCENES = __SCENES__;
             listeners: v && v._listeners ? v._listeners.length : null
         };
     }
+    // A layout the browser has to perform cannot be waited for by
+    // sleeping. A fixed pause is a race that is lost whenever the
+    // machine is busy - which here meant the whole suite passing on
+    // its own and failing inside run_all.py, purely because one more
+    // script ran before it. Wait for the thing itself, and give up
+    // only after long enough that giving up means something.
+    async function waitFor(ready, ms) {
+        var deadline = Date.now() + ms;
+        while (!ready() && Date.now() < deadline) {
+            await new Promise(function (r) { setTimeout(r, 20); });
+        }
+        return ready();
+    }
+
     try {
         // anywidget imports the ESM as a module; do the same.
         var url = URL.createObjectURL(
@@ -160,7 +174,12 @@ var SCENES = __SCENES__;
                         scale: v2.scale, pending: !!v2.fitPending};
 
         document.getElementById('host2').appendChild(det);
-        await new Promise(function (r) { setTimeout(r, 300); });
+        // The deferred fit runs when the observer reports a size, so
+        // wait for the size to arrive rather than for a fixed 300 ms.
+        // What the fit then came to is checked below, and that is the
+        // part this case exists for.
+        out.attachedWaited = await waitFor(
+            function () { return v2.width > 1 && !v2.fitPending; }, 10000);
 
         var bb2 = v2.bbox();
         var want = Math.min(v2.width / (bb2.maxx - bb2.minx),
@@ -204,12 +223,23 @@ var SCENES = __SCENES__;
         }
         var narrow = autoCase(420, 'narrow');
         var wide = autoCase(1600, 'wide');
-        await new Promise(function (r) { setTimeout(r, 300); });
 
         function heightOf(c) {
             return parseFloat(
                 c.box.querySelector('.gt-widget').style.height) || 0;
         }
+
+        // Same again: the height is settled by an observer once the
+        // box has a width. Waiting for a height to be non-zero would
+        // not do - the stand-in is already one - so wait for the
+        // narrow box to stop showing the stand-in. That is the case
+        // that discriminates: it resolves to its own width, 420, where
+        // the wide one resolves to the same 520 the stand-in uses.
+        out.autoWaited = await waitFor(
+            function () {
+                return heightOf(narrow) > 0
+                    && heightOf(narrow) !== parseFloat(narrow.detachedHeight);
+            }, 10000);
         out.auto = {
             viewport: globalThis.innerHeight,
             floor: globalThis.GTraceViewer.MIN_HEIGHT,
@@ -346,6 +376,12 @@ check('the view really does measure nothing at render time',
       '(%sx%s)' % (d.get('width'), d.get('height')))
 check('the fit is deferred rather than done against nothing',
       d.get('pending') is True)
+# The browser lays the element out on its own schedule, so the script
+# waits for that rather than pausing for a fixed time. Say so plainly
+# when the wait ran out: the three checks below would otherwise all
+# fail at once and read as a broken fit rather than a slow page.
+check('the browser laid the element out within the time allowed',
+      res.get('attachedWaited') is True)
 check('the view has a size once it is in the document',
       (l.get('width') or 0) > 100 and (l.get('height') or 0) > 100,
       '(%sx%s)' % (l.get('width'), l.get('height')))
@@ -380,6 +416,8 @@ def want(width):
 # area is laid out - so the height cannot be worked out there either.
 check('the height it used to be fixed at stands in until then',
       a.get('narrowDetached') == '520px', str(a.get('narrowDetached')))
+check('and the observer replaced it within the time allowed',
+      res.get('autoWaited') is True)
 # Below the breakpoint the side panel stacks under the drawing rather
 # than standing beside it, so there the drawing has the whole width.
 check('a narrow output, where the panel stacks, is as tall as it is wide',
