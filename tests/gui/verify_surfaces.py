@@ -390,6 +390,136 @@ for cls in [opt.Mirror, opt.CyMirror]:
         check('%s flat AR at y=%.2fr is the plane at -t' % (label, h),
               close(got, FAR - THICK), '(%.12f)' % got)
 
+print('--- the bounding circle isHit rejects beams with ---')
+
+#isHit() answers a beam that comes nowhere near the optics by testing
+#the bounding circle first, and only then the four faces one at a time.
+#A radius that came out too small would make a beam that does hit be
+#reported as missing: a wrong answer that raises nothing and prints
+#nothing. So the two answers are compared here over a fine sweep of
+#rays, against a copy of the same optics with the circle turned off.
+
+def without_the_circle(cls):
+    '''
+    The same class with the culling test removed, so that isHit() has
+    to reach the faces. A subclass rather than a patched instance:
+    there is then no question of whether the override took.
+    '''
+    return type('NoCull_' + cls.__name__, (cls,),
+                {'_misses_bounding_circle': lambda self, beam: False})
+
+#: Substrates to sweep: flat, curved both ways, wedged, thick and thin,
+#: and a cylinder turned each way. The curvatures include one steep
+#: enough that the face is a good fraction of a hemisphere, which is
+#: where a sagitta added to the corners matters most.
+def cull_cases():
+    cases = []
+    for cname, c in [('flat', 0.0), ('concave', 1.0/0.45),
+                     ('convex steep', -1.0/0.10), ('concave steep', 1.0/0.10)]:
+        for wedge in [0.0, 3.0*np.pi/180]:
+            m = opt.Mirror(HRcenter=[0.31, -0.22], normAngleHR=0.7,
+                           diameter=DIAM, thickness=THICK, wedgeAngle=wedge,
+                           inv_ROC_HR=c, inv_ROC_AR=c/2, name='S')
+            cases.append(('Mirror %s wedge=%.1fdeg' % (cname, wedge*180/np.pi), m))
+    for cd in ['h', 'v']:
+        m = opt.CyMirror(HRcenter=[0.31, -0.22], normAngleHR=0.7,
+                         diameter=DIAM, thickness=THICK,
+                         wedgeAngle=0.25*np.pi/180, inv_ROC_HR=1.0/0.45,
+                         curve_direction=cd, name='S')
+        cases.append(('CyMirror curve_direction=%s' % cd, m))
+    return cases
+
+#: Directions the sweep comes from, and how far off the centre each ray
+#: passes as a fraction of the bounding radius. The offsets run past 1
+#: on both sides so that the boundary itself is crossed every time.
+CULL_ANGLES = [i*np.pi/13 for i in range(26)]
+CULL_OFFSETS = [i/40.0 for i in range(-48, 49)]
+
+for label, m in cull_cases():
+    bare = without_the_circle(type(m))(
+        HRcenter=m.HRcenter, normAngleHR=m.normAngleHR, diameter=m.diameter,
+        thickness=m.thickness, wedgeAngle=m.wedgeAngle,
+        inv_ROC_HR=m.inv_ROC_HR, inv_ROC_AR=m.inv_ROC_AR, name='S',
+        **({'curve_direction': m.curve_direction}
+           if isinstance(m, opt.CyMirror) else {}))
+
+    R = m._bounding_radius()
+    cx, cy = float(m.center[0]), float(m.center[1])
+    hits = 0
+    lost = 0
+    wide = 0
+    wide_culled = 0
+    first_lost = None
+    for ang in CULL_ANGLES:
+        dx, dy = np.cos(ang), np.sin(ang)
+        for f in CULL_OFFSETS:
+            b = R*f
+            pos = [cx + b*(-dy) - 2.0*dx, cy + b*dx - 2.0*dy]
+            ray = opt._ProbeRay(pos, [dx, dy])
+            culled = m._misses_bounding_circle(ray)
+            truth = bare.isHit(ray)
+            if truth['isHit']:
+                hits += 1
+                if culled:
+                    lost += 1
+                    if first_lost is None:
+                        first_lost = (f, truth['face'])
+            #The ray passes the centre at a distance of |b|, so one
+            #wider than the radius has to be rejected.
+            if abs(f) > 1.0:
+                wide += 1
+                if culled:
+                    wide_culled += 1
+    check('%s: the circle never rejects a beam that hits' % label,
+          lost == 0,
+          '(%d of %d hits lost%s)'
+          % (lost, hits, '' if first_lost is None
+             else ', first at offset %.6g R on the %s' % first_lost))
+    #Without this the check above would pass on an infinite radius,
+    #which rejects nothing and saves nothing.
+    check('%s: and every beam passing wider than the radius is rejected'
+          % label, wide_culled == wide, '(%d of %d)' % (wide_culled, wide))
+    check('%s: a beam aimed at the middle is never rejected' % label,
+          not any(m._misses_bounding_circle(
+                      opt._ProbeRay([cx - 2.0*np.cos(a), cy - 2.0*np.sin(a)],
+                                    [np.cos(a), np.sin(a)]))
+                  for a in CULL_ANGLES))
+
+print('--- the cache behind it follows the optics ---')
+
+#The radius is kept alongside the pose it was computed for, and the key
+#is compared by value rather than waited for as a notification: an
+#in-place write to a position array fires nothing.
+m = opt.Mirror(HRcenter=[0.0, 0.0], normAngleHR=0.0, diameter=DIAM,
+               thickness=THICK, wedgeAngle=0.0, inv_ROC_HR=0.0, name='S')
+R0 = m._bounding_radius()
+check('the radius holds a whole substrate',
+      R0 >= np.hypot(THICK/2, DIAM/2) - 1e-15, '(%.6f mm)' % (R0/mm))
+#Moving the optics recomputes the radius, from corner coordinates that
+#the move has rewritten, so it comes back to within rounding rather
+#than to the same bits.
+m.translate([0.4, -0.2])
+check('and moving the optics does not change how big it is',
+      abs(m._bounding_radius() - R0) <= 1e-12*R0,
+      '(%.3g mm apart)' % ((m._bounding_radius() - R0)/mm))
+m.diameter = 2*DIAM
+check('a wider substrate needs a wider circle', m._bounding_radius() > R0,
+      '(%.6f mm)' % (m._bounding_radius()/mm))
+m.diameter = DIAM
+check('and going back gives the first radius again',
+      abs(m._bounding_radius() - R0) <= 1e-15)
+m.inv_ROC_HR = 1.0/0.10
+check('a curved face is allowed for', m._bounding_radius() > R0,
+      '(%.6f mm)' % (m._bounding_radius()/mm))
+
+m = opt.Mirror(HRcenter=[0.0, 0.0], normAngleHR=0.0, diameter=DIAM,
+               thickness=THICK, wedgeAngle=0.0, inv_ROC_HR=0.0, name='S')
+m.get_side_info()
+before = m._geometry_key()
+m.center[0] = 5.0          # in place: no notification is sent
+check('an in-place write to center is noticed all the same',
+      m._geometry_key() != before)
+
 print()
 print('%d passed, %d failed' % (npass, nfail))
 sys.exit(1 if nfail else 0)

@@ -9,13 +9,14 @@ array = np.array
 sqrt = np.lib.scimath.sqrt
 from numpy.linalg import norm
 
-from traits.api import (HasTraits, Enum, Int, Float, CFloat, CArray, List,
-                        Str, Union)
+from traits.api import (Any, HasTraits, Enum, Int, Float, CFloat, CArray,
+                        List, Str, Union)
 
 import gtrace.optics as optics
 import gtrace.optics.geometric
 from .unit import *
 import copy
+import math
 import gtrace.draw as draw
 
 #}}}
@@ -57,6 +58,37 @@ __version__ = "0.6.0"
 __maintainer__ = "Yoichi Aso"
 __email__ = "asoy01@gmail.com"
 __status__ = "Beta"
+
+#}}}
+
+#{{{ sagitta
+
+def _sagitta(invROC, r):
+    '''
+    How far the middle of an arc stands off its own chord.
+
+    Parameters
+    ----------
+    invROC : float
+        Inverse radius of curvature. Zero is a flat face, which stands
+        off nothing.
+    r : float
+        Half the chord length.
+
+    Returns
+    -------
+    float
+        Never negative. The answer is a distance, and which side of the
+        chord the arc is on is not asked here.
+    '''
+    if invROC == 0.0:
+        return 0.0
+    Rc = abs(1.0/invROC)
+    if r >= Rc:
+        #A hemisphere or more. The apex is a full radius off the chord,
+        #and the square root below would be of a negative number.
+        return Rc
+    return Rc - math.sqrt(Rc*Rc - r*r)
 
 #}}}
 
@@ -501,6 +533,13 @@ class Mirror(Optics):
     inv_ROC_HR = CFloat(1.0/7000.0) #Inverse of the ROC of the HR surface.
     inv_ROC_AR = CFloat(0.0) #Inverse of the ROC of the AR surface.
 
+    #Quantities that follow from the shape and the pose alone, kept
+    #alongside the pose they were computed for. See _geometry_key.
+    #transient, so that it is not written into a pickle: it is a
+    #restatement of the traits above and would only be one more thing
+    #that could disagree with them.
+    _geom_cache = Any(transient=True)
+
     Refl_HR = CFloat(99.0) #Power reflectivity of the HR side.
     Trans_HR = CFloat(1.0) #Power transmittance of the HR side.
 
@@ -688,6 +727,144 @@ class Mirror(Optics):
         #curvature does, and construction has none.
         m.anchor_point = self.anchor_point
         return m
+
+#}}}
+
+#{{{ cached geometry
+
+    def _geometry_key(self):
+        '''
+        Every value the derived geometry below is computed from.
+
+        Used to decide whether a cached result still describes this
+        optics: it is recomputed when the key differs from the one it
+        was computed for. Comparing the values is deliberate, rather
+        than listening for trait changes. An in-place write such as
+        ``opt.center[0] = 5`` fires no notification, so a cache
+        invalidated by notification would go on returning the geometry
+        of the old position, and nothing would say so.
+
+        Subclasses that compute their geometry from anything else must
+        extend this. CyMirror does, for curve_direction.
+
+        Returns
+        -------
+        tuple
+            Comparable by value, and cheap to build - well under a
+            microsecond, against tens of microseconds to recompute what
+            it guards.
+        '''
+        c = self.center
+        h = self.HRcenterC
+        v = self.normVectHR
+        return (self.diameter, self.ARdiameter, self.thickness,
+                self.wedgeAngle, self.sagHR, self.sagAR,
+                self.inv_ROC_HR, self.inv_ROC_AR, self.normAngleHR,
+                c[0], c[1], h[0], h[1], v[0], v[1])
+
+    def _geometry(self):
+        '''
+        The store of derived geometry for the current shape and pose.
+
+        Returns an empty dict once either has changed, so a caller finds
+        what it put there only while that is still what the optics looks
+        like.
+
+        Returns
+        -------
+        dict
+            Whatever the callers have put in it, keyed by name.
+        '''
+        key = self._geometry_key()
+        cache = self._geom_cache
+        if cache is None or cache[0] != key:
+            cache = (key, {})
+            self._geom_cache = cache
+        return cache[1]
+
+    def _bounding_radius(self):
+        '''
+        The radius of a circle about ``center`` that contains the whole
+        substrate.
+
+        isHit() uses it to reject a beam before testing the four faces
+        one at a time. It must never come out too small: a radius that
+        cuts inside the substrate makes a beam that does hit the optics
+        be reported as missing, and that is a wrong answer with nothing
+        to announce it. So the corners are taken exactly, and the bulge
+        of a curved face is added on top of them rather than fitted in.
+
+        Returns
+        -------
+        float
+        '''
+        geom = self._geometry()
+        R = geom.get('bounding_radius')
+        if R is not None:
+            return R
+
+        cx = self.center[0]
+        cy = self.center[1]
+        R = 0.0
+        for corner in self.get_corners():
+            d = math.hypot(corner[0] - cx, corner[1] - cy)
+            if d > R:
+                R = d
+
+        #A face is drawn from the two ends of its chord, which is what
+        #the corners are, and its arc stands off that chord by the
+        #sagitta.
+        R = R + max(_sagitta(self.inv_ROC_HR, self.diameter/2.0),
+                    _sagitta(self.inv_ROC_AR, self.ARdiameter/2.0))
+
+        geom['bounding_radius'] = R
+        return R
+
+    def _misses_bounding_circle(self, beam):
+        '''
+        Whether the beam stays clear of the circle that holds the whole
+        substrate, and so cannot touch any face of it.
+
+        A test isHit() puts in front of the per-face ones. It is allowed
+        to say False about a beam that misses - the faces are then asked
+        and give the right answer - but it must never say True about one
+        that hits. Tracing the KAGRA interferometer, 95% of the calls
+        end here.
+
+        Parameters
+        ----------
+        beam : gtrace.beam.GaussianBeam or _ProbeRay
+            Anything with ``pos`` and ``dirVect``.
+
+        Returns
+        -------
+        bool
+        '''
+        dx = beam.dirVect[0]
+        dy = beam.dirVect[1]
+        dlen = math.hypot(dx, dy)
+        if dlen == 0.0:
+            #No direction to reason about. Leave the answer to the faces.
+            return False
+        #A GaussianBeam keeps dirVect normalized, but _ProbeRay is given
+        #whatever the caller wrote, so do not assume it.
+        dx = dx/dlen
+        dy = dy/dlen
+
+        R = self._bounding_radius()
+        ex = self.center[0] - beam.pos[0]
+        ey = self.center[1] - beam.pos[1]
+
+        #How far along the beam its closest approach to the centre lies.
+        t = ex*dx + ey*dy
+        if t < -R:
+            #The whole substrate is behind where the beam starts.
+            return True
+
+        #How far off the beam the centre is at that point.
+        ux = ex - t*dx
+        uy = ey - t*dy
+        return ux*ux + uy*uy > R*R
 
 #}}}
 
@@ -927,6 +1104,14 @@ class Mirror(Optics):
             of the optics, which is not meant to be used, e.g. the side of a mirror.
             In this case, the beam have reached a dead end.
         '''
+
+        #One cheap question before the four expensive ones. Most beams
+        #in a layout of any size go nowhere near a given optics, and
+        #each of those would otherwise be answered by intersecting four
+        #faces and finding nothing.
+        if self._misses_bounding_circle(beam):
+            return {'isHit': False, 'position': np.array((0., 0.)),
+                    'distance': 0.0, 'face': ''}
 
         HRsurface = {'center': self.HRcenterC, 'normal_vector': self.normVectHR,
                      'size': self.diameter, 'inv_ROC': self.inv_ROC_HR, 'name': 'HR'}
@@ -2140,6 +2325,14 @@ class CyMirror(Mirror):
 
 #{{{ get_side_info
 
+    def _geometry_key(self):
+        '''
+        Mirror's key, and which way the cylinder is turned: that is what
+        decides whether the faces meet the sides at their chords or at
+        their apexes. See Mirror._geometry_key.
+        '''
+        return Mirror._geometry_key(self) + (self.curve_direction,)
+
     def get_side_info(self):
         '''
         Return information on the sides of the mirror.
@@ -2247,6 +2440,11 @@ class CyMirror(Mirror):
             of the optics, which is not meant to be used, e.g. the side of a mirror.
             In this case, the beam have reached a dead end.
         '''
+
+        #See Mirror.isHit.
+        if self._misses_bounding_circle(beam):
+            return {'isHit': False, 'position': np.array((0., 0.)),
+                    'distance': 0.0, 'face': ''}
 
         if self.curve_direction == 'h':
             HRsurface = {'center': self.HRcenterC, 'normal_vector': self.normVectHR,
