@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-16 15:55+0900\n"
+"POT-Creation-Date: 2026-08-22 20:45+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -836,6 +836,20 @@ msgstr ""
 
 #: ../../../gtrace/docs/source/layout.rst:489
 msgid ""
+"A mirror can be placed by its front face instead: ``add_assembly('MIRROR-"
+"2IN', HRcenter=[0.3, 0.1])`` puts the centre of the HR face at that "
+"point, and the substrate half a thickness behind it. Give ``center`` or "
+"``HRcenter``, not both. ``assembly_kinds()`` says which of the two each "
+"kind is placed by, under ``place``, and that is what the viewer sends "
+"when an assembly is placed by a click."
+msgstr ""
+"ミラーは前面で置くこともできる。\\ ``add_assembly('MIRROR-2IN', HRcenter=[0.3, 0.1])`` は "
+"HR 面の中心をその点に置き、基板は厚みの半分だけ後ろに立つ。\\ ``center`` と ``HRcenter`` "
+"は、どちらか一方を与える。どちらで置く種類なのかは ``assembly_kinds()`` が ``place`` "
+"として言う。ビューアがクリックでアセンブリを置くときに送るのも、この名前である。"
+
+#: ../../../gtrace/docs/source/layout.rst:496
+msgid ""
 ":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` "
 "registers all four and fills in the names. Each piece takes the first "
 "number that is free for its own kind, so a second two-inch mirror comes "
@@ -845,7 +859,7 @@ msgstr ""
 "は4つまとめて登録し、名前も埋める。各部品は自分の種類で空いている最初の番号を取るので、2つ目の2インチミラーは ``M2`` として置かれ、\\"
 " ``MT2`` に保持され、\\ ``P2`` の上に立ち、\\ ``FK2`` で押さえられる。"
 
-#: ../../../gtrace/docs/source/layout.rst:494
+#: ../../../gtrace/docs/source/layout.rst:501
 msgid ""
 ":py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` and "
 ":py:func:`lens_assembly<gtrace.layout.lens_assembly>` are what the kinds "
@@ -865,11 +879,11 @@ msgstr ""
 "は面法線の向きである。2インチの種類は、図面の設計位置より **5 mm 後ろ**\\ にマウントを置く。この 5 mm "
 "はベンチでの実測であり、モデルは知らない。ペデスタルが入るネジ穴はマウントの点なので、マウントと一緒に動く。"
 
-#: ../../../gtrace/docs/source/layout.rst:505
+#: ../../../gtrace/docs/source/layout.rst:512
 msgid "Parts repeat, so they are worth registering once:"
 msgstr "部品は繰り返し使うので、一度登録しておく価値がある:"
 
-#: ../../../gtrace/docs/source/layout.rst:521
+#: ../../../gtrace/docs/source/layout.rst:528
 msgid ""
 "A model is a **value**: the shapes, a layer, a description, what its "
 "parts are called, and the builder parameters. gtrace copies them in when "
@@ -879,7 +893,7 @@ msgstr ""
 "モデルは\\ **値**\\ である。図形・レイヤー・説明・そこから作る部品の名前・ビルダーのパラメータからなる。gtrace "
 "は、モデルを登録するときにそれらを複製して取り込み、使うときに複製して出す。だから部品と、その元になったモデルは互いに独立のままである。"
 
-#: ../../../gtrace/docs/source/layout.rst:526
+#: ../../../gtrace/docs/source/layout.rst:533
 msgid ""
 "``prefix`` is what the bodies built from the model are named, before the "
 "number. It is part of the definition, and not part of any one layout. A "
@@ -901,7 +915,7 @@ msgstr ""
 " "
 "になる。ファイルを読み込むと、名前ごとに登録簿へ併合される。これが、複数のファイルからライブラリを組み立てるやり方である。1つでも壊れた図形があるファイルは丸ごと拒否され、登録簿には手を触れない。"
 
-#: ../../../gtrace/docs/source/layout.rst:537
+#: ../../../gtrace/docs/source/layout.rst:544
 msgid ""
 "A body keeps the shapes themselves, and the model name only as a label. "
 "**The saved layout is the truth**: a library that has moved on cannot "
@@ -915,7 +929,7 @@ msgstr ""
 ":py:meth:`relink_mechanics<gtrace.layout.OpticalLayout.relink_mechanics>`"
 " で、姿勢にも取り付けにも触らない。"
 
-#: ../../../gtrace/docs/source/layout.rst:544
+#: ../../../gtrace/docs/source/layout.rst:551
 msgid ""
 "The stock models are generic on purpose: ``BB3030``, ``MOUNT-25``, "
 "``HOLDER-50`` and so on. gtrace does not invent the dimensions of a "
@@ -925,7 +939,7 @@ msgstr ""
 "同梱のモデルが汎用的なのは意図的である。\\ ``BB3030``\\ 、\\ ``MOUNT-25``\\ 、\\ ``HOLDER-50`` "
 "などがそれである。gtrace は特定のベンダーの部品の寸法を勝手に決めない。モデルの裏にあるビルダーは、実測した数値を受け取る:"
 
-#: ../../../gtrace/docs/source/layout.rst:562
+#: ../../../gtrace/docs/source/layout.rst:569
 msgid ""
 ":py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` is the "
 "board that goes in the bottom of a vacuum tank. The grid is the same as "
@@ -937,7 +951,7 @@ msgstr ""
 ":py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` "
 "は、真空槽の底に入れるボードである。格子は長方形のボードと同じで、中心について対称、ピッチも同じである。どの穴が実在するかは縁が決める。縁から一定の余裕だけ内側にある位置には穴を開け、そうでない位置には開けない。だから列は縁に近づくほど短くなり、実物の円板と同じになる。"
 
-#: ../../../gtrace/docs/source/layout.rst:569
+#: ../../../gtrace/docs/source/layout.rst:576
 msgid ""
 "A body built by one of these keeps the parameters it was built from, in "
 "``params``. That is what lets you resize it. "
@@ -958,11 +972,11 @@ msgstr ""
 "である。手で描いた部品について分かるのは、形状だけだからである。\\ **円形の部品の寸法は、2つではなく1つである。** ``width`` "
 "でも ``height`` でも直径が決まり、食い違う2つを渡すと拒否される。"
 
-#: ../../../gtrace/docs/source/layout.rst:580
+#: ../../../gtrace/docs/source/layout.rst:587
 msgid "Drawing a part"
 msgstr "部品を描く"
 
-#: ../../../gtrace/docs/source/layout.rst:582
+#: ../../../gtrace/docs/source/layout.rst:589
 msgid ""
 ":py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens the "
 "shape editor on a body. It is the same viewer, given a scene of nothing "
@@ -974,11 +988,11 @@ msgstr ""
 "は、部品に対して形状エディタを開く。同じビューアに、その部品の形状だけからなるシーンを渡したものである。ローカル座標系で、原点を示して描かれる。何ができるかは"
 " :ref:`the-shape-editor` を、コードから動かす方法は :doc:`editing` を参照。"
 
-#: ../../../gtrace/docs/source/layout.rst:589
+#: ../../../gtrace/docs/source/layout.rst:596
 msgid "Undo and redo"
 msgstr "undo と redo"
 
-#: ../../../gtrace/docs/source/layout.rst:591
+#: ../../../gtrace/docs/source/layout.rst:598
 msgid ""
 "Every edit that goes through "
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` keeps the "
@@ -988,7 +1002,7 @@ msgstr ""
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` "
 "を通った編集は全て、その直前の状態を保持するので、取り消せる。undo が抜け出した状態も同じように保持されるので、やり直せる:"
 
-#: ../../../gtrace/docs/source/layout.rst:604
+#: ../../../gtrace/docs/source/layout.rst:611
 msgid ""
 "The history lives on the layout, not in a front end, so undo means the "
 "same thing however the edit arrived. It goes back ``UNDO_DEPTH`` edits. "
@@ -1000,7 +1014,7 @@ msgstr ""
 "回ぶんまで遡れる。redo 側も同じ数までである。redo を埋めるのは undo "
 "だけだからである。拒否された編集は何も変えず、段も消費しない。ファイルを書くだけの ``save`` も同様である。"
 
-#: ../../../gtrace/docs/source/layout.rst:610
+#: ../../../gtrace/docs/source/layout.rst:617
 msgid ""
 "**An edit that goes through discards whatever is waiting to be redone.** "
 "Once the layout has taken a different turn, you cannot return to the "
@@ -1010,7 +1024,7 @@ msgstr ""
 "**編集が1つ通ると、やり直し待ちのものは全て捨てられる。** 新しい編集を行った時点で、redo "
 "の履歴は無効になる。取っておいた状態は、新しい編集が改名したり、削除したり、変更したかもしれない素子を記述しているからである。"
 
-#: ../../../gtrace/docs/source/layout.rst:615
+#: ../../../gtrace/docs/source/layout.rst:622
 msgid ""
 "A step holds the registered elements themselves alongside their "
 "serialized values, and restoring one puts those values back onto those "
@@ -1022,11 +1036,11 @@ msgstr ""
 "1つの段は、登録された素子そのものを、そのシリアライズした値と一緒に保持する。復元するときは、その値を同じオブジェクトに書き戻す。これはリネームを跨いでも成り立つし、削除を跨いでも成り立つ。レイアウトから取り除かれた素子は履歴の中に保持され、同じものとして戻されるからである。何がこれで賄え\\"
 " *ない*\\ かは :py:meth:`undo<gtrace.layout.OpticalLayout.undo>` を参照。"
 
-#: ../../../gtrace/docs/source/layout.rst:623
+#: ../../../gtrace/docs/source/layout.rst:630
 msgid "Editing from a front end"
 msgstr "フロントエンドからの編集"
 
-#: ../../../gtrace/docs/source/layout.rst:625
+#: ../../../gtrace/docs/source/layout.rst:632
 msgid ""
 "A layout is edited by the viewer, and by anything else that speaks the "
 "same protocol, through "
@@ -1035,7 +1049,7 @@ msgstr ""
 "レイアウトはビューアから編集できる。同じプロトコルを話すものなら何からでも編集でき、その入口が "
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` である:"
 
-#: ../../../gtrace/docs/source/layout.rst:634
+#: ../../../gtrace/docs/source/layout.rst:641
 msgid ""
 "For what the viewer's buttons and drags do, see :doc:`viewer`. For the "
 "messages themselves, see :doc:`editing`: which operations exist, what "

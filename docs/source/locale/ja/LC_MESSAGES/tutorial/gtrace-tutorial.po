@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-22 19:30+0900\n"
+"POT-Creation-Date: 2026-08-22 21:03+0900\n"
 "PO-Revision-Date: 2026-08-09 22:30+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -230,12 +230,12 @@ msgid ""
 msgstr "x と y の列が分かれているのは、ビームが一般には丸くないからである。ウェッジのある基板を斜めに通ったあとでは、2つのウェストは違う値になる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:200
-msgid "|041cf78fcca54ed592fb5ff661dfc4c6|"
-msgstr "|041cf78fcca54ed592fb5ff661dfc4c6|"
+msgid "|cd41c1e241f14c898cd40f8e16d0ea01|"
+msgstr "|cd41c1e241f14c898cd40f8e16d0ea01|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:206
-msgid "041cf78fcca54ed592fb5ff661dfc4c6"
-msgstr "041cf78fcca54ed592fb5ff661dfc4c6"
+msgid "cd41c1e241f14c898cd40f8e16d0ea01"
+msgstr "cd41c1e241f14c898cd40f8e16d0ea01"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:202
 msgid ""
@@ -268,12 +268,12 @@ msgstr ""
 " ``inv_ROC_HR`` ではなく半径で表す。だから平面は ``inf`` と読める。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:222
-msgid "|33a81585951a4da1aea2cd776202cc6e|"
-msgstr "|33a81585951a4da1aea2cd776202cc6e|"
+msgid "|cc38715698c14af59d3a31b6c490019b|"
+msgstr "|cc38715698c14af59d3a31b6c490019b|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:268
-msgid "33a81585951a4da1aea2cd776202cc6e"
-msgstr "33a81585951a4da1aea2cd776202cc6e"
+msgid "cc38715698c14af59d3a31b6c490019b"
+msgstr "cc38715698c14af59d3a31b6c490019b"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
 msgid "in the viewer"
@@ -363,21 +363,21 @@ msgstr "``+ Mirror`` / ``+ Lens`` / ``+ Source``"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:245
 msgid ""
-"a new one at the centre of the view; the arrow opens the cylindrical "
-"variants"
-msgstr "表示の中心に1つ追加する。矢印でシリンドリカル版を選べる"
+"arms the tool; click where the new one goes. The arrow opens the "
+"cylindrical variants"
+msgstr "ツールが構えられる。新しいものを置く場所をクリックする。矢印でシリンドリカル版を選べる"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:247
 msgid "``+ Mechanics``"
 msgstr "``+ Mechanics``"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:247
-msgid "a part from the model library (see below)"
-msgstr "モデルライブラリの部品（下記参照）"
+msgid "a part from the model library (see below); click where it goes"
+msgstr "モデルライブラリの部品（下記参照）。置く場所をクリックする"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:249
-msgid "``Remove``"
-msgstr "``Remove``"
+msgid "``Remove``, or Delete"
+msgstr "``Remove``\\ 、または Delete"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:249
 msgid "the selection goes"
@@ -492,12 +492,12 @@ msgid ""
 msgstr "``Measure`` はクリック3回で使う。2回のクリックで何を測るかを、3回目で線をどこに引くかを指定する。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:349
-msgid "|3d5f804dc94e489aa9d77f3967cd9e6d|"
-msgstr "|3d5f804dc94e489aa9d77f3967cd9e6d|"
+msgid "|d0d82014af9e44da9557a7cbd9d06cb2|"
+msgstr "|d0d82014af9e44da9557a7cbd9d06cb2|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:365
-msgid "3d5f804dc94e489aa9d77f3967cd9e6d"
-msgstr "3d5f804dc94e489aa9d77f3967cd9e6d"
+msgid "d0d82014af9e44da9557a7cbd9d06cb2"
+msgstr "d0d82014af9e44da9557a7cbd9d06cb2"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:351
 msgid ""
@@ -577,12 +577,12 @@ msgstr ""
 "が聞かれるたびに宿主から位置を計算する。ミラーを動かせば、マウントが付いてくる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:472
-msgid "|f34d6d896b3f441181f98dd55ef11abe|"
-msgstr "|f34d6d896b3f441181f98dd55ef11abe|"
+msgid "|e2c65b28ab4b40d3af5626b6276fd515|"
+msgstr "|e2c65b28ab4b40d3af5626b6276fd515|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:482
-msgid "f34d6d896b3f441181f98dd55ef11abe"
-msgstr "f34d6d896b3f441181f98dd55ef11abe"
+msgid "e2c65b28ab4b40d3af5626b6276fd515"
+msgstr "e2c65b28ab4b40d3af5626b6276fd515"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:474
 msgid ""
@@ -654,12 +654,12 @@ msgid ""
 msgstr "原点をどこに置くかは慎重に決める。部品を素子に取り付けると、原点はその素子の基板の中心に来る。だからマウントは、これから保持するミラーを囲むように描かれる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:567
-msgid "|dfc370bca9404b0f90b71a4b9284e054|"
-msgstr "|dfc370bca9404b0f90b71a4b9284e054|"
+msgid "|de77086a17874c3d81f942c3fac57581|"
+msgstr "|de77086a17874c3d81f942c3fac57581|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:573
-msgid "dfc370bca9404b0f90b71a4b9284e054"
-msgstr "dfc370bca9404b0f90b71a4b9284e054"
+msgid "de77086a17874c3d81f942c3fac57581"
+msgstr "de77086a17874c3d81f942c3fac57581"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:569
 msgid ""
@@ -756,12 +756,12 @@ msgstr ""
 " ``dimensions=False`` を渡す。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:772
-msgid "|e787e7e46a2b454986e3c2584936127e|"
-msgstr "|e787e7e46a2b454986e3c2584936127e|"
+msgid "|cc0183d3d0984d90a258c1582e70338a|"
+msgstr "|cc0183d3d0984d90a258c1582e70338a|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:774
-msgid "e787e7e46a2b454986e3c2584936127e"
-msgstr "e787e7e46a2b454986e3c2584936127e"
+msgid "cc0183d3d0984d90a258c1582e70338a"
+msgstr "cc0183d3d0984d90a258c1582e70338a"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:821
 msgid "What is underneath"
@@ -818,12 +818,12 @@ msgstr ""
 "q パラメータを伝搬させることである。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:846
-msgid "|7fb20891b2fe4978b772b3b5ae81f9ca|"
-msgstr "|7fb20891b2fe4978b772b3b5ae81f9ca|"
+msgid "|f8adac5bcdd54559a1063e95859ae8e2|"
+msgstr "|f8adac5bcdd54559a1063e95859ae8e2|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:848
-msgid "7fb20891b2fe4978b772b3b5ae81f9ca"
-msgstr "7fb20891b2fe4978b772b3b5ae81f9ca"
+msgid "f8adac5bcdd54559a1063e95859ae8e2"
+msgstr "f8adac5bcdd54559a1063e95859ae8e2"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:859
 msgid ""
@@ -846,12 +846,12 @@ msgstr ""
 "は、その面が向く方向である。\\ ``center`` は基板の中心で、図の箱が置かれるのはこの点である。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:863
-msgid "|b632d76e2b454dedb91370c6d2b10188|"
-msgstr "|b632d76e2b454dedb91370c6d2b10188|"
+msgid "|9b70728d4e53467fa94f8f3f17688eb1|"
+msgstr "|9b70728d4e53467fa94f8f3f17688eb1|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:865
-msgid "b632d76e2b454dedb91370c6d2b10188"
-msgstr "b632d76e2b454dedb91370c6d2b10188"
+msgid "9b70728d4e53467fa94f8f3f17688eb1"
+msgstr "9b70728d4e53467fa94f8f3f17688eb1"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:930
 msgid ""
@@ -885,12 +885,12 @@ msgstr ""
 "を透過したビームである。文字は決まっている:"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:948
-msgid "|20bf2b540d52437a92ffe397c231d8b5|"
-msgstr "|20bf2b540d52437a92ffe397c231d8b5|"
+msgid "|4b5eca8eb4a34a8fad0ddae4023d5969|"
+msgstr "|4b5eca8eb4a34a8fad0ddae4023d5969|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:950
-msgid "20bf2b540d52437a92ffe397c231d8b5"
-msgstr "20bf2b540d52437a92ffe397c231d8b5"
+msgid "4b5eca8eb4a34a8fad0ddae4023d5969"
+msgstr "4b5eca8eb4a34a8fad0ddae4023d5969"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:961
 msgid ""
@@ -2837,4 +2837,166 @@ msgstr ""
 
 #~ msgid "a04a29274c314e7194c83c563ed83dee"
 #~ msgstr "a04a29274c314e7194c83c563ed83dee"
+
+#~ msgid "|041cf78fcca54ed592fb5ff661dfc4c6|"
+#~ msgstr "|041cf78fcca54ed592fb5ff661dfc4c6|"
+
+#~ msgid "041cf78fcca54ed592fb5ff661dfc4c6"
+#~ msgstr "041cf78fcca54ed592fb5ff661dfc4c6"
+
+#~ msgid "|33a81585951a4da1aea2cd776202cc6e|"
+#~ msgstr "|33a81585951a4da1aea2cd776202cc6e|"
+
+#~ msgid "33a81585951a4da1aea2cd776202cc6e"
+#~ msgstr "33a81585951a4da1aea2cd776202cc6e"
+
+#~ msgid "|3d5f804dc94e489aa9d77f3967cd9e6d|"
+#~ msgstr "|3d5f804dc94e489aa9d77f3967cd9e6d|"
+
+#~ msgid "3d5f804dc94e489aa9d77f3967cd9e6d"
+#~ msgstr "3d5f804dc94e489aa9d77f3967cd9e6d"
+
+#~ msgid "|f34d6d896b3f441181f98dd55ef11abe|"
+#~ msgstr "|f34d6d896b3f441181f98dd55ef11abe|"
+
+#~ msgid "f34d6d896b3f441181f98dd55ef11abe"
+#~ msgstr "f34d6d896b3f441181f98dd55ef11abe"
+
+#~ msgid "|dfc370bca9404b0f90b71a4b9284e054|"
+#~ msgstr "|dfc370bca9404b0f90b71a4b9284e054|"
+
+#~ msgid "dfc370bca9404b0f90b71a4b9284e054"
+#~ msgstr "dfc370bca9404b0f90b71a4b9284e054"
+
+#~ msgid "|e787e7e46a2b454986e3c2584936127e|"
+#~ msgstr "|e787e7e46a2b454986e3c2584936127e|"
+
+#~ msgid "e787e7e46a2b454986e3c2584936127e"
+#~ msgstr "e787e7e46a2b454986e3c2584936127e"
+
+#~ msgid "|7fb20891b2fe4978b772b3b5ae81f9ca|"
+#~ msgstr "|7fb20891b2fe4978b772b3b5ae81f9ca|"
+
+#~ msgid "7fb20891b2fe4978b772b3b5ae81f9ca"
+#~ msgstr "7fb20891b2fe4978b772b3b5ae81f9ca"
+
+#~ msgid "|b632d76e2b454dedb91370c6d2b10188|"
+#~ msgstr "|b632d76e2b454dedb91370c6d2b10188|"
+
+#~ msgid "b632d76e2b454dedb91370c6d2b10188"
+#~ msgstr "b632d76e2b454dedb91370c6d2b10188"
+
+#~ msgid "|20bf2b540d52437a92ffe397c231d8b5|"
+#~ msgstr "|20bf2b540d52437a92ffe397c231d8b5|"
+
+#~ msgid "20bf2b540d52437a92ffe397c231d8b5"
+#~ msgstr "20bf2b540d52437a92ffe397c231d8b5"
+
+#~ msgid "|26bd7b3d2d8840f09adaa28047fb98ef|"
+#~ msgstr "|26bd7b3d2d8840f09adaa28047fb98ef|"
+
+#~ msgid "26bd7b3d2d8840f09adaa28047fb98ef"
+#~ msgstr "26bd7b3d2d8840f09adaa28047fb98ef"
+
+#~ msgid "|ad596da82b634b61aaa96402c7cd99c0|"
+#~ msgstr "|ad596da82b634b61aaa96402c7cd99c0|"
+
+#~ msgid "ad596da82b634b61aaa96402c7cd99c0"
+#~ msgstr "ad596da82b634b61aaa96402c7cd99c0"
+
+#~ msgid "|efa57e3936674daba7766f5fd5770c82|"
+#~ msgstr "|efa57e3936674daba7766f5fd5770c82|"
+
+#~ msgid "efa57e3936674daba7766f5fd5770c82"
+#~ msgstr "efa57e3936674daba7766f5fd5770c82"
+
+#~ msgid "|2e7d319a86a846dd859dbaf84edb5902|"
+#~ msgstr "|2e7d319a86a846dd859dbaf84edb5902|"
+
+#~ msgid "2e7d319a86a846dd859dbaf84edb5902"
+#~ msgstr "2e7d319a86a846dd859dbaf84edb5902"
+
+#~ msgid "|b2b021c9e8e046278711b8ba24a72a51|"
+#~ msgstr "|b2b021c9e8e046278711b8ba24a72a51|"
+
+#~ msgid "b2b021c9e8e046278711b8ba24a72a51"
+#~ msgstr "b2b021c9e8e046278711b8ba24a72a51"
+
+#~ msgid "|06108f8b61c5402bab2058ffdbd96909|"
+#~ msgstr "|06108f8b61c5402bab2058ffdbd96909|"
+
+#~ msgid "06108f8b61c5402bab2058ffdbd96909"
+#~ msgstr "06108f8b61c5402bab2058ffdbd96909"
+
+#~ msgid "|68510a9b751d440f887b7a305f3f136f|"
+#~ msgstr "|68510a9b751d440f887b7a305f3f136f|"
+
+#~ msgid "68510a9b751d440f887b7a305f3f136f"
+#~ msgstr "68510a9b751d440f887b7a305f3f136f"
+
+#~ msgid "|2dca22d702594ab3810edfc4536d2c79|"
+#~ msgstr "|2dca22d702594ab3810edfc4536d2c79|"
+
+#~ msgid "2dca22d702594ab3810edfc4536d2c79"
+#~ msgstr "2dca22d702594ab3810edfc4536d2c79"
+
+#~ msgid "|cfb9d006ad86489395566df137b8b23c|"
+#~ msgstr "|cfb9d006ad86489395566df137b8b23c|"
+
+#~ msgid "cfb9d006ad86489395566df137b8b23c"
+#~ msgstr "cfb9d006ad86489395566df137b8b23c"
+
+#~ msgid "|25a5ef64b7c64c67bd2526cd993ad03d|"
+#~ msgstr "|25a5ef64b7c64c67bd2526cd993ad03d|"
+
+#~ msgid "25a5ef64b7c64c67bd2526cd993ad03d"
+#~ msgstr "25a5ef64b7c64c67bd2526cd993ad03d"
+
+#~ msgid "|70a6f5d93d0b422e8c1e78b44e835ede|"
+#~ msgstr "|70a6f5d93d0b422e8c1e78b44e835ede|"
+
+#~ msgid "70a6f5d93d0b422e8c1e78b44e835ede"
+#~ msgstr "70a6f5d93d0b422e8c1e78b44e835ede"
+
+#~ msgid "|5b423651373641908e412df976a382fe|"
+#~ msgstr "|5b423651373641908e412df976a382fe|"
+
+#~ msgid "5b423651373641908e412df976a382fe"
+#~ msgstr "5b423651373641908e412df976a382fe"
+
+#~ msgid "|6bd7b0b0aa504bb487ab4972bd0abfa2|"
+#~ msgstr "|6bd7b0b0aa504bb487ab4972bd0abfa2|"
+
+#~ msgid "6bd7b0b0aa504bb487ab4972bd0abfa2"
+#~ msgstr "6bd7b0b0aa504bb487ab4972bd0abfa2"
+
+#~ msgid "|cbd77a1f63cf465eb33963cacdc3b2f3|"
+#~ msgstr "|cbd77a1f63cf465eb33963cacdc3b2f3|"
+
+#~ msgid "cbd77a1f63cf465eb33963cacdc3b2f3"
+#~ msgstr "cbd77a1f63cf465eb33963cacdc3b2f3"
+
+#~ msgid "|449483a6ebc24564b2e2fabcc2dc3d36|"
+#~ msgstr "|449483a6ebc24564b2e2fabcc2dc3d36|"
+
+#~ msgid "449483a6ebc24564b2e2fabcc2dc3d36"
+#~ msgstr "449483a6ebc24564b2e2fabcc2dc3d36"
+
+#~ msgid "|c579ea17e73a403cb7f54d5c40874a15|"
+#~ msgstr "|c579ea17e73a403cb7f54d5c40874a15|"
+
+#~ msgid "c579ea17e73a403cb7f54d5c40874a15"
+#~ msgstr "c579ea17e73a403cb7f54d5c40874a15"
+
+#~ msgid "|2f034894d7f344fda17eead93b360ff2|"
+#~ msgstr "|2f034894d7f344fda17eead93b360ff2|"
+
+#~ msgid "2f034894d7f344fda17eead93b360ff2"
+#~ msgstr "2f034894d7f344fda17eead93b360ff2"
+
+#~ msgid "|e557e059801f4dadb9348b034d8de9ea|"
+#~ msgstr "|e557e059801f4dadb9348b034d8de9ea|"
+
+#~ msgid "e557e059801f4dadb9348b034d8de9ea"
+#~ msgstr "e557e059801f4dadb9348b034d8de9ea"
 

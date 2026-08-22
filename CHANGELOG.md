@@ -13,6 +13,29 @@ across them.
 
 ### Changed
 
+- **Everything an add button puts down is placed by clicking where it
+  goes.** A mirror, a lens, a laser, a beam dump, a part off the model
+  library, an assembly and a shape used to arrive at the middle of the
+  view, and then had to be dragged or typed into position. Pressing the
+  button now arms a tool: the button stays lit, the status bar asks for
+  the place, and nothing is added until you click on the drawing. `Esc`
+  gives up and adds nothing.
+
+  **The click takes the same marked points a measurement does**, so a
+  new part lands on a screw hole, on the corner of a breadboard, on the
+  face of a mirror already down, or on the origin - rather than near it.
+
+  One click is the whole of it for everything except a shape, which is
+  drawn and so takes as many clicks as its kind needs. What the click
+  gives is the centre of the HR face of an element, the point the light
+  comes from for a laser, and the centre of a body or a dump. An
+  assembly is placed by its element: **a mirror assembly by the centre
+  of its HR face**, a lens assembly by its centre, which is the point
+  each is placed by everywhere else. Which way the new thing faces is not
+  asked for: an element faces back down the -x axis and a laser fires
+  along +x, as before, and both are turned afterwards with `Align`,
+  Shift + drag, or `[` and `]`.
+
 - **A shape is drawn by clicking where it goes.** It used to arrive at a
   fixed size in a fixed place - at the origin in the shape editor, at
   the middle of the view on a bench - and then had to be dragged and
@@ -52,6 +75,45 @@ across them.
   one is still sized to the width of the view.
 
 ### Added
+
+- **A beam that reaches nothing can be drawn longer.** Click such a beam
+  and a grip appears at its far end; drag the grip and the beam is drawn
+  to the length you drag it to. Until now every open beam was drawn at
+  the one length the rules give them all (`open_beam_length`), which is
+  the wrong length whenever the question is where a beam would land.
+
+  The status bar gives the length while you drag, and the length the
+  trace gave it beside; dragging back near that length settles on it
+  exactly, and `Alt` rides past it. A beam that ends on a surface has no
+  grip: it is as long as the distance to that surface.
+
+  **It changes the drawing and nothing else.** A beam that reaches
+  nothing reaches nothing at any length, so no beam is added, removed or
+  recomputed, and the exported DXF has it drawn as it is on the screen.
+  **The next trace throws it away**, so it is not a step of undo. In
+  Python it is `layout.stretch_beam(index, length)`; over the protocol
+  it is `{'op': 'stretch', 'index': 3, 'length': 2.5}`.
+
+  Two fields come with it in the `beams` channel of a scene: `open`,
+  whether the beam ends on nothing, and `traced_length`, the length the
+  trace gave it.
+
+- **The `Delete` key takes the selection away**, which is what the
+  `Remove` button of the panel on show does: an element, a laser, a body,
+  a dimension, or the shape on show in the shape editor. With a beam
+  under the pointer, or nothing selected, it does nothing - a beam is
+  what a trace made, not something the layout holds. A named point keeps
+  its own `- Point` button. The key works while the pointer is over the
+  viewer, and the viewer takes it on the way down and stops it there,
+  whether or not anything was taken away: a notebook shell spends that
+  key on deleting a cell, and it listens for the key before the viewer
+  does.
+
+- **`mirror_assembly()` takes `HRcenter`**, as an alternative to
+  `center`: where the front face stands rather than where the substrate
+  centre stands. `assembly_kinds()` now says which of the two each kind
+  is placed by, through a `place` key, and an `add` message for an
+  assembly may carry either name.
 
 - **Measuring and aiming snap to the middle of a straight edge.** The two
   sides of a substrate, and the four edges of the outline of a body. A

@@ -72,6 +72,14 @@ Getting around
        without running the trace again.
    * - ``Esc``
      - Leave whatever mode you are in, and drop the selection.
+   * - Drag the grip at the end of a beam
+     - Draw a beam that reaches nothing longer or shorter. See
+       :ref:`drawing-a-beam-longer`.
+   * - ``Delete``
+     - Take the selection away. The same as the ``Remove`` button of the
+       panel on show. Nothing is selected, or a beam is: nothing happens.
+       The key works while the pointer is over the viewer, and the viewer
+       keeps it to itself - in a notebook that key deletes a cell.
 
 Making room
 ^^^^^^^^^^^^
@@ -136,6 +144,36 @@ separate them.
 
 A DXF file holds geometry only, and there is nothing in it to ask about a
 beam. This readout therefore comes from the model, not from the drawing.
+
+.. _drawing-a-beam-longer:
+
+Drawing a beam longer
+^^^^^^^^^^^^^^^^^^^^^^
+
+A beam that reaches nothing is drawn at the length the rules give every
+such beam - ``open_beam_length``, one metre unless you say otherwise.
+Sometimes one of them is worth following further: to see where it would
+land, or to find room for the element that is to catch it.
+
+**Click such a beam and a grip appears at its far end. Drag the grip to
+draw that beam longer or shorter.** The status bar gives the length while
+you drag, and the length the trace gave it beside. Dragging back near that
+length settles on it exactly, which is the way back to the picture the
+trace drew; hold **Alt** to ride past it.
+
+Only a beam that reaches nothing has a grip. A beam that ends on a surface
+is as long as the distance to that surface, and drawing it longer would
+draw it through the glass.
+
+**It changes the drawing and nothing else.** A beam that reaches nothing
+reaches nothing at any length - it missed everything because nothing is in
+its way, not because it was too short - so no beam is added, removed or
+recomputed. The DXF you export while it is drawn long has it drawn long.
+
+**The next trace throws it away.** Move an element, edit a property, undo
+anything: the trace runs again, and the beam it made is drawn at the rule's
+length once more. In Python it is
+:py:meth:`stretch_beam<gtrace.layout.OpticalLayout.stretch_beam>`.
 
 .. _the-lasers:
 
@@ -273,6 +311,48 @@ There is one add button for each kind of thing: ``+ Mirror``, ``+ Lens``,
 Two of them have variants, spherical and cylindrical, and open a menu with
 that choice. A cylindrical mirror is a mirror, not a separate kind of thing.
 
+.. _putting-something-down:
+
+**Everything is put down by clicking where it goes.** Pressing an add
+button, or choosing a variant from its menu, arms a tool. The button stays
+lit and the status bar asks for the place. Nothing is added until you click
+on the drawing. **Esc** gives up and adds nothing.
+
+The click takes the same marked points a measurement does, so a new part
+lands exactly on a screw hole, on the corner of a breadboard, on the face
+of a mirror already down, or on the origin. The status bar names the point
+under the cursor before you click it. See :ref:`measuring <measuring>` for
+what those points are.
+
+What the click gives depends on the kind:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Kind
+     - What the click gives
+   * - Mirror, lens
+     - The centre of the HR face.
+   * - Source
+     - The point the light comes from, which is the nose of the box.
+   * - Dump
+     - The centre of the dump.
+   * - Mechanics
+     - The centre of the part.
+   * - Assembly
+     - The place of the element: the centre of the HR face for a mirror,
+       the centre for a lens. The mount or holder, the pedestal and the
+       fork are built around it.
+   * - Shape
+     - As many places as the shape takes. See :ref:`below
+       <drawing-a-shape>`.
+
+Which way the new thing faces is not asked for. An element faces back down
+the −x axis and a laser fires along +x, as they always have. Turn it
+afterwards with **Align**, with Shift + drag, or with the ``[`` and ``]``
+keys.
+
 .. list-table::
    :header-rows: 1
    :widths: 22 78
@@ -284,15 +364,14 @@ that choice. A cylindrical mirror is a mirror, not a separate kind of thing.
        already registered, so an element added to a system of 10 cm optics
        is a 10 cm optics.
    * - ``+ Lens``
-     - A catalogue lens, 500 mm and one inch across, at the centre of the
-       view. It inherits nothing. A lens given the 99 % front face of a
-       mirror would not pass the main beam. Both faces reflect nothing, so
-       the lens makes no ghosts. Put a real coating in **Refl HR** and
-       **Refl AR** when you want the ghosts off a lens.
+     - A catalogue lens, 500 mm and one inch across. It inherits nothing.
+       A lens given the 99 % front face of a mirror would not pass the main
+       beam. Both faces reflect nothing, so the lens makes no ghosts. Put a
+       real coating in **Refl HR** and **Refl AR** when you want the ghosts
+       off a lens.
    * - ``+ Source``
-     - A laser at the centre of the view, firing along +x, at 1064 nm, 1 W,
-       with a 0.2 mm waist at the laser. It copies nothing from the sources
-       already there.
+     - A laser firing along +x, at 1064 nm, 1 W, with a 0.2 mm waist at the
+       laser. It copies nothing from the sources already there.
    * - ``+ Dump``
      - A :ref:`beam dump <mechanics>` facing a beam that runs along +x:
        two absorbing faces and the housing they sit in.
@@ -312,6 +391,15 @@ nothing gives ``H1``. A shape put down with ``+ Shape`` is named for the
 shape it is: ``CIRC1``, ``RECT1``, ``LINE1``, ``POLY1``, ``ARC1``,
 ``TEXT1``.
 
+**A mirror assembly stands by the centre of its HR face, and a lens
+assembly by its centre.** That is the point the click gives, and it is the
+point each element is placed by everywhere else: light turns at the HR
+face of a mirror, and the distances between elements are measured to it,
+while a lens is symmetric about its centre and its holder is drawn around
+that. The two points are half a substrate apart - 3 mm on a one inch
+mirror, 6.35 mm on a two inch one - so a mirror placed by its centre lands
+that far behind where it was clicked.
+
 ``+ Assembly`` puts down a one inch or two inch mirror in its mount, or a
 lens in its holder, on a pedestal held down by a clamping fork. That is what
 is really bolted to a bench. Building it out of four adds and three
@@ -329,9 +417,9 @@ cell.
 
 .. _drawing-a-shape:
 
-**A shape is drawn by clicking where it goes.** Choosing a kind arms a tool;
-the clicks then say what the shape is. Nothing is added until it has been
-drawn.
+**A shape takes more than one click.** Everything else is put down by one
+click, which only says where it goes. A shape is drawn, so its clicks say
+what it is as well.
 
 .. list-table::
    :header-rows: 1
@@ -595,6 +683,13 @@ overwritten at the next trace. The exception is the turn of the element when
 x**, **Joint y** and **Joint angle** are where the element sits in the frame
 of the host. They move it without letting it go.
 
+**Remove**, or the ``Delete`` key, takes the selection away. The key is
+the button of the panel on show, so it removes an element, a laser, a body
+or a dimension, and it does nothing while the beam readout is showing: a
+beam is what a trace made, not something the layout holds. In the
+:ref:`shape editor <the-shape-editor>` it takes out the shape on show. A
+named point has its own **- Point** button, and the key leaves it alone.
+
 **Remove takes what stands on the thing removed**: the mount on the mirror,
 the pedestal under the mount, the far face of a dump and its housing. If
 they were left behind, each one would derive its pose from something that is
@@ -704,6 +799,8 @@ and a point cannot go unnamed. Every gesture commits as one message, so each
 one is one step of undo. The editor works on the body itself, by reference,
 so a part already registered in a layout is redrawn there as soon as the
 layout is drawn again.
+
+.. _measuring:
 
 Measuring
 ----------

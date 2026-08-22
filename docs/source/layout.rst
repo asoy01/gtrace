@@ -486,6 +486,13 @@ mount is bolted down through. The fork goes round the pedestal, with its
 turn free. **The element is the thing to move.** Everything else derives its
 pose from the element.
 
+A mirror can be placed by its front face instead:
+``add_assembly('MIRROR-2IN', HRcenter=[0.3, 0.1])`` puts the centre of the
+HR face at that point, and the substrate half a thickness behind it. Give
+``center`` or ``HRcenter``, not both. ``assembly_kinds()`` says which of
+the two each kind is placed by, under ``place``, and that is what the
+viewer sends when an assembly is placed by a click.
+
 :py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` registers
 all four and fills in the names. Each piece takes the first number that is
 free for its own kind, so a second two-inch mirror comes down as ``M2``,

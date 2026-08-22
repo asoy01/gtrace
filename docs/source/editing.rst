@@ -24,7 +24,8 @@ is the name of something registered in the layout. The examples below use
                        'attrs': {'diameter': 0.15}})
 
 Because a message is a plain dict, the same protocol travels over a notebook
-widget's comm as over any other transport. There are sixteen operations:
+widget's comm as over any other transport. There are seventeen
+operations:
 
 .. list-table::
    :header-rows: 1
@@ -40,6 +41,17 @@ widget's comm as over any other transport. There are sixteen operations:
      - Change what the layout holds.
    * - ``rules``, ``draw``
      - Change the tracing rules and the drawing options.
+   * - ``stretch``
+     - Draw one beam that reaches nothing at a length of your own
+       choosing. ``{'op': 'stretch', 'index': 3, 'length': 2.5}`` names the
+       beam by its place in the list the trace made, which is the order the
+       scene carries them in. It changes the drawing and nothing else, and
+       the next trace throws it away - so it is not a step of undo. Only a
+       beam whose ``open`` is true in the ``beams`` channel may be given
+       one; a beam that ends on a surface is as long as the distance to
+       that surface. Every beam also carries ``traced_length``, the length
+       the trace gave it, so a front end can put it back. See
+       :ref:`drawing-a-beam-longer`.
    * - ``save``, ``load``, ``export``
      - Read and write files.
    * - ``undo``, ``redo``
@@ -414,7 +426,10 @@ name the bodies it adds. The shapes stay on the Python side until a model
 is chosen. ``assemblies`` is what
 :py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` lists, so a front
 end can offer an element together with the parts that hold it, by name.
-Python builds them.
+Python builds them. Each kind carries a ``place``, which names the
+parameter that says where it goes: ``HRcenter`` for a mirror, ``center``
+for a lens. A front end with one clicked point to give sends it under that
+name.
 
 ``newshapes`` says what a shape of each kind looks like when it is first
 put down. It is the same
