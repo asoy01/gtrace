@@ -549,6 +549,24 @@ var SCENE = __SCENE__;
                               shape: v.selectedShape,
                               point: v.selectedPoint};
 
+        // --- Delete takes the shape on show out of the part ---
+        // A named point is selected as well at this stage, and stays:
+        // it is taken away by - Point, which is a different button,
+        // and the key is the Remove button.
+        clickAt(screenOf([-0.018, 0.008]));
+        v.pointerInside = true;
+        before = sent.length;
+        var pointWas = v.selectedPoint;
+        var delEv = new KeyboardEvent('keydown', {key: 'Delete',
+                                                  bubbles: true,
+                                                  cancelable: true});
+        document.dispatchEvent(delEv);
+        out.delShape = {msg: last(), n: sent.length - before,
+                        swallowed: delEv.defaultPrevented,
+                        shape: v.selectedShape, pointWas: pointWas,
+                        point: v.selectedPoint};
+        v.pointerInside = false;
+
         out.sent = sent;
     } catch (e) {
         out.error = String(e && e.stack || e);
@@ -854,6 +872,18 @@ if pv['msg'] and pv['msg']['op'] == 'set_points':
                           part.shapes[RECT].point),
           str(np.round(moved.points['inner'], 5).tolist()))
 
+print('--- Delete takes the shape out of the part ---')
+ds = res['delShape']
+check('one message, removing the shape on show',
+      ds['n'] == 1 and ds['msg'] and ds['msg']['op'] == 'remove_shape'
+      and ds['msg']['index'] == RECT, json.dumps(ds['msg']))
+check('  and the key is swallowed, as a notebook would take it',
+      ds['swallowed'])
+# - Point is a different button, and the key is the Remove button.
+check('  the named point that was also picked is left alone',
+      ds['pointWas'] is not None and ds['point'] == ds['pointWas'],
+      json.dumps({'was': ds['pointWas'], 'now': ds['point']}))
+
 print('--- drawing a shape by clicking ---')
 
 WANT_POINTS = {'line': 2, 'rectangle': 2, 'circle': 2, 'arc': 3, 'text': 1}
@@ -919,9 +949,10 @@ check('while drawing, a press does not take hold of what is underneath',
 
 print('--- what the whole session sent ---')
 ops = set(m.get('op') for m in res['sent'])
-check('nothing but set_shape, rotate_shape, set_points and add_shape '
-      'left the page',
-      ops == {'set_shape', 'rotate_shape', 'set_points', 'add_shape'},
+check('nothing but set_shape, rotate_shape, set_points, add_shape and '
+      'remove_shape left the page',
+      ops == {'set_shape', 'rotate_shape', 'set_points', 'add_shape',
+              'remove_shape'},
       json.dumps(sorted(ops)))
 # add_shape puts a shape at the end rather than naming one, and
 # set_points speaks of the part rather than of a shape; the rest name

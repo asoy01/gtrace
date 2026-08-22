@@ -455,6 +455,13 @@ function placeKey(kind, type) {
 }
 
 /*
+ * The panels with a Remove button, which is what the Delete key
+ * presses. The beam readout has none: a beam is what a trace made,
+ * not something the layout holds, so there is nothing to take away.
+ */
+var REMOVABLE_PANELS = ['optic', 'dimension', 'source', 'mech'];
+
+/*
  * Two places closer together than this, in metres, are the same place:
  * a slip of the hand rather than a shape of no size. Well below
  * anything drawn on a bench.
@@ -1868,7 +1875,7 @@ Viewer.prototype._build = function () {
                   ['+ Vertex / − Vertex',
                    'put a corner into an outline, or take one out'],
                   ['Copy', 'a second one, just beside it'],
-                  ['Remove', 'take it away'],
+                  ['Remove, or Delete', 'take it away'],
                   ['↑ / ↓', 'draw it earlier or later'],
                   ['Undo, or Ctrl + Z', 'put the last edit back'],
                   ['Save to library',
@@ -1901,7 +1908,7 @@ Viewer.prototype._build = function () {
                    + 'click where it goes'],
                   ['+ Mirror, + Lens',
                    'open for the cylindrical variant'],
-                  ['Remove', 'delete the selection'],
+                  ['Remove, or Delete', 'take the selection away'],
                   ['DXF', 'write the drawing out for CAD'],
                   ['Undo, or Ctrl + Z', 'put the last edit back'],
                   ['Redo, or Ctrl + Shift + Z', 'take the undo back']);
@@ -2764,7 +2771,7 @@ Viewer.prototype._buildDimPanel = function () {
     // _refreshDimPanel decides whether it is on offer.
     this.dimFoot = htmlEl('div', 'gt-props-foot');
     var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
-    delBtn.title = 'Remove this dimension';
+    delBtn.title = 'Remove this dimension (Delete)';
     delBtn.addEventListener('click', function () { self.removeSelected(); });
     this.dimFoot.appendChild(delBtn);
     this.dimBody.appendChild(this.dimFoot);
@@ -2909,7 +2916,7 @@ Viewer.prototype._buildOpticPanel = function () {
         copyBtn.addEventListener('click', function () { self.copySelected(); });
         foot.appendChild(copyBtn);
         var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
-        delBtn.title = 'Remove this optics from the layout';
+        delBtn.title = 'Remove this optics from the layout (Delete)';
         delBtn.addEventListener('click', function () { self.removeSelected(); });
         foot.appendChild(delBtn);
         this.opticBody.appendChild(foot);
@@ -2962,7 +2969,7 @@ Viewer.prototype._buildSourcePanel = function () {
     if (this.onEdit) {
         var foot = htmlEl('div', 'gt-props-foot');
         var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
-        delBtn.title = 'Remove this source from the layout';
+        delBtn.title = 'Remove this source from the layout (Delete)';
         delBtn.addEventListener('click', function () { self.removeSelected(); });
         foot.appendChild(delBtn);
         this.sourceBody.appendChild(foot);
@@ -2992,7 +2999,7 @@ Viewer.prototype._buildMechPanel = function () {
     if (this.onEdit) {
         var foot = htmlEl('div', 'gt-props-foot');
         var delBtn = htmlEl('button', 'gt-btn gt-btn-danger', 'Remove');
-        delBtn.title = 'Remove this mechanics from the layout';
+        delBtn.title = 'Remove this mechanics from the layout (Delete)';
         delBtn.addEventListener('click', function () { self.removeSelected(); });
         foot.appendChild(delBtn);
         this.mechBody.appendChild(foot);
@@ -3075,7 +3082,7 @@ Viewer.prototype._buildShapePanel = function () {
           function () { self.moveShape(-1); }],
          ['↓', 'Draw it later, over the others',
           function () { self.moveShape(1); }],
-         ['Remove', 'Take this shape out of the part',
+         ['Remove', 'Take this shape out of the part (Delete)',
           function () { self.removeShape(); }]
         ].forEach(function (spec, i) {
             var btn = htmlEl('button',
@@ -3969,6 +3976,23 @@ Viewer.prototype.removeSelected = function () {
     }
     this.onEdit(msg);
     return msg;
+};
+
+/*
+ * Take away what is selected: the Remove button of the panel on show,
+ * on a key.
+ *
+ * It removes only what a Remove button would. A beam has none, and
+ * neither has a named point of a part - that one is taken away by
+ * - Point, which is a different button - so with either of those in
+ * hand the key does nothing.
+ */
+Viewer.prototype.removeSelection = function () {
+    if (this.scene.editor) {
+        return this._selectedShape() ? this.removeShape() : null;
+    }
+    if (REMOVABLE_PANELS.indexOf(this.panelKind) < 0) { return null; }
+    return this.removeSelected();
 };
 
 /*
@@ -6639,6 +6663,35 @@ Viewer.prototype._bindEvents = function () {
                           ev.ctrlKey);
         }
     });
+
+    // Delete takes the selection away, which is what the Remove button
+    // of the panel on show does.
+    //
+    // It is caught on the way down rather than with the other keys,
+    // and the event is stopped dead: a notebook shell spends this key
+    // on deleting a cell, and it listens for it before the viewer
+    // does. In JupyterLab that listener is further down the page and
+    // stopping the event on the way back up was enough; VS Code runs
+    // the outputs in a frame of its own and forwards keys from a
+    // listener on its window, which is reached first on the way back
+    // up and never reached at all if the event is stopped here. The
+    // cell the viewer lives in is not the viewer's to delete.
+    //
+    // Only with the pointer over this viewer, and the key is swallowed
+    // whether or not anything was there to take: "nothing was
+    // selected" is not a reason to let the cell be deleted.
+    on(global, 'keydown', function (ev) {
+        if (ev.key !== 'Delete' || !self.pointerInside) { return; }
+        if (ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
+        // Not while a property field has the keyboard: there the key
+        // deletes a character.
+        if (ev.target && ev.target.classList
+            && ev.target.classList.contains('gt-input')) { return; }
+        self.removeSelection();
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.stopImmediatePropagation();
+    }, true);
 
     on(global, 'keydown', function (ev) {
         if (VIEWERS.length > 1 && !self.pointerInside) { return; }

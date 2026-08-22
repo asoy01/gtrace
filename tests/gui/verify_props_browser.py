@@ -852,6 +852,88 @@ var LENS = __LENS__;
                           selected: v.selectedOptic,
                           panel: panel()};
 
+            // --- Delete does what Remove does ---
+            // The key is dispatched the way the browser would, so that
+            // what the handler did with it can be read back: a
+            // cancelable event that was swallowed comes back
+            // defaultPrevented.
+            function del(opts) {
+                var ev = new KeyboardEvent('keydown', Object.assign(
+                    {key: 'Delete', bubbles: true, cancelable: true},
+                    opts || {}));
+                document.dispatchEvent(ev);
+                return ev.defaultPrevented;
+            }
+            var beforeDel = sent.length;
+            v._selectOptic(added);
+            v.pointerInside = true;
+            var nDel = sent.length;
+            var swallowed = del();
+            out.delKey = {msg: sent[sent.length - 1],
+                          sent: sent.length - nDel,
+                          swallowed: swallowed,
+                          selected: v.selectedOptic,
+                          panel: panel()};
+
+            // Nothing selected: the beam readout has no Remove button,
+            // so there is nothing to take - but the key is still
+            // swallowed, since a notebook would delete the cell.
+            nDel = sent.length;
+            out.delKey.emptySwallowed = del();
+            out.delKey.emptySent = sent.length - nDel;
+
+            // With a beam pinned rather than an element selected.
+            v.pinned = null;
+            v._selectOptic(added);
+            v._showPanel('beam');
+            nDel = sent.length;
+            out.delKey.onBeamSwallowed = del();
+            out.delKey.onBeamSent = sent.length - nDel;
+            v._showPanel('optic');
+
+            // A modifier makes it someone else's key.
+            nDel = sent.length;
+            out.delKey.withCtrl = del({ctrlKey: true});
+            out.delKey.withCtrlSent = sent.length - nDel;
+
+            // The page around the viewer must not see the key at all.
+            // A notebook shell listens on the way back up - VS Code
+            // forwards keys to its editor from a listener on the
+            // window, and deletes the cell - so being late is the same
+            // as not handling the key.
+            // One listener on the way down and one on the way back
+            // up, which is where a shell puts its own.
+            var seen = [];
+            function spyDown(e) { seen.push('down:' + e.key); }
+            function spyUp(e) { seen.push('up:' + e.key); }
+            document.addEventListener('keydown', spyDown, true);
+            window.addEventListener('keydown', spyUp);
+            v._selectOptic(added);
+            del();
+            out.delKey.pageSaw = seen.slice();
+            // The same page still sees the keys the viewer does not
+            // take, so what is being stopped is this one key.
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'F2', bubbles: true, cancelable: true}));
+            out.delKey.pageSawOther = seen.slice();
+            document.removeEventListener('keydown', spyDown, true);
+            window.removeEventListener('keydown', spyUp);
+
+            // And it belongs to the viewer the pointer is over.
+            v.pointerInside = false;
+            nDel = sent.length;
+            out.delKey.outsideSwallowed = del();
+            out.delKey.outsideSent = sent.length - nDel;
+            v.pointerInside = true;
+            v.selectedOptic = null;
+            v._showPanel('beam');
+            // The element was already taken out of the layout by the
+            // button just above, so what this section sent is a second
+            // remove of something that is gone. Kept out of the stream
+            // the checks replay into Python, which is a script rather
+            // than a list.
+            sent.length = beforeDel;
+
             // --- undo ---
             // Python answers an edit with a scene that says whether
             // there is now something to go back to.
@@ -2008,6 +2090,37 @@ check('the selection is dropped', rem['selected'] is None,
       str(rem['selected']))
 check('and the panel goes back to the beam readout',
       rem['panel']['beamShown'], str(rem['panel']))
+
+print('--- Delete does what Remove does ---')
+dk = res['delKey']
+check('Delete sends the same remove the button sends',
+      dk['sent'] == 1 and dk['msg']['op'] == 'remove'
+      and dk['msg']['target'] == add['msg']['name'], json.dumps(dk['msg']))
+check('  the selection is dropped and the panel goes back',
+      dk['selected'] is None and dk['panel']['beamShown'], json.dumps(dk))
+# A notebook deletes the cell on this key. A viewer that let it through
+# would have the cell it lives in deleted out from under it.
+check('  and the key is swallowed', dk['swallowed'])
+check('with nothing selected it removes nothing',
+      dk['emptySent'] == 0, str(dk['emptySent']))
+check('  but is swallowed all the same', dk['emptySwallowed'])
+# A beam is what a trace made, not something the layout holds.
+check('with the beam readout on show it removes nothing',
+      dk['onBeamSent'] == 0 and dk['onBeamSwallowed'],
+      json.dumps({'sent': dk['onBeamSent'],
+                  'swallowed': dk['onBeamSwallowed']}))
+check('the page around the viewer never sees the key',
+      dk['pageSaw'] == [], json.dumps(dk['pageSaw']))
+check('  while every other key still reaches it, both ways round',
+      dk['pageSawOther'] == ['down:F2', 'up:F2'],
+      json.dumps(dk['pageSawOther']))
+check('Ctrl + Delete is left alone',
+      dk['withCtrlSent'] == 0 and not dk['withCtrl'],
+      json.dumps({'sent': dk['withCtrlSent'], 'swallowed': dk['withCtrl']}))
+check('and with the pointer elsewhere the key is left alone',
+      dk['outsideSent'] == 0 and not dk['outsideSwallowed'],
+      json.dumps({'sent': dk['outsideSent'],
+                  'swallowed': dk['outsideSwallowed']}))
 
 print('--- Python accepts what the buttons sent ---')
 lay2, _ = make_layout()

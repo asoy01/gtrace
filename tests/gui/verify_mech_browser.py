@@ -317,6 +317,20 @@ var EDITABLE = __EDITABLE__;
         if (foot) { foot.click(); }
         out.remove = {msg: sent[before] || null, panel: panel()};
 
+        // The Delete key is that button, for a body as for an element.
+        clickAt(screenOf(MOUNT_PT));
+        before = sent.length;
+        v.pointerInside = true;
+        var delEv = new KeyboardEvent('keydown', {key: 'Delete',
+                                                  bubbles: true,
+                                                  cancelable: true});
+        document.dispatchEvent(delEv);
+        out.removeByKey = {msg: sent[before] || null,
+                           n: sent.length - before,
+                           swallowed: delEv.defaultPrevented,
+                           panel: panel()};
+        v.pointerInside = false;
+
         // --- placing a body on a marked point ---
         // The pedestal dropped near a screw hole of the board: a
         // plain drag settles on it exactly, and Alt takes the cursor
@@ -968,6 +982,16 @@ check('and sends the removal',
 check('  and lets go of the selection',
       not res['remove']['panel']['selectedMech']
       and res['remove']['panel']['beamShown'])
+check('Delete sends the same removal',
+      res['removeByKey']['n'] == 1
+      and res['removeByKey']['msg']['op'] == 'remove'
+      and res['removeByKey']['msg']['target'] == 'Mount',
+      json.dumps(res['removeByKey']['msg']))
+check('  swallowing the key, which a notebook would spend on the cell',
+      res['removeByKey']['swallowed'])
+check('  and letting go of the selection',
+      not res['removeByKey']['panel']['selectedMech']
+      and res['removeByKey']['panel']['beamShown'])
 check('Escape lets go too', not res['escape']['selectedMech']
       and res['escape']['beamShown'])
 
