@@ -546,22 +546,65 @@ var EDITABLE = __EDITABLE__;
                 sm.menu.querySelectorAll('button'),
                 function (b) { return b.textContent; }) : []
         };
+        // Each kind is now drawn rather than dropped: the menu arms
+        // the tool and the clicks say where the shape goes. The places
+        // below are chosen clear of everything else on the bench, so
+        // that the snap has nothing to take and what is drawn is what
+        // was clicked.
+        var PLACES = {
+            Rect: [[0.62, 0.42], [0.68, 0.46]],
+            Circle: [[0.62, 0.42], [0.65, 0.42]],
+            Line: [[0.62, 0.42], [0.68, 0.46]],
+            Poly: [[0.62, 0.42], [0.65, 0.46], [0.68, 0.42]],
+            Arc: [[0.62, 0.42], [0.65, 0.42], [0.62, 0.45]],
+            Text: [[0.62, 0.42]]
+        };
         out.shAdd = {};
+        out.shArm = {};
         if (sm) {
             Array.prototype.forEach.call(sm.menu.querySelectorAll('button'),
-                function (b, i) {
+                function (b) {
+                    var label = b.textContent;
+                    var pts = PLACES[label];
+                    if (!pts) { return; }
                     var was = sent.length;
                     b.click();
-                    out.shAdd[b.textContent] = {
+                    // Armed, and nothing sent by the arming itself.
+                    out.shArm[label] = {armed: v.placing && v.placing.type,
+                                        body: !!(v.placing && v.placing.body),
+                                        n: sent.length - was};
+                    // What the viewer itself made of each place, taken
+                    // from the preview the move sets: a click carries
+                    // whole pixels, so asking the page is the only way
+                    // to know which scene point it took.
+                    var landed = [];
+                    pts.forEach(function (q) {
+                        var sp = screenOf(q);
+                        mouse(window, 'mousemove', sp[0], sp[1]);
+                        landed.push(v.placePreview.slice());
+                        clickAt(sp);
+                    });
+                    if (label === 'Poly') {
+                        // The one kind with no number of places.
+                        mouse(v.svg, 'contextmenu',
+                              screenOf(pts[pts.length - 1])[0],
+                              screenOf(pts[pts.length - 1])[1]);
+                    }
+                    out.shAdd[label] = {
                         msg: sent[was] || null,
+                        scale: v.shapeScale(),
+                        n: sent.length - was,
                         selected: v.selectedMech,
-                        scale: v.shapeScale()
+                        places: landed,
+                        stillArmed: !!v.placing
                     };
                     v.selectedMech = null;   // nothing was really added
                 });
         }
-        // The same button at two zooms: what it puts down is sized to
-        // what is on screen, so the second is twice the first.
+        // The same circle drawn at two zooms. It used to arrive sized
+        // to the view, since nothing else said how big it should be;
+        // now the two clicks say, so the zoom has nothing to do with
+        // it and the same places give the same circle.
         out.shZoom = null;
         if (sm) {
             var circleBtn = null;
@@ -569,16 +612,30 @@ var EDITABLE = __EDITABLE__;
                 function (b) { if (b.textContent === 'Circle') { circleBtn = b; } });
             if (circleBtn) {
                 var keep = v.scale;
-                var n0 = sent.length;
-                circleBtn.click();
-                var first = sent[n0] || null;
+                var C = [[0.62, 0.42], [0.65, 0.42]];
+                function drawCircle() {
+                    var n = sent.length;
+                    circleBtn.click();
+                    C.forEach(function (q) {
+                        var sp = screenOf(q);
+                        mouse(window, 'mousemove', sp[0], sp[1]);
+                        clickAt(sp);
+                    });
+                    return sent[n] || null;
+                }
+                var first = drawCircle();
                 v.scale = keep / 2;          // twice as much of the bench
-                var n1 = sent.length;
-                circleBtn.click();
-                var second = sent[n1] || null;
+                v._applyTransform();
+                var second = drawCircle();
                 v.scale = keep;
+                v._applyTransform();
                 v.selectedMech = null;
-                out.shZoom = {first: first, second: second};
+                // A click carries whole pixels, so the same place
+                // clicked at half the zoom lands on a scene point up
+                // to a pixel away. The claim is that the zoom does not
+                // decide the size, not that pixels do not exist.
+                out.shZoom = {first: first, second: second,
+                              pixel: 2 / (keep / 2)};
             }
         }
 
@@ -1167,6 +1224,70 @@ for entry in scene['assemblies']:
     check('  and one undo takes all four away',
           len(layout.optics) == n_optics and len(layout.mechanics) == n_mech)
 
+def normang(a):
+    """An angle brought into (-pi, pi], for comparing two of them."""
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+def drawn_centre(kind, places):
+    """Where a body of a shape drawn through these places is held."""
+    a = np.asarray(places[0], dtype=float)
+    if kind in ('circle', 'arc', 'text'):
+        return a
+    if kind == 'line':
+        return (a + np.asarray(places[1], dtype=float)) / 2.0
+    pts = np.asarray(places, dtype=float)
+    return (pts.min(axis=0) + pts.max(axis=0)) / 2.0
+
+
+def drawn_where_clicked(kind, body, places):
+    """
+    Whether the shape Python built runs through the places clicked.
+
+    Asked per kind against the world shape rather than by hunting for
+    numbers: a radius and a rotation are both numbers, and the shape is
+    right only if the places mean what that kind says they mean.
+    """
+    s = body.world_shapes()[0]
+    pts = [np.asarray(q, dtype=float) for q in places]
+    if kind == 'line':
+        got = [np.asarray(s.start, dtype=float),
+               np.asarray(s.stop, dtype=float)]
+        ok = np.allclose(sorted(map(tuple, got)), sorted(map(tuple, pts)))
+        return ok, '%s vs %s' % ([list(np.round(g, 6)) for g in got], places)
+    if kind == 'rectangle':
+        corners = [np.asarray(c, dtype=float) for c in s.corners()]
+        ok = all(any(np.linalg.norm(c - q) < 1e-9 for c in corners)
+                 for q in pts)
+        return ok, '%s vs %s' % ([list(np.round(c, 6)) for c in corners],
+                                 places)
+    if kind in ('circle', 'arc'):
+        centre = np.asarray(s.center, dtype=float)
+        want_r = float(np.linalg.norm(pts[1] - pts[0]))
+        ok = (np.allclose(centre, pts[0])
+              and abs(float(s.radius) - want_r) < 1e-9)
+        detail = 'centre %s r %.6f' % (list(np.round(centre, 6)),
+                                       float(s.radius))
+        if kind == 'arc':
+            # The third place says where it stops, by its angle alone.
+            d1, d2 = pts[1] - pts[0], pts[2] - pts[0]
+            want0 = math.atan2(d1[1], d1[0])
+            want1 = math.atan2(d2[1], d2[0])
+            ok = (ok and abs(normang(s.startangle - want0)) < 1e-9
+                  and abs(normang(s.stopangle - want1)) < 1e-9)
+            detail += ' from %.6f to %.6f' % (s.startangle, s.stopangle)
+        return ok, detail
+    if kind == 'polyline':
+        got = [np.array([x, y], dtype=float) for x, y in zip(s.x, s.y)]
+        ok = len(got) == len(pts) and all(
+            np.linalg.norm(g - q) < 1e-9 for g, q in zip(got, pts))
+        return ok, '%s vs %s' % ([list(np.round(g, 6)) for g in got], places)
+    if kind == 'text':
+        got = np.asarray(s.point, dtype=float)
+        return bool(np.allclose(got, pts[0])), str(list(np.round(got, 6)))
+    return False, 'no check for %s' % kind
+
+
 print('--- the shape menu ---')
 KINDS = ['Rect', 'Circle', 'Line', 'Poly', 'Arc', 'Text']
 check('+ Shape offers every kind the editor draws with',
@@ -1175,9 +1296,14 @@ check('+ Shape offers every kind the editor draws with',
 TYPES = {'Rect': 'rectangle', 'Circle': 'circle', 'Line': 'line',
          'Poly': 'polyline', 'Arc': 'arc', 'Text': 'text'}
 for label, kind in TYPES.items():
+    arm = res['shArm'].get(label) or {}
+    check('choosing %s arms the tool rather than dropping a %s'
+          % (label, kind),
+          arm.get('armed') == kind and arm.get('body') is True
+          and arm.get('n') == 0, json.dumps(arm))
     sa = res['shAdd'].get(label) or {}
     msg = sa.get('msg')
-    check('choosing %s sends a body of one %s' % (label, kind),
+    check('  and the clicks make a body of one %s' % kind,
           msg and msg['op'] == 'add' and msg['type'] == 'Mechanics'
           and len(msg['params']['shapes']) == 1
           and msg['params']['shapes'][0]['type'] == kind
@@ -1185,6 +1311,9 @@ for label, kind in TYPES.items():
           json.dumps(msg))
     if not msg:
         continue
+    check('  one message, and the tool puts itself away',
+          sa['n'] == 1 and sa['stillArmed'] is False,
+          json.dumps({'n': sa['n'], 'armed': sa['stillArmed']}))
     check('  carried optimistically, like a model off the shelf',
           sa['selected'] == msg['name'])
     check('  and named for the shape it is',
@@ -1192,32 +1321,43 @@ for label, kind in TYPES.items():
                           'Line': 'LINE1', 'Poly': 'POLY1',
                           'Arc': 'ARC1', 'Text': 'TEXT1'}[label],
           msg['name'])
-    check('  at the centre of the view',
-          np.allclose(msg['params']['center'], [res['cx'], res['cy']]),
-          json.dumps(msg['params']['center']))
-    # The shape is Python's own answer to what a new one looks like,
-    # scaled: the page holds no second opinion about what a circle is.
-    want = scene['newshapes'][kind]
-    got = msg['params']['shapes'][0]
-    k = sa['scale']
-    check('  which is the scene\'s own new %s, scaled by the view' % kind,
-          same_shape(got, scaled(want, k)),
-          json.dumps({'got': got, 'want': scaled(want, k)}))
+    # Where it is drawn, not where the view happens to be looking. The
+    # body is held at the middle of what was drawn, and the shape is
+    # written about that, which is the division every body here keeps.
     layout.apply_edit(msg)
     body = layout.get_mechanics(msg['name'])
-    check('  and Python builds it where the page said',
-          len(body.shapes) == 1
-          and np.allclose(body.center, msg['params']['center']))
+    ok, detail = drawn_where_clicked(kind, body, sa['places'])
+    check('  and Python builds it through the places clicked', ok, detail)
+    if kind == 'text':
+        # The one size no click gives: a caption stays legible on a
+        # bench kilometres across only if it is sized to the view.
+        want = scene['newshapes']['text']['height'] * sa['scale']
+        check('  and the caption is sized to the view',
+              abs(msg['params']['shapes'][0]['height'] - want) < 1e-12,
+              '%g vs %g' % (msg['params']['shapes'][0]['height'], want))
+    check('  with the body held at the middle of what was drawn',
+          np.allclose(body.center, drawn_centre(kind, sa['places'])),
+          '%s vs %s' % (list(np.round(np.asarray(body.center), 6)),
+                        list(np.round(drawn_centre(kind, sa['places']), 6))))
     layout.apply_edit({'op': 'undo'})
 
 sz = res['shZoom']
-check('the same button puts down twice as much at half the zoom',
+check('the same places give the same circle at any zoom',
       sz and sz['first'] and sz['second']
       and abs(sz['second']['params']['shapes'][0]['radius']
-              - 2 * sz['first']['params']['shapes'][0]['radius']) < 1e-12,
-      json.dumps([sz['first']['params']['shapes'][0]['radius'],
-                  sz['second']['params']['shapes'][0]['radius']])
+              - sz['first']['params']['shapes'][0]['radius']) < sz['pixel']
+      and np.allclose(sz['second']['params']['center'],
+                      sz['first']['params']['center'], atol=sz['pixel']),
+      json.dumps({'r': [sz['first']['params']['shapes'][0]['radius'],
+                        sz['second']['params']['shapes'][0]['radius']],
+                  'within': sz['pixel']})
       if sz and sz['first'] and sz['second'] else '')
+# It used to double when the view was zoomed out, since nothing but the
+# view said how big a new shape should be. Now the clicks say.
+check('  rather than doubling with it, as it used to',
+      sz and abs(sz['second']['params']['shapes'][0]['radius']
+                 - 2 * sz['first']['params']['shapes'][0]['radius'])
+            > sz['first']['params']['shapes'][0]['radius'] / 2)
 
 print('--- the size rows and the corner handles ---')
 bf = res['sizeRows']['board']

@@ -32,6 +32,7 @@ import numpy as np
 import gtrace.draw as draw
 from gtrace.draw.viewer import viewer_css
 from gtrace.mechanics import Mechanics, shape_centre
+from gtrace.draw.serialize import shape_to_dict
 from gtrace.draw.viewer.editor import ShapeEditor
 from gtrace.unit import *
 
@@ -67,6 +68,59 @@ def make_part():
         points={'post': [-0.04, -0.03], 'inner': [-0.012, -0.006]})
 
 RECT, CIRCLE, POLY, LINE, ARC = range(5)
+
+
+def normang(a):
+    """An angle brought into (-pi, pi], for comparing two of them."""
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+def drawn_where_clicked(kind, shape, places):
+    """
+    Whether the shape Python built runs through the places clicked.
+
+    Asked per kind rather than by hunting for numbers: a radius and a
+    rotation are both numbers, and the shape is right only if the
+    places mean what that kind says they mean.
+    """
+    pts = [np.asarray(q, dtype=float) for q in places]
+    if kind == 'line':
+        got = [np.asarray(shape.start, dtype=float),
+               np.asarray(shape.stop, dtype=float)]
+        return (np.allclose(got[0], pts[0]) and np.allclose(got[1], pts[1]),
+                str([list(np.round(g, 6)) for g in got]))
+    if kind == 'rectangle':
+        corners = [np.asarray(c, dtype=float) for c in shape.corners()]
+        ok = all(any(np.linalg.norm(c - q) < 1e-12 for c in corners)
+                 for q in pts)
+        return ok, str([list(np.round(c, 6)) for c in corners])
+    if kind in ('circle', 'arc'):
+        centre = np.asarray(shape.center, dtype=float)
+        want_r = float(np.linalg.norm(pts[1] - pts[0]))
+        ok = (np.allclose(centre, pts[0])
+              and abs(float(shape.radius) - want_r) < 1e-12)
+        detail = 'centre %s r %.6f' % (list(np.round(centre, 6)),
+                                       float(shape.radius))
+        if kind == 'arc':
+            d1, d2 = pts[1] - pts[0], pts[2] - pts[0]
+            ok = (ok
+                  and abs(normang(shape.startangle
+                                  - math.atan2(d1[1], d1[0]))) < 1e-12
+                  and abs(normang(shape.stopangle
+                                  - math.atan2(d2[1], d2[0]))) < 1e-12)
+            detail += ' from %.6f to %.6f' % (shape.startangle,
+                                              shape.stopangle)
+        return ok, detail
+    if kind == 'polyline':
+        got = [np.array([x, y], dtype=float)
+               for x, y in zip(shape.x, shape.y)]
+        ok = len(got) == len(pts) and all(
+            np.linalg.norm(g - q) < 1e-12 for g, q in zip(got, pts))
+        return ok, str([list(np.round(g, 6)) for g in got])
+    if kind == 'text':
+        got = np.asarray(shape.point, dtype=float)
+        return bool(np.allclose(got, pts[0])), str(list(np.round(got, 6)))
+    return False, 'no check for %s' % kind
 
 part = make_part()
 scene = ShapeEditor(part).scene_dict()
@@ -151,6 +205,10 @@ var SCENE = __SCENE__;
             var r = rect();
             var h = v._shapeHandlePts[k];
             return [h.px + r.left, h.py + r.top];
+        }
+        function key(k) {
+            window.dispatchEvent(new KeyboardEvent('keydown',
+                {key: k, bubbles: true}));
         }
         function clickAt(p, opts) {
             mouse(v.svg, 'mousedown', p[0], p[1], opts);
@@ -342,6 +400,103 @@ var SCENE = __SCENE__;
         window.dispatchEvent(new KeyboardEvent('keydown',
                                                {key: '[', bubbles: true}));
         out.quarterBack = last();
+
+        // --- drawing a shape by clicking ---
+        // Every kind, drawn where it is told. The places are clear of
+        // the shapes already down, so that what is drawn is what was
+        // clicked; the snap gets its own case below.
+        var DRAW = {
+            line: [[-0.06, -0.05], [-0.03, -0.045]],
+            rectangle: [[-0.06, -0.05], [-0.03, -0.045]],
+            circle: [[-0.06, -0.05], [-0.05, -0.05]],
+            arc: [[-0.06, -0.05], [-0.05, -0.05], [-0.06, -0.04]],
+            polyline: [[-0.06, -0.05], [-0.05, -0.045], [-0.04, -0.05]],
+            text: [[-0.06, -0.05]]
+        };
+        out.draw = {};
+        Object.keys(DRAW).forEach(function (kind) {
+            var pts = DRAW[kind];
+            var was = sent.length;
+            v.startPlace(kind, false);
+            var armed = v.placing && v.placing.type;
+            var took = [];
+            var steps = [];
+            pts.forEach(function (q, i) {
+                var sp = screenOf(q);
+                mouse(window, 'mousemove', sp[0], sp[1]);
+                took.push(v.placePreview.slice());
+                // What the status bar asks for, and whether a preview
+                // is being drawn once there is something to preview.
+                steps.push({status: v.statusBar.textContent,
+                            outline: v.placePath.style.display !== 'none'});
+                clickAt(sp);
+            });
+            if (kind === 'polyline') {
+                var lp = screenOf(pts[pts.length - 1]);
+                mouse(v.svg, 'contextmenu', lp[0], lp[1]);
+            }
+            out.draw[kind] = {armed: armed, msg: sent[was] || null,
+                              n: sent.length - was, places: took,
+                              steps: steps, stillArmed: !!v.placing,
+                              selected: v.selectedShape};
+        });
+
+        // A drawing takes the marked points, as a measurement does.
+        // The origin is one of them, and it is the point every part is
+        // drawn around.
+        var was2 = sent.length;
+        v.startPlace('line', false);
+        var o1 = screenOf([0.0, 0.0]);
+        mouse(window, 'mousemove', o1[0] + 3, o1[1] - 2);
+        out.drawSnap = {label: v.snapped && v.snapped.label,
+                        point: v.snapped && v.snapped.point.slice()};
+        clickAt([o1[0] + 3, o1[1] - 2]);
+        var o2 = screenOf([-0.05, 0.03]);   // an end of the line already down
+        mouse(window, 'mousemove', o2[0] + 2, o2[1] + 2);
+        out.drawSnap.second = v.snapped && v.snapped.label;
+        clickAt([o2[0] + 2, o2[1] + 2]);
+        out.drawSnap.msg = sent[was2] || null;
+
+        // Escape drops a drawing half made, and sends nothing.
+        var was3 = sent.length;
+        v.startPlace('rectangle', false);
+        var e1 = screenOf([-0.06, -0.05]);
+        mouse(window, 'mousemove', e1[0], e1[1]);
+        clickAt(e1);
+        key('Escape');
+        out.drawEsc = {armed: !!v.placing, n: sent.length - was3};
+
+        // The right button on a kind that finishes itself gives up on
+        // it rather than sending half a shape.
+        var was4 = sent.length;
+        v.startPlace('circle', false);
+        mouse(window, 'mousemove', e1[0], e1[1]);
+        clickAt(e1);
+        mouse(v.svg, 'contextmenu', e1[0], e1[1]);
+        out.drawRight = {armed: !!v.placing, n: sent.length - was4};
+
+        // A polyline of one vertex is not a shape, so the right button
+        // drops it.
+        var was5 = sent.length;
+        v.startPlace('polyline', false);
+        mouse(window, 'mousemove', e1[0], e1[1]);
+        clickAt(e1);
+        mouse(v.svg, 'contextmenu', e1[0], e1[1]);
+        out.drawShortPoly = {armed: !!v.placing, n: sent.length - was5};
+
+        // While drawing, the shapes underneath are not being pointed
+        // at: a click means "here" and nothing else.
+        v.startPlace('line', false);
+        // Over the middle of the rectangle already down, which a press
+        // would otherwise take hold of.
+        var over = screenOf([0.0, 0.0]);
+        mouse(window, 'mousemove', over[0], over[1]);
+        mouse(v.svg, 'mousedown', over[0], over[1]);
+        out.drawNoGrab = {dragShape: v.dragShape || null,
+                          dragPoint: v.dragPoint || null,
+                          placing: !!v.placing};
+        mouse(window, 'mouseup', over[0], over[1]);
+        v.cancelPlace();
 
         // --- the points a part names for itself ---
         function clientOfPoint(k) {
@@ -699,15 +854,87 @@ if pv['msg'] and pv['msg']['op'] == 'set_points':
                           part.shapes[RECT].point),
           str(np.round(moved.points['inner'], 5).tolist()))
 
+print('--- drawing a shape by clicking ---')
+
+WANT_POINTS = {'line': 2, 'rectangle': 2, 'circle': 2, 'arc': 3, 'text': 1}
+
+for kind in ['line', 'rectangle', 'circle', 'arc', 'polyline', 'text']:
+    d = res['draw'][kind]
+    check('%s: the tool arms for it' % kind, d['armed'] == kind,
+          str(d['armed']))
+    check('  and one message goes when it is drawn',
+          d['n'] == 1 and d['msg'] and d['msg']['op'] == 'add_shape'
+          and d['msg']['type'] == kind, json.dumps(d['msg']))
+    check('  the tool puts itself away afterwards',
+          d['stillArmed'] is False)
+    if kind in WANT_POINTS:
+        check('  it took exactly %d places' % WANT_POINTS[kind],
+              len(d['places']) == WANT_POINTS[kind], str(len(d['places'])))
+    # The status bar says what to click for, place by place.
+    check('  the status bar asks for each place in turn',
+          all(st['status'].startswith('Draw ' + kind + ':')
+              for st in d['steps']),
+          json.dumps([st['status'][:46] for st in d['steps']]))
+    check('  and previews the shape once there is one to preview',
+          all(st['outline'] for st in d['steps'][1:]) if len(d['steps']) > 1
+          else True,
+          json.dumps([st['outline'] for st in d['steps']]))
+    # What Python makes of it, against the places the page took.
+    part = applied(d['msg'])
+    shape = part.shapes[-1]
+    got = shape_to_dict(shape)
+    check('  Python builds a %s from it' % kind, got['type'] == kind,
+          got['type'])
+    ok, detail = drawn_where_clicked(kind, shape, d['places'])
+    check('  through the places clicked', ok, detail)
+
+ds = res['drawSnap']
+check('a drawing takes the marked points, as a measurement does',
+      ds['label'] == 'origin', str(ds['label']))
+check('  and the origin it took is the origin',
+      ds['point'] == [0.0, 0.0], str(ds['point']))
+check('  the second place too, on an end of the line already down',
+      isinstance(ds['second'], str) and ds['second'].startswith('line '),
+      str(ds['second']))
+check('  so the line Python builds runs between them',
+      ds['msg'] and np.allclose(ds['msg']['params']['start'], [0.0, 0.0])
+      and np.allclose(ds['msg']['params']['stop'], [-0.05, 0.03]),
+      json.dumps(ds['msg']))
+
+check('Escape drops a drawing half made, and sends nothing',
+      res['drawEsc']['armed'] is False and res['drawEsc']['n'] == 0,
+      json.dumps(res['drawEsc']))
+check('the right button gives up on a kind that finishes itself',
+      res['drawRight']['armed'] is False and res['drawRight']['n'] == 0,
+      json.dumps(res['drawRight']))
+check('a polyline of one vertex is dropped rather than sent',
+      res['drawShortPoly']['armed'] is False
+      and res['drawShortPoly']['n'] == 0,
+      json.dumps(res['drawShortPoly']))
+check('while drawing, a press does not take hold of what is underneath',
+      res['drawNoGrab']['dragShape'] is None
+      and res['drawNoGrab']['dragPoint'] is None
+      and res['drawNoGrab']['placing'] is True,
+      json.dumps(res['drawNoGrab']))
+
 print('--- what the whole session sent ---')
 ops = set(m.get('op') for m in res['sent'])
-check('nothing but set_shape, rotate_shape and set_points left the page',
-      ops == {'set_shape', 'rotate_shape', 'set_points'},
+check('nothing but set_shape, rotate_shape, set_points and add_shape '
+      'left the page',
+      ops == {'set_shape', 'rotate_shape', 'set_points', 'add_shape'},
       json.dumps(sorted(ops)))
-check('every message names a shape the part has, or its points',
+# add_shape puts a shape at the end rather than naming one, and
+# set_points speaks of the part rather than of a shape; the rest name
+# a shape, and every one of them has to be a shape the part has.
+check('every message that names a shape names one the part has',
       all(0 <= m['index'] < len(part.shapes) for m in res['sent']
-          if m.get('op') != 'set_points'),
+          if m.get('op') not in ('set_points', 'add_shape')),
       str(len(res['sent'])) + ' messages')
+check('and every add_shape carries the places it was drawn through',
+      all(m.get('params') for m in res['sent']
+          if m.get('op') == 'add_shape'),
+      str(len([m for m in res['sent'] if m.get('op') == 'add_shape']))
+      + ' drawn')
 
 print()
 print('%d passed, %d failed' % (npass, nfail))

@@ -232,8 +232,21 @@ var SCENE = __SCENE__;
 
         before = sent.length;
         button('+ Circle').click();
+        // A shape is drawn now rather than dropped, so the button arms
+        // the tool and nothing is sent until it has been drawn. Where
+        // the clicks go is verify_editor_drag_browser.py's business -
+        // this suite has no mouse.
         out.addCircle = {msg: sent[before] || null,
+                         n: sent.length - before,
+                         armed: v.placing && v.placing.type,
+                         body: !!(v.placing && v.placing.body),
+                         lit: button('+ Circle').classList
+                                  .contains('gt-btn-on'),
                          selected: v.selectedShape};
+        v.cancelPlace();
+        out.addCircleOff = {armed: !!v.placing,
+                            lit: button('+ Circle').classList
+                                     .contains('gt-btn-on')};
         before = sent.length;
         el.querySelectorAll('.gt-shaperow')[0].click();
         button('Copy').click();
@@ -415,9 +428,14 @@ check('a value that is no number sends nothing, and is put back',
 
 print('--- the buttons ---')
 ac = res['addCircle']
-check('+ Circle asks for one, and selects what it asked for',
-      ac['msg'] and ac['msg'] == {'op': 'add_shape', 'type': 'circle'}
-      and ac['selected'] == 2, json.dumps(ac))
+check('+ Circle arms the tool and sends nothing yet',
+      ac['msg'] is None and ac['n'] == 0 and ac['armed'] == 'circle'
+      and ac['body'] is False, json.dumps(ac))
+check('  and lights up, so the mode can be seen', ac['lit'] is True)
+check('  Escape puts it away and the light goes out',
+      res['addCircleOff']['armed'] is False
+      and res['addCircleOff']['lit'] is False,
+      json.dumps(res['addCircleOff']))
 cp = res['copy']
 check('Copy duplicates the picked shape and follows the copy',
       cp['msg'] and cp['msg']['op'] == 'duplicate_shape'

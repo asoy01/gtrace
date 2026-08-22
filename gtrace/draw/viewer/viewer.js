@@ -387,6 +387,64 @@ var SHAPE_KINDS = [
 ];
 
 /*
+ * How many places each kind of shape is drawn by.
+ *
+ *   line       two ends
+ *   rectangle  two opposite corners
+ *   circle     the centre, then a point on it
+ *   arc        the centre, then where it starts, then where it stops
+ *   text       where it goes
+ *
+ * A polyline has none set. It is drawn by as many places as it is
+ * given and finished with the right button, because there is no
+ * number of vertices that a polyline is.
+ */
+var PLACE_POINTS = {
+    line: 2,
+    rectangle: 2,
+    circle: 2,
+    arc: 3,
+    text: 1,
+    polyline: 0
+};
+
+/*
+ * What each kind of shape asks to be shown, on the button that draws
+ * it and in the status bar while it is being drawn.
+ */
+var PLACE_HINTS = {
+    line: 'click both ends',
+    rectangle: 'click two opposite corners',
+    circle: 'click the centre, then a point on it',
+    arc: 'click the centre, then where it starts, then where it stops',
+    polyline: 'click each corner, right button to finish',
+    text: 'click where it goes'
+};
+
+/*
+ * What to ask for next, place by place, while a shape is being drawn.
+ * The blanks are the places whose meaning the hint above already
+ * gives - the ends of a line are alike, and so are the corners of a
+ * polyline - and there the hint stands on its own.
+ */
+var PLACE_STEPS = {
+    line: ['click one end', 'click the other end'],
+    rectangle: ['click one corner', 'click the opposite corner'],
+    circle: ['click the centre', 'click a point on the circle'],
+    arc: ['click the centre', 'click where the arc starts',
+          'click where the arc stops'],
+    polyline: [],
+    text: ['click where the text goes']
+};
+
+/*
+ * Two places closer together than this, in metres, are the same place:
+ * a slip of the hand rather than a shape of no size. Well below
+ * anything drawn on a bench.
+ */
+var PLACE_TIE = 1e-9;
+
+/*
  * What a body of one shape is called, before the number. A drawing
  * rather than a part, so it is named for what it is drawn as: CIRC1
  * for a circle put down on the bench, RECT1 for a plate.
@@ -880,46 +938,6 @@ function turnedShape(s, da, pivot) {
 }
 
 /*
- * A serialized shape with every length in it multiplied, and every
- * angle left alone: the same shape at another size. What + Shape puts
- * down, since the sizes it starts from are a bench's and the view may
- * be anything.
- *
- * The lengths are named per kind, as they are everywhere else here,
- * rather than guessed at by looking for numbers - a rotation and a
- * radius are both numbers, and only one of them scales.
- */
-function scaledShape(s, k) {
-    var out = shapeWith(s, {});
-    function pt(p) { return [p[0] * k, p[1] * k]; }
-    switch (s.type) {
-    case 'line':
-        out.start = pt(s.start); out.stop = pt(s.stop);
-        break;
-    case 'polyline':
-        out.x = s.x.map(function (v) { return v * k; });
-        out.y = s.y.map(function (v) { return v * k; });
-        break;
-    case 'rectangle':
-        out.point = pt(s.point);
-        out.width = s.width * k;
-        out.height = s.height * k;
-        if (s.pivot) { out.pivot = pt(s.pivot); }
-        break;
-    case 'circle':
-        out.center = pt(s.center); out.radius = s.radius * k;
-        break;
-    case 'arc':
-        out.center = pt(s.center); out.radius = s.radius * k;
-        break;
-    case 'text':
-        out.point = pt(s.point); out.height = s.height * k;
-        break;
-    }
-    return out;
-}
-
-/*
  * A serialized shape with some of its attributes replaced: what a
  * drag draws while it is being made, from exactly the attributes it
  * will send when it is let go.
@@ -1246,6 +1264,9 @@ function Viewer(container, scene, options) {
     // click has to mean "this place" rather than whatever clicking
     // there would otherwise have meant.
     this.aligning = null;     // {optic, want, points: [[x, y], ...]}
+    this.placing = null;      // {type, body, want, points: [[x, y], ...]}
+    this.shapeBtns = {};      // the editor's draw buttons, by kind
+    this.placePreview = null; // where the next place of a drawing would go
     this.alignPreview = null; // where the next click would land
 
     // Editing a part: which of its shapes the panel is showing, by
@@ -1346,10 +1367,11 @@ Viewer.prototype._build = function () {
         var shapeRow = htmlEl('div', 'gt-btnrow');
         SHAPE_KINDS.forEach(function (spec) {
             var btn = htmlEl('button', 'gt-btn', spec.label);
-            btn.title = 'Add a ' + spec.type + ' at the origin';
+            btn.title = 'Draw a ' + spec.type + ': ' + PLACE_HINTS[spec.type];
             btn.addEventListener('click', function () {
-                self.addShape(spec.type);
+                self.startPlace(spec.type, false);
             });
+            self.shapeBtns[spec.type] = btn;
             shapeRow.appendChild(btn);
         });
         head.appendChild(shapeRow);
@@ -1481,17 +1503,16 @@ Viewer.prototype._build = function () {
 
         var swrap = htmlEl('div', 'gt-add');
         var sbtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Shape');
-        sbtn.title = 'Draw a shape at the centre of the view, sized to '
-            + 'what is on screen';
+        sbtn.title = 'Draw a shape by clicking where it goes';
         var smenu = htmlEl('div', 'gt-menu');
         smenu.style.display = 'none';
         SHAPE_KINDS.forEach(function (kind) {
             var item = htmlEl('button', 'gt-menuitem',
                               kind.label.replace(/^\+ /, ''));
-            item.title = 'Draw a ' + kind.type + ' at the centre of the view';
+            item.title = 'Draw a ' + kind.type + ': ' + PLACE_HINTS[kind.type];
             item.addEventListener('click', function () {
                 self.closeAddMenus();
-                self.addShapeBody(kind.type);
+                self.startPlace(kind.type, true);
             });
             smenu.appendChild(item);
         });
@@ -1818,7 +1839,9 @@ Viewer.prototype._build = function () {
                   ['Drag a grip', 'a corner, a radius, an end, a vertex'],
                   ['Shift + drag', 'turn it about its middle'],
                   ['[ and ]', 'turn it a quarter turn'],
-                  ['+ Rect / + Circle / …', 'put one down at the origin'],
+                  ['+ Rect / + Circle / …',
+                   'draw one: click where it goes, Esc to give up'],
+                  ['Right button', 'finish a polyline being drawn'],
                   ['+ Vertex / − Vertex',
                    'put a corner into an outline, or take one out'],
                   ['Copy', 'a second one, just beside it'],
@@ -1838,8 +1861,7 @@ Viewer.prototype._build = function () {
                   ['+ Mechanics', 'add a part from the model library'],
                   ['+ Assembly', 'an element with the mount, pedestal '
                    + 'and fork that hold it'],
-                  ['+ Shape', 'draw one at the centre of the view, '
-                   + 'sized to what is on screen'],
+                  ['+ Shape', 'draw one by clicking where it goes'],
                   ['Attached to', 'seat a mount on an optics; '
                    + '(free) detaches it in place'],
                   ['Ctrl + drag', 'drop it square on a beam'],
@@ -3246,18 +3268,6 @@ Viewer.prototype._commitShapeField = function (key, input) {
                  attrs: shapeFieldAttrs(s, key, value)});
 };
 
-/*
- * Put a new shape down at the origin, and select it: what was just
- * asked for is what the panel should be showing.
- */
-Viewer.prototype.addShape = function (type) {
-    if (!this.onEdit) { return null; }
-    var msg = {op: 'add_shape', type: type};
-    this.selectedShape = this._shapes().length;
-    this.onEdit(msg);
-    return msg;
-};
-
 Viewer.prototype.removeShape = function () {
     var s = this._selectedShape();
     if (!s || !this.onEdit) { return null; }
@@ -3699,41 +3709,17 @@ Viewer.prototype._modelPrefix = function (model) {
 };
 
 /*
- * Put a shape of one kind down at the centre of the view, as a body of
- * its own. Not addShape, which is the shape editor's and puts one into
- * the part being drawn: on a bench a shape is a body, and a body is
- * what everything here knows how to move, turn and measure.
+ * How much to scale a bench-sized length by, for the view as it
+ * stands: the width on screen against the width those sizes were
+ * drawn for. A view that has no width yet - the very first render,
+ * before anything has been laid out - leaves them as they are rather
+ * than multiplying by nothing.
  *
- * What the shape looks like comes from the scene - Python's answer to
- * what a new circle is, the same one the shape editor puts down - and
- * is scaled by how wide the view is, since those sizes are a bench's
- * and this may be a layout kilometres across. The shape is drawn about
- * the origin and the body is placed, which is the division everything
- * else here keeps: where a body is, is its pose.
- */
-Viewer.prototype.addShapeBody = function (kind) {
-    if (!this.onEdit) { return null; }
-    var lib = this.scene.newshapes || {};
-    var base = lib[kind];
-    if (!base) { return null; }
-    var name = this._freshOpticName(shapeKindPrefix(kind));
-    var msg = {op: 'add', type: 'Mechanics', name: name,
-               params: {center: [this.cx, this.cy],
-                        shapes: [scaledShape(base, this.shapeScale())]}};
-    this.selectedMech = name;
-    this.selectedOptic = null;
-    this.selectedSource = null;
-    this.selectedDim = null;
-    this.onEdit(msg);
-    return msg;
-};
-
-/*
- * How much to scale a bench-sized shape by, for the view as it stands:
- * the width on screen against the width those sizes were drawn for. A
- * view that has no width yet - the very first render, before anything
- * has been laid out - leaves them as they are rather than multiplying
- * by nothing.
+ * Only one length still needs this. The clicks give every size a
+ * drawn shape has, except the height of a piece of text: that is not
+ * a place, so nothing about where it was put says how big it should
+ * be, and 5 mm of lettering on a layout kilometres across cannot be
+ * seen at all.
  */
 Viewer.prototype.shapeScale = function () {
     var w = this.svg && this.svg.clientWidth;
@@ -4735,9 +4721,9 @@ Viewer.prototype._measurePoint = function (x, y) {
  */
 Viewer.prototype.toggleMeasure = function (on) {
     this.measuring = on === undefined ? !this.measuring : !!on;
-    // The two tools are both modes, and a click cannot mean "measure
-    // here" and "face this way" at once.
-    if (this.measuring) { this.cancelAlign(); }
+    // The tools are all modes, and a click cannot mean "measure here",
+    // "face this way" and "draw a corner here" at once.
+    if (this.measuring) { this.cancelAlign(); this.cancelPlace(); }
     this.measureFrom = null;
     this.measureTo = null;
     this.measureOffset = 0;
@@ -5063,6 +5049,7 @@ Viewer.prototype.startAlign = function (points) {
     var o = this._selectedOptic();
     if (!o || !this.onEdit) { return null; }
     if (this.measuring) { this.toggleMeasure(false); }
+    this.cancelPlace();
     this.aligning = {optic: o.name, want: points, points: []};
     this.alignPreview = null;
     this.snapped = null;
@@ -5146,6 +5133,299 @@ Viewer.prototype.turnSelected = function (deg) {
 Viewer.prototype._refreshAlign = function () {
     if (this.alignBtn) {
         this.alignBtn.disabled = !this._selectedOptic();
+    }
+};
+
+//}}}
+
+//{{{ Drawing a shape by clicking
+
+/*
+ * Arm the tool that draws a shape: the next clicks say where it goes.
+ *
+ * A shape used to arrive at a fixed size in a fixed place, to be
+ * dragged and typed into position afterwards. But a drawing is made of
+ * places, and the places are already on the screen - a corner of
+ * another shape, a screw hole, the origin - so the shape is drawn by
+ * naming them. The clicks take the same marks a measurement does, and
+ * the shape appears where it was drawn rather than where it landed.
+ *
+ * asBody says what is made of it. In a shape editor the shape joins
+ * the part being drawn; on a bench it becomes a body of its own, since
+ * a bench holds bodies rather than loose shapes.
+ */
+Viewer.prototype.startPlace = function (type, asBody) {
+    if (!this.onEdit || !PLACE_POINTS.hasOwnProperty(type)) { return null; }
+    // Three modes that all mean "the next click is a place", so at
+    // most one of them can be armed.
+    if (this.measuring) { this.toggleMeasure(false); }
+    this.cancelAlign();
+    this.placing = {type: type, body: !!asBody, points: [],
+                    want: PLACE_POINTS[type]};
+    this.placePreview = null;
+    this.snapped = null;
+    this.svg.classList.add('gt-measuring');
+    this._litPlaceButton();
+    this._updateOverlay();
+    this._updateStatus();
+    return this.placing;
+};
+
+Viewer.prototype.cancelPlace = function () {
+    if (!this.placing) { return false; }
+    this.placing = null;
+    this.placePreview = null;
+    this.snapped = null;
+    this.svg.classList.remove('gt-measuring');
+    this._litPlaceButton();
+    this._updateOverlay();
+    this._updateStatus();
+    return true;
+};
+
+/*
+ * Light the button of the kind being drawn, as Measure lights its own.
+ * A mode with nothing to show for itself is one the user has no way of
+ * seeing they are in.
+ */
+Viewer.prototype._litPlaceButton = function () {
+    var on = this.placing ? this.placing.type : null;
+    for (var k in this.shapeBtns) {
+        if (!this.shapeBtns.hasOwnProperty(k)) { continue; }
+        this.shapeBtns[k].classList.toggle('gt-btn-on', k === on);
+    }
+};
+
+/*
+ * A click while drawing: take the place, and finish if it was the last
+ * one this kind needs.
+ */
+Viewer.prototype._onPlaceClick = function (x, y) {
+    var pl = this.placing;
+    if (!pl) { return; }
+    var p = this._measurePoint(x, y);
+    // The same place twice running is a slip of the hand, not a shape
+    // of no size. Ignoring it costs a click; taking it makes a line
+    // with both ends together, which can be neither seen nor picked.
+    var last = pl.points[pl.points.length - 1];
+    if (last && Math.abs(last[0] - p[0]) < PLACE_TIE
+             && Math.abs(last[1] - p[1]) < PLACE_TIE) {
+        return;
+    }
+    pl.points.push([p[0], p[1]]);
+    if (pl.want && pl.points.length >= pl.want) {
+        this.finishPlace();
+        return;
+    }
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+/*
+ * Finish the drawing and send it.
+ *
+ * A polyline is finished by the right button; every other kind
+ * finishes itself as soon as it has the places it needs. A drawing
+ * that does not amount to a shape - a polyline of one vertex - is
+ * dropped rather than sent, since there is nothing to make of it.
+ */
+Viewer.prototype.finishPlace = function () {
+    var pl = this.placing;
+    if (!pl || !this.onEdit) { return null; }
+    var params = placeParams(pl.type, pl.points);
+    if (!params) { this.cancelPlace(); return null; }
+    if (pl.type === 'text') {
+        // The one size no click gives. See shapeScale.
+        var base = NEW_SHAPE_BASE(this, 'text');
+        params.height = (base.height || 0.005) * this.shapeScale();
+    }
+    var msg;
+    if (pl.body) {
+        // On a bench a shape is a body, and where a body is, is its
+        // pose: so the shape is written about the origin and the body
+        // is placed at the middle of what was drawn. That is the same
+        // division every other body here keeps.
+        var mid = placeCentre(pl.type, params);
+        var name = this._freshOpticName(shapeKindPrefix(pl.type));
+        msg = {op: 'add', type: 'Mechanics', name: name,
+               params: {center: mid,
+                        shapes: [shiftShape(shapeWith(NEW_SHAPE_BASE(
+                            this, pl.type), params), -mid[0], -mid[1])]}};
+        this.selectedMech = name;
+        this.selectedOptic = null;
+        this.selectedSource = null;
+        this.selectedDim = null;
+    } else {
+        msg = {op: 'add_shape', type: pl.type, params: params};
+        // What was just drawn is what the panel should be showing.
+        this.selectedShape = this._shapes().length;
+    }
+    this.cancelPlace();
+    this.onEdit(msg);
+    return msg;
+};
+
+/*
+ * What a new shape of this kind looks like before the places are put
+ * into it: the defaults Python publishes, so that a thickness or a
+ * caption is whatever Python says a new shape has rather than
+ * something decided again here.
+ */
+function NEW_SHAPE_BASE(viewer, type) {
+    var lib = (viewer.scene && viewer.scene.newshapes) || {};
+    return lib[type] || {type: type};
+}
+
+/*
+ * The shape a set of places comes to, as the attributes an add
+ * message carries. Null when the places do not amount to a shape.
+ */
+function placeParams(type, pts) {
+    var a = pts[0], b = pts[1], c = pts[2];
+    switch (type) {
+    case 'line':
+        return {start: [a[0], a[1]], stop: [b[0], b[1]]};
+    case 'rectangle':
+        // Two opposite corners, whichever way round they were given.
+        // A rectangle is its lower left corner and two sizes, so the
+        // corner is the smaller of the two in each direction.
+        var w = Math.abs(b[0] - a[0]), h = Math.abs(b[1] - a[1]);
+        if (!w || !h) { return null; }
+        return {point: [Math.min(a[0], b[0]), Math.min(a[1], b[1])],
+                width: w, height: h, angle: 0};
+    case 'circle':
+        var r = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (!r) { return null; }
+        return {center: [a[0], a[1]], radius: r};
+    case 'arc':
+        var ar = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (!ar) { return null; }
+        // The second place sets the radius and where the arc starts;
+        // the third only says where it stops, since a point off the
+        // circle still names an angle. The arc runs counterclockwise
+        // from the one to the other - see arcSpan.
+        return {center: [a[0], a[1]], radius: ar,
+                startangle: Math.atan2(b[1] - a[1], b[0] - a[0]),
+                stopangle: Math.atan2(c[1] - a[1], c[0] - a[0])};
+    case 'polyline':
+        if (pts.length < 2) { return null; }
+        return {x: pts.map(function (q) { return q[0]; }),
+                y: pts.map(function (q) { return q[1]; })};
+    case 'text':
+        return {point: [a[0], a[1]]};
+    default:
+        return null;
+    }
+}
+
+/*
+ * The middle of a drawn shape: where a body made of it is held.
+ *
+ * Its own middle rather than its first place, so that a body carries
+ * the shape about it evenly and turns where it stands.
+ */
+function placeCentre(type, d) {
+    switch (type) {
+    case 'line':
+        return [(d.start[0] + d.stop[0]) / 2, (d.start[1] + d.stop[1]) / 2];
+    case 'rectangle':
+        return [d.point[0] + d.width / 2, d.point[1] + d.height / 2];
+    case 'circle':
+    case 'arc':
+        return [d.center[0], d.center[1]];
+    case 'polyline':
+        return [(Math.min.apply(null, d.x) + Math.max.apply(null, d.x)) / 2,
+                (Math.min.apply(null, d.y) + Math.max.apply(null, d.y)) / 2];
+    default:
+        return [d.point[0], d.point[1]];
+    }
+}
+
+/*
+ * A shape moved by a fixed amount. The lengths are named per kind
+ * rather than found by looking for numbers: a rotation and a
+ * coordinate are both numbers, and only one of them moves.
+ */
+function shiftShape(s, dx, dy) {
+    var out = shapeWith(s, {});
+    function pt(q) { return [q[0] + dx, q[1] + dy]; }
+    switch (s.type) {
+    case 'line':
+        out.start = pt(s.start); out.stop = pt(s.stop);
+        break;
+    case 'polyline':
+        out.x = s.x.map(function (v) { return v + dx; });
+        out.y = s.y.map(function (v) { return v + dy; });
+        break;
+    case 'rectangle':
+        out.point = pt(s.point);
+        if (s.pivot) { out.pivot = pt(s.pivot); }
+        break;
+    case 'circle':
+    case 'arc':
+        out.center = pt(s.center);
+        break;
+    case 'text':
+        out.point = pt(s.point);
+        break;
+    }
+    return out;
+}
+
+/*
+ * The places of a drawing joined up, for the preview: the shape as it
+ * would be if the next click were where the cursor is.
+ *
+ * One list of points for every kind, so that the preview is one
+ * polyline and cannot disagree with itself from kind to kind. A circle
+ * and an arc are sampled; everything else is drawn through its own
+ * corners.
+ */
+Viewer.prototype._placeOutline = function () {
+    var pl = this.placing;
+    if (!pl) { return null; }
+    var pts = pl.points.slice();
+    if (this.placePreview) { pts.push(this.placePreview); }
+    if (pts.length < 2) { return null; }
+    var a = pts[0], b = pts[1], c = pts[2];
+    var i, out = [];
+    switch (pl.type) {
+    case 'line':
+    case 'text':
+        return [a, b];
+    case 'polyline':
+        return pts;
+    case 'rectangle':
+        return [[a[0], a[1]], [b[0], a[1]], [b[0], b[1]], [a[0], b[1]],
+                [a[0], a[1]]];
+    case 'circle':
+        var r = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        for (i = 0; i <= 64; i++) {
+            var t = i * 2 * Math.PI / 64;
+            out.push([a[0] + r * Math.cos(t), a[1] + r * Math.sin(t)]);
+        }
+        return out;
+    case 'arc':
+        var ar = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        var a0 = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        if (!c) {
+            // Only the centre and the start are known: show the circle
+            // the arc will be cut from, and the radius as a spoke.
+            for (i = 0; i <= 64; i++) {
+                var u = i * 2 * Math.PI / 64;
+                out.push([a[0] + ar * Math.cos(u), a[1] + ar * Math.sin(u)]);
+            }
+            return out;
+        }
+        var span = (Math.atan2(c[1] - a[1], c[0] - a[0]) - a0) % (2 * Math.PI);
+        if (span < 0) { span += 2 * Math.PI; }
+        for (i = 0; i <= 64; i++) {
+            var v = a0 + span * i / 64;
+            out.push([a[0] + ar * Math.cos(v), a[1] + ar * Math.sin(v)]);
+        }
+        return out;
+    default:
+        return null;
     }
 };
 
@@ -5309,6 +5589,10 @@ Viewer.prototype._renderScene = function () {
     // A polyline rather than a line: bisecting takes three points, so
     // there are two arms to show.
     this.alignPath = svgEl('polyline', {'class': 'gt-rubber'});
+    // The shape being drawn, as it would be if the next click were
+    // where the cursor is. One polyline for every kind, so that the
+    // preview cannot disagree with itself from kind to kind.
+    this.placePath = svgEl('polyline', {'class': 'gt-rubber'});
     // The preview of the dimension being placed lives in this group
     // too, so it goes with it and has to be built again.
     this.pendingEls = null;
@@ -5318,6 +5602,7 @@ Viewer.prototype._renderScene = function () {
     this.overlayGroup.appendChild(this.shapeMark);
     this.overlayGroup.appendChild(this.rubber);
     this.overlayGroup.appendChild(this.alignPath);
+    this.overlayGroup.appendChild(this.placePath);
     this.overlayGroup.appendChild(this.snapMark);
     this.overlayGroup.appendChild(this.mechOutline);
     for (var hj = 0; hj < this.mechHandles.length; hj++) {
@@ -5833,6 +6118,22 @@ Viewer.prototype._bindEvents = function () {
     on(this.root, 'mouseenter', function () { self.pointerInside = true; });
     on(this.root, 'mouseleave', function () { self.pointerInside = false; });
 
+    // The right button finishes a polyline, which is the one kind
+    // with no number of places. The browser menu is kept out of the
+    // way whenever a shape is being drawn, since a right button there
+    // means "done" rather than "what can I do here".
+    on(this.svg, 'contextmenu', function (ev) {
+        if (!self.placing) { return; }
+        ev.preventDefault();
+        if (self.placing.want) {
+            // A kind that finishes itself has no use for the button;
+            // treat it as "give up on this one".
+            self.cancelPlace();
+            return;
+        }
+        self.finishPlace();
+    });
+
     on(this.svg, 'wheel', function (ev) {
         ev.preventDefault();
         var r = self.svg.getBoundingClientRect();
@@ -5856,7 +6157,7 @@ Viewer.prototype._bindEvents = function () {
         // the view. Nothing else in an editor scene can be pointed
         // at, so the rest of this handler has nothing to look for.
         if (self.scene.editor) {
-            if (self.onEdit && !self.measuring && !self.aligning) {
+            if (self.onEdit && !self.measuring && !self.aligning && !self.placing) {
                 var grip = self._pickShapeHandle(px, py);
                 // A named point comes before the shapes and after the
                 // grips: it is a small mark that an area would
@@ -5884,7 +6185,7 @@ Viewer.prototype._bindEvents = function () {
 
         // A resize handle first: it is UI chrome drawn on top of the
         // picture, and only exists while a resizable body is selected.
-        if (self.onEdit && !self.measuring && !self.aligning) {
+        if (self.onEdit && !self.measuring && !self.aligning && !self.placing) {
             var hidx = self._pickMechHandle(px, py);
             if (hidx >= 0 && self._selectedMech()) {
                 self._beginMechResize(self._selectedMech(), hidx);
@@ -5918,7 +6219,7 @@ Viewer.prototype._bindEvents = function () {
         // The laser is tested before the optics, in the same order the
         // click pipeline uses, so that a press and a click never take
         // hold of different things.
-        var grabbable = self.onEdit && !self.measuring && !self.aligning
+        var grabbable = self.onEdit && !self.measuring && !self.aligning && !self.placing
             && !self._pickDimension(pt[0], pt[1]);
         var s = grabbable ? self._pickSource(px, py) : null;
         var o = (grabbable && !s) ? self._pickOptic(pt[0], pt[1]) : null;
@@ -6214,9 +6515,10 @@ Viewer.prototype._bindEvents = function () {
             });
             self.closeAddMenus();
             if (wasOpen) { return; }
-            // An aim half taken is the next innermost thing to let go
-            // of, and letting go of it should not also clear the
-            // selection it was being taken for.
+            // A shape half drawn, then an aim half taken: both are
+            // things to let go of before the selection, and letting go
+            // of either should not also clear it.
+            if (self.cancelPlace()) { return; }
             if (self.cancelAlign()) { return; }
             if (self.measuring) { self.toggleMeasure(false); }
             if (self.scene.editor) {
@@ -7201,6 +7503,19 @@ Viewer.prototype._onHover = function (px, py) {
     var pt = this.screenToScene(px, py);
     this.cursor = pt;
 
+    // While drawing a shape, as while aiming and measuring, the
+    // question is only where the next click lands.
+    if (this.placing) {
+        this.placePreview = this._measurePoint(pt[0], pt[1]);
+        this.hoverOptic = null;
+        this.hoverSource = null;
+        this.hoverMech = null;
+        this.hover = null;
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
+
     // While aiming, as while measuring, the question is only where
     // the next click lands - and what the optics would then face.
     if (this.aligning) {
@@ -7312,6 +7627,11 @@ Viewer.prototype._updateOpticOutline = function (o, center, angle) {
 
 Viewer.prototype._onClick = function (px, py, pickBeamFor) {
     var pt = this.screenToScene(px, py);
+
+    if (this.placing) {
+        this._onPlaceClick(pt[0], pt[1]);
+        return;
+    }
 
     if (this.aligning) {
         this._onAlignClick(pt[0], pt[1]);
@@ -7602,7 +7922,8 @@ function shapePreviewSVG(s) {
 Viewer.prototype._placeShapeHandles = function (s) {
     var self = this;
     if (!this.shapeHandleGroup) { return; }
-    var hs = (this.onEdit && s && !this.measuring && !this.aligning)
+    var hs = (this.onEdit && s && !this.measuring && !this.aligning
+              && !this.placing)
         ? shapeHandles(s) : [];
     var vi = this._vertexIndex();
     while (this.shapeHandleEls.length < hs.length) {
@@ -7824,11 +8145,27 @@ Viewer.prototype._updateOverlay = function () {
         this.alignPath.style.display = 'none';
     }
 
+    // The shape being drawn, through the places named so far and the
+    // one the cursor is over. Without it the tool is guesswork: a
+    // rectangle given one corner says nothing about what it will be.
+    var pout = this._placeOutline();
+    if (pout && pout.length > 1) {
+        var self3 = this;
+        this.placePath.setAttribute('points', pout.map(function (q) {
+            var sp = self3.sceneToScreen(q[0], q[1]);
+            return sp[0] + ',' + sp[1];
+        }).join(' '));
+        this.placePath.style.display = '';
+    } else {
+        this.placePath.style.display = 'none';
+    }
+
     // Where the next click would land, when that is a marked point
     // rather than the cursor. Without it the tool is guesswork: the
     // snap is invisible until the measurement is already made. The
     // same mark shows the screw hole a dragged anchor has caught on.
-    var snapPt = ((this.measuring || this.aligning) && this.snapped)
+    var snapPt = ((this.measuring || this.aligning || this.placing)
+                  && this.snapped)
         ? this.snapped.point
         : (this.dragPoint && this.dragPoint.snap)
             ? this.dragPoint.snap.point
@@ -8049,6 +8386,24 @@ Viewer.prototype._updateStatus = function () {
                   fmtLen(d.center[1]) +
                   (d.hole ? '   on ' + d.hole.label : '');
         }
+        return;
+    }
+    if (this.placing) {
+        var pl = this.placing;
+        var pwhere = this.snapped ? this.snapped.label
+            : (this.cursor ? fmtLen(this.cursor[0]) + ',  '
+                             + fmtLen(this.cursor[1]) : '');
+        var step = PLACE_STEPS[pl.type][pl.points.length]
+            || PLACE_HINTS[pl.type];
+        // A polyline says how many corners it has so far, since that
+        // is the only thing that says how far along it is.
+        var count = (pl.type === 'polyline' && pl.points.length)
+            ? '  (' + pl.points.length + ' so far)' : '';
+        this.statusBar.textContent =
+            'Draw ' + pl.type + ':  ' + step + count +
+            (pwhere ? '     at  ' + pwhere : '') +
+            (pl.want ? '' : '     right button to finish') +
+            '     (Esc to cancel)';
         return;
     }
     if (this.aligning) {
