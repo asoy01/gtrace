@@ -412,8 +412,8 @@ places instead of an angle.
 specified by, from wherever it faces now.
 
 The clicks land on the same marked points a measurement snaps to: the
-corners and the apexes of a substrate, the ends of a beam, and **the screw
-holes of a breadboard**. The holes make this exact instead of approximate. A
+corners and the apexes of a substrate, the middle of each straight edge, the
+ends of a beam, and **the screw holes of a breadboard**. The holes make this exact instead of approximate. A
 mount goes on the hole pattern, and the angle it should face is a question
 about two holes. The arms are drawn to the cursor while you work, the
 element is outlined as it would face, and the status bar names the angle it
@@ -480,13 +480,18 @@ therefore selects the board, and only after that does dragging move it. An
 attached body cannot be dragged at all, because it goes where its host goes.
 If its turn is free, Shift + drag swings it about the point it is held by.
 
-**A drag snaps to the marked points.** Every point a measurement can snap to
-is also a place where a part can go:
+**A drag snaps to the marked points.** Most of the points a measurement can
+snap to are also places where a part can go:
 
 * the screw holes of a breadboard;
 * the corners and centres of the other bodies;
 * the points a part names for itself, such as the hole under a mount, the
   axis of a pedestal or the bore of a fork.
+
+The middle of an edge is the exception. It is a place to measure from and to
+aim by, not a fixing: nothing is bolted to the middle of the side of a plate,
+and counting it here would let it outbid the screw hole a few millimetres
+away that the part is really going onto.
 
 Drop a pedestal near the hole under a mount and it lands on the hole
 exactly. Hold Alt to use the exact cursor position. The status bar names the
@@ -705,9 +710,16 @@ depends on where there is room. What is on offer:
   a curved face put them;
 * the **apex of each face** and the **middle** of each substrate — the same
   points :ref:`changing-a-curvature` calls the anchors;
+* the **middle of each straight edge**: the two sides of a substrate, and the
+  four edges of the outline of a body;
 * both **ends of every beam** in the trace;
 * the **screw holes** of a breadboard and the points a part names for
   itself.
+
+A curved face has no middle on offer. The middle of its chord is inside the
+glass, where nothing is drawn, and the middle of the arc itself is the apex,
+which is already on the list. A flat face has both at the same place, so it
+is covered either way.
 
 The reach is in screen pixels, so it looks the same however far the view is
 zoomed. Points on a hidden layer are not offered: you switched that layer

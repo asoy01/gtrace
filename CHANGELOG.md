@@ -9,6 +9,31 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
+## Unreleased
+
+### Added
+
+- **Measuring and aiming snap to the middle of a straight edge.** The two
+  sides of a substrate, and the four edges of the outline of a body. A
+  measurement often wants to run from the middle of the side of a mirror
+  or from the middle of the edge of a breadboard, and until now the only
+  marks near those were the corners either side of them.
+
+  Only straight edges get one. A curved face is an arc: the middle of its
+  chord is inside the glass where nothing is drawn, and the middle of the
+  arc itself is the apex, which was already on offer. A flat face has
+  both at the same place, so it was covered either way. That is the rule
+  the shape editor has always used for the shapes it draws.
+
+  The new points carry `kind: 'midpoint'`, and they are last in the list,
+  so anything already named at the same place keeps its own label.
+
+- **Dragging a part onto another does not use them.** The middle of an
+  edge is a place to measure from and to aim by, not a fixing: nothing is
+  bolted to the middle of the side of a plate, and counting it there
+  would let it outbid the screw hole a few millimetres away that the part
+  is really going onto. Every other kind of mark still works as before.
+
 ## 0.7.0 — 2026-08-21
 
 ### Changed

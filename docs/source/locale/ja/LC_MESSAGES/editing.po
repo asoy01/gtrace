@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-16 15:55+0900\n"
+"POT-Creation-Date: 2026-08-22 18:37+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -727,11 +727,34 @@ msgstr ""
 #: ../../../gtrace/docs/source/editing.rst:421
 msgid ""
 "``snap`` carries, for each substrate, its four corners, the apex of each "
-"face, and its middle. It also carries the points a body names for itself,"
-" and the centre of every screw hole a body has."
-msgstr "``snap`` は、各基板について4隅・各面の頂点・中心を運ぶ。さらに、周辺物が自分で名前を付けている点と、周辺物が持つ全てのネジ穴の中心も運ぶ。"
+"face, its middle, and the middle of each of its two sides. It also "
+"carries, for each body, the four corners of its outline, the middle of "
+"each of those four edges, the points the body names for itself, and the "
+"centre of every screw hole it has."
+msgstr ""
+"``snap`` "
+"は、各基板について4隅・各面の頂点・中心・2つの側面それぞれの中点を運ぶ。さらに各周辺物について、外形の4隅・その4辺それぞれの中点・周辺物が自分で名前を付けている点・持っている全てのネジ穴の中心を運ぶ。"
 
-#: ../../../gtrace/docs/source/editing.rst:425
+#: ../../../gtrace/docs/source/editing.rst:427
+msgid ""
+"Each point says what ``kind`` it is. A front end that offers points for "
+"one purpose and not another reads that: the viewer takes every kind when "
+"measuring and aiming, and leaves out ``midpoint`` when a part is dragged "
+"onto another, because the middle of an edge is a place to measure from "
+"rather than a fixing."
+msgstr ""
+"各点は、自分が何の ``kind`` であるかを持っている。用途によって出す点を変えるフロントエンドは、これを読む。ビューアは測定と Align "
+"では全ての kind を使い、部品を別の部品へドラッグするときだけ ``midpoint`` "
+"を外す。辺の中点は測る場所であって、固定する場所ではないからである。"
+
+#: ../../../gtrace/docs/source/editing.rst:433
+msgid ""
+"Only straight edges get a middle. The middle of a curved face is its "
+"apex, which is already on the list; the middle of its chord is inside the"
+" glass, where nothing is drawn."
+msgstr "中点が付くのは直線の辺だけである。曲面の中央は頂点であり、それは既に上の一覧に入っている。弦の中点はガラスの内部にあり、そこには何も描かれていない。"
+
+#: ../../../gtrace/docs/source/editing.rst:437
 msgid ""
 "The named points come before the holes. Two marks at the same place count"
 " as one point, and the first one wins. The post hole of a mount is both a"
@@ -741,7 +764,7 @@ msgstr ""
 "名前付き点は穴より先に来る。同じ場所にある2つの印は1つの点として数え、先に来たほうが勝つからである。マウントのポスト穴は、図の上では円であり、同時にマウントがペデスタルの上に立つ点でもある。\\"
 " ``MT post`` のほうが ``MT hole`` より役に立つラベルである。"
 
-#: ../../../gtrace/docs/source/editing.rst:430
+#: ../../../gtrace/docs/source/editing.rst:442
 msgid ""
 "These points come from Python because they are geometry: a corner is "
 "where the wedge and the sagitta of a curved face put it. Beam ends are "

@@ -419,8 +419,20 @@ The sizes are bench sizes. A front end that shows kilometres is expected to
 scale them to what it shows.
 
 ``snap`` carries, for each substrate, its four corners, the apex of each
-face, and its middle. It also carries the points a body names for itself,
-and the centre of every screw hole a body has.
+face, its middle, and the middle of each of its two sides. It also carries,
+for each body, the four corners of its outline, the middle of each of those
+four edges, the points the body names for itself, and the centre of every
+screw hole it has.
+
+Each point says what ``kind`` it is. A front end that offers points for one
+purpose and not another reads that: the viewer takes every kind when
+measuring and aiming, and leaves out ``midpoint`` when a part is dragged onto
+another, because the middle of an edge is a place to measure from rather
+than a fixing.
+
+Only straight edges get a middle. The middle of a curved face is its apex,
+which is already on the list; the middle of its chord is inside the glass,
+where nothing is drawn.
 
 The named points come before the holes. Two marks at the same place count
 as one point, and the first one wins. The post hole of a mount is both a

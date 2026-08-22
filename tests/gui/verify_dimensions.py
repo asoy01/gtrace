@@ -262,10 +262,13 @@ print('--- snap points ---')
 
 pts = optic_snap_points(mirror)
 kinds = [p['kind'] for p in pts]
-check('four corners and three named points', len(pts) == 7, str(len(pts)))
+check('four corners, three named points and two side middles',
+      len(pts) == 9, str(len(pts)))
 check('the corners come first', kinds[:4] == ['corner']*4, str(kinds))
 check('then the two faces and the middle',
-      kinds[4:] == ['face', 'face', 'centre'], str(kinds[4:]))
+      kinds[4:7] == ['face', 'face', 'centre'], str(kinds[4:7]))
+check('and the side middles last, so a named point at the same place wins',
+      kinds[7:] == ['midpoint', 'midpoint'], str(kinds[7:]))
 corners = [np.asarray(p['point']) for p in pts[:4]]
 for i, c in enumerate(mirror.get_corners()):
     check('corner %d is the corner' % (i + 1),
@@ -277,6 +280,38 @@ check('the HR point is the apex',
       np.linalg.norm(np.asarray(hr['point'])
                      - np.asarray(mirror.HRcenter)) < 1e-15,
       str(hr['point']))
+# The two sides of the substrate are straight lines, so their middles
+# are points on the drawing. Side 1 runs between corners 1 and 4, side 2
+# between corners 2 and 3 - which is what makes them the sides rather
+# than the faces.
+mids = [np.asarray(p['point']) for p in pts if p['kind'] == 'midpoint']
+for i, (a, b) in enumerate([(0, 3), (1, 2)]):
+    want = (corners[a] + corners[b]) / 2.0
+    check('side %d middle is halfway along that side' % (i + 1),
+          np.linalg.norm(mids[i] - want) < 1e-15,
+          '(%s vs %s)' % (mids[i], want))
+
+# A curved face gets none. The middle of an arc is not a place anything
+# is lined up on, and the middle of its chord is inside the glass with
+# nothing drawn there. The apex is already offered, as 'HR'.
+curved = opt.Mirror(HRcenter=[0.5, 0.0], normAngleHR=np.deg2rad(135),
+                    diameter=10*cm, thickness=5*cm,
+                    wedgeAngle=np.deg2rad(0.25), inv_ROC_HR=1./(50*cm),
+                    n=1.45, name='curved')
+cpts = optic_snap_points(curved)
+chord = np.asarray(curved.HRcenterC)
+check('a curved face has a chord centre away from its apex',
+      np.linalg.norm(chord - np.asarray(curved.HRcenter)) > 1e-4,
+      '(%.6f mm apart)'
+      % (np.linalg.norm(chord - np.asarray(curved.HRcenter))/mm))
+check('and nothing is offered there',
+      all(np.linalg.norm(np.asarray(q['point']) - chord) > 1e-6
+          for q in cpts), str([q['label'] for q in cpts
+                               if np.linalg.norm(np.asarray(q['point'])
+                                                 - chord) <= 1e-6]))
+check('the curved substrate still gets its two side middles',
+      len([q for q in cpts if q['kind'] == 'midpoint']) == 2)
+
 check('every point is named after its optics',
       all(p['optic'] == 'flat' and p['label'].startswith('flat ') for p in pts))
 json.dumps(pts)
@@ -509,7 +544,7 @@ check('the span inside the lens says so',
 check('the span in the open does not',
       scene['dimensions'][1]['optical'] is None
       and scene['dimensions'][1]['inside'] is None)
-check('seven snap points per optics', len(scene['snap']) == 7*len(lay.optics),
+check('nine snap points per optics', len(scene['snap']) == 9*len(lay.optics),
       str(len(scene['snap'])))
 # The line is worked out here rather than in a front end, so that only
 # one place has an opinion about which side the offset goes.

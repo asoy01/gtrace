@@ -386,6 +386,38 @@ var EDITABLE = __EDITABLE__;
                             want: loose.end.slice()};
         }
 
+        // The middle of a straight edge is on offer as well: the two
+        // sides of a substrate, and the four edges of a body's
+        // outline. Aim a few pixels off one and it should be taken,
+        // the same as a corner or an apex.
+        var mids = v.scene.snap.filter(function (s) {
+            return s.kind === 'midpoint';
+        });
+        out.midCount = mids.length;
+        // One that nothing else is sitting on, so that what answers is
+        // the midpoint itself and not a neighbour.
+        var mid = null;
+        mids.forEach(function (m) {
+            if (mid) { return; }
+            var clear = v.scene.snap.every(function (s) {
+                return s === m
+                    || Math.hypot(s.point[0] - m.point[0],
+                                  s.point[1] - m.point[1]) > 0.01;
+            });
+            if (clear) { mid = m; }
+        });
+        out.hasClearMid = !!mid;
+        if (mid) {
+            var mp = screenOf(mid.point);
+            mouse(window, 'mousemove', mp[0] + 3, mp[1] - 2);
+            out.snapMid = {label: v.snapped && v.snapped.label,
+                           kind: v.snapped && v.snapped.kind,
+                           point: v.snapped && v.snapped.point.slice(),
+                           want: mid.point.slice(),
+                           preview: v.measurePreview.slice(),
+                           markShown: v.snapMark.style.display !== 'none'};
+        }
+
         // --- while measuring, nothing else answers the mouse ---
         var opticPt = screenOf(v.scene.optics[0].center);
         mouse(window, 'mousemove', opticPt[0], opticPt[1]);
@@ -673,6 +705,24 @@ ar = res['armed']
 check('the button arms it', ar['measuring'])
 check('and lights up', ar['lit'])
 check('the cursor says so', ar['cursor'])
+
+print('--- snapping to the middle of an edge ---')
+check('the scene offers edge middles', res['midCount'] > 0,
+      str(res['midCount']))
+check('one of them stands clear of every other mark',
+      res['hasClearMid'])
+sm = res.get('snapMid') or {}
+check('the cursor a few pixels off it takes it',
+      sm.get('kind') == 'midpoint', str(sm.get('label')))
+check('  exactly, not the pixel under the cursor',
+      sm.get('point') == sm.get('want'),
+      '%s vs %s' % (sm.get('point'), sm.get('want')))
+check('  the measurement would start there',
+      sm.get('preview') == sm.get('want'), str(sm.get('preview')))
+check('  and the mark is shown', sm.get('markShown') is True)
+check('  the label says which edge it is',
+      isinstance(sm.get('label'), str)
+      and sm.get('label', '').endswith(' midpoint'), str(sm.get('label')))
 
 print('--- snapping ---')
 sn = res['snapNear']

@@ -907,6 +907,14 @@ check('a drag on it pans and sends nothing',
       json.dumps(res['clampDrag']))
 
 print('--- placing a body on a marked point ---')
+# The edge middles are for measuring and aiming, not for fixing. A drag
+# that counted them would let one outbid the screw hole a few
+# millimetres away that the part is actually going onto.
+mids = [p for p in layout.snap_points() if p['kind'] == 'midpoint']
+check('the layout does publish edge middles', len(mids) > 0, str(len(mids)))
+check('  but a dragged body never settles on one',
+      'midpoint' not in json.dumps(res.get('postSnap') or {}),
+      json.dumps(res.get('postSnap')))
 check('the board offers a screw hole to aim at',
       res['hole'] is not None
       and any(np.allclose(sp['point'], res['hole'])

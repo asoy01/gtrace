@@ -1327,7 +1327,8 @@ def _dump_shapes(apex, length, thick, half, radius, top_half, wide_half,
 def mechanics_snap_points(m):
     '''
     The points of a Mechanics worth snapping to: the four corners of
-    its outline, its center, and the centre of every circle it draws.
+    its outline, the middle of each of its edges, its center, and the
+    centre of every circle it draws.
 
     The circles are the screw holes of a breadboard - which is where a
     bench actually puts things, so they are what a measurement wants
@@ -1367,6 +1368,19 @@ def mechanics_snap_points(m):
             points.append({'point': [float(p[0]), float(p[1])],
                            'optic': str(m.name), 'kind': 'hole',
                            'label': '%s hole' % m.name})
+    # The middle of each edge of the outline, last for the same reason
+    # the corners come before the holes: a hole in the middle of an
+    # edge is a feature of the part, and an edge middle is a place on
+    # it, so the hole should keep the label. Edge i runs from corner i
+    # to the next one round.
+    corners = m.outline()
+    for i in range(len(corners)):
+        a = corners[i]
+        b = corners[(i + 1) % len(corners)]
+        points.append({'point': [float((a[0] + b[0])/2.0),
+                                 float((a[1] + b[1])/2.0)],
+                       'optic': str(m.name), 'kind': 'midpoint',
+                       'label': '%s edge %d midpoint' % (m.name, i + 1)})
     return points
 
 #: What a snap point on an optics is called, and where it is. The corner
@@ -1378,7 +1392,8 @@ _SNAP_FACE_POINTS = [('HRcenter', 'HR'), ('ARcenter', 'AR'),
 def optic_snap_points(o):
     '''
     The points of an optics worth snapping a measurement to: the four
-    corners of the substrate, the apex of each face, and the middle.
+    corners of the substrate, the apex of each face, the middle, and
+    the middle of each side.
 
     These come from Python rather than being worked out by a front end
     because they are geometry: a corner is where the wedge and the
@@ -1386,6 +1401,15 @@ def optic_snap_points(o):
     description of that to exist in a browser. Beam ends are a different
     matter - they are already carried literally in the scene - so they
     are not here.
+
+    The sides get a middle and the faces do not, for the reason the
+    shape editor gives: the middle of an arc is not a place anything is
+    lined up on. A side is a straight line, so its middle is a point on
+    the drawing. A curved face is an arc, and the middle of its chord
+    is inside the glass with nothing drawn there - while the middle of
+    the arc itself is the apex, which is already offered above. A flat
+    face has its apex and its chord centre at the same place, so that
+    one is covered either way.
 
     Returns
     -------
@@ -1406,6 +1430,18 @@ def optic_snap_points(o):
                        'optic': str(o.name),
                        'kind': 'centre' if attr == 'center' else 'face',
                        'label': '%s %s' % (o.name, what)})
+    # Last, so that a point already named at the same place keeps its
+    # own label: two marks within SNAP_TIE of each other are one point
+    # to a front end, and the first of them wins.
+    if hasattr(o, 'get_side_info'):
+        # The first of each triple is the middle of that side, which is
+        # what the hit test uses it for. Read only - the list is the
+        # optics' own and is handed out as it stands.
+        for i, side in enumerate(o.get_side_info()):
+            c = side[0]
+            points.append({'point': [float(c[0]), float(c[1])],
+                           'optic': str(o.name), 'kind': 'midpoint',
+                           'label': '%s side %d midpoint' % (o.name, i + 1)})
     return points
 
 def _merge_by_name(registered, specs, build, update):

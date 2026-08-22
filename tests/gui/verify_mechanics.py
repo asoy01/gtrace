@@ -399,13 +399,25 @@ check('the canvas carries the mechanics layer',
           for ly in scene['canvas']['layers']))
 
 snaps = [p for p in scene['snap'] if p['optic'] == 'BB1']
-check('the corners and the centre are snap points',
-      len(snaps) == 5
-      and sorted(p['kind'] for p in snaps) == ['centre'] + ['corner'] * 4)
+check('the corners, the centre and the edge middles are snap points',
+      len(snaps) == 9
+      and sorted(p['kind'] for p in snaps)
+          == ['centre'] + ['corner'] * 4 + ['midpoint'] * 4,
+      str(sorted(p['kind'] for p in snaps)))
 corner_pts = [p['point'] for p in snaps if p['kind'] == 'corner']
 check('  at the outline corners',
       close(sorted(map(tuple, corner_pts)),
             sorted(map(tuple, L.get_mechanics('BB1').outline()))))
+# Edge i runs from corner i to the next one round, so a part can be
+# lined up on the middle of a side of another.
+outline = L.get_mechanics('BB1').outline()
+mid_pts = [p['point'] for p in snaps if p['kind'] == 'midpoint']
+want = [tuple((np.asarray(outline[i]) + np.asarray(outline[(i + 1) % 4]))/2.0)
+        for i in range(4)]
+check('  and halfway along each edge',
+      close(sorted(map(tuple, mid_pts)), sorted(want)))
+check('  the edge middles come last, so a hole there keeps its label',
+      [p['kind'] for p in snaps][-4:] == ['midpoint'] * 4)
 
 L.apply_edit({'op': 'draw', 'params': {'drawOpticsNames': False}})
 scene = L.scene_dict()

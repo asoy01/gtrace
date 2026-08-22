@@ -214,6 +214,41 @@ var EDITABLE = __EDITABLE__;
             return;
         }
 
+        // Aiming takes its points from the same marks a measurement
+        // does, so the middle of an edge is one of them. Its own mode
+        // and its own click handler, though, so ask it here too.
+        key('a');
+        // Whichever edge middle stands furthest from every other mark.
+        // A fixed clearance will not do: a breadboard puts a hole every
+        // 25 mm, so on that part nothing is ever far from something.
+        var mid = null, midClear = 0;
+        v.scene.snap.forEach(function (m) {
+            if (m.kind !== 'midpoint') { return; }
+            var near = Infinity;
+            v.scene.snap.forEach(function (s) {
+                if (s === m) { return; }
+                near = Math.min(near, Math.hypot(s.point[0] - m.point[0],
+                                                 s.point[1] - m.point[1]));
+            });
+            if (near > midClear) { mid = m; midClear = near; }
+        });
+        out.midClear = midClear;
+        out.alignMid = null;
+        if (mid) {
+            // Two pixels off, and well inside the clearance measured
+            // above, so that the middle is what is nearest.
+            var mp = screenOf(mid.point);
+            hover([mp[0] + 2, mp[1] - 1]);
+            out.alignMid = {hovered: v.snapped && v.snapped.label,
+                            scale: v.scale};
+            clickAt([mp[0] + 2, mp[1] - 1]);
+            out.alignMid.taken = v.aligning
+                ? v.aligning.points.slice(-1)[0] : null;
+            out.alignMid.want = mid.point.slice();
+            out.alignMid.label = mid.label;
+        }
+        v.cancelAlign();
+
         // --- two points ---
         key('a');
         out.armed2 = {armed: !!v.aligning, want: v.aligning && v.aligning.want,
@@ -368,6 +403,18 @@ check('the menu offers both aims and both turns',
       res['items'] == ['Line 2 points', 'Bisect 3 points',
                        'Turn +45°', 'Turn −45°'],
       json.dumps(res['items']))
+
+print('--- aiming by the middle of an edge ---')
+am = res.get('alignMid')
+check('the scene offers an edge middle to aim by', am is not None,
+      '' if am is None else '(%s, %.1f mm clear)'
+      % (am['label'], res['midClear']*1000))
+if am:
+    check('the cursor a couple of pixels off it takes the middle',
+          am['hovered'] == am['label'], str(am['hovered']))
+    check('  and the click lands on it exactly',
+          am['taken'] == am['want'],
+          '%s vs %s' % (am['taken'], am['want']))
 
 print('--- square across two points ---')
 a2 = res['armed2']

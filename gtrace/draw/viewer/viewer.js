@@ -6509,12 +6509,18 @@ Viewer.prototype._updateMechDrag = function (scenePt, free) {
  * and the points a part names for itself, like the bore of a fork or
  * the hole a pedestal screws into. That is what makes "drop the
  * pedestal on the mount" land exactly rather than nearly.
+ *
+ * The middle of an edge is left out. It is a place to measure from
+ * and to aim by, not a fixing: nothing is bolted to the middle of the
+ * side of a plate, and counting it here would let it outbid the screw
+ * hole a few millimetres away that the part is actually going onto.
  */
 Viewer.prototype._mechSnap = function (mech, delta, free) {
     if (free) { return null; }
     var reach = Math.min(SNAP_RADIUS / this.scale, HOLE_SNAP_MAX);
     var mine = [], theirs = [];
     (this.scene.snap || []).forEach(function (s) {
+        if (s.kind === 'midpoint') { return; }
         if (s.optic === mech.name) { mine.push(s); } else { theirs.push(s); }
     });
     var best = null, bestD = reach;
