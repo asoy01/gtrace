@@ -131,6 +131,11 @@ var LENS = __LENS__;
         var el = document.getElementById('host');
         mod.default.render({model: model, el: el});
         var v = el.gtraceViewer;
+        // The keyboard shortcuts only answer with the pointer over the
+        // viewer, and on this page there is nowhere else for it to be.
+        // The checks that want the pointer away set this to false where
+        // they need it.
+        v.pointerInside = true;
         var r = v.svg.getBoundingClientRect();
         // The drawing moves on the page - the side panel folds away,
         // the viewer is dragged taller - so where it is now is asked

@@ -39,6 +39,21 @@ function htmlEl(tag, cls, text) {
     return e;
 }
 
+/*
+ * Is this element one that takes typing?
+ *
+ * The viewer's own property fields are inputs. So is whatever the page
+ * around the viewer puts the caret in, and a notebook cell is an
+ * element with contenteditable set. A key aimed at any of them is not
+ * a shortcut, even when the pointer happens to rest over the drawing.
+ */
+function isTyping(el) {
+    if (!el || !el.tagName) { return false; }
+    if (el.isContentEditable) { return true; }
+    var tag = el.tagName.toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+
 //}}}
 
 //{{{ Formatting
@@ -254,13 +269,6 @@ function layerColor(rgb) {
 //}}}
 
 //{{{ Viewer
-
-/*
- * Every live viewer on the page. Used only to scope the keyboard
- * shortcuts: with one viewer the keys work wherever the pointer is,
- * with several they act on the one being pointed at.
- */
-var VIEWERS = [];
 
 /*
  * What the front end can put into a layout. The name prefix is only a
@@ -1316,7 +1324,6 @@ function Viewer(container, scene, options) {
     this.dragPoint = null;
     this._pointMarkPts = null;
 
-    VIEWERS.push(this);
     this._build();
     this._renderScene();
     this._refreshDisplayPanel();
@@ -6726,96 +6733,158 @@ Viewer.prototype._bindEvents = function () {
     on(global, 'keydown', function (ev) {
         if (ev.key !== 'Delete' || !self.pointerInside) { return; }
         if (ev.ctrlKey || ev.metaKey || ev.altKey) { return; }
-        // Not while a property field has the keyboard: there the key
-        // deletes a character.
-        if (ev.target && ev.target.classList
-            && ev.target.classList.contains('gt-input')) { return; }
+        // Not while something has the keyboard for typing: there the
+        // key deletes a character. That covers the viewer's own
+        // property fields and the editors of the page around it, since
+        // the caret can be in a cell while the pointer rests here.
+        if (isTyping(ev.target)) { return; }
         self.removeSelection();
         ev.preventDefault();
         ev.stopPropagation();
         ev.stopImmediatePropagation();
     }, true);
 
+    // The rest of the keys the viewer answers to.
+    //
+    // Caught on the way down, for the reason the Delete handler above
+    // gives: the page around the viewer binds keys of its own and is
+    // reached first. In JupyterLab 'a' inserts a cell, 'm' turns the
+    // cell into Markdown - which throws the widget away with it - and
+    // Ctrl+Z undoes an edit to the cell. On the way back up none of
+    // them ever arrived.
+    //
+    // Only with the pointer over this viewer. That was always the
+    // rule, but the code applied it only when the page held more than
+    // one viewer, so a page with one viewer took keys from anywhere:
+    // typing 'f' into a notebook cell re-fitted the drawing, and 'm'
+    // armed the measuring tool.
+    //
+    // A key the viewer answers to is swallowed whether or not it
+    // changed anything, on the same ground as Delete: "nothing was
+    // selected" is not a reason to let the cell be turned into
+    // Markdown.
     on(global, 'keydown', function (ev) {
-        if (VIEWERS.length > 1 && !self.pointerInside) { return; }
-        // Not while a property field has the keyboard.
-        if (ev.target && ev.target.classList
-            && ev.target.classList.contains('gt-input')) { return; }
-        if (ev.key === 'f' || ev.key === 'F') { self.fit(); }
-        // Ctrl+Z and Ctrl+Shift+Z / Ctrl+Y, but only with the pointer
-        // over this viewer: the page around a notebook cell has its own
-        // undo, and taking the keys from everywhere would undo edits
-        // the user meant for that. Both spellings of redo are bound
-        // because which one is the habit depends on the platform.
-        if ((ev.key === 'z' || ev.key === 'Z') && (ev.ctrlKey || ev.metaKey)
-                && self.pointerInside) {
-            if (ev.shiftKey) {
-                if (self.redo()) { ev.preventDefault(); }
-            } else if (self.undo()) { ev.preventDefault(); }
+        if (!self.pointerInside) { return; }
+        if (isTyping(ev.target)) { return; }
+        if (!self._onKey(ev)) { return; }
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.stopImmediatePropagation();
+    }, true);
+
+};
+
+/*
+ * Act on a key, and say whether it was one of the viewer's.
+ *
+ * The caller stops the event for everything this returns true for, so
+ * a key is claimed here only when the viewer really does own it: the
+ * letters that aim an optics are not the viewer's while a shape editor
+ * is on show, and none of the plain letters are the viewer's while a
+ * modifier is held, or Ctrl+F would fit the drawing instead of opening
+ * the browser's search.
+ */
+Viewer.prototype._onKey = function (ev) {
+    var plain = !ev.ctrlKey && !ev.metaKey && !ev.altKey;
+    // Ctrl on Windows and Linux, Command on a Mac.
+    var accel = (ev.ctrlKey || ev.metaKey) && !ev.altKey;
+    var k = ev.key;
+
+    if (plain && (k === 'f' || k === 'F')) {
+        this.fit();
+        return true;
+    }
+
+    // Ctrl+Z and Ctrl+Shift+Z / Ctrl+Y. Both spellings of redo are
+    // bound because which one is the habit depends on the platform.
+    if (accel && (k === 'z' || k === 'Z')) {
+        if (ev.shiftKey) { this.redo(); } else { this.undo(); }
+        return true;
+    }
+    if (accel && !ev.shiftKey && (k === 'y' || k === 'Y')) {
+        this.redo();
+        return true;
+    }
+
+    // Measuring: 'm' arms the tool, Escape puts it away. Escape clears
+    // the selection too, as it always has - a measurement half placed
+    // is one more thing it is letting go of.
+    if (plain && (k === 'm' || k === 'M')) {
+        this.toggleMeasure();
+        return true;
+    }
+
+    // A quarter turn. In an editor there is no optics to turn and the
+    // shape on show is turned instead; a quarter turn is a quarter
+    // turn either way.
+    if (plain && (k === ']' || k === '[')) {
+        var by = (k === ']') ? 45 : -45;
+        if (this.scene.editor) { this.turnShape(by); } else {
+            this.turnSelected(by);
         }
-        if ((ev.key === 'y' || ev.key === 'Y') && (ev.ctrlKey || ev.metaKey)
-                && !ev.shiftKey && self.pointerInside) {
-            if (self.redo()) { ev.preventDefault(); }
-        }
-        // Measuring: 'm' arms the tool, Escape puts it away. Escape
-        // clears the selection too, as it always has - a measurement
-        // half placed is one more thing it is letting go of.
-        if ((ev.key === 'm' || ev.key === 'M') && !ev.ctrlKey && !ev.metaKey) {
-            self.toggleMeasure();
-        }
-        // Aiming the selected optics: the two ways of naming an angle
-        // by places, and the quarter turn. See ALIGN_ITEMS, which
-        // carries the same keys into the menu's tooltips.
-        if (!ev.ctrlKey && !ev.metaKey) {
-            // In an editor the same keys turn the shape on show:
-            // there is no optics to aim, and a quarter turn is a
-            // quarter turn either way.
-            if (self.scene.editor) {
-                if (ev.key === ']') { self.turnShape(45); }
-                if (ev.key === '[') { self.turnShape(-45); }
-            } else {
-                if (ev.key === 'a' || ev.key === 'A') { self.startAlign(2); }
-                if (ev.key === 'b' || ev.key === 'B') { self.startAlign(3); }
-                if (ev.key === ']') { self.turnSelected(45); }
-                if (ev.key === '[') { self.turnSelected(-45); }
-            }
-        }
-        if (ev.key === 'Escape') {
-            // An open menu is the innermost thing Escape can close, so
-            // it goes first and the selection is left alone.
-            var wasOpen = (self.addMenus || []).some(function (m) {
-                return m.menu.style.display !== 'none';
-            });
-            self.closeAddMenus();
-            if (wasOpen) { return; }
-            // Something half put down, then an aim half taken: both
-            // are things to let go of before the selection, and
-            // letting go of either should not also clear it.
-            if (self.dragBeam) {
-                // A beam half stretched: let go of it and leave the
-                // beam as long as it was.
-                self.dragBeam = null;
-                self._updateOverlay();
-                self._updateStatus();
-                return;
-            }
-            if (self.cancelPlace()) { return; }
-            if (self.cancelAlign()) { return; }
-            if (self.measuring) { self.toggleMeasure(false); }
-            if (self.scene.editor) {
-                self._selectShape(null);
-                return;
-            }
-            self.pinned = null;
-            self.selectedOptic = null;
-            self.selectedDim = null;
-            self.selectedSource = null;
-            self.selectedMech = null;
-            self._setReadout(null);
-            self._showPanel('beam');
-            self._updateOverlay();
-        }
+        return true;
+    }
+
+    // Aiming the selected optics: the two ways of naming an angle by
+    // places. See ALIGN_ITEMS, which carries the same keys into the
+    // menu's tooltips. An editor has no optics to aim, so there the
+    // letters are left to the page.
+    if (plain && !this.scene.editor && (k === 'a' || k === 'A')) {
+        this.startAlign(2);
+        return true;
+    }
+    if (plain && !this.scene.editor && (k === 'b' || k === 'B')) {
+        this.startAlign(3);
+        return true;
+    }
+
+    if (plain && k === 'Escape') {
+        this._onEscape();
+        return true;
+    }
+
+    return false;
+};
+
+/*
+ * Let go of one thing. Which thing depends on what is open, and the
+ * order is from the innermost outwards, so that letting go of a menu
+ * or a half-finished action does not also clear the selection.
+ */
+Viewer.prototype._onEscape = function () {
+    // An open menu is the innermost thing Escape can close, so it goes
+    // first and the selection is left alone.
+    var wasOpen = (this.addMenus || []).some(function (m) {
+        return m.menu.style.display !== 'none';
     });
+    this.closeAddMenus();
+    if (wasOpen) { return; }
+    // Something half put down, then an aim half taken: both are things
+    // to let go of before the selection, and letting go of either
+    // should not also clear it.
+    if (this.dragBeam) {
+        // A beam half stretched: let go of it and leave the beam as
+        // long as it was.
+        this.dragBeam = null;
+        this._updateOverlay();
+        this._updateStatus();
+        return;
+    }
+    if (this.cancelPlace()) { return; }
+    if (this.cancelAlign()) { return; }
+    if (this.measuring) { this.toggleMeasure(false); }
+    if (this.scene.editor) {
+        this._selectShape(null);
+        return;
+    }
+    this.pinned = null;
+    this.selectedOptic = null;
+    this.selectedDim = null;
+    this.selectedSource = null;
+    this.selectedMech = null;
+    this._setReadout(null);
+    this._showPanel('beam');
+    this._updateOverlay();
 };
 
 //}}}
@@ -7182,8 +7251,6 @@ Viewer.prototype.destroy = function () {
     });
     this._listeners = [];
     if (this._ro) { this._ro.disconnect(); this._ro = null; }
-    var i = VIEWERS.indexOf(this);
-    if (i >= 0) { VIEWERS.splice(i, 1); }
     if (this.root && this.root.parentNode) {
         this.root.parentNode.removeChild(this.root);
     }

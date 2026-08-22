@@ -192,6 +192,11 @@ var SCENE = __SCENE__;
         var el = document.getElementById('host');
         mod.default.render({model: model, el: el});
         var v = el.gtraceViewer;
+        // The keyboard shortcuts only answer with the pointer over the
+        // viewer, and on this page there is nowhere else for it to be.
+        // The checks that want the pointer away set this to false where
+        // they need it.
+        v.pointerInside = true;
 
         // Re-measured every time: the status bar changes length as the
         // cursor moves, and that reflows the page.

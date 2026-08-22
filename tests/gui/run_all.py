@@ -89,6 +89,8 @@ SUITES = [
      'headless browser: the editor side bar, and the messages its rows send'),
     ('verify_editor_drag_browser.py',
      'headless browser: drawing a part by hand - picking, carrying, grips'),
+    ('verify_keys_browser.py',
+     'headless browser: which keys the viewer takes from the page around it'),
 ]
 
 #: Checks that live with the rest of the tests but are worth running in

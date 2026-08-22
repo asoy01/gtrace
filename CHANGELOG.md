@@ -9,6 +9,30 @@ an unchanged input. They are corrections rather than regressions, but a
 system traced with an earlier version will not reproduce bit for bit
 across them.
 
+## Unreleased
+
+### Fixed
+
+- **The keyboard shortcuts work inside JupyterLab.** The viewer listened
+  for its keys on the way back up the page. A notebook binds keys of its
+  own and is reached first, so several shortcuts never arrived: `Ctrl+Z`
+  and `Ctrl+Y` did nothing at all, `a` and `b` inserted a notebook cell
+  instead of aiming an element, and **`m` turned the cell into Markdown,
+  which threw the viewer away with it**. The keys are now caught on the
+  way down, as `Delete` already was, and go no further once the viewer
+  has taken one.
+
+- **Typing into the page no longer works the viewer.** A key reached the
+  shortcuts whenever the page held a single viewer, wherever the pointer
+  was and whatever had the keyboard. Typing `f` into a notebook cell
+  re-fitted the drawing, and `m` armed the measuring tool. A shortcut
+  now answers only with the pointer over the viewer, and never while
+  something is being typed into - the viewer's own fields, or an editor
+  of the page around it.
+
+- **`Ctrl+F` opens the browser's search instead of fitting the
+  drawing.** `f` was read as Fit whatever modifier was held with it.
+
 ## 0.8.0 - 2026-08-22
 
 ### Changed
