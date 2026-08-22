@@ -558,7 +558,11 @@ UNDO_DEPTH = 50
 #: than adding to it. Being on this list also means the operation does
 #: not discard the redo stack - writing a file in the middle of stepping
 #: back and forth is not a change of mind.
-_NOT_UNDOABLE = frozenset(['save', 'export', 'undo', 'redo'])
+#: 'stretch' is here because what it changes is not in a snapshot: it
+#: is the length of a beam the trace made, and every snapshot restore
+#: runs the trace again. An undo step that does nothing is a press
+#: wasted.
+_NOT_UNDOABLE = frozenset(['save', 'export', 'undo', 'redo', 'stretch'])
 
 #: Formats 'export' can write.
 EXPORT_FORMATS = frozenset(['dxf'])
@@ -2873,6 +2877,70 @@ class OpticalLayout(object):
             self.beams.extend(beams)
         return self.beams
 
+    def stretch_beam(self, index, length):
+        '''
+        Draw one open beam at a length of your own choosing.
+
+        A beam that reaches nothing is drawn at the length the rules
+        give every such beam - :py:attr:`open_beam_length
+        <gtrace.layout.TraceRules.open_beam_length>`. Sometimes one of
+        them is worth following further: to see where it would land, or
+        to find room for the element that is to catch it.
+
+        **This changes the drawing and nothing else.** A beam that
+        reaches nothing reaches nothing at any length, so no beam is
+        added, removed or recomputed. **The next trace throws it
+        away**, since the length belongs to the beam that trace made.
+        ``traced_length`` remembers what the trace gave it, so the
+        beam can be put back without tracing again.
+
+        Only an open beam can be drawn longer. A beam that ends on a
+        surface is as long as the distance to that surface, and drawing
+        it longer would draw it through the glass.
+
+        Parameters
+        ----------
+        index : int
+            Which beam, as an index into :py:attr:`beams` - the order
+            the scene carries them in.
+        length : float
+            How far to draw it, in metres. Above zero.
+
+        Returns
+        -------
+        beam : gtrace.beam.GaussianBeam
+            The beam that was lengthened.
+        '''
+        if self.beams is None:
+            raise ValueError('There are no beams to draw longer: the '
+                             'layout has not been traced since it last '
+                             'changed.')
+        try:
+            i = int(index)
+        except (TypeError, ValueError):
+            raise ValueError('A beam is named by its index, not by %r.'
+                             % (index,))
+        if i < 0 or i >= len(self.beams):
+            raise ValueError('There is no beam %d; the trace made %d.'
+                             % (i, len(self.beams)))
+        b = self.beams[i]
+        if not getattr(b, 'open_end', False):
+            raise ValueError('%s ends on a surface, so its length is the '
+                             'distance to that surface. Only a beam that '
+                             'reaches nothing can be drawn longer.'
+                             % (b.name,))
+        try:
+            v = float(length)
+        except (TypeError, ValueError):
+            raise ValueError('A length is a number, not %r.' % (length,))
+        if not np.isfinite(v) or v <= 0.0:
+            raise ValueError('A beam is drawn some length above zero, '
+                             'not %r.' % (length,))
+        if not hasattr(b, 'traced_length'):
+            b.traced_length = float(b.length)
+        b.length = v
+        return b
+
 #}}}
 
 #{{{ apply_edit
@@ -3415,6 +3483,16 @@ class OpticalLayout(object):
                 raise EditError('Could not write %s (%s: %s).'
                                 % (path, type(e).__name__, e))
             # Writing a file changes nothing about the layout.
+            return self
+
+        elif op == 'stretch':
+            try:
+                self.stretch_beam(msg.get('index'), msg.get('length'))
+            except ValueError as e:
+                raise EditError(str(e))
+            # How far an open beam is drawn is the drawing, not the
+            # physics, so the trace stands - as it does for a drawing
+            # option.
             return self
 
         elif op == 'draw':

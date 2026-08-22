@@ -249,6 +249,21 @@
     cursor: nwse-resize;
 }
 
+/* The grip at the far end of the open beam being read: dragging it
+   draws that beam longer or shorter. Square like the other grips, in
+   the colour of the beams rather than of a selection, since what it
+   belongs to is a beam. */
+.gt-beam-handle {
+    fill: #fff;
+    stroke: #d02020;
+    stroke-width: 1.4;
+    cursor: move;
+}
+
+.gt-beam-handle.gt-dragging {
+    fill: #ffe0e0;
+}
+
 /* ----------------------------------------------------------------- sources */
 
 /* The laser drawn at the start of a source beam. Filled rather than

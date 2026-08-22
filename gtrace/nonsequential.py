@@ -101,7 +101,14 @@ def non_seq_trace(optList, src_beam, order=10, power_threshold=0.1,
                     hit_optics = opt
 
     if final_answer is None:
-        #The beam does not hit any optics
+        #The beam does not hit any optics. Its length is not measured
+        #from anything: it is open_beam_length, or the length the
+        #source was given. open_end says so, since nothing else about
+        #the beam does, and a drawing that lengthens such a beam has
+        #to know which ones it may lengthen. A beam that ends on a
+        #surface or on a side is not one of them - its length is where
+        #the glass is.
+        src_beam.open_end = True
         return [src_beam]
 
     if final_answer['face'] == 'side':

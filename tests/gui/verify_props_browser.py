@@ -132,9 +132,13 @@ var LENS = __LENS__;
         mod.default.render({model: model, el: el});
         var v = el.gtraceViewer;
         var r = v.svg.getBoundingClientRect();
+        // The drawing moves on the page - the side panel folds away,
+        // the viewer is dragged taller - so where it is now is asked
+        // for every time rather than remembered from the first render.
         function screenOf(p) {
+            var rr = v.svg.getBoundingClientRect();
             var s = v.sceneToScreen(p[0], p[1]);
-            return [s[0] + r.left, s[1] + r.top];
+            return [s[0] + rr.left, s[1] + rr.top];
         }
         function panel() {
             return {
@@ -200,6 +204,37 @@ var LENS = __LENS__;
         function clickAt(p) {
             mouse(v.svg, 'mousedown', p[0], p[1]);
             mouse(window, 'mouseup', p[0], p[1]);
+        }
+        // Where along a beam to click: the place clear of the lasers.
+        // A laser is drawn at a fixed size in pixels and is picked
+        // before the beams, and the open beam here runs back past the
+        // one it came from - so its middle is the one place on it that
+        // cannot be clicked.
+        function clearOf(b) {
+            var best = null, far = -1;
+            [0.15, 0.25, 0.35, 0.5, 0.65, 0.8].forEach(function (f) {
+                var m = [b.pos[0] + b.dirVect[0] * b.length * f,
+                         b.pos[1] + b.dirVect[1] * b.length * f];
+                var near = Math.min.apply(null,
+                    (v.scene.sources || []).map(function (sc) {
+                        return Math.hypot(m[0] - sc.pos[0], m[1] - sc.pos[1]);
+                    }).concat([1e9]));
+                if (near > far) { far = near; best = m; }
+            });
+            return best;
+        }
+        // Beams lie on top of one another - the beam that left an
+        // element and the one that arrived at it run along the same
+        // line - and clicking the same place again steps through them.
+        // So the beam wanted is clicked for until the readout is on
+        // it, which is what a reader does.
+        function pinBeam(index, at) {
+            v.lastClick = null;
+            for (var t = 0; t < 10; t++) {
+                clickAt(at);
+                if (v.pinned && v.pinned.index === index) { return t + 1; }
+            }
+            return 0;
         }
         // Click where the armed thing goes, and say where it landed.
         //
@@ -1055,6 +1090,136 @@ var LENS = __LENS__;
                                        selected: v.selectedOptic,
                                        pinned: !!v.pinned,
                                        steps: more};
+        }
+
+        // --- drawing an open beam longer ---
+        // A beam that reaches nothing is drawn at the length the rules
+        // give every such beam. The grip at its far end draws it
+        // further, so that where it would land can be seen.
+        out.stretch = null;
+        if (EDITABLE) {
+            var oi = -1, si = -1;
+            v.scene.beams.forEach(function (b, i) {
+                if (b.open && b.layer === 'main_beam' && oi < 0) { oi = i; }
+                if (!b.open && b.layer === 'main_beam' && si < 0) { si = i; }
+            });
+            var ob = v.scene.beams[oi];
+            // Pin the readout to it by clicking its middle, the way a
+            // reader does.
+            var mid = screenOf(clearOf(ob));
+            var pinTries = pinBeam(oi, mid);
+            var end = screenOf([ob.pos[0] + ob.dirVect[0] * ob.length,
+                                ob.pos[1] + ob.dirVect[1] * ob.length]);
+            out.stretch = {
+                index: oi,
+                tries: pinTries,
+                pinned: v.pinned ? v.pinned.index : null,
+                shown: v.beamHandle.style.display !== 'none',
+                // The grip stands at the far end of the beam. Its x
+                // and y are the corner of a 9 px square, in the
+                // drawing's own coordinates - which is what
+                // sceneToScreen gives, while screenOf gives what a
+                // mouse event carries.
+                dx: Math.abs(Number(v.beamHandle.getAttribute('x')) + 4.5
+                             - v.sceneToScreen(ob.pos[0] + ob.dirVect[0]
+                                               * ob.length,
+                                               ob.pos[1] + ob.dirVect[1]
+                                               * ob.length)[0]),
+                dy: Math.abs(Number(v.beamHandle.getAttribute('y')) + 4.5
+                             - v.sceneToScreen(ob.pos[0] + ob.dirVect[0]
+                                               * ob.length,
+                                               ob.pos[1] + ob.dirVect[1]
+                                               * ob.length)[1])
+            };
+
+            // A beam that ends on a surface offers no grip: its length
+            // is the distance to that surface.
+            var sb = v.scene.beams[si];
+            var smid = screenOf(clearOf(sb));
+            pinBeam(si, smid);
+            out.stretch.shutPinned = v.pinned ? v.pinned.beam.open : null;
+            out.stretch.shutShown = v.beamHandle.style.display !== 'none';
+
+            // Back to the open one, and drag the grip along the beam.
+            pinBeam(oi, mid);
+            var far = screenOf([ob.pos[0] + ob.dirVect[0] * (ob.length + 0.6),
+                                ob.pos[1] + ob.dirVect[1] * (ob.length + 0.6)]);
+            var nStretch = sent.length;
+            mouse(v.svg, 'mousedown', end[0], end[1]);
+            mouse(window, 'mousemove', far[0], far[1], {altKey: true});
+            out.stretch.dragging = v.dragBeam ? v.dragBeam.length : null;
+            out.stretch.status = v.statusBar.textContent;
+            out.stretch.preview = v.beamPath.style.display !== 'none';
+            mouse(window, 'mouseup', far[0], far[1], {altKey: true});
+            out.stretch.msg = sent[nStretch] || null;
+            out.stretch.n = sent.length - nStretch;
+            // What a pixel is worth on the bench: a click lands on a
+            // whole pixel, so the length asked for and the length that
+            // came of it differ by up to one.
+            out.stretch.pixel = 1 / v.scale;
+
+            // Python answers with the same trace redrawn. The readout
+            // goes back on the beam, so the grip can be dragged again.
+            var longer = JSON.parse(JSON.stringify(v.scene));
+            longer.beams[oi].length = out.stretch.msg
+                ? out.stretch.msg.length : ob.length;
+            longer.beams[oi].end = [
+                ob.pos[0] + ob.dirVect[0] * longer.beams[oi].length,
+                ob.pos[1] + ob.dirVect[1] * longer.beams[oi].length];
+            model.set('scene', longer);
+            out.stretch.repinned = v.pinned ? v.pinned.index : null;
+            out.stretch.stillShown = v.beamHandle.style.display !== 'none';
+
+            // Dragging back near the length the trace gave it settles
+            // on exactly that, so the picture can be put back without
+            // tracing again. Alt rides free, as it does past a hole.
+            var back = screenOf([ob.pos[0] + ob.dirVect[0] * (ob.length + 0.01),
+                                 ob.pos[1] + ob.dirVect[1] * (ob.length + 0.01)]);
+            var nSnap = sent.length;
+            var nowEnd = screenOf(longer.beams[oi].end);
+            mouse(v.svg, 'mousedown', nowEnd[0], nowEnd[1]);
+            mouse(window, 'mousemove', back[0], back[1]);
+            out.stretch.snapped = v.dragBeam ? v.dragBeam.snapped : null;
+            out.stretch.snapLength = v.dragBeam ? v.dragBeam.length : null;
+            mouse(window, 'mousemove', back[0], back[1], {altKey: true});
+            out.stretch.freeSnapped = v.dragBeam ? v.dragBeam.snapped : null;
+            mouse(window, 'mouseup', back[0], back[1]);
+            out.stretch.snapMsg = sent[nSnap] || null;
+
+            // A press on the grip that never moved decides nothing.
+            var nStill = sent.length;
+            var e2 = screenOf([ob.pos[0] + ob.dirVect[0] * ob.length,
+                               ob.pos[1] + ob.dirVect[1] * ob.length]);
+            pinBeam(oi, mid);
+            mouse(v.svg, 'mousedown', e2[0], e2[1]);
+            mouse(window, 'mouseup', e2[0], e2[1]);
+            out.stretch.stillSent = sent.length - nStill;
+
+            model.set('scene', SCENE);
+            v.pinned = null;
+            v._showPanel('beam');
+            // A stretch names a beam by its place in the list the
+            // trace made, and the checks below replay this stream
+            // into a layout whose beams have been changed by every
+            // add and remove above. Kept out of it: the stream is a
+            // script, not a record.
+            sent.length = nStretch;
+        }
+
+        // A page with nowhere to send edits offers no grip: drawing
+        // a beam longer is Python's to do, and a promise this page
+        // could not keep is worse than no grip at all.
+        out.readOnlyGrip = null;
+        if (!EDITABLE) {
+            var ri = -1;
+            v.scene.beams.forEach(function (b, i) {
+                if (b.open && ri < 0) { ri = i; }
+            });
+            if (ri >= 0) {
+                pinBeam(ri, screenOf(clearOf(v.scene.beams[ri])));
+                out.readOnlyGrip = {pinned: v.pinned ? v.pinned.index : null,
+                                    shown: v.beamHandle.style.display !== 'none'};
+            }
         }
 
         // --- the layout file buttons ---
@@ -2091,6 +2256,48 @@ check('the selection is dropped', rem['selected'] is None,
 check('and the panel goes back to the beam readout',
       rem['panel']['beamShown'], str(rem['panel']))
 
+print('--- drawing an open beam longer ---')
+st = res['stretch']
+if st:
+    check('clicking an open beam pins it', st['pinned'] == st['index'],
+          json.dumps({'pinned': st['pinned'], 'want': st['index'],
+                      'clicks': st['tries']}))
+    check('  and a grip stands at its far end',
+          st['shown'] and st['dx'] < 0.6 and st['dy'] < 0.6,
+          json.dumps({'dx': st['dx'], 'dy': st['dy']}))
+    # A beam that ends on a surface is as long as the distance to that
+    # surface; drawing it longer would draw it through the glass.
+    check('a beam that ends on a surface offers none',
+          st['shutPinned'] is False and not st['shutShown'],
+          json.dumps({'open': st['shutPinned'], 'grip': st['shutShown']}))
+    check('dragging the grip sends one stretch of that beam',
+          st['n'] == 1 and st['msg'] and st['msg']['op'] == 'stretch'
+          and st['msg']['index'] == st['index'], json.dumps(st['msg']))
+    beam_len = scene['beams'][st['index']]['length'] if st['msg'] else 0
+    check('  as long as the cursor was down the beam',
+          st['msg'] and abs(st['msg']['length'] - (beam_len + 0.6))
+          < 2 * st['pixel'],
+          '%s vs %s (pixel %.4f m)'
+          % (st['msg'] and st['msg']['length'], beam_len + 0.6,
+             st['pixel']))
+    check('  previewed while the drag is on, and named in the status bar',
+          st['preview'] and 'm' in st['status']
+          and st['msg'] and abs(st['dragging'] - st['msg']['length']) < 1e-12,
+          json.dumps(st['status']))
+    # Otherwise the grip disappears at the end of every drag, and a
+    # beam is rarely drawn to the right length the first time.
+    check('the readout goes back on the beam when the scene comes back',
+          st['repinned'] == st['index'] and st['stillShown'],
+          json.dumps({'pinned': st['repinned'], 'grip': st['stillShown']}))
+    # The way back to the picture the trace drew, without tracing again.
+    check('dragging near the traced length settles on it exactly',
+          st['snapped'] is True and abs(st['snapLength'] - beam_len) < 1e-15,
+          json.dumps({'snapped': st['snapped'], 'len': st['snapLength']}))
+    check('  and Alt rides past it', st['freeSnapped'] is False,
+          json.dumps(st['freeSnapped']))
+    check('a press on the grip that never moved sends nothing',
+          st['stillSent'] == 0, str(st['stillSent']))
+
 print('--- Delete does what Remove does ---')
 dk = res['delKey']
 check('Delete sends the same remove the button sends',
@@ -2392,6 +2599,11 @@ check('the values are still readable',
       and abs(float(res['fields']['cx']) - res['m1']['center'][0]) < 1e-15,
       str(res['fields']['cx']))
 check('and nothing is sent', res['sent'] == [], str(res['sent']))
+if res.get('readOnlyGrip'):
+    check('an open beam can be read, but has no grip to draw it longer',
+          res['readOnlyGrip']['pinned'] is not None
+          and not res['readOnlyGrip']['shown'],
+          json.dumps(res['readOnlyGrip']))
 
 print()
 print('%d passed, %d failed' % (npass, nfail))

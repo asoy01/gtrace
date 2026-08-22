@@ -388,7 +388,17 @@ def beam_to_dict(b):
             'Gouyx': float(b.Gouyx),
             'Gouyy': float(b.Gouyy),
             'optDist': float(b.optDist),
-            'stray_order': int(b.stray_order)}
+            'stray_order': int(b.stray_order),
+            # Whether the beam ends on nothing. An open beam is as long
+            # as the trace was told to draw it, so a front end may ask
+            # for a different length; one that ends on a surface is as
+            # long as the distance to that surface.
+            'open': bool(getattr(b, 'open_end', False)),
+            # The length the trace gave it, which is what 'length' is
+            # until someone asks for another one. Kept so that a front
+            # end that lengthens a beam can put it back where it was
+            # without running the trace again.
+            'traced_length': float(getattr(b, 'traced_length', b.length))}
 
 #}}}
 

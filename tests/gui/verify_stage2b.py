@@ -258,6 +258,97 @@ check('with a flat AR surface the two agree exactly',
                   atol=1e-15)
       and float(flat.sagAR) == 0.0)
 
+print('--- an open beam says so, and says what the trace gave it ---')
+layout, (M1, M2, M3) = make_layout()
+layout.trace()
+scene = layout.scene_dict()
+sbeams = scene['beams']
+check('every beam says whether it ends on nothing',
+      all('open' in b for b in sbeams))
+# The two have to be told apart by something the front end can see: a
+# beam that ends on a surface is as long as the distance to it, and
+# drawing that one longer would draw it through the glass.
+check('the ones that reach nothing are the ones the rules sized',
+      all(abs(b['length'] - layout.rules.open_beam_length) < 1e-12
+          for b in sbeams if b['open']),
+      json.dumps(sorted(set(round(b['length'], 6)
+                            for b in sbeams if b['open']))))
+check('  and there are some of each',
+      any(b['open'] for b in sbeams) and any(not b['open'] for b in sbeams),
+      '%d open of %d' % (len([b for b in sbeams if b['open']]), len(sbeams)))
+# A beam stopped by the edge of a substrate is not open either: it is
+# as long as the distance to that edge.
+sides = [b for b in sbeams if b['name'].endswith(':s1')]
+check('a beam stopped on the side of an element is not open',
+      sides and not any(b['open'] for b in sides),
+      json.dumps([b['name'] for b in sides]))
+check('every beam carries the length the trace gave it',
+      all(abs(b['traced_length'] - b['length']) < 1e-15 for b in sbeams))
+
+print('--- stretch: drawing one open beam longer ---')
+OPEN_I = [i for i, b in enumerate(sbeams) if b['open']][0]
+SHUT_I = [i for i, b in enumerate(sbeams) if not b['open']][0]
+was = list(layout.beams)
+layout.apply_edit({'op': 'stretch', 'index': OPEN_I, 'length': 3.25})
+check('the beam is drawn at the length asked for',
+      abs(layout.beams[OPEN_I].length - 3.25) < 1e-15,
+      str(layout.beams[OPEN_I].length))
+check('  and the trace stands: the same beams, not a new set',
+      layout.beams is not None and list(layout.beams) == was,
+      '%d beams' % len(layout.beams))
+stretched = layout.scene_dict()['beams'][OPEN_I]
+check('  the scene draws it that long',
+      abs(stretched['length'] - 3.25) < 1e-15
+      and abs(stretched['end'][0] - (stretched['pos'][0]
+                                     + stretched['dirVect'][0] * 3.25)) < 1e-12,
+      json.dumps(stretched['end']))
+check('  while remembering what the trace gave it',
+      abs(stretched['traced_length']
+          - layout.rules.open_beam_length) < 1e-12,
+      str(stretched['traced_length']))
+# The picture is what this changes, so the picture has to follow.
+line = layout.draw().layers['main_beam'].shapes
+check('  and the drawing runs that far',
+      any(abs(np.hypot(sh.stop[0] - sh.start[0],
+                       sh.stop[1] - sh.start[1]) - 3.25) < 1e-9
+          for sh in line if hasattr(sh, 'start')),
+      '%d lines on the main layer' % len(line))
+check('  it is not an undo step',
+      not layout.scene_dict()['can_undo'])
+layout.apply_edit({'op': 'stretch', 'index': OPEN_I, 'length': 0.75})
+check('a second stretch still remembers the traced length',
+      abs(layout.scene_dict()['beams'][OPEN_I]['traced_length']
+          - layout.rules.open_beam_length) < 1e-12)
+
+refused({'op': 'stretch', 'index': SHUT_I, 'length': 2.0},
+        'a beam that ends on a surface')
+refused({'op': 'stretch', 'index': OPEN_I, 'length': 0.0},
+        'a length of nothing')
+refused({'op': 'stretch', 'index': OPEN_I, 'length': -1.0},
+        'a length below zero')
+refused({'op': 'stretch', 'index': OPEN_I, 'length': float('inf')},
+        'a length of infinity')
+refused({'op': 'stretch', 'index': len(sbeams), 'length': 2.0},
+        'a beam the trace never made')
+refused({'op': 'stretch', 'index': 'M1:r1', 'length': 2.0},
+        'a beam named rather than numbered')
+
+# What the next trace does with it: nothing, because the beam it was
+# about is gone. This is what makes the gesture a temporary one.
+layout.apply_edit({'op': 'move', 'target': 'M3', 'HRcenter': [0.95, 0.4]})
+check('an edit that runs the trace again drops the stretch',
+      abs(layout.scene_dict()['beams'][OPEN_I]['length']
+          - layout.rules.open_beam_length) < 1e-12,
+      str(layout.scene_dict()['beams'][OPEN_I]['length']))
+lay_untraced, _ = make_layout()
+try:
+    lay_untraced.apply_edit({'op': 'stretch', 'index': 0, 'length': 2.0})
+    check('a layout that has not been traced has no beam to draw longer',
+          False, '(was applied)')
+except EditError as e:
+    check('a layout that has not been traced has no beam to draw longer',
+          True, '(%s)' % str(e)[:50])
+
 print('--- drawing options ---')
 layout, (M1, M2, M3) = make_layout()
 # An astigmatic source, so that the three width modes are telling apart.

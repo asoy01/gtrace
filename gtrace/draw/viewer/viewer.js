@@ -1223,6 +1223,8 @@ function Viewer(container, scene, options) {
     this.labels = [];       // {el, x, y, rotation, layer}
     this.layerGroups = {};  // layer name -> {geom, label, visible}
     this.pinned = null;     // pinned readout {beam, d, point, rank, count}
+    this.dragBeam = null;   // the open beam being drawn longer
+    this._repin = null;     // the beam to put the readout back on
     this.hover = null;
     this.cycle = 0;         // index into the bundle of overlapping beams
     this.lastClick = null;
@@ -5782,6 +5784,16 @@ Viewer.prototype._renderScene = function () {
     // beams lying on the same line often run opposite ways, so stepping
     // through them has to show more than that the mark moved.
     this.slideArrow = svgEl('path', {'class': 'gt-slide-arrow'});
+    // The grip at the far end of the open beam on show, and the line
+    // it draws while it is dragged. A beam that reaches nothing is as
+    // long as the trace was told to draw every such beam, and how far
+    // is worth looking at is not something the trace can know.
+    this.beamHandle = svgEl('rect', {'class': 'gt-beam-handle',
+                                     width: 9, height: 9});
+    this.beamHandle.style.display = 'none';
+    this.beamPath = svgEl('line', {'class': 'gt-rubber'});
+    this.beamPath.style.display = 'none';
+    this._beamHandlePt = null;
     // The measurement being placed, and the marked point the next click
     // would take.
     this.rubber = svgEl('line', {'class': 'gt-rubber'});
@@ -5804,6 +5816,8 @@ Viewer.prototype._renderScene = function () {
     this.overlayGroup.appendChild(this.rubber);
     this.overlayGroup.appendChild(this.alignPath);
     this.overlayGroup.appendChild(this.placePath);
+    this.overlayGroup.appendChild(this.beamPath);
+    this.overlayGroup.appendChild(this.beamHandle);
     this.overlayGroup.appendChild(this.snapMark);
     this.overlayGroup.appendChild(this.mechOutline);
     for (var hj = 0; hj < this.mechHandles.length; hj++) {
@@ -6387,6 +6401,17 @@ Viewer.prototype._bindEvents = function () {
         // A resize handle first: it is UI chrome drawn on top of the
         // picture, and only exists while a resizable body is selected.
         if (self.onEdit && !self.measuring && !self.aligning && !self.placing) {
+            // The grip that draws an open beam longer stands on the
+            // beam being read, which is the thing on show: it comes
+            // before the handles of anything else.
+            if (self._pickBeamHandle(px, py) && self._stretchableBeam()) {
+                self._beginBeamStretch();
+                dragging = true; moved = 0;
+                lastX = ev.clientX; lastY = ev.clientY;
+                self.svg.classList.add('gt-dragging');
+                ev.preventDefault();
+                return;
+            }
             var hidx = self._pickMechHandle(px, py);
             if (hidx >= 0 && self._selectedMech()) {
                 self._beginMechResize(self._selectedMech(), hidx);
@@ -6464,6 +6489,14 @@ Viewer.prototype._bindEvents = function () {
 
     on(global, 'mousemove', function (ev) {
         var r = self.svg.getBoundingClientRect();
+        if (self.dragBeam) {
+            moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
+            lastX = ev.clientX; lastY = ev.clientY;
+            self._updateBeamStretch(
+                self.screenToScene(ev.clientX - r.left, ev.clientY - r.top),
+                ev.altKey);
+            return;
+        }
         if (self.dragMechResize) {
             moved += Math.abs(ev.clientX - lastX) + Math.abs(ev.clientY - lastY);
             lastX = ev.clientX; lastY = ev.clientY;
@@ -6533,6 +6566,16 @@ Viewer.prototype._bindEvents = function () {
     });
 
     on(global, 'mouseup', function (ev) {
+        if (self.dragBeam) {
+            dragging = false;
+            self.svg.classList.remove('gt-dragging');
+            var rb = self.svg.getBoundingClientRect();
+            self._updateBeamStretch(
+                self.screenToScene(ev.clientX - rb.left, ev.clientY - rb.top),
+                ev.altKey);
+            self._endBeamStretch(moved >= 4);
+            return;
+        }
         if (self.dragMechResize) {
             dragging = false;
             self.svg.classList.remove('gt-dragging');
@@ -6748,6 +6791,14 @@ Viewer.prototype._bindEvents = function () {
             // Something half put down, then an aim half taken: both
             // are things to let go of before the selection, and
             // letting go of either should not also clear it.
+            if (self.dragBeam) {
+                // A beam half stretched: let go of it and leave the
+                // beam as long as it was.
+                self.dragBeam = null;
+                self._updateOverlay();
+                self._updateStatus();
+                return;
+            }
             if (self.cancelPlace()) { return; }
             if (self.cancelAlign()) { return; }
             if (self.measuring) { self.toggleMeasure(false); }
@@ -7532,6 +7583,156 @@ Viewer.prototype._endMechResize = function (commit) {
     if (!r.round) { attrs.center = r.center; }
     this.onEdit({op: 'set', target: r.mech.name, attrs: attrs});
 };
+
+//{{{ Drawing an open beam longer
+
+/*
+ * How short the drag may make a beam, in screen pixels, and how near
+ * the traced length it settles on it. A beam of no length cannot be
+ * seen or taken hold of, and a grip that cannot be found again is a
+ * gesture with no way back.
+ */
+var BEAM_MIN_PIXELS = 8;
+var BEAM_SNAP_PIXELS = 6;
+
+/*
+ * The beam the grip belongs to, or null.
+ *
+ * The readout has to be pinned to it - the grip is chrome on the beam
+ * being looked at - and the beam has to be one that reaches nothing.
+ * A beam that ends on a surface is as long as the distance to that
+ * surface, and drawing it longer would draw it through the glass.
+ */
+Viewer.prototype._stretchableBeam = function () {
+    if (!this.onEdit || this.measuring || this.aligning || this.placing) {
+        return null;
+    }
+    var p = this.pinned;
+    if (!p || !p.beam || !p.beam.open) { return null; }
+    var g = this.layerGroups[p.beam.layer];
+    if (g && !g.visible) { return null; }
+    return p;
+};
+
+/*
+ * Stand the grip at the far end of that beam, and remember where it
+ * is for the mousedown hit test. Mid-drag it stands at the end the
+ * beam would have, with the line it would be drawn along.
+ */
+Viewer.prototype._placeBeamHandle = function () {
+    var st = this.dragBeam;
+    var b = st ? st.beam : (this._stretchableBeam() || {}).beam;
+    if (!b) {
+        this._beamHandlePt = null;
+        this.beamHandle.style.display = 'none';
+        this.beamPath.style.display = 'none';
+        return;
+    }
+    var len = st ? st.length : b.length;
+    var q = this.sceneToScreen(b.pos[0] + b.dirVect[0] * len,
+                               b.pos[1] + b.dirVect[1] * len);
+    this._beamHandlePt = q;
+    this.beamHandle.setAttribute('x', q[0] - 4.5);
+    this.beamHandle.setAttribute('y', q[1] - 4.5);
+    this.beamHandle.classList.toggle('gt-dragging', !!st);
+    this.beamHandle.style.display = '';
+    if (st) {
+        var a = this.sceneToScreen(b.pos[0], b.pos[1]);
+        this.beamPath.setAttribute('x1', a[0]);
+        this.beamPath.setAttribute('y1', a[1]);
+        this.beamPath.setAttribute('x2', q[0]);
+        this.beamPath.setAttribute('y2', q[1]);
+        this.beamPath.style.display = '';
+    } else {
+        this.beamPath.style.display = 'none';
+    }
+};
+
+/*
+ * Whether a screen point is on the grip. The same reach the other
+ * grips have: one that must be hit to the pixel is one that is missed.
+ */
+Viewer.prototype._pickBeamHandle = function (px, py) {
+    var q = this._beamHandlePt;
+    return !!q && Math.abs(px - q[0]) <= 7 && Math.abs(py - q[1]) <= 7;
+};
+
+Viewer.prototype._beginBeamStretch = function () {
+    var p = this._stretchableBeam();
+    if (!p) { return; }
+    this.dragBeam = {index: p.index, beam: p.beam, d: p.d,
+                     length: p.beam.length,
+                     traced: p.beam.traced_length || p.beam.length,
+                     snapped: false};
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+/*
+ * The cursor, projected onto the beam: a beam is drawn along its own
+ * direction, so the only thing a drag can say about it is how far.
+ */
+Viewer.prototype._updateBeamStretch = function (scenePt, free) {
+    var st = this.dragBeam;
+    if (!st) { return; }
+    var b = st.beam;
+    var len = (scenePt[0] - b.pos[0]) * b.dirVect[0]
+            + (scenePt[1] - b.pos[1]) * b.dirVect[1];
+    var floor = BEAM_MIN_PIXELS / this.scale;
+    if (!(len > floor)) { len = floor; }
+    // The length the trace gave it is where the beam belongs, so the
+    // drag settles on it - that is the way back to the picture the
+    // trace drew, without running the trace again. Alt rides free,
+    // as it does past a screw hole.
+    st.snapped = false;
+    if (!free && Math.abs(len - st.traced) * this.scale <= BEAM_SNAP_PIXELS) {
+        len = st.traced;
+        st.snapped = true;
+    }
+    st.length = len;
+    this._updateOverlay();
+    this._updateStatus();
+};
+
+Viewer.prototype._endBeamStretch = function (commit) {
+    var st = this.dragBeam;
+    this.dragBeam = null;
+    if (!st) { return; }
+    this._updateOverlay();
+    if (!commit || !this.onEdit) { this._updateStatus(); return; }
+    if (st.length === st.beam.length) { this._updateStatus(); return; }
+    // Python answers with the same trace redrawn, so the beam is still
+    // beam number index. Ask for the readout to be put back on it:
+    // otherwise the grip disappears at the end of every drag, and a
+    // beam is rarely drawn to the right length the first time.
+    this._repin = {index: st.index, name: st.beam.name,
+                   pos: [st.beam.pos[0], st.beam.pos[1]], d: st.d};
+    this.onEdit({op: 'stretch', index: st.index, length: st.length});
+};
+
+/*
+ * Put the readout back on the beam that was just drawn longer.
+ *
+ * Only if the scene that came back really is the same trace: the same
+ * beam, at the same place, in the same slot. A scene that arrived for
+ * some other reason has beams of its own, and pinning one of those
+ * would say the reader had clicked something they never clicked.
+ */
+Viewer.prototype._repinBeam = function (want) {
+    var b = (this.scene.beams || [])[want.index];
+    if (!b || b.name !== want.name) { return; }
+    if (Math.abs(b.pos[0] - want.pos[0]) > 1e-12
+            || Math.abs(b.pos[1] - want.pos[1]) > 1e-12) { return; }
+    var d = Math.min(want.d, b.length);
+    this.pinned = {beam: b, d: d, dist: 0, index: want.index,
+                   point: [b.pos[0] + b.dirVect[0] * d,
+                           b.pos[1] + b.dirVect[1] * d],
+                   rank: 0, count: 1};
+    this._showPanel('beam');
+    this._setReadout(this.pinned);
+};
+
+//}}}
 
 /*
  * Dragging a shape while a part is being drawn.
@@ -8499,6 +8700,10 @@ Viewer.prototype._updateOverlay = function () {
         this.slideArrow.style.display = 'none';
     }
 
+    // The grip that draws an open beam longer, at the far end of the
+    // beam being read.
+    this._placeBeamHandle();
+
     // Whether there is anything to aim can change with any click.
     this._refreshAlign();
 
@@ -8521,6 +8726,18 @@ Viewer.prototype._updateOverlay = function () {
 };
 
 Viewer.prototype._updateStatus = function () {
+    // An open beam being drawn longer or shorter. What the trace gave
+    // it is shown beside it, since that is the length the picture had
+    // and the one the drag settles back onto.
+    var sb = this.dragBeam;
+    if (sb) {
+        this.statusBar.textContent = sb.beam.name + ':  ' +
+            fmtLen(sb.length) +
+            (sb.snapped
+                ? '     the length the trace drew'
+                : '     (traced ' + fmtLen(sb.traced) + ')');
+        return;
+    }
     // A body being cut to a new size. One number for a round one,
     // which is what makes it clear that the drag is not stretching
     // a disc into an oval.
@@ -8849,6 +9066,13 @@ Viewer.prototype.setScene = function (scene) {
         this.selectedMech = null;
         this._showPanel('beam');
     }
+
+    // A beam that was just drawn longer comes back as the same beam:
+    // the trace was not run again, only the drawing. Put the readout
+    // back on it, so that the grip is there to be dragged again.
+    var repin = this._repin;
+    this._repin = null;
+    if (repin) { this._repinBeam(repin); }
 
     // A loaded layout can be anywhere; frame it rather than leaving the
     // view over wherever the previous one happened to be.
