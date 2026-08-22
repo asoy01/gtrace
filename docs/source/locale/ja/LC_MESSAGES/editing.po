@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-22 18:37+0900\n"
+"POT-Creation-Date: 2026-08-22 19:30+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -434,6 +434,19 @@ msgstr ""
 
 #: ../../../gtrace/docs/source/editing.rst:286
 msgid ""
+"``add_shape`` takes the ``params`` of the shape, which is how the viewer "
+"sends a shape the user has drawn by clicking: the places become a "
+"``start`` and a ``stop``, a ``center`` and a ``radius``, and so on. With "
+"no ``params`` it puts down the default shape of that kind, which is what "
+"``newshapes`` carries."
+msgstr ""
+"``add_shape`` は図形の ``params`` "
+"を受け取る。ユーザーがクリックで描いた図形を、ビューアはこの形で送る。クリックした場所が ``start`` と ``stop``\\ 、\\ "
+"``center`` と ``radius`` などになる。\\ ``params`` が無ければ、その種類の既定の図形を置く。\\ "
+"``newshapes`` が運んでいるものである。"
+
+#: ../../../gtrace/docs/source/editing.rst:292
+msgid ""
 "The operations are ``add_shape``, ``set_shape``, ``remove_shape``, "
 "``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``set_points``, "
 "``save_model``, ``undo`` and ``redo``. A shape is edited in three steps: "
@@ -454,7 +467,7 @@ msgstr ""
 "に分解し、メッセージが指定するものを変え、図形を作り直す。したがって、図形とは何かを決める規則はコンストラクタだけである。コンストラクタが検出しない値は、編集結果を確定する前に検査して拒否する。0以下の大きさ、無限大の座標、頂点が1つしかない輪郭である。添字は\\"
 " **リストの中の位置**\\ であり、これは図形が描かれる順序でもある。1つ取り除くと、それ以降の番号がずれる。"
 
-#: ../../../gtrace/docs/source/editing.rst:298
+#: ../../../gtrace/docs/source/editing.rst:304
 msgid ""
 "A turn is the one edit that is not a set of attributes, because turning "
 "means something different for each kind of shape. The two angles of an "
@@ -473,7 +486,7 @@ msgstr ""
 "の既定値は :py:func:`shape_centre<gtrace.mechanics.shape_centre>`\\ "
 "、つまり図形のバウンディングボックスの中心である。"
 
-#: ../../../gtrace/docs/source/editing.rst:308
+#: ../../../gtrace/docs/source/editing.rst:314
 msgid ""
 "The turn of a **body** is a different question, and it is not written "
 "into the shapes. The pose of a body says where it stands and which way it"
@@ -486,7 +499,7 @@ msgstr ""
 "の回転は別の問題であり、図形には書き込まれない。周辺物の姿勢が、どこに立ちどちらを向いているかを表し、図形は周辺物の座標系で読まれる。したがって、回転した周辺物が持つ長方形も、ベンチ上には4隅を結んだ閉じたポリラインとして届く。DXF"
 " ファイルが持つのも、どちらの場合も同じものである。"
 
-#: ../../../gtrace/docs/source/editing.rst:314
+#: ../../../gtrace/docs/source/editing.rst:320
 #, python-brace-format
 msgid ""
 "``set_points`` carries the **whole list** of named points, not one point."
@@ -502,7 +515,7 @@ msgstr ""
 " undo の1段になる。2つの点が同じ名前を持つことはできず、名前の無い点も作れない。シーンチャネルは ``points`` で、\\ "
 "``{'name': str, 'point': [x, y], 'index': int}`` のリストである。"
 
-#: ../../../gtrace/docs/source/editing.rst:322
+#: ../../../gtrace/docs/source/editing.rst:328
 msgid ""
 "The editor holds the ``Mechanics`` **by reference**, like everything else"
 " here. A body already registered in a layout is therefore redrawn at the "
@@ -512,11 +525,11 @@ msgstr ""
 "エディタは、ここにある他のものと同じく ``Mechanics`` を\\ **参照で**\\ "
 "持つ。したがって、すでにレイアウトに登録されている周辺物は、そのレイアウトの次の描画で描き直される。取り付け・姿勢・ビルダーのパラメータには手を触れない。"
 
-#: ../../../gtrace/docs/source/editing.rst:328
+#: ../../../gtrace/docs/source/editing.rst:334
 msgid "Rules, drawing and files"
 msgstr "規則・描画・ファイル"
 
-#: ../../../gtrace/docs/source/editing.rst:330
+#: ../../../gtrace/docs/source/editing.rst:336
 msgid ""
 "The tracing rules have their own operation, and each value is checked. "
 "``order`` is a whole number no greater than ``MAX_RULE_ORDER``, since "
@@ -525,7 +538,7 @@ msgstr ""
 "トレースの規則には専用の操作があり、値はそれぞれ検査される。\\ ``order`` は ``MAX_RULE_ORDER`` "
 "以下の整数である。1次増えるごとに、全ての素子でもう一巡の反射が起きるからである::"
 
-#: ../../../gtrace/docs/source/editing.rst:337
+#: ../../../gtrace/docs/source/editing.rst:343
 msgid ""
 "Three operations do *not* invalidate the trace result: ``draw`` changes "
 "display settings, and ``save`` and ``export`` write a file. None of them "
@@ -535,7 +548,7 @@ msgstr ""
 "3つの操作は、トレース結果を\\ *無効にしない*\\ 。\\ ``draw`` は表示の設定を変え、\\ ``save`` と "
 "``export`` はファイルを書く。どれも物理を変えないので、再トレースを起こさない。寸法線に対する操作も同様である。"
 
-#: ../../../gtrace/docs/source/editing.rst:342
+#: ../../../gtrace/docs/source/editing.rst:348
 #, python-brace-format
 msgid ""
 "``export`` writes the drawing, not the model. Today that is only ``{'op':"
@@ -548,11 +561,11 @@ msgstr ""
 ":py:meth:`export_dxf<gtrace.layout.OpticalLayout.export_dxf>` を呼ぶ。\\ :ref"
 ":`dxf-export` を参照。"
 
-#: ../../../gtrace/docs/source/editing.rst:348
+#: ../../../gtrace/docs/source/editing.rst:354
 msgid "Scene channels"
 msgstr "シーンチャネル"
 
-#: ../../../gtrace/docs/source/editing.rst:350
+#: ../../../gtrace/docs/source/editing.rst:356
 msgid ""
 ":py:meth:`scene_dict<gtrace.layout.OpticalLayout.scene_dict>` adds ten "
 "entries to what "
@@ -562,87 +575,87 @@ msgstr ""
 ":py:func:`scene_to_dict<gtrace.draw.serialize.scene_to_dict>` "
 "が作るものに10個の項目を足す:"
 
-#: ../../../gtrace/docs/source/editing.rst:358
+#: ../../../gtrace/docs/source/editing.rst:364
 msgid "Channel"
 msgstr "チャネル"
 
-#: ../../../gtrace/docs/source/editing.rst:359
+#: ../../../gtrace/docs/source/editing.rst:365
 msgid "What it carries"
 msgstr "何を運ぶか"
 
-#: ../../../gtrace/docs/source/editing.rst:360
+#: ../../../gtrace/docs/source/editing.rst:366
 msgid "``can_undo``, ``can_redo``"
 msgstr "``can_undo``, ``can_redo``"
 
-#: ../../../gtrace/docs/source/editing.rst:361
+#: ../../../gtrace/docs/source/editing.rst:367
 msgid "Whether the front end's Undo and Redo have anything to work with."
 msgstr "フロントエンドの Undo と Redo に、戻す先があるかどうか。"
 
-#: ../../../gtrace/docs/source/editing.rst:362
+#: ../../../gtrace/docs/source/editing.rst:368
 msgid "``dimensions``"
 msgstr "``dimensions``"
 
-#: ../../../gtrace/docs/source/editing.rst:363
+#: ../../../gtrace/docs/source/editing.rst:369
 msgid "The dimensions, with their measurements."
 msgstr "寸法線と、その測定値。"
 
-#: ../../../gtrace/docs/source/editing.rst:364
+#: ../../../gtrace/docs/source/editing.rst:370
 msgid "``snap``"
 msgstr "``snap``"
 
-#: ../../../gtrace/docs/source/editing.rst:365
+#: ../../../gtrace/docs/source/editing.rst:371
 msgid "The points a front end may snap a measurement to."
 msgstr "フロントエンドが測定を吸着させてよい点。"
 
-#: ../../../gtrace/docs/source/editing.rst:366
+#: ../../../gtrace/docs/source/editing.rst:372
 msgid "``sources``"
 msgstr "``sources``"
 
-#: ../../../gtrace/docs/source/editing.rst:367
+#: ../../../gtrace/docs/source/editing.rst:373
 msgid "The laser sources."
 msgstr "レーザー光源。"
 
-#: ../../../gtrace/docs/source/editing.rst:368
+#: ../../../gtrace/docs/source/editing.rst:374
 msgid "``rules``"
 msgstr "``rules``"
 
-#: ../../../gtrace/docs/source/editing.rst:369
+#: ../../../gtrace/docs/source/editing.rst:375
 msgid "The tracing rules."
 msgstr "トレースの規則。"
 
-#: ../../../gtrace/docs/source/editing.rst:370
+#: ../../../gtrace/docs/source/editing.rst:376
 msgid "``mechanics``"
 msgstr "``mechanics``"
 
-#: ../../../gtrace/docs/source/editing.rst:371
+#: ../../../gtrace/docs/source/editing.rst:377
 msgid "The bodies that are registered in the layout."
 msgstr "レイアウトに登録されている周辺物。"
 
-#: ../../../gtrace/docs/source/editing.rst:372
+#: ../../../gtrace/docs/source/editing.rst:378
 msgid "``mechlib``"
 msgstr "``mechlib``"
 
-#: ../../../gtrace/docs/source/editing.rst:373
+#: ../../../gtrace/docs/source/editing.rst:379
 msgid "The model library a new body can be built from."
 msgstr "新しい周辺物を作れるモデルライブラリ。"
 
-#: ../../../gtrace/docs/source/editing.rst:374
+#: ../../../gtrace/docs/source/editing.rst:380
 msgid "``assemblies``"
 msgstr "``assemblies``"
 
-#: ../../../gtrace/docs/source/editing.rst:375
+#: ../../../gtrace/docs/source/editing.rst:381
 msgid "The assemblies a front end can offer."
 msgstr "フロントエンドが提示できる組み立て。"
 
-#: ../../../gtrace/docs/source/editing.rst:376
+#: ../../../gtrace/docs/source/editing.rst:382
 msgid "``newshapes``"
 msgstr "``newshapes``"
 
-#: ../../../gtrace/docs/source/editing.rst:377
+#: ../../../gtrace/docs/source/editing.rst:383
 msgid "What a new shape of each kind looks like."
 msgstr "各種類の図形を新しく置いたときの姿。"
 
-#: ../../../gtrace/docs/source/editing.rst:379
+#: ../../../gtrace/docs/source/editing.rst:385
 msgid ""
 "``sources`` says which of the beams the user put there. Nothing else in "
 "the scene can say it. A source is traced from a *copy* of itself, so its "
@@ -658,7 +671,7 @@ msgstr ""
 "の中にあり、トレースが作ったビームと同じように見える。各項目は、レーザーがどこに立ち、どちらへ撃ち、どんな光を出すかを持つ。ウェストも含む。ウェストはここで計算していて保存しない。寸法線の長さと同じ理由である。\\"
 " ``rules`` はトレースの規則を運ぶ。これはどの素子のものでもないが、絵がどこまで描かれるかを決める。"
 
-#: ../../../gtrace/docs/source/editing.rst:388
+#: ../../../gtrace/docs/source/editing.rst:394
 msgid ""
 "Each dimension carries a ``line``: the two ends the line lands on once "
 "the offset is applied. Only one place therefore decides which side the "
@@ -667,7 +680,7 @@ msgstr ""
 "各寸法線は ``line`` "
 "を持つ。オフセットを適用したあとに線が着地する両端である。したがって、オフセットをどちら側に取るかを決める場所は1箇所だけになる。"
 
-#: ../../../gtrace/docs/source/editing.rst:392
+#: ../../../gtrace/docs/source/editing.rst:398
 #, python-brace-format
 msgid ""
 "``mechanics`` carries the pose of each body, what it is attached to, and "
@@ -694,7 +707,7 @@ msgstr ""
 ":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` "
 "が判定に使う多角形と同じもので、ブラウザが第二の記述を持つ理由が無い。"
 
-#: ../../../gtrace/docs/source/editing.rst:405
+#: ../../../gtrace/docs/source/editing.rst:411
 msgid ""
 "``mechlib`` is the model library, as names, descriptions and name "
 "prefixes. The ``+ Mechanics`` menu shows those names, and it uses the "
@@ -709,7 +722,7 @@ msgstr ""
 "``assemblies`` は :py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` "
 "が並べるものである。これでフロントエンドは、素子とそれを保持する部品をまとめて名前で提示できる。組み立てるのは Python である。"
 
-#: ../../../gtrace/docs/source/editing.rst:413
+#: ../../../gtrace/docs/source/editing.rst:419
 msgid ""
 "``newshapes`` says what a shape of each kind looks like when it is first "
 "put down. It is the same "
@@ -724,7 +737,7 @@ msgstr ""
 "Shape`` "
 "は図形1つの周辺物を追加でき、フロントエンドは「新しい円はどれくらいの大きさか」という問いに自前の答えを持たずに済む。大きさはベンチの寸法である。キロメートルを表示しているフロントエンドは、表示しているものに合わせて拡大縮小することが期待される。"
 
-#: ../../../gtrace/docs/source/editing.rst:421
+#: ../../../gtrace/docs/source/editing.rst:427
 msgid ""
 "``snap`` carries, for each substrate, its four corners, the apex of each "
 "face, its middle, and the middle of each of its two sides. It also "
@@ -735,7 +748,7 @@ msgstr ""
 "``snap`` "
 "は、各基板について4隅・各面の頂点・中心・2つの側面それぞれの中点を運ぶ。さらに各周辺物について、外形の4隅・その4辺それぞれの中点・周辺物が自分で名前を付けている点・持っている全てのネジ穴の中心を運ぶ。"
 
-#: ../../../gtrace/docs/source/editing.rst:427
+#: ../../../gtrace/docs/source/editing.rst:433
 msgid ""
 "Each point says what ``kind`` it is. A front end that offers points for "
 "one purpose and not another reads that: the viewer takes every kind when "
@@ -747,14 +760,14 @@ msgstr ""
 "では全ての kind を使い、部品を別の部品へドラッグするときだけ ``midpoint`` "
 "を外す。辺の中点は測る場所であって、固定する場所ではないからである。"
 
-#: ../../../gtrace/docs/source/editing.rst:433
+#: ../../../gtrace/docs/source/editing.rst:439
 msgid ""
 "Only straight edges get a middle. The middle of a curved face is its "
 "apex, which is already on the list; the middle of its chord is inside the"
 " glass, where nothing is drawn."
 msgstr "中点が付くのは直線の辺だけである。曲面の中央は頂点であり、それは既に上の一覧に入っている。弦の中点はガラスの内部にあり、そこには何も描かれていない。"
 
-#: ../../../gtrace/docs/source/editing.rst:437
+#: ../../../gtrace/docs/source/editing.rst:443
 msgid ""
 "The named points come before the holes. Two marks at the same place count"
 " as one point, and the first one wins. The post hole of a mount is both a"
@@ -764,7 +777,7 @@ msgstr ""
 "名前付き点は穴より先に来る。同じ場所にある2つの印は1つの点として数え、先に来たほうが勝つからである。マウントのポスト穴は、図の上では円であり、同時にマウントがペデスタルの上に立つ点でもある。\\"
 " ``MT post`` のほうが ``MT hole`` より役に立つラベルである。"
 
-#: ../../../gtrace/docs/source/editing.rst:442
+#: ../../../gtrace/docs/source/editing.rst:448
 msgid ""
 "These points come from Python because they are geometry: a corner is "
 "where the wedge and the sagitta of a curved face put it. Beam ends are "

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-22 18:37+0900\n"
+"POT-Creation-Date: 2026-08-22 19:30+0900\n"
 "PO-Revision-Date: 2026-08-09 22:30+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -230,12 +230,12 @@ msgid ""
 msgstr "x と y の列が分かれているのは、ビームが一般には丸くないからである。ウェッジのある基板を斜めに通ったあとでは、2つのウェストは違う値になる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:200
-msgid "|a255683d9131428ca213e608160cb132|"
-msgstr "|a255683d9131428ca213e608160cb132|"
+msgid "|041cf78fcca54ed592fb5ff661dfc4c6|"
+msgstr "|041cf78fcca54ed592fb5ff661dfc4c6|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:206
-msgid "a255683d9131428ca213e608160cb132"
-msgstr "a255683d9131428ca213e608160cb132"
+msgid "041cf78fcca54ed592fb5ff661dfc4c6"
+msgstr "041cf78fcca54ed592fb5ff661dfc4c6"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:202
 msgid ""
@@ -268,12 +268,12 @@ msgstr ""
 " ``inv_ROC_HR`` ではなく半径で表す。だから平面は ``inf`` と読める。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:222
-msgid "|367507d8e7544f76b63dcf4f2ca76c4e|"
-msgstr "|367507d8e7544f76b63dcf4f2ca76c4e|"
+msgid "|33a81585951a4da1aea2cd776202cc6e|"
+msgstr "|33a81585951a4da1aea2cd776202cc6e|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:268
-msgid "367507d8e7544f76b63dcf4f2ca76c4e"
-msgstr "367507d8e7544f76b63dcf4f2ca76c4e"
+msgid "33a81585951a4da1aea2cd776202cc6e"
+msgstr "33a81585951a4da1aea2cd776202cc6e"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
 msgid "in the viewer"
@@ -492,12 +492,12 @@ msgid ""
 msgstr "``Measure`` はクリック3回で使う。2回のクリックで何を測るかを、3回目で線をどこに引くかを指定する。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:349
-msgid "|ad68d4fe14694be780b31ce2ef774be9|"
-msgstr "|ad68d4fe14694be780b31ce2ef774be9|"
+msgid "|3d5f804dc94e489aa9d77f3967cd9e6d|"
+msgstr "|3d5f804dc94e489aa9d77f3967cd9e6d|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:365
-msgid "ad68d4fe14694be780b31ce2ef774be9"
-msgstr "ad68d4fe14694be780b31ce2ef774be9"
+msgid "3d5f804dc94e489aa9d77f3967cd9e6d"
+msgstr "3d5f804dc94e489aa9d77f3967cd9e6d"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:351
 msgid ""
@@ -577,12 +577,12 @@ msgstr ""
 "が聞かれるたびに宿主から位置を計算する。ミラーを動かせば、マウントが付いてくる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:472
-msgid "|c04218947b0543b0b0fb5432c9430abb|"
-msgstr "|c04218947b0543b0b0fb5432c9430abb|"
+msgid "|f34d6d896b3f441181f98dd55ef11abe|"
+msgstr "|f34d6d896b3f441181f98dd55ef11abe|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:482
-msgid "c04218947b0543b0b0fb5432c9430abb"
-msgstr "c04218947b0543b0b0fb5432c9430abb"
+msgid "f34d6d896b3f441181f98dd55ef11abe"
+msgstr "f34d6d896b3f441181f98dd55ef11abe"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:474
 msgid ""
@@ -654,12 +654,12 @@ msgid ""
 msgstr "原点をどこに置くかは慎重に決める。部品を素子に取り付けると、原点はその素子の基板の中心に来る。だからマウントは、これから保持するミラーを囲むように描かれる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:567
-msgid "|77641ede5a474c2c84f86d2267021b70|"
-msgstr "|77641ede5a474c2c84f86d2267021b70|"
+msgid "|dfc370bca9404b0f90b71a4b9284e054|"
+msgstr "|dfc370bca9404b0f90b71a4b9284e054|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:573
-msgid "77641ede5a474c2c84f86d2267021b70"
-msgstr "77641ede5a474c2c84f86d2267021b70"
+msgid "dfc370bca9404b0f90b71a4b9284e054"
+msgstr "dfc370bca9404b0f90b71a4b9284e054"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:569
 msgid ""
@@ -756,12 +756,12 @@ msgstr ""
 " ``dimensions=False`` を渡す。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:772
-msgid "|ad90d11260254af4a459915475d4eda3|"
-msgstr "|ad90d11260254af4a459915475d4eda3|"
+msgid "|e787e7e46a2b454986e3c2584936127e|"
+msgstr "|e787e7e46a2b454986e3c2584936127e|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:774
-msgid "ad90d11260254af4a459915475d4eda3"
-msgstr "ad90d11260254af4a459915475d4eda3"
+msgid "e787e7e46a2b454986e3c2584936127e"
+msgstr "e787e7e46a2b454986e3c2584936127e"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:821
 msgid "What is underneath"
@@ -818,12 +818,12 @@ msgstr ""
 "q パラメータを伝搬させることである。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:846
-msgid "|294f28d9656443f4b831ce5b99301298|"
-msgstr "|294f28d9656443f4b831ce5b99301298|"
+msgid "|7fb20891b2fe4978b772b3b5ae81f9ca|"
+msgstr "|7fb20891b2fe4978b772b3b5ae81f9ca|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:848
-msgid "294f28d9656443f4b831ce5b99301298"
-msgstr "294f28d9656443f4b831ce5b99301298"
+msgid "7fb20891b2fe4978b772b3b5ae81f9ca"
+msgstr "7fb20891b2fe4978b772b3b5ae81f9ca"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:859
 msgid ""
@@ -846,12 +846,12 @@ msgstr ""
 "は、その面が向く方向である。\\ ``center`` は基板の中心で、図の箱が置かれるのはこの点である。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:863
-msgid "|684d88e5ec1843b3ba5fdd58b026bde5|"
-msgstr "|684d88e5ec1843b3ba5fdd58b026bde5|"
+msgid "|b632d76e2b454dedb91370c6d2b10188|"
+msgstr "|b632d76e2b454dedb91370c6d2b10188|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:865
-msgid "684d88e5ec1843b3ba5fdd58b026bde5"
-msgstr "684d88e5ec1843b3ba5fdd58b026bde5"
+msgid "b632d76e2b454dedb91370c6d2b10188"
+msgstr "b632d76e2b454dedb91370c6d2b10188"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:930
 msgid ""
@@ -885,12 +885,12 @@ msgstr ""
 "を透過したビームである。文字は決まっている:"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:948
-msgid "|a04a29274c314e7194c83c563ed83dee|"
-msgstr "|a04a29274c314e7194c83c563ed83dee|"
+msgid "|20bf2b540d52437a92ffe397c231d8b5|"
+msgstr "|20bf2b540d52437a92ffe397c231d8b5|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:950
-msgid "a04a29274c314e7194c83c563ed83dee"
-msgstr "a04a29274c314e7194c83c563ed83dee"
+msgid "20bf2b540d52437a92ffe397c231d8b5"
+msgstr "20bf2b540d52437a92ffe397c231d8b5"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:961
 msgid ""
@@ -2783,4 +2783,58 @@ msgstr ""
 
 #~ msgid "ba5b8d8ec97d4c71bac8d4db2f4555a0"
 #~ msgstr "ba5b8d8ec97d4c71bac8d4db2f4555a0"
+
+#~ msgid "|a255683d9131428ca213e608160cb132|"
+#~ msgstr "|a255683d9131428ca213e608160cb132|"
+
+#~ msgid "a255683d9131428ca213e608160cb132"
+#~ msgstr "a255683d9131428ca213e608160cb132"
+
+#~ msgid "|367507d8e7544f76b63dcf4f2ca76c4e|"
+#~ msgstr "|367507d8e7544f76b63dcf4f2ca76c4e|"
+
+#~ msgid "367507d8e7544f76b63dcf4f2ca76c4e"
+#~ msgstr "367507d8e7544f76b63dcf4f2ca76c4e"
+
+#~ msgid "|ad68d4fe14694be780b31ce2ef774be9|"
+#~ msgstr "|ad68d4fe14694be780b31ce2ef774be9|"
+
+#~ msgid "ad68d4fe14694be780b31ce2ef774be9"
+#~ msgstr "ad68d4fe14694be780b31ce2ef774be9"
+
+#~ msgid "|c04218947b0543b0b0fb5432c9430abb|"
+#~ msgstr "|c04218947b0543b0b0fb5432c9430abb|"
+
+#~ msgid "c04218947b0543b0b0fb5432c9430abb"
+#~ msgstr "c04218947b0543b0b0fb5432c9430abb"
+
+#~ msgid "|77641ede5a474c2c84f86d2267021b70|"
+#~ msgstr "|77641ede5a474c2c84f86d2267021b70|"
+
+#~ msgid "77641ede5a474c2c84f86d2267021b70"
+#~ msgstr "77641ede5a474c2c84f86d2267021b70"
+
+#~ msgid "|ad90d11260254af4a459915475d4eda3|"
+#~ msgstr "|ad90d11260254af4a459915475d4eda3|"
+
+#~ msgid "ad90d11260254af4a459915475d4eda3"
+#~ msgstr "ad90d11260254af4a459915475d4eda3"
+
+#~ msgid "|294f28d9656443f4b831ce5b99301298|"
+#~ msgstr "|294f28d9656443f4b831ce5b99301298|"
+
+#~ msgid "294f28d9656443f4b831ce5b99301298"
+#~ msgstr "294f28d9656443f4b831ce5b99301298"
+
+#~ msgid "|684d88e5ec1843b3ba5fdd58b026bde5|"
+#~ msgstr "|684d88e5ec1843b3ba5fdd58b026bde5|"
+
+#~ msgid "684d88e5ec1843b3ba5fdd58b026bde5"
+#~ msgstr "684d88e5ec1843b3ba5fdd58b026bde5"
+
+#~ msgid "|a04a29274c314e7194c83c563ed83dee|"
+#~ msgstr "|a04a29274c314e7194c83c563ed83dee|"
+
+#~ msgid "a04a29274c314e7194c83c563ed83dee"
+#~ msgstr "a04a29274c314e7194c83c563ed83dee"
 

@@ -11,6 +11,46 @@ across them.
 
 ## Unreleased
 
+### Changed
+
+- **A shape is drawn by clicking where it goes.** It used to arrive at a
+  fixed size in a fixed place - at the origin in the shape editor, at
+  the middle of the view on a bench - and then had to be dragged and
+  typed into position. Choosing a kind now arms a tool, and the clicks
+  say what the shape is:
+
+  | Kind | What the clicks say |
+  |---|---|
+  | Line | Both ends |
+  | Rect | Two opposite corners |
+  | Circle | The centre, then a point on it |
+  | Arc | The centre, then where it starts, then where it stops |
+  | Poly | A corner per click, finished with the right button |
+  | Text | Where it goes |
+
+  **The clicks take the same marked points a measurement does**, which is
+  what makes a shape line up with what is already there instead of nearly
+  lining up.
+
+  While you draw, the shape is drawn as it would be if the next click
+  were where the cursor is, the button of the kind being drawn stays
+  lit, and the status bar says which place it is asking for. `Esc` gives
+  up on a drawing half made. The right button on a kind that finishes
+  itself gives up as well, and a polyline of one vertex is dropped
+  rather than sent, since neither is a shape.
+
+  Both doors on: the shape editor's `+ Rect` and the bench's `+ Shape`.
+  What is made of the drawing still differs, as it always has - a shape
+  in the part being drawn, or a body of its own on a bench - and on a
+  bench the shape is written about the origin with the body placed at
+  the middle of what was drawn, which is the division every body here
+  keeps.
+
+- **The size of a new shape no longer depends on the zoom**, because the
+  clicks give it. The one exception is the height of a piece of text: a
+  click says where the text goes and nothing says how big it is, so that
+  one is still sized to the width of the view.
+
 ### Added
 
 - **Measuring and aiming snap to the middle of a straight edge.** The two

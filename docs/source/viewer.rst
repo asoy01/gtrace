@@ -302,7 +302,8 @@ that choice. A cylindrical mirror is a mirror, not a separate kind of thing.
    * - ``+ Assembly``
      - An element **with the parts that hold it**.
    * - ``+ Shape``
-     - One drawing primitive as a body of its own.
+     - One drawing primitive as a body of its own, **drawn by clicking
+       where it goes**.
 
 **What is added is named for what it is**: a mount comes down as ``MT1``, a
 pedestal as ``P1``, a fork as ``FK1``, a holder as ``HLD1`` and a breadboard
@@ -321,16 +322,56 @@ pedestal and the fork come with it. The names follow the same rule: ``M2``
 held by ``MT2`` on ``P2`` in ``FK2``.
 
 ``+ Shape`` offers the six drawing primitives: rectangle, circle, line,
-polyline, arc and text. It puts one down as a body of that single shape, for
-example a tank wall, an aperture, the edge of a table, or a note on the
-drawing. It does the same thing as writing
-``Mechanics(shapes=[draw.Circle(...)])`` in a cell.
+polyline, arc and text. It makes a body of that single shape, for example a
+tank wall, an aperture, the edge of a table, or a note on the drawing. It
+does the same thing as writing ``Mechanics(shapes=[draw.Circle(...)])`` in a
+cell.
 
-**A shape is sized to the view it is put down in.** The default sizes are
-bench sizes: a 20 mm plate, a 5 mm hole. Those are right when the screen
-shows a part, and invisible when it shows three kilometres of
-interferometer. The viewer therefore scales them by the width of the view.
-Type the number you want into the panel afterwards.
+.. _drawing-a-shape:
+
+**A shape is drawn by clicking where it goes.** Choosing a kind arms a tool;
+the clicks then say what the shape is. Nothing is added until it has been
+drawn.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
+
+   * - Kind
+     - What the clicks say
+   * - Line
+     - Both ends.
+   * - Rect
+     - Two opposite corners.
+   * - Circle
+     - The centre, then a point on it.
+   * - Arc
+     - The centre, then where the arc starts, then where it stops. It runs
+       counterclockwise from the one to the other. The third click only
+       gives an angle, so it need not be on the circle.
+   * - Poly
+     - A corner per click. **The right button finishes it.**
+   * - Text
+     - Where the text goes.
+
+While you draw, the shape is drawn as it would be if the next click were
+where the cursor is, and the status bar says which place it is asking for.
+**Esc** gives up on a drawing half made. The right button on a kind that
+finishes itself gives up as well.
+
+**The clicks take the same marked points a measurement does** — the corners
+and apexes of an element, the middle of a straight edge, the screw holes of
+a breadboard, the ends of a beam. That is what makes a shape line up with
+what is already there instead of nearly lining up.
+
+The body is held at the middle of what was drawn, and the shape is written
+about that point. Where a body is, is its pose, and this keeps that true for
+a hand-drawn one.
+
+**The size is what you drew**, so it does not depend on how far the view was
+zoomed. The one exception is the height of a piece of text: a click says
+where the text goes and nothing says how big it is, so that one is sized to
+the width of the view. Type the number you want into the panel afterwards.
 
 Placing things
 ---------------
@@ -601,8 +642,10 @@ undo, measuring and the layer panel come along unchanged.
 
 The side bar is different here. It has four parts:
 
-* buttons that put a rectangle, circle, line, polyline, arc or text down at
-  the origin;
+* buttons that draw a rectangle, circle, line, polyline, arc or text. They
+  work as :ref:`+ Shape <drawing-a-shape>` does on a bench: the button arms
+  a tool, and the clicks say where the shape goes. The button of the kind
+  being drawn stays lit until it is drawn or **Esc** gives up on it;
 * the list of shapes, in the order they are drawn. You pick a shape here,
   copy it, move it earlier or later, or take it away;
 * the numbers of the picked shape, in millimetres and degrees;

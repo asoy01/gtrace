@@ -283,6 +283,12 @@ protocol of its own:
                    'points': [{'name': 'post', 'point': [-0.0135, 0.0]}]})
     ed.apply_edit({'op': 'undo'})
 
+``add_shape`` takes the ``params`` of the shape, which is how the viewer
+sends a shape the user has drawn by clicking: the places become a
+``start`` and a ``stop``, a ``center`` and a ``radius``, and so on. With no
+``params`` it puts down the default shape of that kind, which is what
+``newshapes`` carries.
+
 The operations are ``add_shape``, ``set_shape``, ``remove_shape``,
 ``duplicate_shape``, ``move_shape``, ``rotate_shape``, ``set_points``,
 ``save_model``, ``undo`` and ``redo``. A shape is edited in three steps:
