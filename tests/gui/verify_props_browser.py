@@ -197,7 +197,28 @@ var LENS = __LENS__;
                 function (b) { return b.textContent; });
         }
         // Open the menu and choose from it, which is what a user does.
-        function addFrom(label, item) {
+        function clickAt(p) {
+            mouse(v.svg, 'mousedown', p[0], p[1]);
+            mouse(window, 'mouseup', p[0], p[1]);
+        }
+        // Click where the armed thing goes, and say where it landed.
+        //
+        // The place is given as a fraction across the drawing rather
+        // than as a scene point: a point on the bench can be off the
+        // screen, and a move outside the drawing is not a hover. What
+        // it landed on is read back from the viewer, since a click
+        // carries whole pixels.
+        function placeAt(q) {
+            var rr = v.svg.getBoundingClientRect();
+            var sp = [rr.left + rr.width * q[0], rr.top + rr.height * q[1]];
+            mouse(window, 'mousemove', sp[0], sp[1]);
+            var landed = v.placePreview.slice();
+            clickAt(sp);
+            return landed;
+        }
+        // Arm a kind from its menu, then put one down. Nothing is
+        // added by the menu item alone.
+        function addFrom(label, item, at) {
             var w = addGroup(label);
             w.querySelector('.gt-addbtn').click();
             var target = null;
@@ -206,6 +227,7 @@ var LENS = __LENS__;
                     if (b.textContent === item) { target = b; }
                 });
             target.click();
+            return at ? placeAt(at) : null;
         }
         // --- making room ---
         // A notebook cell is a letterbox and a bench drawing is not, so
@@ -752,10 +774,28 @@ var LENS = __LENS__;
         if (EDITABLE) {
             var nSent = sent.length;
             v.cx = 0.31; v.cy = 0.22; v._applyTransform();
+            // Well away from the middle of the view, so that a thing
+            // put at the middle would be seen for what it is.
+            var AT = [0.28, 0.30], AT2 = [0.70, 0.65];
+            // Arming adds nothing: the click that follows does.
             addFrom('+ Mirror', 'Spherical');
+            out.arm = {armed: v.placing && v.placing.kind,
+                       type: v.placing && v.placing.type,
+                       lit: !!addGroup('+ Mirror')
+                            .querySelector('.gt-addbtn.gt-btn-on'),
+                       status: v.statusBar.textContent,
+                       sent: sent.length - nSent};
+            v.cancelPlace();
+            out.arm.offAfterCancel = !addGroup('+ Mirror')
+                .querySelector('.gt-addbtn.gt-btn-on');
+
+            nSent = sent.length;
+            var atMirror = addFrom('+ Mirror', 'Spherical', AT);
             out.add = {msg: sent[sent.length - 1],
                        sent: sent.length - nSent,
                        selected: v.selectedOptic,
+                       at: atMirror,
+                       stillArmed: !!v.placing,
                        viewCentre: [v.cx, v.cy]};
 
             // Python answers with a scene that has the new mirror in it.
@@ -775,31 +815,34 @@ var LENS = __LENS__;
                                 : v.opticFields.name.el.textContent};
 
             // A second one must not reuse the name.
-            addFrom('+ Mirror', 'Spherical');
+            addFrom('+ Mirror', 'Spherical', AT2);
             out.secondName = sent[sent.length - 1].name;
 
             // The cylindrical kind, from its own button.
             var nCy = sent.length;
-            addFrom('+ Mirror', 'Cylindrical');
+            var atCy = addFrom('+ Mirror', 'Cylindrical', AT);
             out.addCy = {msg: sent[sent.length - 1],
                          sent: sent.length - nCy,
+                         at: atCy,
                          selected: v.selectedOptic};
 
             // A lens carries no parameters of its own from the view:
             // Python builds it from catalogue defaults, since a lens is
             // not cut to match the mirrors around it.
             var nLensBtn = sent.length;
-            addFrom('+ Lens', 'Spherical');
+            var atLens = addFrom('+ Lens', 'Spherical', AT);
             out.addLens = {msg: sent[sent.length - 1],
                            sent: sent.length - nLensBtn,
+                           at: atLens,
                            selected: v.selectedOptic};
 
             // The cylindrical lens: catalogue defaults like a Lens,
             // plus the curve direction like a CyMirror.
             var nCyLensBtn = sent.length;
-            addFrom('+ Lens', 'Cylindrical');
+            var atCyLens = addFrom('+ Lens', 'Cylindrical', AT);
             out.addCyLens = {msg: sent[sent.length - 1],
                              sent: sent.length - nCyLensBtn,
+                             at: atCyLens,
                              selected: v.selectedOptic};
 
             // Put the first one back in the panel, then remove it.
@@ -897,7 +940,7 @@ var LENS = __LENS__;
         out.cycleClicks = null;
         if (cbeam) {
             var pc = screenOf(cbeam.end);
-            var clickAt = function () {
+            var clickBeamEnd = function () {
                 mouse(window, 'mousemove', pc[0], pc[1]);
                 mouse(v.svg, 'mousedown', pc[0], pc[1]);
                 mouse(window, 'mouseup', pc[0], pc[1]);
@@ -907,12 +950,12 @@ var LENS = __LENS__;
             v.lastClick = null;
             var under = v._pickAll(cbeam.end[0], cbeam.end[1],
                                    12 / v.scale).length;
-            clickAt();
+            clickBeamEnd();
             out.cycleClicks = {
                 optic: copt.name, under: under,
                 first: {panel: panel(), selected: v.selectedOptic}
             };
-            clickAt();
+            clickBeamEnd();
             out.cycleClicks.second = {panel: panel(),
                                       selected: v.selectedOptic,
                                       beam: v.pinned ? v.pinned.beam.name
@@ -923,7 +966,7 @@ var LENS = __LENS__;
             // so the count is bounded rather than assumed.
             var more = 0;
             while (more < under + 3 && v.selectedOptic === null) {
-                clickAt();
+                clickBeamEnd();
                 more += 1;
             }
             out.cycleClicks.wrapped = {panel: panel(),
@@ -1055,9 +1098,15 @@ var LENS = __LENS__;
         // of them is called what the first dump is called.
         if (EDITABLE) {
             var nd = sent.length;
+            var DUMP_AT = [0.28, 0.30];
             button('+ Dump').click();
+            out.dumpArm = {armed: v.placing && v.placing.kind,
+                           lit: button('+ Dump').classList.contains('gt-btn-on'),
+                           sent: sent.length - nd};
+            var atDump = placeAt(DUMP_AT);
             out.dump = {msg: sent[sent.length - 1],
                         n: sent.length - nd,
+                        at: atDump,
                         selected: v.selectedOptic};
             var withDump = JSON.parse(JSON.stringify(v.scene));
             ['a', 'b'].forEach(function (t) {
@@ -1074,6 +1123,7 @@ var LENS = __LENS__;
             model.set('scene', withDump);
             nd = sent.length;
             button('+ Dump').click();
+            placeAt(DUMP_AT);
             out.dump2 = {msg: sent[sent.length - 1],
                          n: sent.length - nd};
             model.set('scene', SCENE);
@@ -1258,14 +1308,18 @@ print('--- the dump button ---')
 check('a dump is a plain button, not a menu',
       res['addDumpButton'] and not res['addDumpGroup'])
 if res.get('dump'):
+    da = res['dumpArm']
+    check('the dump button arms a place rather than adding one',
+          da['sent'] == 0 and da['armed'] == 'dump', json.dumps(da))
+    check('  and lights while it is armed', da['lit'])
     dm = res['dump']
     check('one add message, naming the dump rather than an element',
           dm['n'] == 1 and dm['msg'] and dm['msg']['op'] == 'add'
           and dm['msg']['type'] == 'BeamDump' and dm['msg']['name'] == 'BD1',
           json.dumps(dm['msg']))
-    check('  at the centre of the view, facing a beam along +x',
+    check('  where it was clicked, facing a beam along +x',
           dm['msg'] and dm['msg']['params']['angle'] == 0
-          and len(dm['msg']['params']['center']) == 2,
+          and dm['msg']['params']['center'] == dm['at'],
           json.dumps(dm['msg']['params']))
     check('  and the selection follows its first face',
           dm['selected'] == 'BD1a', str(dm['selected']))
@@ -1792,6 +1846,14 @@ check('and the field snaps back',
 print('--- adding a mirror ---')
 check('the add button is there', res['addButton'])
 check('the remove button is there', res['removeButton'])
+arm = res['arm']
+check('the menu item arms a place rather than adding one',
+      arm['sent'] == 0 and arm['armed'] == 'optics'
+      and arm['type'] == 'Mirror', json.dumps(arm))
+check('  the button it hangs from is lit while it is armed', arm['lit'])
+check('  the status bar asks for the place',
+      'click where it goes' in arm['status'], arm['status'])
+check('  and giving up puts the light out', arm['offAfterCancel'])
 add = res['add']
 check('one message per click', add['sent'] == 1, str(add['sent']))
 check("it is an 'add'", add['msg']['op'] == 'add', str(add['msg'].get('op')))
@@ -1799,10 +1861,16 @@ check('of a Mirror', add['msg']['type'] == 'Mirror', str(add['msg'].get('type'))
 check('with a name the layout does not use yet',
       add['msg']['name'] not in [o['name'] for o in scene['optics']],
       str(add['msg'].get('name')))
-check('placed at the centre of the view',
-      abs(add['msg']['params']['HRcenter'][0] - add['viewCentre'][0]) < 1e-12
-      and abs(add['msg']['params']['HRcenter'][1] - add['viewCentre'][1]) < 1e-12,
-      str(add['msg']['params']['HRcenter']))
+check('placed where it was clicked',
+      abs(add['msg']['params']['HRcenter'][0] - add['at'][0]) < 1e-12
+      and abs(add['msg']['params']['HRcenter'][1] - add['at'][1]) < 1e-12,
+      '%s vs %s' % (add['msg']['params']['HRcenter'], add['at']))
+# The click is the whole of what says where it goes, so a place away
+# from the middle of the view must not come out in the middle of it.
+check('  and not at the centre of the view',
+      abs(add['msg']['params']['HRcenter'][0] - add['viewCentre'][0]) > 1e-3,
+      '%s vs %s' % (add['msg']['params']['HRcenter'], add['viewCentre']))
+check('  the mode is put away once it is placed', not add['stillArmed'])
 check('the new optics is selected right away',
       add['selected'] == add['msg']['name'], str(add['selected']))
 check('and its properties show once the scene comes back',
@@ -1827,9 +1895,9 @@ check('named apart from the plain mirrors',
       cy['msg']['name'].startswith('CY')
       and cy['msg']['name'] != add['msg']['name'],
       str(cy['msg']['name']))
-check('placed at the centre of the view like the others',
-      cy['msg']['params']['HRcenter'] == add['msg']['params']['HRcenter'],
-      str(cy['msg']['params']['HRcenter']))
+check('placed where it was clicked, like the others',
+      cy['msg']['params']['HRcenter'] == cy['at'],
+      '%s vs %s' % (cy['msg']['params']['HRcenter'], cy['at']))
 check('and selected right away', cy['selected'] == cy['msg']['name'],
       str(cy['selected']))
 
@@ -1848,9 +1916,9 @@ check('named apart from the mirrors',
       ln2['msg']['name'].startswith('L')
       and ln2['msg']['name'] not in (add['msg']['name'], cy['msg']['name']),
       str(ln2['msg']['name']))
-check('placed at the centre of the view like the others',
-      ln2['msg']['params']['HRcenter'] == add['msg']['params']['HRcenter'],
-      str(ln2['msg']['params']['HRcenter']))
+check('placed where it was clicked, like the others',
+      ln2['msg']['params']['HRcenter'] == ln2['at'],
+      '%s vs %s' % (ln2['msg']['params']['HRcenter'], ln2['at']))
 check('and selected right away', ln2['selected'] == ln2['msg']['name'],
       str(ln2['selected']))
 
@@ -1874,9 +1942,9 @@ check('named apart from the lenses and the mirrors',
       and cl['msg']['name'] not in (add['msg']['name'], cy['msg']['name'],
                                     ln2['msg']['name']),
       str(cl['msg']['name']))
-check('placed at the centre of the view like the others',
-      cl['msg']['params']['HRcenter'] == add['msg']['params']['HRcenter'],
-      str(cl['msg']['params']['HRcenter']))
+check('placed where it was clicked, like the others',
+      cl['msg']['params']['HRcenter'] == cl['at'],
+      '%s vs %s' % (cl['msg']['params']['HRcenter'], cl['at']))
 check('and selected right away', cl['selected'] == cl['msg']['name'],
       str(cl['selected']))
 

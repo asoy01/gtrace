@@ -438,6 +438,23 @@ var PLACE_STEPS = {
 };
 
 /*
+ * What a thing that is put down whole asks for: the one place it goes.
+ * A mirror, a lens, a source, a dump, an assembly and a part off the
+ * model shelf all come with their own shape, so the only thing a click
+ * has to say about them is where they stand.
+ */
+var PLACE_AT = 'click where it goes';
+
+/*
+ * The key a place is armed under, so that the button which armed it
+ * can be lit while it is armed. A kind and the thing within the kind:
+ * 'optics:Mirror', 'mechanics:MT-1IN', 'shape:circle'.
+ */
+function placeKey(kind, type) {
+    return kind + ':' + (type || '');
+}
+
+/*
  * Two places closer together than this, in metres, are the same place:
  * a slip of the hand rather than a shape of no size. Well below
  * anything drawn on a bench.
@@ -1264,8 +1281,8 @@ function Viewer(container, scene, options) {
     // click has to mean "this place" rather than whatever clicking
     // there would otherwise have meant.
     this.aligning = null;     // {optic, want, points: [[x, y], ...]}
-    this.placing = null;      // {type, body, want, points: [[x, y], ...]}
-    this.shapeBtns = {};      // the editor's draw buttons, by kind
+    this.placing = null;      // {kind, type, want, points: [[x, y], ...]}
+    this.placeBtns = {};      // the buttons that arm a place, by job key
     this.placePreview = null; // where the next place of a drawing would go
     this.alignPreview = null; // where the next click would land
 
@@ -1371,7 +1388,7 @@ Viewer.prototype._build = function () {
             btn.addEventListener('click', function () {
                 self.startPlace(spec.type, false);
             });
-            self.shapeBtns[spec.type] = btn;
+            self.placeBtns[placeKey('shape', spec.type)] = btn;
             shapeRow.appendChild(btn);
         });
         head.appendChild(shapeRow);
@@ -1383,21 +1400,23 @@ Viewer.prototype._build = function () {
         ADD_GROUPS.forEach(function (g) {
             if (g.dump) {
                 var dbtn = htmlEl('button', 'gt-btn', '+ ' + g.label);
-                dbtn.title = g.title + ' at the centre of the view, '
-                    + 'facing a beam that runs along +x';
+                dbtn.title = g.title + ': ' + PLACE_AT
+                    + '. It faces a beam that runs along +x';
                 dbtn.addEventListener('click', function () {
-                    self.addBeamDump();
+                    self.startPlaceDump();
                 });
+                self.placeBtns[placeKey('dump', null)] = dbtn;
                 addRow.appendChild(dbtn);
                 return;
             }
             var only = g.types.length === 1 ? addableType(g.types[0]) : null;
             var btn = htmlEl('button', 'gt-btn', '+ ' + g.label);
             if (only) {
-                btn.title = only.title + ' at the centre of the view';
+                btn.title = only.title + ': ' + PLACE_AT;
                 btn.addEventListener('click', function () {
-                    self.addOptics(only.type);
+                    self.startPlaceOptics(only.type);
                 });
+                self.placeBtns[placeKey('optics', only.type)] = btn;
                 addRow.appendChild(btn);
                 return;
             }
@@ -1408,7 +1427,7 @@ Viewer.prototype._build = function () {
             // scrolls without anything having to compute where it went.
             var wrap = htmlEl('div', 'gt-add');
             btn.className += ' gt-addbtn';
-            btn.title = g.title + ' at the centre of the view';
+            btn.title = g.title + ': ' + PLACE_AT;
             var menu = htmlEl('div', 'gt-menu');
             menu.style.display = 'none';
             g.types.forEach(function (type, i) {
@@ -1416,11 +1435,15 @@ Viewer.prototype._build = function () {
                 if (!t) { return; }
                 var item = htmlEl('button', 'gt-menuitem',
                                   (g.names && g.names[i]) || t.label);
-                item.title = t.title + ' at the centre of the view';
+                item.title = t.title + ': ' + PLACE_AT;
                 item.addEventListener('click', function () {
                     self.closeAddMenus();
-                    self.addOptics(t.type);
+                    self.startPlaceOptics(t.type);
                 });
+                // The variant is armed from a menu that closes behind
+                // it, so what is lit while it is armed is the button
+                // the menu hangs from - the one still on the screen.
+                self.placeBtns[placeKey('optics', t.type)] = btn;
                 menu.appendChild(item);
             });
             btn.addEventListener('click', function () {
@@ -1444,8 +1467,7 @@ Viewer.prototype._build = function () {
         // brings a new library.
         var hwrap = htmlEl('div', 'gt-add');
         var hbtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Mechanics');
-        hbtn.title = 'Add a part from the model library at the centre '
-            + 'of the view';
+        hbtn.title = 'Add a part from the model library: ' + PLACE_AT;
         var hmenu = htmlEl('div', 'gt-menu');
         hmenu.style.display = 'none';
         hbtn.addEventListener('click', function () {
@@ -1482,8 +1504,8 @@ Viewer.prototype._build = function () {
         // whichever ran last, so + Assembly opened the Align menu.
         var asmWrap = htmlEl('div', 'gt-add');
         var asmBtn = htmlEl('button', 'gt-btn gt-addbtn', '+ Assembly');
-        asmBtn.title = 'Add an element with the parts that hold it, at the '
-            + 'centre of the view';
+        asmBtn.title = 'Add an element with the parts that hold it: '
+            + PLACE_AT;
         var asmMenu = htmlEl('div', 'gt-menu');
         asmMenu.style.display = 'none';
         asmBtn.addEventListener('click', function () {
@@ -1514,6 +1536,7 @@ Viewer.prototype._build = function () {
                 self.closeAddMenus();
                 self.startPlace(kind.type, true);
             });
+            self.placeBtns[placeKey('shape', kind.type)] = sbtn;
             smenu.appendChild(item);
         });
         sbtn.addEventListener('click', function () {
@@ -1858,9 +1881,10 @@ Viewer.prototype._build = function () {
                    + '(Alt rides free)'],
                   ['Drag a selected body', 'move it'],
                   ['Drag a corner handle', 'cut a breadboard to size'],
-                  ['+ Mechanics', 'add a part from the model library'],
+                  ['+ Mechanics', 'add a part from the model library: '
+                   + 'click where it goes'],
                   ['+ Assembly', 'an element with the mount, pedestal '
-                   + 'and fork that hold it'],
+                   + 'and fork that hold it: click where it goes'],
                   ['+ Shape', 'draw one by clicking where it goes'],
                   ['Attached to', 'seat a mount on an optics; '
                    + '(free) detaches it in place'],
@@ -1872,8 +1896,9 @@ Viewer.prototype._build = function () {
                   ['Ctrl + click a beam', 'move the selected optics along it'],
                   ['Edit a property', 'apply it to the layout'],
                   ['+ Mirror / + Lens / + Source',
-                   'add one at the centre of the view'],
-                  ['+ Dump', 'add a beam dump facing a beam along +x'],
+                   'add one: click where it goes, Esc to give up'],
+                  ['+ Dump', 'add a beam dump facing a beam along +x: '
+                   + 'click where it goes'],
                   ['+ Mirror, + Lens',
                    'open for the cylindrical variant'],
                   ['Remove', 'delete the selection'],
@@ -3504,7 +3529,8 @@ Viewer.prototype.removePoint = function () {
 };
 
 /*
- * Put a beam dump at the centre of the view.
+ * Put a beam dump at the place given, or at the centre of the view
+ * when no place is given.
  *
  * Three pieces come of it - two absorbing faces and the housing they
  * sit in - so what is chosen here is the name of the dump rather than
@@ -3515,11 +3541,12 @@ Viewer.prototype.removePoint = function () {
  * It faces a beam running along +x, which is the direction a new
  * mirror is put down to reflect and the way a bench is usually built.
  */
-Viewer.prototype.addBeamDump = function () {
+Viewer.prototype.addBeamDump = function (at) {
     if (!this.onEdit) { return null; }
     var name = this._freshDumpName();
+    var where = at || [this.cx, this.cy];
     var msg = {op: 'add', type: 'BeamDump', name: name,
-               params: {center: [this.cx, this.cy], angle: 0}};
+               params: {center: [where[0], where[1]], angle: 0}};
     this.selectedOptic = name + 'a';
     this.selectedSource = null;
     this.selectedMech = null;
@@ -3550,14 +3577,15 @@ Viewer.prototype._freshDumpName = function () {
 };
 
 /*
- * Add an optics at the centre of the current view.
+ * Add an optics at the place given, or at the centre of the current
+ * view when no place is given.
  *
  * The name is chosen here rather than by Python, so that the viewer can
  * select the new element as soon as the scene comes back without
  * needing a reply channel. Everything else is left to the layout, which
  * fills the gaps from the optics already registered.
  */
-Viewer.prototype.addOptics = function (type, params) {
+Viewer.prototype.addOptics = function (type, params, at) {
     if (!this.onEdit) { return null; }
     var spec = null;
     for (var i = 0; i < ADDABLE_TYPES.length; i++) {
@@ -3571,9 +3599,10 @@ Viewer.prototype.addOptics = function (type, params) {
     // a new mirror faces back down the -x axis, where the beams
     // already in a layout tend to come from, and a new laser fires
     // along +x, which is where the rest of a bench is built from.
+    var where = at || [this.cx, this.cy];
     var pose = spec.source
-        ? {pos: [this.cx, this.cy], dirAngle: 0}
-        : {HRcenter: [this.cx, this.cy], normAngleHR: Math.PI};
+        ? {pos: [where[0], where[1]], dirAngle: 0}
+        : {HRcenter: [where[0], where[1]], normAngleHR: Math.PI};
     var msg = {op: 'add', type: spec.type, name: name,
                params: Object.assign(pose, spec.params || {}, params || {})};
     // Optimistic: the scene that comes back will contain it, and the
@@ -3608,15 +3637,18 @@ Viewer.prototype._refreshMechMenu = function () {
     var lib = this.scene.mechlib || [];
     hm.wrap.style.display = lib.length ? '' : 'none';
     hm.menu.textContent = '';
+    this._forgetPlaceButtons('mechanics');
     lib.forEach(function (entry) {
         var item = htmlEl('button', 'gt-menuitem', entry.name);
         item.title = entry.description || '';
         item.addEventListener('click', function () {
             self.closeAddMenus();
-            self.addMechanics(entry.name, entry.prefix);
+            self.startPlaceMechanics(entry.name, entry.prefix);
         });
+        self.placeBtns[placeKey('mechanics', entry.name)] = hm.button;
         hm.menu.appendChild(item);
     });
+    this._litPlaceButton();
 };
 
 /*
@@ -3630,38 +3662,64 @@ Viewer.prototype._refreshAssemblyMenu = function () {
     var kinds = this.scene.assemblies || [];
     am.wrap.style.display = kinds.length ? '' : 'none';
     am.menu.textContent = '';
+    this._forgetPlaceButtons('assembly');
     kinds.forEach(function (entry) {
         var item = htmlEl('button', 'gt-menuitem', entry.label || entry.kind);
         item.title = entry.description || '';
         item.addEventListener('click', function () {
             self.closeAddMenus();
-            self.addAssembly(entry.kind, entry.prefix);
+            self.startPlaceAssembly(entry.kind, entry.prefix,
+                                    entry.label || entry.kind);
         });
+        self.placeBtns[placeKey('assembly', entry.kind)] = am.button;
         am.menu.appendChild(item);
     });
+    this._litPlaceButton();
 };
 
 /*
- * Add an assembly at the centre of the current view: the element and
- * the parts that hold it, as one edit and so as one step of undo.
+ * Drop the keys of one kind before a menu is filled again. The model
+ * shelf and the assembly kinds ride in the scene, so a new scene can
+ * bring a different list; a key left behind would point at a menu
+ * item that is no longer offered.
+ */
+Viewer.prototype._forgetPlaceButtons = function (kind) {
+    var head = kind + ':';
+    for (var k in this.placeBtns) {
+        if (this.placeBtns.hasOwnProperty(k) && k.indexOf(head) === 0) {
+            delete this.placeBtns[k];
+        }
+    }
+};
+
+/*
+ * Add an assembly at the place given, or at the centre of the current
+ * view when no place is given: the element and the parts that hold it,
+ * as one edit and so as one step of undo.
  *
  * Only the element's name is chosen here, so that the selection can
  * follow it without waiting for a reply. What the parts are called is
  * Python's, which is where the free numbers are known.
  */
-Viewer.prototype.addAssembly = function (kind, prefix) {
+Viewer.prototype.addAssembly = function (kind, prefix, at) {
     if (!this.onEdit) { return null; }
+    var entry = this._assemblyKind(kind);
     if (prefix === undefined || prefix === null) {
-        var kinds = this.scene.assemblies || [];
-        for (var i = 0; i < kinds.length; i++) {
-            if (kinds[i].kind === kind) { prefix = kinds[i].prefix; }
-        }
+        prefix = entry ? entry.prefix : null;
     }
     var name = this._freshOpticName(prefix || 'M');
     // Facing back down -x, like a new mirror: that is where the beams
     // already in a layout tend to come from.
+    var where = at || [this.cx, this.cy];
+    // Where an assembly stands is the kind's to say, and the scene
+    // says it: a mirror stands by the centre of its front face, since
+    // that is where light turns and what a layout measures to, and a
+    // lens by its centre. One point either way - only the name of the
+    // parameter differs.
+    var params = {angle: Math.PI};
+    params[(entry && entry.place) || 'center'] = [where[0], where[1]];
     var msg = {op: 'add', type: 'Assembly', kind: kind, name: name,
-               params: {center: [this.cx, this.cy], angle: Math.PI}};
+               params: params};
     this.selectedOptic = name;
     this.selectedMech = null;
     this.selectedSource = null;
@@ -3671,23 +3729,37 @@ Viewer.prototype.addAssembly = function (kind, prefix) {
 };
 
 /*
- * Add a library model at the centre of the current view. The name is
- * chosen here, like a new optics' name, so the viewer can select what
- * it asked for as soon as the scene comes back.
+ * What the scene says about one kind of assembly, or null when the
+ * scene carries no such kind.
+ */
+Viewer.prototype._assemblyKind = function (kind) {
+    var kinds = this.scene.assemblies || [];
+    for (var i = 0; i < kinds.length; i++) {
+        if (kinds[i].kind === kind) { return kinds[i]; }
+    }
+    return null;
+};
+
+/*
+ * Add a library model at the place given, or at the centre of the
+ * current view when no place is given. The name is chosen here, like a
+ * new optics' name, so the viewer can select what it asked for as soon
+ * as the scene comes back.
  *
  * What it is called before the number is the model's to say - a mount
  * is MT1, a fork FK1 - and the shelf carries it. A model that says
  * nothing gets H, which is what everything got before the models said
  * anything.
  */
-Viewer.prototype.addMechanics = function (model, prefix) {
+Viewer.prototype.addMechanics = function (model, prefix, at) {
     if (!this.onEdit) { return null; }
     if (prefix === undefined || prefix === null) {
         prefix = this._modelPrefix(model);
     }
     var name = this._freshOpticName(prefix || 'H');
+    var where = at || [this.cx, this.cy];
     var msg = {op: 'add', type: 'Mechanics', name: name,
-               params: {model: model, center: [this.cx, this.cy]}};
+               params: {model: model, center: [where[0], where[1]]}};
     this.selectedMech = name;
     this.selectedOptic = null;
     this.selectedSource = null;
@@ -5138,37 +5210,110 @@ Viewer.prototype._refreshAlign = function () {
 
 //}}}
 
-//{{{ Drawing a shape by clicking
+//{{{ Putting something down by clicking
 
 /*
- * Arm the tool that draws a shape: the next clicks say where it goes.
+ * Arm a place: the next clicks say where the new thing goes.
  *
- * A shape used to arrive at a fixed size in a fixed place, to be
- * dragged and typed into position afterwards. But a drawing is made of
- * places, and the places are already on the screen - a corner of
- * another shape, a screw hole, the origin - so the shape is drawn by
- * naming them. The clicks take the same marks a measurement does, and
- * the shape appears where it was drawn rather than where it landed.
+ * Everything the buttons add used to arrive at the centre of the view,
+ * to be dragged and typed into position afterwards. But a bench is
+ * made of places, and the places are already on the screen - the face
+ * of another mirror, a screw hole, the origin - so the new thing is
+ * put down by naming one. The clicks take the same marks a measurement
+ * does, and what is added appears where it was put rather than where
+ * it landed.
  *
- * asBody says what is made of it. In a shape editor the shape joins
- * the part being drawn; on a bench it becomes a body of its own, since
- * a bench holds bodies rather than loose shapes.
+ * The job says what is being put down:
+ *
+ *   kind    'shape', 'optics', 'dump', 'assembly' or 'mechanics'
+ *   type    the shape kind, the optics class, the assembly kind or
+ *           the model name - whichever the kind deals in
+ *   want    how many clicks it takes; 0 for a polyline, which is
+ *           finished by the right button
+ *   key     the button to light while it is armed
+ *   label   what the status bar calls it
+ *   steps   what to ask for, click by click, with hint as the fallback
+ *
+ * A shape carries one more: body says what is made of it. In a shape
+ * editor the shape joins the part being drawn; on a bench it becomes a
+ * body of its own, since a bench holds bodies rather than loose shapes.
  */
-Viewer.prototype.startPlace = function (type, asBody) {
-    if (!this.onEdit || !PLACE_POINTS.hasOwnProperty(type)) { return null; }
+Viewer.prototype._armPlace = function (job) {
+    if (!this.onEdit) { return null; }
     // Three modes that all mean "the next click is a place", so at
     // most one of them can be armed.
     if (this.measuring) { this.toggleMeasure(false); }
     this.cancelAlign();
-    this.placing = {type: type, body: !!asBody, points: [],
-                    want: PLACE_POINTS[type]};
+    job.points = [];
+    this.placing = job;
     this.placePreview = null;
     this.snapped = null;
     this.svg.classList.add('gt-measuring');
     this._litPlaceButton();
     this._updateOverlay();
     this._updateStatus();
-    return this.placing;
+    return job;
+};
+
+/*
+ * Draw a shape: the clicks say what it is as well as where it goes,
+ * so how many of them it takes is the kind's to say.
+ */
+Viewer.prototype.startPlace = function (type, asBody) {
+    if (!PLACE_POINTS.hasOwnProperty(type)) { return null; }
+    return this._armPlace({kind: 'shape', type: type, body: !!asBody,
+                           want: PLACE_POINTS[type],
+                           key: placeKey('shape', type),
+                           label: 'Draw ' + type,
+                           steps: PLACE_STEPS[type],
+                           hint: PLACE_HINTS[type]});
+};
+
+/*
+ * Put down an element or a laser. One click: what it looks like is the
+ * catalogue's, and which way it faces is the same default a new one
+ * has always had, so the only open question is where it stands.
+ */
+Viewer.prototype.startPlaceOptics = function (type) {
+    var spec = addableType(type);
+    if (!spec) { return null; }
+    return this._armPlace({kind: 'optics', type: type, want: 1,
+                           key: placeKey('optics', type),
+                           label: 'Place ' + spec.label,
+                           steps: [PLACE_AT], hint: PLACE_AT});
+};
+
+Viewer.prototype.startPlaceDump = function () {
+    return this._armPlace({kind: 'dump', type: null, want: 1,
+                           key: placeKey('dump', null),
+                           label: 'Place beam dump',
+                           steps: [PLACE_AT], hint: PLACE_AT});
+};
+
+/*
+ * Put down an assembly. The click gives the element's place, and the
+ * mount, the pedestal and the fork are built about it on the Python
+ * side, as they are wherever an assembly is added.
+ *
+ * Which point of the element that is depends on the kind, so the
+ * status bar names it: a mirror stands by the centre of its front
+ * face, a lens by its centre, and the two are a few millimetres apart.
+ */
+Viewer.prototype.startPlaceAssembly = function (kind, prefix, label) {
+    var entry = this._assemblyKind(kind);
+    var hint = (entry && entry.place === 'HRcenter')
+        ? 'click where the front face goes' : PLACE_AT;
+    return this._armPlace({kind: 'assembly', type: kind, prefix: prefix,
+                           want: 1, key: placeKey('assembly', kind),
+                           label: 'Place ' + (label || kind),
+                           steps: [hint], hint: hint});
+};
+
+Viewer.prototype.startPlaceMechanics = function (model, prefix) {
+    return this._armPlace({kind: 'mechanics', type: model, prefix: prefix,
+                           want: 1, key: placeKey('mechanics', model),
+                           label: 'Place ' + model,
+                           steps: [PLACE_AT], hint: PLACE_AT});
 };
 
 Viewer.prototype.cancelPlace = function () {
@@ -5184,21 +5329,28 @@ Viewer.prototype.cancelPlace = function () {
 };
 
 /*
- * Light the button of the kind being drawn, as Measure lights its own.
- * A mode with nothing to show for itself is one the user has no way of
+ * Light the button that armed the place, as Measure lights its own. A
+ * mode with nothing to show for itself is one the user has no way of
  * seeing they are in.
+ *
+ * Several keys can share a button - the variants of a menu are armed
+ * from the items, and what stays on the screen is the button the menu
+ * hangs from - so the button to light is found first and every
+ * registered button is then set against it. Toggling key by key would
+ * turn a shared button off again on the next key.
  */
 Viewer.prototype._litPlaceButton = function () {
-    var on = this.placing ? this.placing.type : null;
-    for (var k in this.shapeBtns) {
-        if (!this.shapeBtns.hasOwnProperty(k)) { continue; }
-        this.shapeBtns[k].classList.toggle('gt-btn-on', k === on);
+    var lit = this.placing ? this.placeBtns[this.placing.key] : null;
+    for (var k in this.placeBtns) {
+        if (!this.placeBtns.hasOwnProperty(k)) { continue; }
+        var btn = this.placeBtns[k];
+        btn.classList.toggle('gt-btn-on', btn === lit);
     }
 };
 
 /*
- * A click while drawing: take the place, and finish if it was the last
- * one this kind needs.
+ * A click while a place is armed: take the place, and finish if it was
+ * the last one this kind needs.
  */
 Viewer.prototype._onPlaceClick = function (x, y) {
     var pl = this.placing;
@@ -5222,16 +5374,38 @@ Viewer.prototype._onPlaceClick = function (x, y) {
 };
 
 /*
- * Finish the drawing and send it.
+ * Finish what was being put down and send it.
  *
  * A polyline is finished by the right button; every other kind
  * finishes itself as soon as it has the places it needs. A drawing
  * that does not amount to a shape - a polyline of one vertex - is
  * dropped rather than sent, since there is nothing to make of it.
+ *
+ * Everything that is not a shape is one click and one add, so the
+ * place goes to the same add the button used to call directly. The
+ * mode is put away first: the add chooses a name from the scene and
+ * selects it, and an armed mode has no part in that.
  */
 Viewer.prototype.finishPlace = function () {
     var pl = this.placing;
     if (!pl || !this.onEdit) { return null; }
+    if (pl.kind !== 'shape') {
+        var at = pl.points[0];
+        this.cancelPlace();
+        if (!at) { return null; }
+        switch (pl.kind) {
+        case 'optics':
+            return this.addOptics(pl.type, null, at);
+        case 'dump':
+            return this.addBeamDump(at);
+        case 'assembly':
+            return this.addAssembly(pl.type, pl.prefix, at);
+        case 'mechanics':
+            return this.addMechanics(pl.type, pl.prefix, at);
+        default:
+            return null;
+        }
+    }
     var params = placeParams(pl.type, pl.points);
     if (!params) { this.cancelPlace(); return null; }
     if (pl.type === 'text') {
@@ -5383,7 +5557,10 @@ function shiftShape(s, dx, dy) {
  */
 Viewer.prototype._placeOutline = function () {
     var pl = this.placing;
-    if (!pl) { return null; }
+    // Only a shape is drawn by its places. Everything else comes with
+    // its own outline, which nothing here knows until Python has built
+    // it - so what the cursor shows is the mark it would land on.
+    if (!pl || pl.kind !== 'shape') { return null; }
     var pts = pl.points.slice();
     if (this.placePreview) { pts.push(this.placePreview); }
     if (pts.length < 2) { return null; }
@@ -6515,9 +6692,9 @@ Viewer.prototype._bindEvents = function () {
             });
             self.closeAddMenus();
             if (wasOpen) { return; }
-            // A shape half drawn, then an aim half taken: both are
-            // things to let go of before the selection, and letting go
-            // of either should not also clear it.
+            // Something half put down, then an aim half taken: both
+            // are things to let go of before the selection, and
+            // letting go of either should not also clear it.
             if (self.cancelPlace()) { return; }
             if (self.cancelAlign()) { return; }
             if (self.measuring) { self.toggleMeasure(false); }
@@ -8393,14 +8570,13 @@ Viewer.prototype._updateStatus = function () {
         var pwhere = this.snapped ? this.snapped.label
             : (this.cursor ? fmtLen(this.cursor[0]) + ',  '
                              + fmtLen(this.cursor[1]) : '');
-        var step = PLACE_STEPS[pl.type][pl.points.length]
-            || PLACE_HINTS[pl.type];
+        var step = (pl.steps && pl.steps[pl.points.length]) || pl.hint;
         // A polyline says how many corners it has so far, since that
         // is the only thing that says how far along it is.
         var count = (pl.type === 'polyline' && pl.points.length)
             ? '  (' + pl.points.length + ' so far)' : '';
         this.statusBar.textContent =
-            'Draw ' + pl.type + ':  ' + step + count +
+            pl.label + ':  ' + step + count +
             (pwhere ? '     at  ' + pwhere : '') +
             (pl.want ? '' : '     right button to finish') +
             '     (Esc to cancel)';

@@ -203,6 +203,19 @@ var EDITABLE = __EDITABLE__;
             mouse(v.svg, 'mousedown', p[0], p[1], opts);
             mouse(window, 'mouseup', p[0], p[1], opts);
         }
+        // Click where an armed thing goes, and say where it landed.
+        // The place comes from the viewer rather than from the scene
+        // point asked for: a click carries whole pixels.
+        function placeAt(q) {
+            var sp = screenOf(q);
+            mouse(window, 'mousemove', sp[0], sp[1]);
+            var landed = v.placePreview.slice();
+            clickAt(sp);
+            return landed;
+        }
+        // Clear of the board, the beams and the bodies, so that what
+        // is put down is put where it was clicked.
+        var ADD_AT = [0.62, 0.42];
         function dragFromTo(a, b, opts) {
             mouse(v.svg, 'mousedown', a[0], a[1], opts);
             mouse(window, 'mousemove',
@@ -469,8 +482,20 @@ var EDITABLE = __EDITABLE__;
             Array.prototype.forEach.call(hm.menu.querySelectorAll('button'),
                 function (b) { if (b.textContent === 'BB3030') { bbItem = b; } });
         }
-        if (bbItem) { bbItem.click(); }
-        out.hwAdd = {msg: sent[before] || null, selected: v.selectedMech};
+        out.hwArm = null;
+        var atBB = null;
+        if (bbItem) {
+            bbItem.click();
+            // Armed, and nothing sent by the arming itself.
+            out.hwArm = {armed: v.placing && v.placing.kind,
+                         model: v.placing && v.placing.type,
+                         lit: hm.button.classList.contains('gt-btn-on'),
+                         n: sent.length - before,
+                         status: v.statusBar.textContent};
+            atBB = placeAt(ADD_AT);
+        }
+        out.hwAdd = {msg: sent[before] || null, selected: v.selectedMech,
+                     at: atBB, stillArmed: !!v.placing};
         v.selectedMech = null;   // nothing was really added
 
         // What each model calls the bodies built from it. A part is
@@ -482,6 +507,7 @@ var EDITABLE = __EDITABLE__;
                 function (b) {
                     var was = sent.length;
                     b.click();
+                    placeAt(ADD_AT);
                     var msg = sent[was] || null;
                     out.hwNames[b.textContent] = msg ? msg.name : null;
                     v.selectedMech = null;
@@ -495,6 +521,13 @@ var EDITABLE = __EDITABLE__;
         // then close over whichever ran last. That is not visible in
         // what the menus contain - only in what a click on the button
         // does - so it is checked here by clicking the buttons.
+        // Aiming is offered only while an element is selected, and
+        // whether there is anything to aim is worked out again at
+        // every click - including the clicks that put the parts above
+        // down. Take an element back into the selection, so that
+        // every button on the row is one a click can open.
+        v.selectedOptic = 'M1';
+        v._refreshAlign();
         out.menuOwn = (v.addMenus || []).map(function (entry, i) {
             v.closeAddMenus();
             entry.button.click();
@@ -524,9 +557,17 @@ var EDITABLE = __EDITABLE__;
                 function (b) {
                     var was = sent.length;
                     b.click();
+                    var armed = {kind: v.placing && v.placing.kind,
+                                 type: v.placing && v.placing.type,
+                                 lit: am.button.classList.contains('gt-btn-on'),
+                                 n: sent.length - was};
+                    var at = placeAt(ADD_AT);
                     out.asmAdd[b.textContent] = {
                         msg: sent[was] || null,
                         n: sent.length - was,
+                        arm: armed,
+                        at: at,
+                        stillArmed: !!v.placing,
                         selectedOptic: v.selectedOptic,
                         selectedMech: v.selectedMech
                     };
@@ -535,10 +576,6 @@ var EDITABLE = __EDITABLE__;
         }
 
         // --- the shape menu ---
-        // Where the view is looking, read here: what + Shape puts down
-        // lands at the centre, and the driver moves the view later on.
-        out.cx = v.cx;
-        out.cy = v.cy;
         var sm = v.shapeMenu;
         out.shMenu = {
             shown: !!sm && sm.wrap.style.display !== 'none',
@@ -1116,12 +1153,24 @@ check('+ Mechanics lists exactly the library shelf',
       and set(res['hwMenu']['items'])
           == set(e['name'] for e in scene['mechlib']),
       json.dumps(res['hwMenu']['items']))
+hwa = res['hwArm']
+check('choosing a model arms a place rather than dropping the part',
+      hwa and hwa['n'] == 0 and hwa['armed'] == 'mechanics'
+      and hwa['model'] == 'BB3030', json.dumps(hwa))
+check('  the + Mechanics button is lit while it is armed', hwa['lit'])
+check('  and the status bar asks for the place',
+      'click where it goes' in hwa['status'], hwa['status'])
 ha = res['hwAdd']
-check('choosing a model sends the add, carried optimistically',
+check('  and the click sends the add, carried optimistically',
       ha['msg'] and ha['msg']['op'] == 'add'
       and ha['msg']['type'] == 'Mechanics'
       and ha['msg']['params']['model'] == 'BB3030'
       and ha['selected'] == ha['msg']['name'], json.dumps(ha))
+check('  placed where it was clicked, and the tool puts itself away',
+      ha['msg'] and ha['msg']['params']['center'] == ha['at']
+      and ha['stillArmed'] is False,
+      '%s vs %s' % (json.dumps(ha['msg']['params']['center']),
+                    json.dumps(ha['at'])))
 layout.apply_edit(ha['msg'])
 check('  and Python builds it from the shelf',
       layout.get_mechanics(ha['msg']['name']).resizable)
@@ -1197,7 +1246,13 @@ check('+ Assembly lists the kinds the scene carries',
 for entry in scene['assemblies']:
     aa = res['asmAdd'].get(entry['label']) or {}
     msg = aa.get('msg')
-    check('choosing %s sends one add of that kind' % entry['label'],
+    arm = aa.get('arm') or {}
+    check('choosing %s arms a place rather than adding one'
+          % entry['label'],
+          arm.get('n') == 0 and arm.get('kind') == 'assembly'
+          and arm.get('type') == entry['kind'] and arm.get('lit'),
+          json.dumps(arm))
+    check('  and the click sends one add of that kind',
           aa.get('n') == 1 and msg and msg['op'] == 'add'
           and msg['type'] == 'Assembly' and msg['kind'] == entry['kind'],
           json.dumps(msg))
@@ -1207,9 +1262,17 @@ for entry in scene['assemblies']:
           msg['name'].startswith(entry['prefix'])
           and aa['selectedOptic'] == msg['name']
           and not aa['selectedMech'], json.dumps(msg['name']))
-    check('  at the centre of the view',
-          np.allclose(msg['params']['center'], [res['cx'], res['cy']]),
-          json.dumps(msg['params']['center']))
+    # A mirror stands by the centre of its front face and a lens by
+    # its centre, so which parameter carries the click is the kind's
+    # to say. The scene says it, and the page sends that name.
+    place = entry['place']
+    sent_places = [k for k in msg['params']
+                   if k in ('center', 'HRcenter')]
+    check('  where it was clicked, under the name the kind gives',
+          sent_places == [place] and msg['params'][place] == aa['at'],
+          '%s: %s vs %s' % (place, json.dumps(msg['params']),
+                            json.dumps(aa['at'])))
+    check('  and the tool puts itself away', aa['stillArmed'] is False)
     n_optics = len(layout.optics)
     n_mech = len(layout.mechanics)
     layout.apply_edit(msg)

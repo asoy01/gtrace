@@ -487,8 +487,8 @@ CREATABLE_DUMP_PARAMS = frozenset(['center', 'angle', 'reflectivity'])
 #: mount, how thick the substrate - and what is here is what a front
 #: end has to say: where it stands, which way it looks, and for a lens
 #: what it is for.
-CREATABLE_ASSEMBLY_PARAMS = frozenset(['center', 'angle', 'diameter',
-                                       'thickness', 'f'])
+CREATABLE_ASSEMBLY_PARAMS = frozenset(['center', 'HRcenter', 'angle',
+                                       'diameter', 'thickness', 'f'])
 
 #: Attributes of a Mechanics a front end may change: its pose - or,
 #: attached, its attachment - and nothing else. The shapes are the body
@@ -1819,7 +1819,7 @@ def _stand(optic, mount=None, pedestal=DEFAULT_PEDESTAL, fork=DEFAULT_FORK,
         host = part
     return parts
 
-def mirror_assembly(name='M1', center=(0.0, 0.0), angle=np.pi,
+def mirror_assembly(name='M1', center=None, angle=np.pi, HRcenter=None,
                     diameter=1*unit.inch, thickness=6*unit.mm,
                     mount='MOUNT-25', pedestal=DEFAULT_PEDESTAL,
                     fork=DEFAULT_FORK, mount_name=None, pedestal_name=None,
@@ -1846,10 +1846,17 @@ def mirror_assembly(name='M1', center=(0.0, 0.0), angle=np.pi,
     center : sequence of 2 floats, optional
         Where the substrate centre stands, in metres. The mount is
         drawn around that point, so it is what lines the stack up.
+        Defaults to the origin.
     angle : float, optional
         Which way the front face looks, in radians. Defaults to pi,
         facing back down -x, which is what a new mirror does in the
         viewer.
+    HRcenter : sequence of 2 floats, optional
+        Where the centre of the front face stands, in metres. The
+        other way of saying where the mirror goes, and the one a
+        layout is built from: light reflects off that face, and the
+        distances between elements are measured to it. Give this or
+        ``center``, not both.
     diameter, thickness : float, optional
         The optic. 1 inch by 6 mm, which is what the one-inch mount is
         drawn to seat.
@@ -1878,13 +1885,20 @@ def mirror_assembly(name='M1', center=(0.0, 0.0), angle=np.pi,
         and hosts first within each, which is the order they have to
         be registered in.
     '''
+    if center is not None and HRcenter is not None:
+        raise ValueError('A mirror assembly stands in one place: give '
+                         'center or HRcenter, not both.')
     # Built at the origin and then stood where it goes: a Mirror is
     # constructed from its front face, and what lines the stack up is
     # the substrate centre - the point the mount is drawn around.
     optic = optcomp.Mirror(HRcenter=[0.0, 0.0], normAngleHR=float(angle),
                            diameter=float(diameter),
                            thickness=float(thickness), name=name, **kwargs)
-    optic.center = np.asarray(center, dtype='float64')
+    if HRcenter is not None:
+        optic.HRcenter = np.asarray(HRcenter, dtype='float64')
+    else:
+        optic.center = np.asarray(
+            (0.0, 0.0) if center is None else center, dtype='float64')
     return [optic], _stand(optic, mount=mount, pedestal=pedestal, fork=fork,
                            mount_name=mount_name,
                            pedestal_name=pedestal_name, fork_name=fork_name,
@@ -1950,8 +1964,14 @@ def lens_assembly(name='L1', center=(0.0, 0.0), angle=np.pi, f=0.2,
 #: shapes, and the first piece of every assembly here is an element.
 #: It is a builder, like the beam dump, and what a saved layout carries
 #: is what it built.
+#: Which parameter a kind is placed by, for the kinds whose place is
+#: not the substrate centre. A mirror is placed by its front face:
+#: that is where light turns, and where a layout measures to. A lens
+#: is placed by its centre, which is where its holder is drawn around
+#: and what the two faces are symmetric about.
 ASSEMBLY_KINDS = [
     {'kind': 'MIRROR-1IN', 'label': '1 inch mirror', 'prefix': 'M',
+     'place': 'HRcenter',
      'description': '1 inch mirror in a 1 inch mount, on a pedestal '
                     'and fork',
      'builder': mirror_assembly,
@@ -1961,6 +1981,7 @@ ASSEMBLY_KINDS = [
      'parts': [('mount', 'mount_name'), ('pedestal', 'pedestal_name'),
                ('fork', 'fork_name')]},
     {'kind': 'MIRROR-2IN', 'label': '2 inch mirror', 'prefix': 'M',
+     'place': 'HRcenter',
      'description': '2 inch mirror in a 2 inch mount, on a pedestal '
                     'and fork',
      'builder': mirror_assembly,
@@ -2000,12 +2021,17 @@ def assembly_kinds():
     What :func:`assembly` can build: kind, label and description, in
     the order a menu should show them.
 
+    ``place`` names the parameter that says where the assembly goes,
+    so that a front end with one point to give knows what to call it:
+    ``'HRcenter'`` for a mirror, ``'center'`` for a lens.
+
     Returns
     -------
     list of dict
     '''
     return [{'kind': a['kind'], 'label': a['label'],
-             'description': a['description'], 'prefix': a['prefix']}
+             'description': a['description'], 'prefix': a['prefix'],
+             'place': a.get('place', 'center')}
             for a in ASSEMBLY_KINDS]
 
 def _assembly_kind(kind):

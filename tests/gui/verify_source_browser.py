@@ -444,8 +444,20 @@ var EDITABLE = __EDITABLE__;
         // --- adding and removing ---
         if (EDITABLE) {
             sent.length = 0;
+            // The button arms a place; the click that follows says
+            // where the laser stands. The place is read back from the
+            // viewer, since a click carries whole pixels.
             button('+ Source').click();
+            out.arm = {armed: v.placing && v.placing.kind,
+                       type: v.placing && v.placing.type,
+                       lit: button('+ Source').classList.contains('gt-btn-on'),
+                       sent: sent.length};
+            var sp = screenOf([0.42, 0.31]);
+            mouse(window, 'mousemove', sp[0], sp[1]);
+            var atSource = v.placePreview.slice();
+            clickAt(sp);
             out.added = {sent: sent.slice(), selected: v.selectedSource,
+                         at: atSource, stillArmed: !!v.placing,
                          optic: v.selectedOptic};
 
             sent.length = 0;
@@ -798,6 +810,11 @@ check('  and selects the laser', tap['selected'] == 'b0',
 check('  showing its panel', tap['panel']['sourceShown'], str(tap['panel']))
 
 print('--- adding and removing ---')
+arm = res['arm']
+check('+ Source arms a place rather than adding one',
+      arm['sent'] == 0 and arm['armed'] == 'optics'
+      and arm['type'] == 'Source', json.dumps(arm))
+check('  and lights while it is armed', arm['lit'])
 add = res['added']
 check('+ Source sends one message', len(add['sent']) == 1, str(add['sent']))
 amsg = add['sent'][0] if add['sent'] else {}
@@ -810,9 +827,11 @@ check('  carrying a position and a direction, not a face',
       and 'dirAngle' in (amsg.get('params') or {})
       and 'HRcenter' not in (amsg.get('params') or {}),
       str(amsg.get('params')))
-check('  at the centre of the view',
-      abs(amsg['params']['pos'][0]) < 10 and abs(amsg['params']['pos'][1]) < 10,
-      str(amsg['params']['pos']))
+check('  where it was clicked',
+      amsg['params']['pos'] == add['at'],
+      '%s vs %s' % (amsg['params']['pos'], add['at']))
+check('  and the mode is put away once it is placed',
+      not add['stillArmed'])
 check('  with a name nothing in the layout has taken',
       amsg.get('name') not in [o['name'] for o in scene['optics']]
       + [s['name'] for s in scene['sources']], str(amsg.get('name')))

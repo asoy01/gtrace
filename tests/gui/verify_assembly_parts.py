@@ -79,6 +79,15 @@ check('the kinds are the four a bench starts from',
       json.dumps([k['kind'] for k in kinds]))
 check('each says what to call it and what it is',
       all(k['label'] and k['description'] and k['prefix'] for k in kinds))
+# A front end has one clicked point to give, and the two kinds do not
+# stand by the same point of their element: a mirror by the centre of
+# its front face, where light turns and where a layout measures to, a
+# lens by its centre. Half a substrate apart, which is millimetres.
+check('  and which point it stands by',
+      {k['kind']: k['place'] for k in kinds}
+      == {'MIRROR-1IN': 'HRcenter', 'MIRROR-2IN': 'HRcenter',
+          'LENS-1IN': 'center', 'LENS-2IN': 'center'},
+      json.dumps({k['kind']: k['place'] for k in kinds}))
 check('  and the kinds are strict JSON, for the scene',
       json.loads(json.dumps(kinds)) == kinds)
 try:
@@ -330,6 +339,54 @@ was = np.array(p1.center)
 m1.center = m1.center + [0.5, 0.0]
 check('  and moving the element still carries it',
       np.allclose(p1.center - was, [0.5, 0.0]))
+
+print()
+print('--- a mirror stood by its front face ---')
+
+# The point the click gives. It is not the substrate centre: the two
+# are half a thickness apart along the face normal, and it is the
+# front face a layout is built from.
+for kind, thickness in [('MIRROR-1IN', 6*mm), ('MIRROR-2IN', 12.7*mm)]:
+    (m,), (mt, pd, fk) = assembly(kind, HRcenter=[0.3, 0.1], angle=np.pi)
+    check('%s puts the front face where it was asked to' % kind,
+          np.allclose(m.HRcenter, [0.3, 0.1]),
+          str(np.round(m.HRcenter, 6).tolist()))
+    # Facing back down -x, so the glass runs the other way: +x.
+    check('  with the substrate behind it, half a thickness back',
+          np.allclose(m.center, [0.3 + thickness / 2, 0.1]),
+          str(np.round(m.center, 6).tolist()))
+    # Naming the place the other way round must build the same stack.
+    # The mount is not always on the substrate centre - the two inch
+    # one is bolted 5 mm back - so the claim is that nothing moves,
+    # not that the mount is anywhere in particular.
+    (m2,), parts2 = assembly(kind, center=m.center.tolist(), angle=np.pi)
+    check('  and the stack is the one center would have built',
+          np.allclose(m2.HRcenter, m.HRcenter)
+          and all(np.allclose(a.center, b.center)
+                  for a, b in zip(parts2, [mt, pd, fk])),
+          str([np.round(x.center, 6).tolist() for x in parts2]))
+
+# Two ways of saying where one thing goes. Taking both would leave the
+# caller with no way of knowing which one was used.
+try:
+    assembly('MIRROR-1IN', center=[0.0, 0.0], HRcenter=[0.1, 0.0])
+    both = False
+except ValueError:
+    both = True
+check('center and HRcenter together are refused', both)
+check('a mirror given neither still stands at the origin',
+      np.allclose(mirror_assembly(name='M9')[0][0].center, [0.0, 0.0]))
+
+# What the viewer sends when a mirror assembly is placed by a click.
+L = fresh()
+L.apply_edit({'op': 'add', 'type': 'Assembly', 'kind': 'MIRROR-2IN',
+              'name': 'M7', 'params': {'HRcenter': [0.42, -0.13],
+                                       'angle': np.pi}})
+check('an add message may say HRcenter',
+      np.allclose(L.get_optics('M7').HRcenter, [0.42, -0.13]),
+      str(np.round(L.get_optics('M7').HRcenter, 6).tolist()))
+check('  and the three parts come with it',
+      len(L.mechanics) == 3, '(%d bodies)' % len(L.mechanics))
 
 print()
 print('--- what a piece left out means ---')
