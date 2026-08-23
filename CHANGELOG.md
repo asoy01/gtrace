@@ -11,6 +11,20 @@ across them.
 
 ## Unreleased
 
+### Documentation
+
+- **The manual says *beam* for what travels through a system.** It said
+  *light* in fifteen places, and the Japanese said 光, while everything
+  else - the layer names, the readout, the class names - says beam.
+
+- **The part of the viewer the layout is drawn in is called the drawing
+  area.** It was "the drawing", which is also the picture itself. The
+  strip beside it keeps the name it had, the side panel.
+
+- **Two Japanese terms are now the ones the manual uses throughout.** A
+  bench is 光学ベンチ, and the bodies `Mechanics` puts on it are 機構部品
+  rather than 周辺物.
+
 ### Fixed
 
 - **The keyboard shortcuts work inside JupyterLab.** The viewer listened

@@ -127,7 +127,7 @@ Sources
 
 The same operations reach the source beams, and mean for a laser what they
 mean for an element: ``move`` says where it stands, ``rotate`` which way it
-fires, ``set`` what light it puts out. ``b0`` below is the name of a source
+fires, ``set`` what beam it puts out. ``b0`` below is the name of a source
 registered in the layout.
 
 .. code-block:: python
@@ -398,7 +398,7 @@ entries to what
 scene can say it. A source is traced from a *copy* of itself, so its own
 beam sits in ``beams`` and looks like the beams the trace made from it.
 Each entry carries where the laser stands, which way it fires, and the
-light it emits. The waist is included. It is computed here and not stored,
+beam it emits. The waist is included. It is computed here and not stored,
 for the same reason the length of a dimension is. ``rules`` carries the
 tracing rules. They belong to no element, but they decide how much of the
 picture there is.

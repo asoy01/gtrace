@@ -380,7 +380,7 @@ msgid ""
 msgstr ""
 "その逆で、HR は\\ *反射*\\ するためのものである、という宣言。そこでの反射では次数が増えない。通常のミラーでは True "
 "である。ビームスプリッタや入射鏡でも True のままにする。これらの素子では、基板の内側から HR "
-"で反射する光が、干渉計の主要な戻りビームだからである。\\ :py:class:`Lens<gtrace.optcomp.Lens>` と "
+"で反射したものが、干渉計の主要な戻りビームだからである。\\ :py:class:`Lens<gtrace.optcomp.Lens>` と "
 ":py:class:`CyLens<gtrace.optcomp.CyLens>` では既定で False "
 "である。レンズの面での反射はゴーストであり、そのように数える。"
 

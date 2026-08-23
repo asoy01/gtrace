@@ -23,8 +23,8 @@ writes the HTML file.
 .. figure:: tutorial/figures/viewer_readout.png
    :width: 100%
 
-   The viewer with a beam clicked. The drawing is on the left, the readout
-   and the controls on the right.
+   The viewer with a beam clicked. The drawing area is on the left, the
+   readout and the controls on the right.
 
 Opening it
 -----------
@@ -91,8 +91,8 @@ There are three ways to give the drawing more room.
 it down to make the viewer taller.
 
 **Fold the side panel away** with the small button at the top right of the
-drawing, which gives the drawing the whole width. The button stays where it
-was, turned round, to bring the panel back.
+drawing area, which gives the drawing area the whole width. The button stays
+where it was, turned round, to bring the panel back.
 
 **Ask for a height in Python**: ``layout.show(height=700)``, or
 ``w.height = 700`` afterwards.
@@ -105,11 +105,12 @@ does reframe, because a height chosen there is usually a request to see the
 whole thing at that size.
 
 With no height given, the widget takes its height from the width of the
-output area, so the drawing starts as tall as it is wide. It measures the
-width of the *drawing*, not the width of the widget. The side panel is a
-fixed strip, so squaring the whole widget would leave the drawing taller
-than it is wide, which is the wrong shape for a bench. The height is capped
-to the window height. Split the notebook pane and the drawing squares
+output area, so the drawing area starts as tall as it is wide. It measures
+the width of the *drawing area*, not the width of the widget. The side panel
+is a fixed strip, so squaring the whole widget would leave the drawing area
+taller than it is wide, which is the wrong shape for a bench. The height is
+capped to the window height. Split the notebook pane and the drawing area
+squares
 itself up again.
 
 The grip belongs to the widget. The written HTML file fills its window
@@ -180,7 +181,7 @@ length once more. In Python it is
 The lasers
 ^^^^^^^^^^^
 
-Each registered source is drawn as a small box at the point its light comes
+Each registered source is drawn as a small box at the point its beam comes
 from, and the beam leaves through the nose of the box. Without the box you
 could not tell which beams you put there yourself. A source is traced from a
 *copy* of itself, so its own beam looks like the beams the trace made from
@@ -193,7 +194,7 @@ it is not exported to DXF. There is one exception. When the beam gets wider
 than the aperture it comes out of, the box grows with the view, so the
 aperture goes on matching the beam.
 
-The box sits *behind* the point the light leaves from, so it does not cover
+The box sits *behind* the point the beam leaves from, so it does not cover
 the beam. A click picks the box before any element underneath it. Clicking
 a laser opens the source properties, on a read-only page as much as in the
 notebook.
@@ -286,7 +287,7 @@ Editing a source
 
 Clicking a laser opens the source panel. Drag the box to move the laser,
 hold Shift to turn it, or type the numbers. A laser turns about the point
-its light comes from. That point *is* the source, so the nose of the box
+its beam comes from. That point *is* the source, so the nose of the box
 stays put while the box swings.
 
 **The beam is given as its waist, not as a q-parameter.** Four rows carry
@@ -335,7 +336,7 @@ What the click gives depends on the kind:
    * - Mirror, lens
      - The centre of the HR face.
    * - Source
-     - The point the light comes from, which is the nose of the box.
+     - The point the beam comes from, which is the nose of the box.
    * - Dump
      - The centre of the dump.
    * - Mechanics
@@ -393,7 +394,7 @@ shape it is: ``CIRC1``, ``RECT1``, ``LINE1``, ``POLY1``, ``ARC1``,
 
 **A mirror assembly stands by the centre of its HR face, and a lens
 assembly by its centre.** That is the point the click gives, and it is the
-point each element is placed by everywhere else: light turns at the HR
+point each element is placed by everywhere else: a beam turns at the HR
 face of a mirror, and the distances between elements are measured to it,
 while a lens is symmetric about its centre and its holder is drawn around
 that. The two points are half a substrate apart - 3 mm on a one inch
@@ -491,7 +492,7 @@ What you see while dragging is where the element ends up.
 
 **Screw holes are snap points.** An element dragged near a hole puts its
 anchor point exactly on that hole, because optics go on the hole grid of a
-bench. A laser does the same, and puts the point its light leaves from on
+bench. A laser does the same, and puts the point its beam leaves from on
 the hole. The measuring tool and Align also take the holes as marked points.
 
 Squaring onto a beam
@@ -533,7 +534,7 @@ the other way about turns the element right round, which is how a face is
 flipped.
 
 **Bisect 3 points** (``b``) takes from, at, to. The face ends up on the
-bisector of that corner. That is where a mirror must look to send light from
+bisector of that corner. That is where a mirror must look to send a beam from
 the first place to the last one. It is the law of reflection, given as three
 places instead of an angle.
 
@@ -940,7 +941,7 @@ there at write time with ``render_html(..., width_mode='y')``.
 
 **Tracing rules** are the three rules the trace runs under: the **Order**,
 the **Power threshold** and the **Open beam** length. These are the numbers
-to change when you look for stray light. Lower the threshold and the trace
+to change when you look for stray beams. Lower the threshold and the trace
 finds fainter paths, and takes longer. Changing one of these **re-traces**,
 and the picture that comes back has more or fewer beams in it. See
 :py:class:`TraceRules<gtrace.layout.TraceRules>`.

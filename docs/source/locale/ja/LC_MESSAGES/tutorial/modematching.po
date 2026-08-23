@@ -67,7 +67,7 @@ msgid ""
 "is a real substrate. The trace itself then says how good the coupling is."
 msgstr ""
 "手順はこうである。まず共振器の固有モードを求める。次に gtrace "
-"で実際のベンチを組む。そこではレンズに厚みがあり、入射鏡は本物の基板である。結合の良し悪しは、トレースの結果から評価できる。"
+"で実際の光学ベンチを組む。そこではレンズに厚みがあり、入射鏡は本物の基板である。結合の良し悪しは、トレースの結果から評価できる。"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:57
 msgid "The eigenmode of the cavity"
@@ -286,7 +286,7 @@ msgid ""
 "objects are shared between processes. The scan therefore never touches "
 "the ``layout`` of this notebook or its viewer"
 msgstr ""
-"各ワーカーは ``build_bench()`` で\\ **自分専用のベンチ**\\ "
+"各ワーカーは ``build_bench()`` で\\ **自分専用の光学ベンチ**\\ "
 "を組む。だからプロセス間でオブジェクトを共有しない。走査がこの notebook の ``layout`` やそのビューアに触ることは無い"
 
 #: ../../../gtrace/docs/source/tutorial/modematching.ipynb:491

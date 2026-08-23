@@ -109,7 +109,7 @@ msgstr "gtrace チュートリアル"
 msgid ""
 "This notebook builds a bench of one laser and three mirrors, and then "
 "works on it in the viewer."
-msgstr "この notebook は、レーザー1台とミラー3枚のベンチを組み、それをビューアの上で操作する。"
+msgstr "この notebook は、レーザー1台とミラー3枚の光学ベンチを組み、それをビューアの上で操作する。"
 
 #: ../../../gtrace/docs/source/tutorial.rst:50
 msgid ""

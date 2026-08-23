@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-22 21:03+0900\n"
+"POT-Creation-Date: 2026-08-23 21:49+0900\n"
 "PO-Revision-Date: 2026-08-09 22:30+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -28,7 +28,7 @@ msgid ""
 "parameters at every point of every beam."
 msgstr ""
 "gtrace "
-"は、ベンチ上の光学系の中をガウシアンビームが進む様子を追跡する。ブラウザには、実寸の幾何と、各ビーム上の任意の点でのビームパラメータが表示される。"
+"は、光学ベンチ上の光学系の中をガウシアンビームが進む様子を追跡する。ブラウザには、実寸の幾何と、各ビーム上の任意の点でのビームパラメータが表示される。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:22
 msgid ""
@@ -57,7 +57,7 @@ msgstr ""
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:42
 msgid "Building a bench"
-msgstr "ベンチを組む"
+msgstr "光学ベンチを組む"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:44
 msgid ""
@@ -69,7 +69,7 @@ msgid ""
 " of a whole bench."
 msgstr ""
 "レーザー1台とミラー3枚である。ここで使うミラーは大きくて厚く、それぞれ前面が背面に対して 0.25 "
-"度だけ傾いている。この傾きをウェッジ角と呼ぶ。ウェッジ角があると、背面からの弱い反射が目に見える角度で外れていく。実物の1インチのステアリングミラーにも同じウェッジが付いているが、小さすぎてベンチ全体の図では見えない。"
+"度だけ傾いている。この傾きをウェッジ角と呼ぶ。ウェッジ角があると、背面からの弱い反射が目に見える角度で外れていく。実物の1インチのステアリングミラーにも同じウェッジが付いているが、小さすぎて光学ベンチ全体の図では見えない。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:127
 msgid ""
@@ -168,7 +168,7 @@ msgid ""
 "right of the drawing folds the side panel away and gives the drawing the "
 "whole width."
 msgstr ""
-"notebook のセルは横長で、ベンチの図面はたいてい違う。下辺のグリップをドラッグすると、ビューアが高くなる。行き着いた高さは "
+"notebook のセルは横長で、光学ベンチの図面はたいてい違う。下辺のグリップをドラッグすると、ビューアが高くなる。行き着いた高さは "
 "``w.height`` に書き戻される。図の右上の小さなボタンでサイドパネルを畳むと、描画領域を横幅いっぱいに広げられる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:163
@@ -230,12 +230,12 @@ msgid ""
 msgstr "x と y の列が分かれているのは、ビームが一般には丸くないからである。ウェッジのある基板を斜めに通ったあとでは、2つのウェストは違う値になる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:200
-msgid "|cd41c1e241f14c898cd40f8e16d0ea01|"
-msgstr "|cd41c1e241f14c898cd40f8e16d0ea01|"
+msgid "|88a1f0950c23472499dc7dc388701e07|"
+msgstr "|88a1f0950c23472499dc7dc388701e07|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:206
-msgid "cd41c1e241f14c898cd40f8e16d0ea01"
-msgstr "cd41c1e241f14c898cd40f8e16d0ea01"
+msgid "88a1f0950c23472499dc7dc388701e07"
+msgstr "88a1f0950c23472499dc7dc388701e07"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:202
 msgid ""
@@ -254,7 +254,7 @@ msgstr "DXF ファイルが持つのは幾何だけなので、この読み出�
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:218
 msgid "Changing the bench by hand"
-msgstr "ベンチを手で変更する"
+msgstr "光学ベンチを手で変更する"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:220
 msgid ""
@@ -268,12 +268,12 @@ msgstr ""
 " ``inv_ROC_HR`` ではなく半径で表す。だから平面は ``inf`` と読める。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:222
-msgid "|cc38715698c14af59d3a31b6c490019b|"
-msgstr "|cc38715698c14af59d3a31b6c490019b|"
+msgid "|08c318b4d90b423f88bb255c100c745d|"
+msgstr "|08c318b4d90b423f88bb255c100c745d|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:268
-msgid "cc38715698c14af59d3a31b6c490019b"
-msgstr "cc38715698c14af59d3a31b6c490019b"
+msgid "08c318b4d90b423f88bb255c100c745d"
+msgstr "08c318b4d90b423f88bb255c100c745d"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:225
 msgid "in the viewer"
@@ -425,7 +425,7 @@ msgid ""
 "drag, so you see the result before you release the button."
 msgstr ""
 "**Ctrl + ドラッグ**\\ "
-"は、最初に覚える操作である。ベンチ上のほとんどの素子は、ビームに直交し、ビームが中心を通るように置かれる。素子の位置は3つの数で決まる。角度、ビームからの横方向のずれ、ビームに沿った距離である。Ctrl"
+"は、最初に覚える操作である。光学ベンチ上のほとんどの素子は、ビームに直交し、ビームが中心を通るように置かれる。素子の位置は3つの数で決まる。角度、ビームからの横方向のずれ、ビームに沿った距離である。Ctrl"
 " + ドラッグは最初の2つを決め、3つ目をこちらに残す。ドラッグ中に輪郭が吸い付くので、ボタンを放す前に結果が見える。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:262
@@ -458,16 +458,14 @@ msgstr ""
 msgid ""
 "Press ``b`` and click three places: from, at, to. The element takes the "
 "bisector of that corner. That is the direction a mirror must look in to "
-"send light from the first place to the last one. Neither ``a`` nor ``b`` "
-"moves the element."
-msgstr ""
-"``b`` "
-"を押して3つの場所をクリックする。始点・頂点・終点の順である。素子はその角の二等分線の向きになる。最初の場所から最後の場所へ光を送るために、ミラーが向くべき方向である。\\"
-" ``a`` も ``b`` も、素子を動かさない。"
+"send a beam from the first place to the last one. Neither ``a`` nor ``b``"
+" moves the element."
+msgstr "``b`` を押して3つの場所をクリックする。始点・頂点・終点の順である。素子はその角の二等分線の向きになる。最初の場所から最後の場所へビームを送るために、ミラーが向くべき方向である。\\ ``a`` も ``b`` も、素子を動かさない。"
+
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:280
 msgid "Changing the bench from a cell"
-msgstr "セルからベンチを変更する"
+msgstr "セルから光学ベンチを変更する"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:282
 msgid ""
@@ -477,7 +475,7 @@ msgid ""
 "zoom, pan and layer visibility, so the picture does not jump while you "
 "work."
 msgstr ""
-"ビューアと自分のコードは同じオブジェクトを扱うので、セルからベンチを変更することもできる。ウィジェットを変数に入れておき、変更のあとで "
+"ビューアと自分のコードは同じオブジェクトを扱うので、セルから光学ベンチを変更することもできる。ウィジェットを変数に入れておき、変更のあとで "
 "``update()`` を呼ぶ。ビューアは\\ **その場で**\\ "
 "描き直し、今のズーム・パン・レイヤーの表示状態を保つので、作業中に絵が跳ねることはない。"
 
@@ -492,12 +490,12 @@ msgid ""
 msgstr "``Measure`` はクリック3回で使う。2回のクリックで何を測るかを、3回目で線をどこに引くかを指定する。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:349
-msgid "|d0d82014af9e44da9557a7cbd9d06cb2|"
-msgstr "|d0d82014af9e44da9557a7cbd9d06cb2|"
+msgid "|9eaf9aa540af4236bc7682cb5b71296b|"
+msgstr "|9eaf9aa540af4236bc7682cb5b71296b|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:365
-msgid "d0d82014af9e44da9557a7cbd9d06cb2"
-msgstr "d0d82014af9e44da9557a7cbd9d06cb2"
+msgid "9eaf9aa540af4236bc7682cb5b71296b"
+msgstr "9eaf9aa540af4236bc7682cb5b71296b"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:351
 msgid ""
@@ -553,15 +551,13 @@ msgstr "マウント・ホルダー・ブレッドボード"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:379
 msgid ""
-"A layout is not only light. The parts that hold the optics take up room, "
+"A layout is not only beams. The parts that hold the optics take up room, "
 "bump into each other and have to be bolted somewhere, so gtrace carries "
 "them too. A ``Mechanics`` object is a named body made of drawing "
 "primitives. The trace never sees it, and beams pass straight through it. "
 "It is drawn, picked, measured, saved and exported like everything else."
-msgstr ""
-"レイアウトは光だけではない。素子を保持する部品は場所を取り、互いにぶつかり、どこかにボルトで留めなければならない。そのため、gtrace "
-"はこれらの部品もレイアウトの中に保持する。\\ ``Mechanics`` "
-"オブジェクトは、描画プリミティブからできた名前付きの物体である。トレースはこれを見ないので、ビームはそのまま通り抜ける。描画・選択・測定・保存・書き出しは、他のものと同じようにできる。"
+msgstr "レイアウトはビームだけではない。素子を保持する部品は場所を取り、互いにぶつかり、どこかにボルトで留めなければならない。そのため、gtrace はこれらの部品もレイアウトの中に保持する。\\ ``Mechanics`` オブジェクトは、描画プリミティブからできた名前付きの物体である。トレースはこれを見ないので、ビームはそのまま通り抜ける。描画・選択・測定・保存・書き出しは、他のものと同じようにできる。"
+
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:381
 msgid ""
@@ -571,18 +567,18 @@ msgid ""
 "position from its host every time it is asked. Move the mirror and the "
 "mount follows."
 msgstr ""
-"下の小さなベンチには、450 x 300 mm "
+"下の小さな光学ベンチには、450 x 300 mm "
 "のブレッドボードの上にレンズ1枚とステアリングミラー2枚があり、それぞれの素子の下にマウントがある。マウントは、保持する素子に\\ "
 "**取り付けられている**\\ 。自分の位置を持たず、gtrace "
 "が聞かれるたびに宿主から位置を計算する。ミラーを動かせば、マウントが付いてくる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:472
-msgid "|e2c65b28ab4b40d3af5626b6276fd515|"
-msgstr "|e2c65b28ab4b40d3af5626b6276fd515|"
+msgid "|23cb6b24bdd34526b0dc747e58412ad5|"
+msgstr "|23cb6b24bdd34526b0dc747e58412ad5|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:482
-msgid "e2c65b28ab4b40d3af5626b6276fd515"
-msgstr "e2c65b28ab4b40d3af5626b6276fd515"
+msgid "23cb6b24bdd34526b0dc747e58412ad5"
+msgstr "23cb6b24bdd34526b0dc747e58412ad5"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:474
 msgid ""
@@ -592,7 +588,7 @@ msgid ""
 "a board does not hide a mount standing on it. You can drag a board only "
 "after you select it: the first click selects it, and dragging before that"
 " pans the view."
-msgstr "クリックが周辺物を選ぶのは最後で、ビームと素子の後である。ブレッドボードはベンチのほとんどを覆うので、その上をクリックしても、手前のビームか素子に当たる。複数の周辺物が重なっていれば小さいほうが勝つので、ボードの上に立つマウントがボードに隠されることはない。ボードをドラッグできるのは選択したあとである。最初のクリックが選択で、その前のドラッグは表示のパンになる。"
+msgstr "クリックが機構部品を選ぶのは最後で、ビームと素子の後である。ブレッドボードは光学ベンチのほとんどを覆うので、その上をクリックしても、手前のビームか素子に当たる。複数の機構部品が重なっていれば小さいほうが勝つので、ボードの上に立つマウントがボードに隠されることはない。ボードをドラッグできるのは選択したあとである。最初のクリックが選択で、その前のドラッグは表示のパンになる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:476
 msgid ""
@@ -654,12 +650,12 @@ msgid ""
 msgstr "原点をどこに置くかは慎重に決める。部品を素子に取り付けると、原点はその素子の基板の中心に来る。だからマウントは、これから保持するミラーを囲むように描かれる。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:567
-msgid "|de77086a17874c3d81f942c3fac57581|"
-msgstr "|de77086a17874c3d81f942c3fac57581|"
+msgid "|dd819b76c75641258d109d20fb8512b4|"
+msgstr "|dd819b76c75641258d109d20fb8512b4|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:573
-msgid "de77086a17874c3d81f942c3fac57581"
-msgstr "de77086a17874c3d81f942c3fac57581"
+msgid "dd819b76c75641258d109d20fb8512b4"
+msgstr "dd819b76c75641258d109d20fb8512b4"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:569
 msgid ""
@@ -687,7 +683,7 @@ msgid ""
 "changed since cannot change a drawing you already made. Call "
 "``layout.relink_mechanics()`` when you do want the newer definition."
 msgstr ""
-"周辺物は、元になったモデルへの参照ではなく、形状そのものを持つ。だから保存したレイアウトはそれだけで完結していて、その後で変わったライブラリが、既に作った図面を変えてしまうことはない。新しい定義が欲しいときは"
+"機構部品は、元になったモデルへの参照ではなく、形状そのものを持つ。だから保存したレイアウトはそれだけで完結していて、その後で変わったライブラリが、既に作った図面を変えてしまうことはない。新しい定義が欲しいときは"
 " ``layout.relink_mechanics()`` を呼ぶ。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:649
@@ -703,7 +699,7 @@ msgid ""
 "reads and writes the file, and the path is relative to the directory the "
 "kernel runs in. The page in the browser never gets access to your disk."
 msgstr ""
-"``layout.save`` は、素子・光源ビーム・トレースの規則・周辺物・寸法線を JSON "
+"``layout.save`` は、素子・光源ビーム・トレースの規則・機構部品・寸法線を JSON "
 "ファイルに書く。トレースしたビームは書かない。\\ ``trace()`` がまた作るからである。サイドバーの **Layout file** "
 "パネルが、ビューアから同じことをする。ファイルを読み書きするのは Python "
 "で、パスはカーネルが動いているディレクトリからの相対である。ブラウザのページにディスクへのアクセスは渡さない。"
@@ -752,16 +748,16 @@ msgid ""
 msgstr ""
 "``export_dxf`` は図面を DXF ファイルに書き出す。DXF は CAD ソフトウェアが読む形式である。サイドバーの ``DXF``"
 " "
-"ボタンも同じメソッドを呼ぶ。ビーム・素子・周辺物・寸法線は、それぞれ専用のレイヤーに載るので、図面を開いた人はそれらを消せる。寸法線をまったく入れたくなければ"
+"ボタンも同じメソッドを呼ぶ。ビーム・素子・機構部品・寸法線は、それぞれ専用のレイヤーに載るので、図面を開いた人はそれらを消せる。寸法線をまったく入れたくなければ"
 " ``dimensions=False`` を渡す。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:772
-msgid "|cc0183d3d0984d90a258c1582e70338a|"
-msgstr "|cc0183d3d0984d90a258c1582e70338a|"
+msgid "|3ed4340256a94963ae948acbd6ea4cc4|"
+msgstr "|3ed4340256a94963ae948acbd6ea4cc4|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:774
-msgid "cc0183d3d0984d90a258c1582e70338a"
-msgstr "cc0183d3d0984d90a258c1582e70338a"
+msgid "3ed4340256a94963ae948acbd6ea4cc4"
+msgstr "3ed4340256a94963ae948acbd6ea4cc4"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:821
 msgid "What is underneath"
@@ -818,12 +814,12 @@ msgstr ""
 "q パラメータを伝搬させることである。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:846
-msgid "|f8adac5bcdd54559a1063e95859ae8e2|"
-msgstr "|f8adac5bcdd54559a1063e95859ae8e2|"
+msgid "|c2db8442d7ad49ab916765c15e43253a|"
+msgstr "|c2db8442d7ad49ab916765c15e43253a|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:848
-msgid "f8adac5bcdd54559a1063e95859ae8e2"
-msgstr "f8adac5bcdd54559a1063e95859ae8e2"
+msgid "c2db8442d7ad49ab916765c15e43253a"
+msgstr "c2db8442d7ad49ab916765c15e43253a"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:859
 msgid ""
@@ -846,12 +842,12 @@ msgstr ""
 "は、その面が向く方向である。\\ ``center`` は基板の中心で、図の箱が置かれるのはこの点である。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:863
-msgid "|9b70728d4e53467fa94f8f3f17688eb1|"
-msgstr "|9b70728d4e53467fa94f8f3f17688eb1|"
+msgid "|2f8bb1bf15094c5c930f8e1c58ebe997|"
+msgstr "|2f8bb1bf15094c5c930f8e1c58ebe997|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:865
-msgid "9b70728d4e53467fa94f8f3f17688eb1"
-msgstr "9b70728d4e53467fa94f8f3f17688eb1"
+msgid "2f8bb1bf15094c5c930f8e1c58ebe997"
+msgstr "2f8bb1bf15094c5c930f8e1c58ebe997"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:930
 msgid ""
@@ -885,12 +881,12 @@ msgstr ""
 "を透過したビームである。文字は決まっている:"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:948
-msgid "|4b5eca8eb4a34a8fad0ddae4023d5969|"
-msgstr "|4b5eca8eb4a34a8fad0ddae4023d5969|"
+msgid "|fdbbce18ce6048499c60e10067695057|"
+msgstr "|fdbbce18ce6048499c60e10067695057|"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:950
-msgid "4b5eca8eb4a34a8fad0ddae4023d5969"
-msgstr "4b5eca8eb4a34a8fad0ddae4023d5969"
+msgid "fdbbce18ce6048499c60e10067695057"
+msgstr "fdbbce18ce6048499c60e10067695057"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:961
 msgid ""
@@ -1077,7 +1073,7 @@ msgstr "次に読むもの"
 msgid ""
 "`Optical layouts <../layout.rst>`__ - the layout object in reference "
 "detail, mechanics included."
-msgstr "`Optical layouts <../layout.rst>`__ — レイアウトオブジェクトのリファレンス。周辺物も含む。"
+msgstr "`Optical layouts <../layout.rst>`__ — レイアウトオブジェクトのリファレンス。機構部品も含む。"
 
 #: ../../../gtrace/docs/source/tutorial/gtrace-tutorial.ipynb:1415
 msgid "`The edit protocol <../editing.rst>`__ - every message, and what it does."
@@ -1653,7 +1649,7 @@ msgstr ""
 #~ "レンズは何も継承しない。ミラーの 99 % "
 #~ "の前面をまとったレンズは主ビームが通らないレンズであり、大きなミラーから取った口径は、その素材では削り出せない焦点距離である。だから "
 #~ "``+ Lens`` は代わりにカタログのレンズを置く — 500 "
-#~ "mm、1インチ径、両面とも何も反射しない。レンズだらけのベンチが微弱なゴーストで絵を埋めないためである。選択すると Type"
+#~ "mm、1インチ径、両面とも何も反射しない。レンズだらけの光学ベンチが微弱なゴーストで絵を埋めないためである。選択すると Type"
 #~ " のすぐ下に **Focal length** "
 #~ "の行が加わる。カタログの流儀どおりミリメートルで、この行に書き込むと両方の曲率が一緒に解き直される — "
 #~ "レンズの形を保ち、レンズは動かさずに — Python で ``L.f`` "
@@ -2486,7 +2482,7 @@ msgstr ""
 #~ msgstr "gtrace は notebook 用の extras 付きで入れる。これでウィジェットが入る:"
 
 #~ msgid "A bench in a dozen lines"
-#~ msgstr "十数行のベンチ"
+#~ msgstr "十数行の光学ベンチ"
 
 #~ msgid ""
 #~ "``power_threshold`` is the knob to turn"
@@ -2999,4 +2995,58 @@ msgstr ""
 
 #~ msgid "e557e059801f4dadb9348b034d8de9ea"
 #~ msgstr "e557e059801f4dadb9348b034d8de9ea"
+
+#~ msgid "|cd41c1e241f14c898cd40f8e16d0ea01|"
+#~ msgstr "|cd41c1e241f14c898cd40f8e16d0ea01|"
+
+#~ msgid "cd41c1e241f14c898cd40f8e16d0ea01"
+#~ msgstr "cd41c1e241f14c898cd40f8e16d0ea01"
+
+#~ msgid "|cc38715698c14af59d3a31b6c490019b|"
+#~ msgstr "|cc38715698c14af59d3a31b6c490019b|"
+
+#~ msgid "cc38715698c14af59d3a31b6c490019b"
+#~ msgstr "cc38715698c14af59d3a31b6c490019b"
+
+#~ msgid "|d0d82014af9e44da9557a7cbd9d06cb2|"
+#~ msgstr "|d0d82014af9e44da9557a7cbd9d06cb2|"
+
+#~ msgid "d0d82014af9e44da9557a7cbd9d06cb2"
+#~ msgstr "d0d82014af9e44da9557a7cbd9d06cb2"
+
+#~ msgid "|e2c65b28ab4b40d3af5626b6276fd515|"
+#~ msgstr "|e2c65b28ab4b40d3af5626b6276fd515|"
+
+#~ msgid "e2c65b28ab4b40d3af5626b6276fd515"
+#~ msgstr "e2c65b28ab4b40d3af5626b6276fd515"
+
+#~ msgid "|de77086a17874c3d81f942c3fac57581|"
+#~ msgstr "|de77086a17874c3d81f942c3fac57581|"
+
+#~ msgid "de77086a17874c3d81f942c3fac57581"
+#~ msgstr "de77086a17874c3d81f942c3fac57581"
+
+#~ msgid "|cc0183d3d0984d90a258c1582e70338a|"
+#~ msgstr "|cc0183d3d0984d90a258c1582e70338a|"
+
+#~ msgid "cc0183d3d0984d90a258c1582e70338a"
+#~ msgstr "cc0183d3d0984d90a258c1582e70338a"
+
+#~ msgid "|f8adac5bcdd54559a1063e95859ae8e2|"
+#~ msgstr "|f8adac5bcdd54559a1063e95859ae8e2|"
+
+#~ msgid "f8adac5bcdd54559a1063e95859ae8e2"
+#~ msgstr "f8adac5bcdd54559a1063e95859ae8e2"
+
+#~ msgid "|9b70728d4e53467fa94f8f3f17688eb1|"
+#~ msgstr "|9b70728d4e53467fa94f8f3f17688eb1|"
+
+#~ msgid "9b70728d4e53467fa94f8f3f17688eb1"
+#~ msgstr "9b70728d4e53467fa94f8f3f17688eb1"
+
+#~ msgid "|4b5eca8eb4a34a8fad0ddae4023d5969|"
+#~ msgstr "|4b5eca8eb4a34a8fad0ddae4023d5969|"
+
+#~ msgid "4b5eca8eb4a34a8fad0ddae4023d5969"
+#~ msgstr "4b5eca8eb4a34a8fad0ddae4023d5969"
 

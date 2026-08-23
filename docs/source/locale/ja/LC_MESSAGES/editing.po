@@ -3,12 +3,11 @@
 # This file is distributed under the same license as the gtrace package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-22 22:07+0900\n"
+"POT-Creation-Date: 2026-08-23 21:49+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ja\n"
@@ -204,7 +203,7 @@ msgid ""
 "it."
 msgstr ""
 "``align`` "
-"は素子をビームに正対させる。ベンチ上のほとんどの素子は、そこに座るべきものである。ビームは直前のトレースでの添字で指定し、名前を検査に使う。さらに点を1つ渡す。素子はビームに正対するよう回され、その点を射影した位置でビームの軸に載せられる。これを送る"
+"は素子をビームに正対させる。光学ベンチ上のほとんどの素子は、そこに座るべきものである。ビームは直前のトレースでの添字で指定し、名前を検査に使う。さらに点を1つ渡す。素子はビームに正対するよう回され、その点を射影した位置でビームの軸に載せられる。これを送る"
 " Ctrl ドラッグについては :doc:`viewer` を参照。"
 
 #: ../../../gtrace/docs/source/editing.rst:93
@@ -260,11 +259,10 @@ msgstr "光源"
 msgid ""
 "The same operations reach the source beams, and mean for a laser what "
 "they mean for an element: ``move`` says where it stands, ``rotate`` which"
-" way it fires, ``set`` what light it puts out. ``b0`` below is the name "
-"of a source registered in the layout."
-msgstr ""
-"同じ操作が光源ビームにも届き、レーザーに対して素子と同じ意味を持つ。\\ ``move`` はどこに立つか、\\ ``rotate`` "
-"はどちらへ撃つか、\\ ``set`` はどんな光を出すかである。以下の ``b0`` は、レイアウトに登録された光源の名前である。"
+" way it fires, ``set`` what beam it puts out. ``b0`` below is the name of"
+" a source registered in the layout."
+msgstr "同じ操作が光源ビームにも届き、レーザーに対して素子と同じ意味を持つ。\\ ``move`` はどこに立つか、\\ ``rotate`` はどちらへ撃つか、\\ ``set`` はどんなビームを出すかである。以下の ``b0`` は、レイアウトに登録された光源の名前である。"
+
 
 #: ../../../gtrace/docs/source/editing.rst:144
 msgid ""
@@ -382,7 +380,7 @@ msgstr ""
 
 #: ../../../gtrace/docs/source/editing.rst:232
 msgid "Bodies"
-msgstr "周辺物"
+msgstr "機構部品"
 
 #: ../../../gtrace/docs/source/editing.rst:234
 msgid ""
@@ -391,8 +389,8 @@ msgid ""
 "``attached_to``, ``offset``, ``offset_angle``, ``fix_rotation``, "
 "``width`` and ``height``):"
 msgstr ""
-"同じ操作が周辺物にも届く。ホワイトリストは独自である（\\ ``EDITABLE_MECHANICS_ATTRS``: ``center``\\ "
-"、\\ ``rotationAngle``\\ 、\\ ``attached_to``\\ 、\\ ``offset``\\ 、\\ "
+"同じ操作が機構部品にも届く。ホワイトリストは独自である（\\ ``EDITABLE_MECHANICS_ATTRS``: ``center``\\"
+" 、\\ ``rotationAngle``\\ 、\\ ``attached_to``\\ 、\\ ``offset``\\ 、\\ "
 "``offset_angle``\\ 、\\ ``fix_rotation``\\ 、\\ ``width``\\ 、\\ "
 "``height``\\ ）:"
 
@@ -410,12 +408,13 @@ msgid ""
 "turn is free."
 msgstr ""
 "``model`` を指定して ``shapes`` を持たない ``add`` は、ライブラリから組み立てられる。\\ ``shapes`` "
-"を持つものは、その図形から組み立てられる。\\ ``attached_to`` は素子の名前、\\ **または他の周辺物の名前**\\ 、あるいは"
-" ``None`` を取る。\\ *素子*\\ "
+"を持つものは、その図形から組み立てられる。\\ ``attached_to`` は素子の名前、\\ **または他の機構部品の名前**\\ "
+"、あるいは ``None`` を取る。\\ *素子*\\ "
 "の上に座らせると、モデルが決めた定位置に置かれる。マウントがミラーのどこに付くかはライブラリが決めることで、カーソルが決めることではないからである。\\"
-" *周辺物*\\ の上に座らせると、いま居る場所を保つ。ペデスタルがマウントのどの穴に入るかは、ベンチの上で決めることだからである。\\ "
+" *機構部品*\\ の上に座らせると、いま居る場所を保つ。ペデスタルがマウントのどの穴に入るかは、光学ベンチの上で決めることだからである。\\ "
 "``width`` や ``height`` の設定は ``resize`` "
-"を通る。設定できる大きさを持たない周辺物には、そう返る。取り付けられている周辺物への ``rotate`` は、回転が自由でない限り拒否される。"
+"を通る。設定できる大きさを持たない機構部品には、そう返る。取り付けられている機構部品への ``rotate`` "
+"は、回転が自由でない限り拒否される。"
 
 #: ../../../gtrace/docs/source/editing.rst:259
 msgid ""
@@ -424,7 +423,7 @@ msgid ""
 "the point the body is pinned by. So \"drop it on the hole, then attach "
 "it\" pins the body by that hole. See :ref:`mechanics`."
 msgstr ""
-"このプロトコルで取り付けると、吸着する点は図から取られる。宿主のいずれかの点とすでに一致している周辺物の点が、留められる点になる。つまり「穴の上に落としてから取り付ける」と、その穴で留まる。\\"
+"このプロトコルで取り付けると、吸着する点は図から取られる。宿主のいずれかの点とすでに一致している機構部品の点が、留められる点になる。つまり「穴の上に落としてから取り付ける」と、その穴で留まる。\\"
 " :ref:`mechanics` を参照。"
 
 #: ../../../gtrace/docs/source/editing.rst:264
@@ -519,8 +518,8 @@ msgid ""
 "polyline of its four corners. That is what a DXF file holds in either "
 "case."
 msgstr ""
-"**周辺物**\\ "
-"の回転は別の問題であり、図形には書き込まれない。周辺物の姿勢が、どこに立ちどちらを向いているかを表し、図形は周辺物の座標系で読まれる。したがって、回転した周辺物が持つ長方形も、ベンチ上には4隅を結んだ閉じたポリラインとして届く。DXF"
+"**機構部品**\\ "
+"の回転は別の問題であり、図形には書き込まれない。機構部品の姿勢が、どこに立ちどちらを向いているかを表し、図形は機構部品の座標系で読まれる。したがって、回転した機構部品が持つ長方形も、光学ベンチ上には4隅を結んだ閉じたポリラインとして届く。DXF"
 " ファイルが持つのも、どちらの場合も同じものである。"
 
 #: ../../../gtrace/docs/source/editing.rst:332
@@ -547,7 +546,7 @@ msgid ""
 "parameters are untouched."
 msgstr ""
 "エディタは、ここにある他のものと同じく ``Mechanics`` を\\ **参照で**\\ "
-"持つ。したがって、すでにレイアウトに登録されている周辺物は、そのレイアウトの次の描画で描き直される。取り付け・姿勢・ビルダーのパラメータには手を触れない。"
+"持つ。したがって、すでにレイアウトに登録されている機構部品は、そのレイアウトの次の描画で描き直される。取り付け・姿勢・ビルダーのパラメータには手を触れない。"
 
 #: ../../../gtrace/docs/source/editing.rst:346
 msgid "Rules, drawing and files"
@@ -653,7 +652,7 @@ msgstr "``mechanics``"
 
 #: ../../../gtrace/docs/source/editing.rst:389
 msgid "The bodies that are registered in the layout."
-msgstr "レイアウトに登録されている周辺物。"
+msgstr "レイアウトに登録されている機構部品。"
 
 #: ../../../gtrace/docs/source/editing.rst:390
 msgid "``mechlib``"
@@ -661,7 +660,7 @@ msgstr "``mechlib``"
 
 #: ../../../gtrace/docs/source/editing.rst:391
 msgid "The model library a new body can be built from."
-msgstr "新しい周辺物を作れるモデルライブラリ。"
+msgstr "新しい機構部品を作れるモデルライブラリ。"
 
 #: ../../../gtrace/docs/source/editing.rst:392
 msgid "``assemblies``"
@@ -685,15 +684,12 @@ msgid ""
 "the scene can say it. A source is traced from a *copy* of itself, so its "
 "own beam sits in ``beams`` and looks like the beams the trace made from "
 "it. Each entry carries where the laser stands, which way it fires, and "
-"the light it emits. The waist is included. It is computed here and not "
+"the beam it emits. The waist is included. It is computed here and not "
 "stored, for the same reason the length of a dimension is. ``rules`` "
 "carries the tracing rules. They belong to no element, but they decide how"
 " much of the picture there is."
-msgstr ""
-"``sources`` は、ビームのうちどれをユーザーが置いたものかを伝える。シーンの他の何もそれを伝えられない。光源は自分自身の\\ "
-"*コピー*\\ からトレースされるので、光源自身のビームも ``beams`` "
-"の中にあり、トレースが作ったビームと同じように見える。各項目は、レーザーがどこに立ち、どちらへ撃ち、どんな光を出すかを持つ。ウェストも含む。ウェストはここで計算していて保存しない。寸法線の長さと同じ理由である。\\"
-" ``rules`` はトレースの規則を運ぶ。これはどの素子のものでもないが、絵がどこまで描かれるかを決める。"
+msgstr "``sources`` は、ビームのうちどれをユーザーが置いたものかを伝える。シーンの他の何もそれを伝えられない。光源は自分自身の\\ *コピー*\\ からトレースされるので、光源自身のビームも ``beams`` の中にあり、トレースが作ったビームと同じように見える。各項目は、レーザーがどこに立ち、どちらへ撃ち、どんなビームを出すかを持つ。ウェストも含む。ウェストはここで計算していて保存しない。寸法線の長さと同じ理由である。\\ ``rules`` はトレースの規則を運ぶ。これはどの素子のものでもないが、絵がどこまで描かれるかを決める。"
+
 
 #: ../../../gtrace/docs/source/editing.rst:406
 msgid ""
@@ -722,11 +718,12 @@ msgid ""
 "and a browser has no reason to hold a second description of it."
 msgstr ""
 "``mechanics`` "
-"は、各周辺物の姿勢、何に取り付けられているか、フロントエンドがそれを拾うための輪郭を運ぶ。手描きの図形1つでできた周辺物は、その "
-"``shape`` も、周辺物の座標系のまま運ぶ。そういう周辺物は部品ではなく図なので、編集の対象はその図形自身の数値である。\\ "
-"``{'op': 'set', 'target': ..., 'attrs': {'shape': {...}}}`` "
+"は、各機構部品の姿勢、何に取り付けられているか、フロントエンドがそれを拾うための輪郭を運ぶ。手描きの図形1つでできた機構部品は、その "
+"``shape`` "
+"も、機構部品の座標系のまま運ぶ。そういう機構部品は、ライブラリの部品ではなく図なので、編集の対象はその図形自身の数値である。\\ ``{'op':"
+" 'set', 'target': ..., 'attrs': {'shape': {...}}}`` "
 "がそれを設定する。適用される規則は形状エディタと同じである。ライブラリから来た部品は、代わりに ``width`` と ``height`` "
-"で寸法を変える。図形が複数ある周辺物は :py:meth:`edit<gtrace.mechanics.Mechanics.edit>` "
+"で寸法を変える。図形が複数ある機構部品は :py:meth:`edit<gtrace.mechanics.Mechanics.edit>` "
 "で編集する。どちらも ``shape`` を拒否する。どの図形のことか推測しないためである。輪郭はここで計算する。これは "
 ":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` "
 "が判定に使う多角形と同じもので、ブラウザが第二の記述を持つ理由が無い。"
@@ -745,7 +742,7 @@ msgid ""
 "that name."
 msgstr ""
 "``mechlib`` はモデルライブラリを、名前・説明・名前の接頭辞として運ぶ。\\ ``+ Mechanics`` "
-"メニューはこの名前を表示し、追加する周辺物の名前に接頭辞を使う。図形は、モデルが選ばれるまで Python 側に留まる。\\ "
+"メニューはこの名前を表示し、追加する機構部品の名前に接頭辞を使う。図形は、モデルが選ばれるまで Python 側に留まる。\\ "
 "``assemblies`` は :py:func:`assembly_kinds<gtrace.layout.assembly_kinds>` "
 "が並べるものである。これでフロントエンドは、素子とそれを保持する部品をまとめて名前で提示できる。組み立てるのは Python である。各種類は "
 "``place`` を持ち、どこに置くかを言うパラメータの名前を示す。ミラーは ``HRcenter``\\ 、レンズは ``center`` "
@@ -764,7 +761,7 @@ msgstr ""
 "``newshapes`` は、各種類の図形を最初に置いたときにどんな姿になるかを伝える。形状エディタが参照するものと同じ "
 ":py:data:`NEW_SHAPES<gtrace.draw.serialize.NEW_SHAPES>` である。これで ``+ "
 "Shape`` "
-"は図形1つの周辺物を追加でき、フロントエンドは「新しい円はどれくらいの大きさか」という問いに自前の答えを持たずに済む。大きさはベンチの寸法である。キロメートルを表示しているフロントエンドは、表示しているものに合わせて拡大縮小することが期待される。"
+"は図形1つの機構部品を追加でき、フロントエンドは「新しい円はどれくらいの大きさか」という問いに自前の答えを持たずに済む。大きさは光学ベンチの寸法である。キロメートルを表示しているフロントエンドは、表示しているものに合わせて拡大縮小することが期待される。"
 
 #: ../../../gtrace/docs/source/editing.rst:442
 msgid ""
@@ -775,7 +772,7 @@ msgid ""
 "centre of every screw hole it has."
 msgstr ""
 "``snap`` "
-"は、各基板について4隅・各面の頂点・中心・2つの側面それぞれの中点を運ぶ。さらに各周辺物について、外形の4隅・その4辺それぞれの中点・周辺物が自分で名前を付けている点・持っている全てのネジ穴の中心を運ぶ。"
+"は、各基板について4隅・各面の頂点・中心・2つの側面それぞれの中点を運ぶ。さらに各機構部品について、外形の4隅・その4辺それぞれの中点・機構部品が自分で名前を付けている点・持っている全てのネジ穴の中心を運ぶ。"
 
 #: ../../../gtrace/docs/source/editing.rst:448
 msgid ""

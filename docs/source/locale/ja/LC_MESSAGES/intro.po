@@ -28,13 +28,13 @@ msgid ""
 "look at the result in a browser and move the elements until the layout is"
 " right. When the layout is finished, you export the drawing to DXF."
 msgstr ""
-"gtrace は、ベンチ上に配置した光学系の中をガウシアンビームが進む様子を追跡する。ミラーとレンズを Python "
+"gtrace は、光学ベンチ上に配置した光学系の中をガウシアンビームが進む様子を追跡する。ミラーとレンズを Python "
 "で配置し、ビームをトレースする。結果をブラウザで見ながら、レイアウトが正しくなるまで素子を動かす。レイアウトができあがったら、図面を DXF "
 "に書き出す。"
 
 #: ../../../gtrace/docs/source/intro.rst:12
 msgid "The bench built further down this page, seen in gtrace's viewer."
-msgstr "このページの下の方で組むベンチを、gtrace のビューアで見たところ。"
+msgstr "このページの下の方で組む光学ベンチを、gtrace のビューアで見たところ。"
 
 #: ../../../gtrace/docs/source/intro.rst:14
 msgid "What it does:"
@@ -81,7 +81,7 @@ msgstr ""
 msgid ""
 "gtrace works in two dimensions: everything lies on one plane. That covers"
 " a bench layout, the case gtrace was written for."
-msgstr "gtrace は2次元で動く。全てが1つの平面上にある。これはベンチのレイアウトを扱うのに十分であり、gtrace はそのために書かれた。"
+msgstr "gtrace は2次元で動く。全てが1つの平面上にある。これは光学ベンチのレイアウトを扱うのに十分であり、gtrace はそのために書かれた。"
 
 #: ../../../gtrace/docs/source/intro.rst:33
 msgid "Installation"
@@ -183,7 +183,7 @@ msgstr ""
 "``HRcenter`` が前面の位置を決め、\\ ``normAngleHR`` はその面の法線が向く方向である。したがって "
 "``deg2rad(135)`` は、+x 方向に進むビームを +y 方向に進むビームに変える。\\ ``Refl_HR=0.99, "
 "Trans_HR=0.01`` "
-"は、100分の1がミラーで反射せずに透過することを表す。素子が3つしかないベンチから10本のビームが返ってくるのは、そのためである。"
+"は、100分の1がミラーで反射せずに透過することを表す。素子が3つしかない光学ベンチから10本のビームが返ってくるのは、そのためである。"
 
 #: ../../../gtrace/docs/source/intro.rst:119
 msgid ""
@@ -236,7 +236,7 @@ msgstr "``open_beam_length``"
 msgid ""
 "How long a beam that hits nothing is drawn. The default is 1 m; 15 cm "
 "keeps this small bench from being lost in its own stray beams."
-msgstr "何にも当たらないビームをどれだけの長さで描くか。既定は 1 m である。この小さなベンチでは、迷光が図を覆わないように 15 cm にしている。"
+msgstr "何にも当たらないビームをどれだけの長さで描くか。既定は 1 m である。この小さな光学ベンチでは、迷光が図を覆わないように 15 cm にしている。"
 
 #: ../../../gtrace/docs/source/intro.rst:143
 msgid ""
@@ -275,7 +275,7 @@ msgstr ""
 msgid ""
 "The bench in the notebook widget, with the beam between the two steering "
 "mirrors clicked."
-msgstr "notebook のウィジェットで見たベンチ。2枚のステアリングミラーの間のビームをクリックしたところ。"
+msgstr "notebook のウィジェットで見た光学ベンチ。2枚のステアリングミラーの間のビームをクリックしたところ。"
 
 #: ../../../gtrace/docs/source/intro.rst:169
 msgid ""
@@ -416,7 +416,7 @@ msgstr ":doc:`propagation`"
 msgid ""
 "Use everything ``OpticalLayout`` can do: mechanics, assemblies, "
 "dimensions, undo, JSON"
-msgstr "``OpticalLayout`` の機能を全部使う: 周辺物、組み立て、寸法線、undo、JSON"
+msgstr "``OpticalLayout`` の機能を全部使う: 機構部品、組み立て、寸法線、undo、JSON"
 
 #: ../../../gtrace/docs/source/intro.rst:266
 msgid ":doc:`layout`"

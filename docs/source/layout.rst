@@ -309,7 +309,7 @@ in, jointed so the three move as one.
     [o.name for o in faces], [b.name for b in bodies]
     # (['BD1a', 'BD1b'], ['BD1box'])
 
-``angle`` is **the direction the light travels**, so a dump is aimed the way
+``angle`` is **the direction the beam travels**, so a dump is aimed the way
 the beam runs, not by where its mouth points. What comes back is split into
 ``(optics, bodies)``, which is what every builder here returns. Each list
 has the hosts first, which is the order they are registered in. They are
@@ -320,7 +320,7 @@ second dump. Without a name it is given the first free one.
 
 The two faces stand in a V because a black face is not perfectly black.
 What one face sends back, the other catches and sends back again, so the
-light works its way into the wedge instead of coming out the way it came.
+beam works its way into the wedge instead of coming out the way it came.
 With the default 4% a beam is down to 0.16% after two bounces and to a part
 in ten million after five. The faces are therefore elements, and not a shape
 drawn on the housing.
@@ -340,7 +340,7 @@ The same is true of a real dump.
 Mechanics
 ----------
 
-A bench is not only light. What holds the optics takes up room, bumps into
+A bench is not only beams. What holds the optics takes up room, bumps into
 things and has to be bolted somewhere, so a layout carries that too. A
 :py:class:`Mechanics<gtrace.mechanics.Mechanics>` is a named body of drawing
 primitives that the trace never sees:
