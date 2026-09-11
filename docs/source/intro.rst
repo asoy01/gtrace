@@ -9,25 +9,26 @@ the layout is finished, you export the drawing to DXF.
 .. figure:: imgs/intro_bench.png
    :width: 100%
 
-   The bench built further down this page, seen in gtrace's viewer.
+   The bench built by the code in "A first layout" below, seen in
+   gtrace's viewer.
 
-What it does:
+What gtrace does:
 
-* You place the elements and gtrace works out the rest. Which surface a
-  beam hits next, where it goes and what comes off it are computed, not
-  declared.
-* Reflection and refraction are treated at every surface, so the faint
-  ghost beams off anti-reflection coatings come out of the trace along
-  with the beam you meant to have.
-* The ABCD matrix is multiplied out along every beam. The beam radius, the
-  wavefront curvature, the waist and the accumulated Gouy phase are
+* You place the elements and gtrace computes the rest. Which surface a
+  beam hits next, where the beam goes and which new beams each surface
+  produces are all computed, not declared.
+* gtrace computes reflection and refraction at every surface. The trace
+  therefore includes the faint ghost beams from anti-reflection coatings,
+  not only the main beam.
+* gtrace multiplies the ABCD matrices along every beam. The beam radius,
+  the wavefront curvature, the waist and the accumulated Gouy phase are
   therefore known at every point of every beam.
 * Optical path length accumulates through glass as well as through air.
-* The result can be read out by clicking in the viewer, saved as JSON,
-  sent to somebody as a single HTML page, or exported to DXF for CAD.
+* You can read the result by clicking in the viewer, save it as JSON,
+  send it to somebody as a single HTML page, or export it to DXF for CAD.
 
-gtrace works in two dimensions: everything lies on one plane. That covers
-a bench layout, the case gtrace was written for.
+gtrace works in two dimensions: everything lies on one plane. Two
+dimensions are enough for a bench layout, the case gtrace was written for.
 
 Installation
 -------------
@@ -39,8 +40,9 @@ Python 3.9 or newer::
 Write the quotes around ``gtrace[notebook]``. In zsh, brackets without
 quotes are read as a glob.
 
-This installs gtrace and both viewers: the widget that runs inside a
-Jupyter notebook, and the standalone HTML page that opens in a web browser.
+This installs gtrace and both viewers: the notebook widget, which runs
+inside a Jupyter notebook, and the HTML viewer, a standalone page that
+opens in a web browser.
 
 It does not install Jupyter itself. If you do not have Jupyter::
 
@@ -50,13 +52,16 @@ VS Code's notebook editor works instead of JupyterLab: open the ``.ipynb``
 file and select the interpreter you installed gtrace into.
 
 If you do not use notebooks, ``pip install gtrace`` installs gtrace and the
-HTML viewer, and leaves out the widget.
+HTML viewer, without the notebook widget.
+
+To install from a git clone instead, see "Installing from a git clone" at
+the end of this page.
 
 A first layout
 ---------------
 
-A laser, a lens and two steering mirrors. This runs in a notebook or in a
-plain script; nothing in it is notebook specific.
+A laser, a lens and two steering mirrors. The code below runs in a notebook
+or in a plain script, and uses no notebook-specific feature.
 
 .. code-block:: python
 
@@ -93,52 +98,53 @@ plain script; nothing in it is notebook specific.
 
     10 beams
 
-Reading it from the top:
+Reading the code from the top:
 
 **Units.** Lengths are in metres and angles are in radians. ``gtrace.unit``
-gives you ``mm``, ``cm``, ``inch``, ``nm``, ``ppm`` and the rest as plain
-multipliers, and ``deg2rad`` for angles, so ``250*mm`` and ``deg2rad(135)``
-read the way they should.
+gives you ``mm``, ``cm``, ``inch``, ``nm``, ``ppm`` and other units as plain
+multipliers, and ``deg2rad`` for angles. You can therefore write ``250*mm``
+and ``deg2rad(135)``.
 
 **The source beam.** A :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>`
 starts at ``pos`` and travels in the direction ``dirAngle``, measured from
-the x axis counterclockwise. Its shape is the complex beam parameter ``q0``;
-:py:func:`q_from_waist<gtrace.layout.q_from_waist>` builds one from a waist
-radius, the distance from that waist to where the beam starts, and the
-wavelength.
+the x axis counterclockwise. The beam shape is the complex beam parameter
+``q0``. :py:func:`q_from_waist<gtrace.layout.q_from_waist>` builds a ``q0``
+from a waist radius, the distance from that waist to where the beam starts,
+and the wavelength.
 
-**The elements.** :py:class:`Lens<gtrace.optcomp.Lens>` is ordered by its
-focal length. :py:class:`Mirror<gtrace.optcomp.Mirror>` has two surfaces,
-the front face HR and the back face AR. ``HRcenter`` places the front face
-and ``normAngleHR`` is the direction its normal points, so
-``deg2rad(135)`` turns a beam travelling along +x into one travelling along
-+y. ``Refl_HR=0.99, Trans_HR=0.01`` say that one part in a hundred goes
-through the mirror instead of bouncing off it. That is why ten beams come
-back from a bench with only three elements on it.
+**The elements.** :py:class:`Lens<gtrace.optcomp.Lens>` is specified by its
+focal length ``f``. gtrace solves for the curvatures of the two faces from
+``f``, the thickness and the index of refraction.
+:py:class:`Mirror<gtrace.optcomp.Mirror>` has two surfaces, the front face
+HR and the back face AR. ``HRcenter`` places the front face and
+``normAngleHR`` is the direction the HR normal points, so
+``deg2rad(135)`` turns a beam travelling along +x into a beam travelling
+along +y. ``Refl_HR=0.99, Trans_HR=0.01`` say that one part in a hundred
+passes through the mirror instead of reflecting. The trace therefore
+returns ten beams from a bench with only three elements on it.
 
 **The layout.** :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` is
 the whole system in one object: the elements, the source beams, and the
 rules the trace runs under. :py:class:`TraceRules<gtrace.layout.TraceRules>`
-has three of those:
+holds three rules:
 
 .. list-table::
    :header-rows: 1
    :widths: 30 70
 
    * - Rule
-     - What it sets
+     - What the rule sets
    * - ``power_threshold``
-     - How faint a beam has to get before it stops being followed.
-       Lower it to chase more ghosts, at the cost of time.
+     - How faint a beam has to get before it stops being followed. Lower
+       ``power_threshold`` to follow more ghost beams, at the cost of time.
    * - ``order``
      - How many ghost reflections a beam may go through before it stops
-       being followed. Every beam carries the count, and the count is not
+       being followed. Every beam carries the count. The count is not
        reset when the beam leaves one element for the next, so ``order``
-       is a limit on the whole trace. See :ref:`stray-order`.
+       limits the whole trace. See :ref:`stray-order`.
    * - ``open_beam_length``
      - How long a beam that hits nothing is drawn. The default is 1 m;
-       15 cm keeps this small bench from being lost in its own stray
-       beams.
+       15 cm keeps the stray beams from covering this small bench.
 
 **The trace.** :py:meth:`trace()<gtrace.layout.OpticalLayout.trace>`
 releases each source beam, follows it wherever the geometry takes it, and
@@ -151,14 +157,15 @@ Showing the result
 
     layout.show()
 
-In a Jupyter notebook this puts the viewer in the cell output. Anywhere
-else it writes a self-contained HTML file and opens it in your browser.
+In a Jupyter notebook, ``show()`` puts the viewer in the cell output.
+Anywhere else, ``show()`` writes a self-contained HTML file and opens it in
+your browser.
 
-The two show the same drawing and report the same beam numbers. They differ
-in what they can change. The notebook widget has a running Python kernel
-behind it, so it can edit the layout and trace it again. The HTML file has
-no kernel, so it is read-only: you can pan, zoom, click a beam and measure a
-distance, but not move anything.
+The two viewers show the same drawing and report the same numbers for each
+beam. They differ in what they can change. The notebook widget has a
+running Python kernel behind it, so the widget can edit the layout and
+trace it again. The HTML viewer has no kernel, so it is read-only: you can
+pan, zoom, click a beam and measure a distance, but not move anything.
 
 .. figure:: imgs/intro_readout.png
    :width: 100%
@@ -166,26 +173,26 @@ distance, but not move anything.
    The bench in the notebook widget, with the beam between the two steering
    mirrors clicked.
 
-Click anywhere along a beam, not only at a corner. The panel then tells you
-what that beam is doing *at that point*: the radius, the wavefront ROC, the
-complex q, the waist radius, the distance to the waist, the Rayleigh range,
-the accumulated Gouy phase, the power, and the optical path travelled so
-far. The x and y columns are separate, because a beam is not round in
-general.
+Click anywhere along a beam, not only at a corner. The panel then shows the
+properties of that beam *at that point*: the radius, the wavefront radius
+of curvature (ROC), the complex q, the waist radius, the distance to the
+waist, the Rayleigh range, the accumulated Gouy phase, the power, and the
+optical path travelled so far. The x and y columns are separate, because a
+beam is not round in general.
 
-Click an element and the panel shows its properties instead, and lets you
-change them.
+Click an element and the panel shows the element properties instead, and
+lets you change them.
 
 Drag the background to pan and use the wheel to zoom; ``Fit`` frames the
 whole layout again. The buttons along the top of the widget add elements,
 align one element to a beam, measure a distance, and undo. :doc:`viewer`
-goes through all of them.
+describes all of the buttons.
 
 Changing the layout
 --------------------
 
 Working with gtrace is a loop: place an element, look at what the beams do,
-move the element. Both halves of that loop reach the same objects.
+move the element. Python and the widget reach the same objects.
 
 From Python, keep the widget in a variable and call ``update()`` after a
 change:
@@ -220,11 +227,11 @@ Saving and exporting
     layout.export_dxf('bench.dxf')     # geometry for CAD
 
 :py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>`
-reads a saved layout back into the objects you already have, so a change
-you did not want can be undone by reloading.
+reads a saved layout back into the objects you already have, so you can
+undo an unwanted change by reloading.
 
-The beams are ordinary Python objects, so the numbers are there to be used
-in your own code:
+The beams are ordinary Python objects, so you can use the numbers in your
+own code:
 
 .. code-block:: python
 
@@ -239,9 +246,9 @@ in your own code:
 
     waist 209.3 um, 228 mm past the lens
 
-The viewer cannot do this part. A layout can be produced by a search, an
-optimisation or a loop over a catalogue of stock lenses, and only then
-opened and looked at.
+The viewer cannot do this. Your code can build a layout from a search, an
+optimisation or a loop over a catalogue of stock lenses, and open the
+viewer only afterwards.
 
 Where to go next
 -----------------
@@ -270,16 +277,16 @@ Where to go next
        front end of your own
      - :doc:`editing`
 
-Read :doc:`propagation` early. It explains where the ghost beams come from
-and how they are counted, so that you can choose ``order`` and
-``power_threshold`` on purpose instead of turning them until the picture
-looks right.
+Read :doc:`propagation` early. That chapter explains where the ghost beams
+come from and how they are counted, so that you can choose ``order`` and
+``power_threshold`` for a reason, instead of changing them until the
+picture looks right.
 
-Mirrors and beams also work without a layout. You can hand a beam to a
-mirror, get the reflected and transmitted beams back, and carry them
+Mirrors and beams also work without a layout. You can pass a beam to a
+mirror, get the reflected and transmitted beams, and keep track of them
 yourself. The last chapter of the :doc:`tutorial` builds a cavity that way
-and registers it in a layout afterwards. Work like this when the positions
-of the elements have to be computed instead of typed in.
+and registers it in a layout afterwards. Work this way when the element
+positions have to be computed instead of typed in.
 
 Installing from a git clone
 ----------------------------
@@ -290,6 +297,6 @@ To track gtrace's own development, or to edit gtrace itself::
     cd gtrace
     pip install -e ".[notebook]"
 
-The tutorial notebooks live in ``docs/source/tutorial/``. They need nothing
-from the repository but gtrace itself, so downloading the ``.ipynb`` files
-on their own works too; :doc:`tutorial` links to them.
+The tutorial notebooks are in ``docs/source/tutorial/``. They need only
+gtrace and nothing else from the repository, so you can download the
+``.ipynb`` files on their own. :doc:`tutorial` links to them.

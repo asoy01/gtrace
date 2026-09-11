@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-23 21:49+0900\n"
+"POT-Creation-Date: 2026-09-11 07:30+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -25,58 +25,57 @@ msgstr "光学レイアウト"
 msgid ""
 "An :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` holds a whole "
 "optical system in one object: the optics, the source beams and the rules "
-"that govern the non-sequential trace. It is what you draw, what you save "
-"to disk, and what the interactive viewer edits."
+"that govern the non-sequential trace. You draw the layout, save it to "
+"disk, and edit it in the interactive viewer."
 msgstr ""
 ":py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
-"は、光学系全体を1つのオブジェクトとして保持する。素子・光源ビーム・非逐次トレースの規則が入っている。描画の対象であり、ディスクに保存する対象であり、対話的なビューアが編集する対象でもある。"
+"は、光学系全体を1つのオブジェクトとして保持する。素子・光源ビーム・非逐次トレースを決める規則が入っている。レイアウトは描画し、ディスクに保存し、対話的なビューアで編集する。"
 
 #: ../../../gtrace/docs/source/layout.rst:9
 msgid ""
 "Use a layout when you intend to trace, redraw and adjust one system "
 "repeatedly. The optics and beams described in :doc:`basic_concepts` and "
-":doc:`propagation` also work on their own, and the :doc:`tutorial` gets "
-"as far as a traced mode cleaner without a layout."
+":doc:`propagation` also work on their own, and the :doc:`tutorial` traces"
+" a mode cleaner without a layout."
 msgstr ""
 "1つの系を繰り返しトレースし、描き直し、調整するつもりなら、レイアウトを使う。\\ :doc:`basic_concepts` と "
-":doc:`propagation` で説明した素子とビームはそれだけでも動き、\\ :doc:`tutorial` "
-"はレイアウトを使わずにモードクリーナーのトレースまで進む。"
+":doc:`propagation` で説明した素子とビームは、それだけでも動く。\\ :doc:`tutorial` "
+"はレイアウトを使わずにモードクリーナーをトレースする。"
 
 #: ../../../gtrace/docs/source/layout.rst:15
-msgid "Build it, then register it"
-msgstr "組み立ててから登録する"
+msgid "Build the system, then register it"
+msgstr "系の組み立てと登録"
 
 #: ../../../gtrace/docs/source/layout.rst:17
 msgid ""
-"The work falls into two phases. First, build and align the system with "
-"ordinary Python:"
+"The work has two phases. First, build and align the system with ordinary "
+"Python:"
 msgstr "作業は2つの段階に分かれる。まず、普通の Python で系を組み立てて調整する:"
 
 #: ../../../gtrace/docs/source/layout.rst:35
-msgid "Then register the result and work with it as a whole:"
-msgstr "次に、その結果を登録し、全体として扱う:"
+msgid "Then register the optics and the source in one layout:"
+msgstr "次に、素子とソースを1つのレイアウトに登録する:"
 
 #: ../../../gtrace/docs/source/layout.rst:48
 msgid ""
 "A layout does not replace the code of the first phase. You place the "
 "mirrors with ordinary Python: sequential tracing, ``scipy.optimize``, "
-"cavity eigenmode solving. That is how you close a cavity on itself, or "
-"make a beam arrive at a mirror at the intended angle of incidence. The "
-"layout takes the result and gives you one object to trace, draw, save and"
-" edit."
+"cavity eigenmode solving. These methods close a cavity on itself, or make"
+" a beam arrive at a mirror at the intended angle of incidence. The layout"
+" takes the result and gives you one object to trace, draw, save and edit."
 msgstr ""
 "レイアウトは、1つ目の段階のコードの代わりにはならない。ミラーを置くのは普通の Python である。逐次トレース、\\ "
 "``scipy.optimize``\\ "
-"、共振器の固有モードの計算などを使う。共振器が閉じるようにする、狙った入射角でビームがミラーに届くようにする、といった作業はそうやって行う。レイアウトはその結果を受け取り、トレース・描画・保存・編集をまとめて行える1つのオブジェクトを与える。"
+"、共振器の固有モードの計算を使う。これらの方法で、共振器を自分自身に閉じさせたり、狙った入射角でビームをミラーに届かせたりする。レイアウトはその結果を受け取り、トレース・描画・保存・編集をまとめて行える1つのオブジェクトを与える。"
 
 #: ../../../gtrace/docs/source/layout.rst:55
 msgid "Held by reference"
-msgstr "参照で保持する"
+msgstr "参照による保持"
 
 #: ../../../gtrace/docs/source/layout.rst:57
 msgid ""
 "The layout does not copy what you register. ``layout.get_optics('PRM')`` "
-"returns the very object bound to ``PRM`` in your code. So:"
+"returns the same object that ``PRM`` names in your code. So:"
 msgstr ""
 "レイアウトは、登録したものをコピーしない。\\ ``layout.get_optics('PRM')`` は、コード中の ``PRM`` "
 "が束縛しているそのオブジェクトを返す。だから:"
@@ -84,11 +83,9 @@ msgstr ""
 #: ../../../gtrace/docs/source/layout.rst:65
 msgid ""
 "and, in the other direction, an edit made in the viewer changes the "
-"object that ``PRM`` names. There is one copy of the model, and both you "
-"and the GUI are looking at it."
-msgstr ""
-"逆向きにも、ビューアで加えた編集は ``PRM`` が指すオブジェクトを変える。モデルは1つしかなく、Python のコードと GUI "
-"は同じオブジェクトを参照する。"
+"object that ``PRM`` names. There is one copy of the model, and your code "
+"and the viewer both use it."
+msgstr "逆向きにも、ビューアで加えた編集は ``PRM`` が指すオブジェクトを変える。モデルは1つしかなく、コードとビューアはその同じものを使う。"
 
 #: ../../../gtrace/docs/source/layout.rst:69
 msgid ""
@@ -117,8 +114,8 @@ msgstr "トレースのルール"
 
 #: ../../../gtrace/docs/source/layout.rst:81
 msgid ""
-":py:class:`TraceRules<gtrace.layout.TraceRules>` collects what governs "
-"the non-sequential trace:"
+":py:class:`TraceRules<gtrace.layout.TraceRules>` collects the settings "
+"that govern the non-sequential trace:"
 msgstr ":py:class:`TraceRules<gtrace.layout.TraceRules>` は、非逐次トレースを決める設定をまとめて持つ:"
 
 #: ../../../gtrace/docs/source/layout.rst:84
@@ -127,9 +124,9 @@ msgstr "``order``"
 
 #: ../../../gtrace/docs/source/layout.rst:85
 msgid ""
-"How many ghost reflections a beam may go through before it stops being "
-"followed. Defaults to 10."
-msgstr "ビームが追跡を打ち切られるまでに通ってよいゴースト反射の回数。既定値は 10。"
+"How many ghost reflections a beam may make before the trace stops "
+"following it. Defaults to 10."
+msgstr "トレースが追跡を打ち切るまでに、ビームが起こしてよいゴースト反射の回数。既定は 10。"
 
 #: ../../../gtrace/docs/source/layout.rst:88
 msgid "``power_threshold``"
@@ -137,12 +134,12 @@ msgstr "``power_threshold``"
 
 #: ../../../gtrace/docs/source/layout.rst:89
 msgid ""
-"Beams weaker than this are not propagated further. Defaults to 0.1. This "
-"is the value to change when you look for ghost beams. Lower it and the "
-"trace finds fainter paths, and takes longer."
+"Beams weaker than this threshold are not propagated further. Defaults to "
+"0.1. Change this value when you look for ghost beams. A lower value makes"
+" the trace find fainter paths, and take longer."
 msgstr ""
-"これより弱いビームは、それ以上伝搬させない。既定は 0.1 "
-"である。ゴーストビームを探すときに変えるのは、この値である。下げるとトレースはより暗い経路まで見つけるが、その分だけ時間がかかる。"
+"この閾値より弱いビームは、それ以上伝搬させない。既定は 0.1 "
+"である。ゴーストビームを探すときには、この値を変える。値を下げるとトレースはより暗い経路まで見つけるが、その分だけ時間がかかる。"
 
 #: ../../../gtrace/docs/source/layout.rst:93
 msgid "``open_beam_length``"
@@ -156,135 +153,144 @@ msgstr "何にも当たらなかったビームをどれだけの長さで描く
 msgid ""
 "Each beam carries its own count, and the count is not reset when the beam"
 " leaves one element for the next, so ``order`` limits the whole trace. "
-"How many ghosts of *one particular element* should be followed is a "
-"property of that element. It lives there instead, as the "
-"``max_stray_order`` attribute of the optics. What raises a beam's stray "
-"order, and the flags that say which face of an element is meant for what,"
-" are described in :ref:`stray-order`."
+"How many ghosts of *one particular element* are followed is a property of"
+" that element, the ``max_stray_order`` attribute of the optics. :ref"
+":`stray-order` describes what raises a beam's stray order, and the flags "
+"that mark the role of each face of an element."
 msgstr ""
 "各ビームが自分のカウントを持ち、ビームが1つの素子から次の素子へ移るときにリセットされないので、\\ ``order`` "
-"はトレース全体を制限する。\\ *ある1つの素子* のゴーストをいくつまで追うべきかは、その素子の性質である。それは素子側に、\\ "
-"``max_stray_order`` "
-"属性として置いてある。ビームの迷光次数が何で上がるか、素子のどの面が何のためのものかを言うフラグについては、\\ :ref:`stray-"
-"order` で説明する。"
+"はトレース全体を制限する。\\ *ある1つの素子* のゴーストをいくつまで追うかは、その素子の性質であり、素子の "
+"``max_stray_order`` 属性である。ビームの迷光次数が何で上がるか、素子の各面の役割を示すフラグが何かは、\\ :ref"
+":`stray-order` で説明する。"
 
-#: ../../../gtrace/docs/source/layout.rst:104
+#: ../../../gtrace/docs/source/layout.rst:103
 msgid ""
 "``open_beam_length`` applies to the beams the trace produces. A *source* "
-"that reaches nothing keeps its own ``length``, which is the state a "
-"layout is in while it is being built."
+"that reaches nothing keeps its own ``length``. That happens often while a"
+" layout is still being built, before any element stands in the beam's "
+"path."
 msgstr ""
-"``open_beam_length`` は、トレースが生み出したビームに適用される。何にも届かない\\ *ソース*\\ は自分の "
-"``length`` を保つ。レイアウトを組み立てている途中は、この状態である。"
+"``open_beam_length`` は、トレースが生み出したビームに適用される。何にも届かない *ソース* は自分の ``length`` "
+"を保つ。これは、レイアウトを組み立てている途中、ビームの経路にまだ素子が1つも立っていないときによく起きる。"
 
-#: ../../../gtrace/docs/source/layout.rst:108
+#: ../../../gtrace/docs/source/layout.rst:107
 msgid ""
 "All three can also be changed from the viewer, or by the message in "
 ":ref:`editing-a-source`."
 msgstr "3つともビューアから変更できる。\\ :ref:`editing-a-source` のメッセージでも変更できる。"
 
-#: ../../../gtrace/docs/source/layout.rst:112
+#: ../../../gtrace/docs/source/layout.rst:111
 msgid "Drawing options"
 msgstr "描画のオプション"
 
-#: ../../../gtrace/docs/source/layout.rst:114
+#: ../../../gtrace/docs/source/layout.rst:113
 msgid ""
 "How a layout is drawn is a display choice, not part of the model. "
-"Changing one redraws; it does not re-trace. The available options and "
-"their defaults are collected in ``gtrace.layout.DRAW_OPTIONS``:"
+"Changing an option redraws the layout; it does not re-trace. The "
+"available options and their defaults are collected in "
+"``gtrace.layout.DRAW_OPTIONS``:"
 msgstr ""
-"レイアウトをどう描くかは表示の選択であって、モデルの一部ではない。変更すると描き直されるが、トレースはやり直されない。指定できるオプションと既定値は"
+"レイアウトをどう描くかは表示の選択であって、モデルの一部ではない。オプションを変えるとレイアウトを描き直すが、トレースはやり直さない。指定できるオプションと既定値は"
 " ``gtrace.layout.DRAW_OPTIONS`` にまとめてある:"
 
-#: ../../../gtrace/docs/source/layout.rst:119
+#: ../../../gtrace/docs/source/layout.rst:118
 msgid "Option"
 msgstr "オプション"
 
-#: ../../../gtrace/docs/source/layout.rst:119
+#: ../../../gtrace/docs/source/layout.rst:118
 msgid "Default"
 msgstr "既定値"
 
-#: ../../../gtrace/docs/source/layout.rst:119
+#: ../../../gtrace/docs/source/layout.rst:118
 msgid "Meaning"
 msgstr "意味"
 
-#: ../../../gtrace/docs/source/layout.rst:121
+#: ../../../gtrace/docs/source/layout.rst:120
 msgid "``sigma_main``"
 msgstr "``sigma_main``"
 
-#: ../../../gtrace/docs/source/layout.rst:121
-#: ../../../gtrace/docs/source/layout.rst:123
+#: ../../../gtrace/docs/source/layout.rst:120
+#: ../../../gtrace/docs/source/layout.rst:122
 msgid "2.7"
 msgstr "2.7"
 
-#: ../../../gtrace/docs/source/layout.rst:121
+#: ../../../gtrace/docs/source/layout.rst:120
 msgid "Width of the drawn envelope of the main beams, in units of the 1/e² radius"
 msgstr "主ビームの包絡線を描く幅。1/e² 半径を単位とする"
 
-#: ../../../gtrace/docs/source/layout.rst:123
+#: ../../../gtrace/docs/source/layout.rst:122
 msgid "``sigma_stray``"
 msgstr "``sigma_stray``"
 
-#: ../../../gtrace/docs/source/layout.rst:123
+#: ../../../gtrace/docs/source/layout.rst:122
 msgid "The same, for stray beams"
 msgstr "同じものの迷光ビーム版"
 
-#: ../../../gtrace/docs/source/layout.rst:124
+#: ../../../gtrace/docs/source/layout.rst:123
 msgid "``width_mode``"
 msgstr "``width_mode``"
 
-#: ../../../gtrace/docs/source/layout.rst:124
+#: ../../../gtrace/docs/source/layout.rst:123
 msgid "``'x'``"
 msgstr "``'x'``"
 
-#: ../../../gtrace/docs/source/layout.rst:124
+#: ../../../gtrace/docs/source/layout.rst:123
 msgid ""
 "Which transverse direction the envelope shows: ``'x'``, ``'y'`` or "
 "``'avg'``"
 msgstr "包絡線がどの横方向を示すか: ``'x'``\\ 、\\ ``'y'``\\ 、\\ ``'avg'``"
 
-#: ../../../gtrace/docs/source/layout.rst:126
+#: ../../../gtrace/docs/source/layout.rst:125
 msgid "``drawMainWidth``"
 msgstr "``drawMainWidth``"
 
+#: ../../../gtrace/docs/source/layout.rst:125
 #: ../../../gtrace/docs/source/layout.rst:126
-#: ../../../gtrace/docs/source/layout.rst:127
-#: ../../../gtrace/docs/source/layout.rst:130
+#: ../../../gtrace/docs/source/layout.rst:129
 msgid "True"
 msgstr "True"
 
-#: ../../../gtrace/docs/source/layout.rst:126
+#: ../../../gtrace/docs/source/layout.rst:125
 msgid "Whether to draw the main beam envelope"
 msgstr "主ビームの包絡線を描くかどうか"
 
-#: ../../../gtrace/docs/source/layout.rst:127
+#: ../../../gtrace/docs/source/layout.rst:126
 msgid "``drawStrayWidth``"
 msgstr "``drawStrayWidth``"
 
-#: ../../../gtrace/docs/source/layout.rst:127
+#: ../../../gtrace/docs/source/layout.rst:126
 msgid "Whether to draw the stray beam envelope"
 msgstr "迷光ビームの包絡線を描くかどうか"
 
-#: ../../../gtrace/docs/source/layout.rst:128
+#: ../../../gtrace/docs/source/layout.rst:127
 msgid "``drawBeamLabels``"
 msgstr "``drawBeamLabels``"
 
-#: ../../../gtrace/docs/source/layout.rst:128
+#: ../../../gtrace/docs/source/layout.rst:127
+#: ../../../gtrace/docs/source/layout.rst:130
 #: ../../../gtrace/docs/source/layout.rst:131
 msgid "False"
 msgstr "False"
 
-#: ../../../gtrace/docs/source/layout.rst:128
+#: ../../../gtrace/docs/source/layout.rst:127
 msgid "Annotate each beam with its name and power"
 msgstr "各ビームに名前とパワーを注記する"
 
-#: ../../../gtrace/docs/source/layout.rst:130
+#: ../../../gtrace/docs/source/layout.rst:129
 msgid "``drawOpticsNames``"
 msgstr "``drawOpticsNames``"
 
-#: ../../../gtrace/docs/source/layout.rst:130
+#: ../../../gtrace/docs/source/layout.rst:129
 msgid "Annotate each element with its name"
 msgstr "各素子に名前を注記する"
+
+#: ../../../gtrace/docs/source/layout.rst:130
+msgid "``drawMechanicsNames``"
+msgstr "``drawMechanicsNames``"
+
+#: ../../../gtrace/docs/source/layout.rst:130
+msgid "Annotate each body with its name"
+msgstr "各部品に名前を注記する"
 
 #: ../../../gtrace/docs/source/layout.rst:131
 msgid "``fontSize``"
@@ -312,12 +318,11 @@ msgstr "なぜ 2.7 σ か"
 msgid ""
 "The envelope is drawn at 2.7 times the 1/e² radius because that is the "
 "aperture at which the diffraction loss of a Gaussian beam is 1 ppm. "
-"Drawing every envelope at the same σ gives every envelope in the picture "
-"the same meaning: outside this line there is nothing that matters at the "
-"ppm level."
+"Drawing every envelope at the same σ gives them all the same meaning: "
+"outside the line there is nothing that matters at the ppm level."
 msgstr ""
 "包絡線を 1/e² 半径の 2.7 倍で描くのは、ガウシアンビームの回折損失が 1 ppm になる口径がそこだからである。すべての包絡線を同じ σ"
-" で描けば、図の中のどの包絡線も同じ意味を持つ。この線の外側には ppm のレベルで問題になるものは無い、という意味である。"
+" で描けば、どれも同じ意味を持つ。線の外側には ppm のレベルで問題になるものは無い、という意味である。"
 
 #: ../../../gtrace/docs/source/layout.rst:161
 msgid ""
@@ -344,8 +349,8 @@ msgid ""
 " options. The trace result is not saved. Call "
 ":py:meth:`trace<gtrace.layout.OpticalLayout.trace>` after loading a file."
 " Drawing a layout that has no trace result traces it first, so "
-":py:meth:`show<gtrace.layout.OpticalLayout.show>` works straight after a "
-"load."
+":py:meth:`show<gtrace.layout.OpticalLayout.show>` works immediately after"
+" a load."
 msgstr ""
 "ファイルに入るのは素子・ソース・トレースのルール・描画のオプションである。トレース結果は保存しない。ファイルを読み込んだら "
 ":py:meth:`trace<gtrace.layout.OpticalLayout.trace>` "
@@ -359,128 +364,129 @@ msgstr "寸法線"
 #: ../../../gtrace/docs/source/layout.rst:190
 msgid ""
 "A :py:class:`Dimension<gtrace.layout.Dimension>` is a distance measured "
-"between two points of the layout, kept as a note on it:"
+"between two points of the layout, and is stored in the layout:"
 msgstr ""
 ":py:class:`Dimension<gtrace.layout.Dimension>` "
-"は、レイアウト上の2点の間で測った距離で、レイアウトへの書き込みとして保持される:"
+"は、レイアウト上の2点の間で測った距離であり、レイアウトの中に保持される:"
 
 #: ../../../gtrace/docs/source/layout.rst:201
 msgid ""
 "Dimensions are registered on the layout beside the optics, saved with it,"
-" and taken back by undo like anything else. They share one namespace with"
-" the optics."
-msgstr ""
-"寸法線は素子と並んでレイアウトに登録され、レイアウトと一緒に保存され、他のものと同じように undo "
-"で取り消される。素子と1つの名前空間を共有する。"
+" and restored by undo. They share one namespace with the optics."
+msgstr "寸法線は素子と並んでレイアウトに登録され、レイアウトと一緒に保存され、undo で復元される。素子と1つの名前空間を共有する。"
 
-#: ../../../gtrace/docs/source/layout.rst:205
+#: ../../../gtrace/docs/source/layout.rst:204
 msgid ""
 "``offset`` is where the dimension *line* is drawn, in metres, positive to"
 " the left of the direction from ``p1`` to ``p2``. "
 ":py:meth:`line_ends<gtrace.layout.Dimension.line_ends>` gives the two "
-"ends it lands on. This is a choice about the drawing, not about the "
-"measurement. The distances you want to measure usually run along a beam "
-"or through an element, and a line drawn on top of them cannot be read. "
-"**It changes nothing about what is measured.** The span is still between "
-"``p1`` and ``p2``, and so are the length and the test below."
+"ends of that line. The offset is a choice about the drawing, not about "
+"the measurement. The distances you want to measure usually run along a "
+"beam or through an element, where a line drawn on top of them cannot be "
+"read. **The offset changes nothing about what is measured.** The span, "
+"the length and the test below are all still taken between ``p1`` and "
+"``p2``."
 msgstr ""
-"``offset`` は寸法\\ *線*\\ をどこに描くかを、メートル単位で決める。\\ ``p1`` から ``p2`` "
-"への向きに対して左が正である。線が実際に載る2つの端は "
-":py:meth:`line_ends<gtrace.layout.Dimension.line_ends>` "
-"が返す。これは図の見せ方の選択であって、測定の内容ではない。測りたい距離はたいていビームに沿っているか素子を貫いていて、その上に線を引くと読めなくなる。\\"
-" **測っている対象は何も変わらない。** 区間は ``p1`` と ``p2`` の間のままで、長さも下の判定も変わらない。"
+"``offset`` は寸法 *線* をどこに描くかを、メートル単位で決める。\\ ``p1`` から ``p2`` "
+"への向きに対して左が正である。\\ :py:meth:`line_ends<gtrace.layout.Dimension.line_ends>`"
+" "
+"は、その線の2つの端を返す。オフセットは図の描き方の選択であって、測定の選択ではない。測りたい距離はたいていビームに沿っているか素子を貫いていて、その上に線を引くと読めなくなる。\\"
+" **オフセットは、測るものを何も変えない。** 区間も、長さも、下の判定も、すべて ``p1`` と ``p2`` の間で取ったままである。"
 
-#: ../../../gtrace/docs/source/layout.rst:214
+#: ../../../gtrace/docs/source/layout.rst:213
 msgid ""
-"**A dimension does not hold on to the element a point was taken from.** "
-"An element that then moves leaves the measurement where it was made. To "
-"measure the same thing again after a change, draw it again."
+"**A dimension does not remember the element a point was taken from.** An "
+"element that then moves leaves the measurement where it was made. To "
+"measure the same distance after a change, add the dimension again."
 msgstr ""
 "**寸法線は、点を取った素子を覚えていない。** "
-"その後で素子が動いても、測定は測ったときの場所に残る。変更後に同じものを測り直したければ、もう一度引くこと。"
+"その後で素子が動いても、測定は測ったときの場所に残る。変更後に同じ距離を測るには、寸法線をもう一度引く。"
 
-#: ../../../gtrace/docs/source/layout.rst:218
+#: ../../../gtrace/docs/source/layout.rst:217
 msgid ""
-"What a dimension comes to is worked out afresh every time the scene is "
-"built, and never stored, so it cannot go stale:"
-msgstr "寸法線が示す値は、シーンを組み立てるたびに計算し直され、保存されない。だから古くならない:"
+"The value of a dimension is computed every time the scene is built, and "
+"never stored, so it cannot become out of date:"
+msgstr "寸法線の値は、シーンを組み立てるたびに計算され、保存されない。だから古くならない:"
 
-#: ../../../gtrace/docs/source/layout.rst:226
+#: ../../../gtrace/docs/source/layout.rst:225
 msgid ""
 "``optical`` is reported **only when the whole span runs inside one "
 "substrate**, where it is the physical distance times the refractive "
-"index. The optical thickness of a substrate is the measurement this "
-"answers. A span that crosses in and out of glass also has an optical "
+"index. ``optical`` is how you measure the optical thickness of a "
+"substrate. A span that crosses in and out of glass also has an optical "
 "length, but that length is not a dimension of anything. It depends on "
-"where the ends happen to fall, so gtrace leaves it out."
+"where the ends happen to fall, so gtrace does not report it."
 msgstr ""
-"``optical`` が報告されるのは、\\ **区間全体が1つの基板の中に収まっているときだけ**\\ "
-"である。その場合の値は、物理的な距離に屈折率を掛けたものになる。これが答える測定は、基板の光学的な厚みである。ガラスに出入りする区間にも光学的な長さはあるが、それは何かの寸法ではない。端がどこに落ちるかで決まってしまうので、gtrace"
+"``optical`` が報告されるのは、\\ **区間全体が1つの基板の中を通っているときだけ** "
+"である。その場合の値は、物理的な距離に屈折率を掛けたものである。\\ ``optical`` "
+"は、基板の光学的な厚みを測るためのものである。ガラスに出入りする区間にも光学的な長さはあるが、その長さは何の寸法でもない。端がどこに落ちるかで決まってしまうので、gtrace"
 " は報告しない。"
 
-#: ../../../gtrace/docs/source/layout.rst:233
+#: ../../../gtrace/docs/source/layout.rst:232
 msgid ""
-"Whether a span runs inside one substrate is answered by "
-":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>`, "
-"which asks the optics itself. "
-":py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface only when"
-" the ray approaches it from outside, so from inside a substrate it finds "
-"nothing at all. Ends that lie exactly on a face count as inside, because "
-"that is where such a measurement is usually taken from."
+":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` "
+"answers whether a span runs inside one substrate, by asking the optics "
+"itself. :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` reports a surface "
+"only when the ray approaches it from outside, so from inside a substrate "
+"it finds nothing at all. Ends that lie exactly on a face count as inside,"
+" because that is where such a measurement is usually taken from."
 msgstr ""
 "区間が1つの基板の中を通っているかどうかに答えるのは "
 ":py:meth:`contains_segment<gtrace.optcomp.Optics.contains_segment>` "
-"で、これは素子自身に尋ねる。\\ :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` "
+"で、素子自身に尋ねる。\\ :py:meth:`isHit<gtrace.optcomp.Mirror.isHit>` "
 "は、光線が外側から近づいた面しか報告しない。だから基板の内側からは何も見つからない。端がちょうど面の上にある場合は内側と数える。この種の測定は、たいていそこから取るからである。"
 
-#: ../../../gtrace/docs/source/layout.rst:242
+#: ../../../gtrace/docs/source/layout.rst:240
 msgid "Assemblies"
 msgstr "アセンブリ"
 
-#: ../../../gtrace/docs/source/layout.rst:244
+#: ../../../gtrace/docs/source/layout.rst:242
 msgid ""
 "Two absorbing faces in a V make one beam dump, and a pair of steering "
 "mirrors makes one periscope. "
 ":py:meth:`assemble<gtrace.layout.OpticalLayout.assemble>` says that one "
 "element follows another. The follower keeps its place relative to the "
-"host, and moving or turning the host carries it along:"
+"host, and moves and turns with the host. ``M1`` and ``M2`` below are two "
+"steering mirrors registered in the layout:"
 msgstr ""
 "V 字に置いた2枚の吸収面で1つのビームダンプになり、ステアリングミラー2枚で1つのペリスコープになる。\\ "
 ":py:meth:`assemble<gtrace.layout.OpticalLayout.assemble>` "
-"は、ある素子が別の素子に従うことを指定する。従う側は宿主に対する位置関係を保ち、宿主を動かしたり回したりすると一緒に運ばれる:"
+"は、ある素子が別の素子に従うことを指定する。従う側は宿主に対する位置関係を保ち、宿主と一緒に動き、一緒に回る。下の ``M1`` と ``M2``"
+" は、レイアウトに登録した2枚のステアリングミラーである:"
 
-#: ../../../gtrace/docs/source/layout.rst:257
+#: ../../../gtrace/docs/source/layout.rst:256
 msgid ""
 "The offset is in the host's frame: origin at its substrate centre, x "
-"along its HR normal, the same frame a mount attaches in. What lands there"
-" is the follower's **anchor point**, the one it is already held by. "
-"``fix_rotation`` decides who may change the relative angle. True, the "
-"default, suits a face of a dump, which is built at its angle. False lets "
-"the angle be edited, and the element still turns *with* its host. The "
-"host may be another element or a body."
+"along its HR normal, the same frame a mount attaches in. The point that "
+"lands there is the follower's **anchor point**, the point it is already "
+"held by. ``fix_rotation`` decides who may change the relative angle. "
+"True, the default, suits a face of a dump, which is built at its angle. "
+"False lets the angle be edited, and the element still turns *with* its "
+"host. The host may be another element or a body."
 msgstr ""
-"オフセットは宿主の座標系で与える。原点は宿主の基板中心、x 軸は HR "
-"面の法線方向で、部品を取り付けるときと同じ座標系である。そこに来るのは、従う側の\\ **アンカー点**\\ "
-"、つまりその素子が元から支点にしている点である。\\ ``fix_rotation`` は相対角を誰が変えてよいかを決める。既定の True "
-"は、角度込みで作られるダンプの面に合う。False にすると角度を編集できるようになり、それでも素子は宿主と\\ *一緒に*\\ "
-"回る。宿主は別の素子でも部品でもよい。"
+"オフセットは宿主の枠で与える。原点は宿主の基板中心、x は HR 面の法線の向きで、マウントが取り付くのと同じ枠である。そこに来るのは、従う側の "
+"**アンカー点**\\ 、つまりその素子が元から支点にしている点である。\\ ``fix_rotation`` "
+"は、相対角を誰が変えてよいかを決める。既定の True は、角度込みで作られるダンプの面に合う。False "
+"にすると角度を編集できるようになり、それでも素子は宿主と *一緒に* 回る。宿主は別の素子でも部品でもよい。"
 
-#: ../../../gtrace/docs/source/layout.rst:265
+#: ../../../gtrace/docs/source/layout.rst:264
 msgid ""
 "A follower cannot be placed by hand. ``move``, ``align``, ``slide`` and a"
 " typed pose are refused, in the same words an attached body uses: the "
 "follower goes where its host goes. There is one exception. If "
 "``fix_rotation`` is False, the turn of the element is read back into the "
-"joint, so that the next settle keeps it. "
-":py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` brings "
-"the followers along, because the second face of a dump is part of that "
+"joint, so that the angle is kept the next time the follower's pose is "
+"written from the host. "
+":py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` copies "
+"the followers too, because the second face of a dump is part of that "
 "dump."
 msgstr ""
-"従う側の素子は、手で配置できない。\\ ``move``\\ ・\\ ``align``\\ ・\\ ``slide``\\ "
-"・姿勢の直接入力は拒否される。取り付けた部品と同じ言い方で拒む。従う側は、宿主が行くところへ行くからである。例外が1つある。\\ "
-"``fix_rotation`` が False なら、素子の回転は関節に読み戻され、次の書き込みでも保たれる。\\ "
+"従う側の素子は、手で配置できない。\\ ``move``\\ 、\\ ``align``\\ 、\\ ``slide``\\ "
+"、姿勢の直接入力は拒否される。取り付けた部品と同じ言い方で拒む。従う側は、宿主が行くところへ行くからである。例外が1つある。\\ "
+"``fix_rotation`` が False "
+"なら、素子の回転は関節に読み戻される。次に宿主から従う側の姿勢を書き込むときにも、その角度が保たれるようにするためである。\\ "
 ":py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` "
-"は従う側も連れていく。ダンプの2枚目の面は、そのダンプの一部だからである。"
+"は従う側もコピーする。ダンプの2枚目の面は、そのダンプの一部だからである。"
 
 #: ../../../gtrace/docs/source/layout.rst:273
 msgid ""
@@ -502,39 +508,38 @@ msgstr ""
 
 #: ../../../gtrace/docs/source/layout.rst:282
 msgid ""
-"One case follows from that. Reading a follower's pose in a cell "
-"**without** tracing or drawing first gives the value from before the host"
-" moved. Assign ``M1.HRcenter``, then call ``layout.trace()``, and the "
-"follower is where it should be. A layout with no assemblies is not "
-"touched at all."
+"One consequence follows. Reading a follower's pose in a cell **without** "
+"tracing or drawing first gives the value from before the host moved. "
+"Assign ``M1.HRcenter``, then call ``layout.trace()``, and the follower is"
+" where it should be. A layout with no assemblies is not touched at all."
 msgstr ""
-"このため、次の点に注意が必要である。トレースも描画も **せずに** セルの中で従う側の姿勢を読むと、宿主が動く前の値が返る。\\ "
+"ここから1つの帰結が出る。先にトレースも描画も **せずに** セルの中で従う側の姿勢を読むと、宿主が動く前の値が返る。\\ "
 "``M1.HRcenter`` に代入してから ``layout.trace()`` "
-"を呼べば、従う側は正しい位置にいる。組み立てを1つも持たないレイアウトには、何もしない。"
+"を呼べば、従う側は正しい位置にいる。アセンブリを1つも持たないレイアウトには、何もしない。"
 
 #: ../../../gtrace/docs/source/layout.rst:287
 msgid ""
-"**Removing something takes what stands on it.** "
+"**Removing an object takes what stands on it.** "
 ":py:meth:`remove_optics<gtrace.layout.OpticalLayout.remove_optics>` and "
 ":py:meth:`remove_mechanics<gtrace.layout.OpticalLayout.remove_mechanics>`"
 " take the target and everything whose pose comes from it, however deep, "
-"and return the list of what went. A mount whose mirror has gone would "
-"derive its pose from something no longer in the layout. It is one edit, "
-"so it is one step of undo. To keep something that is standing on it, "
-"detach or disassemble it first."
+"and return the list of what was removed. A mount whose mirror has gone "
+"would derive its pose from an object no longer in the layout. The removal"
+" is one edit, so it is one step of undo. To keep a body that stands on "
+"the target, detach or disassemble it first."
 msgstr ""
 "**何かを消すと、その上に立っているものも消える。** "
 ":py:meth:`remove_optics<gtrace.layout.OpticalLayout.remove_optics>` と "
 ":py:meth:`remove_mechanics<gtrace.layout.OpticalLayout.remove_mechanics>`"
 " "
-"は、対象と、そこから姿勢を得ているものすべてを、どれだけ深くても一緒に取り除き、消えたものの一覧を返す。ミラーが消えたマウントは、レイアウトにもう無いものから姿勢を導くことになるからである。これは1回の編集なので、undo"
-" も1段である。上に立っているものを残したければ、先に detach か disassemble する。"
+"は、対象と、そこから姿勢を得ているものすべてを、どれだけ深くても一緒に取り除き、消えたものの一覧を返す。ミラーが消えたマウントは、レイアウトにもう無いものから姿勢を導くことになるからである。取り除きは1回の編集なので、undo"
+" も1段である。対象の上に立つ部品を残したければ、先に detach か disassemble を行う。"
 
 #: ../../../gtrace/docs/source/layout.rst:296
 msgid ""
-"A circle is refused, in a call and in a loaded file: a pose that comes "
+"A cycle is refused, in a call and in a loaded file: a pose that comes "
 "from itself has no value."
-msgstr "循環は拒否される。呼び出しでも、読み込んだファイルの中でも同じである。自分自身から導かれる姿勢には値が無い。"
+msgstr "循環は拒否される。呼び出しでも、読み込んだファイルの中でも同じである。自分自身から来る姿勢には値が無い。"
 
 #: ../../../gtrace/docs/source/layout.rst:300
 msgid "The beam dump"
@@ -542,149 +547,160 @@ msgstr "ビームダンプ"
 
 #: ../../../gtrace/docs/source/layout.rst:302
 msgid ""
-":py:func:`beam_dump<gtrace.layout.beam_dump>` builds the assembly the "
-"feature was written for: two absorbing faces in a V and the housing they "
-"sit in, jointed so the three move as one."
+":py:meth:`add_beam_dump<gtrace.layout.OpticalLayout.add_beam_dump>` "
+"builds a beam dump and registers it: two absorbing faces in a V and the "
+"housing they sit in, jointed so the three move as one."
 msgstr ""
-":py:func:`beam_dump<gtrace.layout.beam_dump>` "
-"は、この機能を作るきっかけになったアセンブリを組み立てる。V "
-"字に置いた2枚の吸収面と、それが収まる筐体で、3つが1つとして動くように関節でつないである。"
+":py:meth:`add_beam_dump<gtrace.layout.OpticalLayout.add_beam_dump>` "
+"は、ビームダンプを組み立てて登録する。V 字に置いた2枚の吸収面と、それが収まる筐体で、3つが1つとして動くように関節でつないである。"
 
 #: ../../../gtrace/docs/source/layout.rst:312
 msgid ""
 "``angle`` is **the direction the beam travels**, so a dump is aimed the "
-"way the beam runs, not by where its mouth points. What comes back is "
-"split into ``(optics, bodies)``, which is what every builder here "
-"returns. Each list has the hosts first, which is the order they are "
-"registered in. They are named from the dump: ``BD1a`` and ``BD1b`` are "
-"its two faces and ``BD1box`` its housing. A dump is numbered and its "
-"pieces lettered, so ``BD2b`` is the far face of the second dump. Without "
-"a name it is given the first free one."
-msgstr "``angle`` は\\ **ビームが進む向き**\\ である。ダンプはビームの走る向きに合わせて置くもので、口がどちらを向いているかで置くのではない。返り値は ``(optics, bodies)`` に分かれている。ここのビルダーはどれもこの形で返す。各リストの中は宿主が先であり、それが登録される順序でもある。名前はダンプから付ける。\\ ``BD1a`` と ``BD1b`` が2枚の面、\\ ``BD1box`` が筐体である。ダンプに番号を、部品に文字を振るので、\\ ``BD2b`` は2つ目のダンプの奥側の面である。名前を渡さなければ、空いている最初の番号が付く。"
+"way the beam runs, not by where its mouth points. The call returns "
+"``(optics, bodies)``, like every builder here. Each list has the hosts "
+"first, the order they are registered in: ``BD1a`` is the host, ``BD1b`` "
+"follows it and ``BD1box`` stands on it. The pieces are named after the "
+"dump: ``BD1a`` and ``BD1b`` are its two faces and ``BD1box`` its housing."
+" A dump is numbered and its pieces lettered, so ``BD2b`` is the far face "
+"of the second dump. A dump with no name given takes the first free "
+"number. :py:func:`beam_dump<gtrace.layout.beam_dump>` builds the same "
+"three pieces without registering them."
+msgstr ""
+"``angle`` は **ビームが進む向き** "
+"である。ダンプはビームの走る向きに合わせて置くもので、口がどちらを向いているかで置くのではない。呼び出しは ``(optics, "
+"bodies)`` を返す。ここのビルダーはどれもこの形である。各リストの中は宿主が先で、それが登録される順序でもある。\\ ``BD1a`` "
+"が宿主、\\ ``BD1b`` がそれに従い、\\ ``BD1box`` がその上に立つ。部品の名前はダンプから付ける。\\ ``BD1a`` と"
+" ``BD1b`` が2枚の面、\\ ``BD1box`` が筐体である。ダンプに番号を、部品に文字を振るので、\\ ``BD2b`` "
+"は2つ目のダンプの奥側の面である。名前を渡さなければ、空いている最初の番号が付く。\\ "
+":py:func:`beam_dump<gtrace.layout.beam_dump>` は、同じ3つの部品を登録せずに組み立てる。"
 
-
-#: ../../../gtrace/docs/source/layout.rst:321
+#: ../../../gtrace/docs/source/layout.rst:323
 msgid ""
 "The two faces stand in a V because a black face is not perfectly black. "
-"What one face sends back, the other catches and sends back again, so the "
-"beam works its way into the wedge instead of coming out the way it came. "
-"With the default 4% a beam is down to 0.16% after two bounces and to a "
-"part in ten million after five. The faces are therefore elements, and not"
-" a shape drawn on the housing."
-msgstr "2つの面が V 字に立っているのは、黒い面が完全な黒ではないからである。一方の面が返したビームをもう一方が受けてまた返すので、ビームは来た道を戻らずに楔の奥へ入っていく。既定の 4% なら、2回の反射でビームは 0.16% に、5回で1千万分の1になる。だから面は、筐体に描いた形状ではなく素子にしてある。"
+"One face reflects a little light, the other catches it and reflects it "
+"again, so the beam travels deeper into the wedge instead of leaving the "
+"way it came. With the default 4% a beam falls to 0.16% after two bounces "
+"and to a part in ten million after five. The faces are therefore "
+"elements, and not a shape drawn on the housing."
+msgstr ""
+"2枚の面が V "
+"字に立っているのは、黒い面が完全な黒ではないからである。一方の面が少しだけ光を反射し、もう一方がそれを受けてまた反射するので、ビームは来た道を戻らずに楔の奥へ入っていく。既定の"
+" 4% なら、2回の反射でビームは 0.16% に、5回で1千万分の1になる。だから面は、筐体に描いた形状ではなく素子にしてある。"
 
-
-#: ../../../gtrace/docs/source/layout.rst:328
+#: ../../../gtrace/docs/source/layout.rst:330
 msgid ""
 "The V comes from three numbers in the drawing: the apex 25 mm above the "
 "post hole, faces 50 mm long, opening 28°. **The reflectivity is not one "
-"of them.** What a black absorber returns depends on the glass and the "
-"polarisation, so "
+"of them.** The reflectivity of a black absorber depends on the glass and "
+"the polarisation, so "
 ":py:data:`DUMP_REFLECTIVITY<gtrace.layout.DUMP_REFLECTIVITY>` is a "
-"placeholder to be measured and passed."
+"placeholder. Measure it and pass your own value."
 msgstr ""
 "V 字は図面の3つの数字で決まる。頂点はポスト穴の 25 mm 上、面の長さ 50 mm、開き角 28° である。\\ "
-"**反射率はその3つに入らない。** 黒い吸収体が返す量はガラスと偏光で決まるので、\\ "
+"**反射率はこの3つに入らない。** 黒い吸収体の反射率はガラスと偏光で決まるので、\\ "
 ":py:data:`DUMP_REFLECTIVITY<gtrace.layout.DUMP_REFLECTIVITY>` "
-"は仮の値である。実測して渡すこと。"
+"は仮の値である。実測して、自分の値を渡すこと。"
 
-#: ../../../gtrace/docs/source/layout.rst:334
+#: ../../../gtrace/docs/source/layout.rst:337
 msgid ""
-"Aim it into one side of the V, not at the apex. A ray sent exactly at the"
-" apex hits neither face, since that is the point where the two of them "
-"end. The same is true of a real dump."
+"Aim the beam into one side of the V, not at the apex. A ray sent exactly "
+"at the apex hits neither face, because the apex is where both faces end. "
+"The same is true of a real dump."
 msgstr ""
-"狙うのは V "
-"字の片側で、頂点ではない。頂点ちょうどに送った光線はどちらの面にも当たらない。そこは2つの面が終わる点だからである。実物のダンプでも同じである。"
+"ビームは V "
+"字の片側に向けて狙う。頂点に向けてはいけない。頂点ちょうどに送った光線は、どちらの面にも当たらない。そこは2枚の面が終わる点だからである。実物のダンプでも同じである。"
 
-#: ../../../gtrace/docs/source/layout.rst:341
+#: ../../../gtrace/docs/source/layout.rst:344
 msgid "Mechanics"
 msgstr "Mechanics（部品）"
 
-#: ../../../gtrace/docs/source/layout.rst:343
+#: ../../../gtrace/docs/source/layout.rst:346
 msgid ""
-"A bench is not only beams. What holds the optics takes up room, bumps "
-"into things and has to be bolted somewhere, so a layout carries that too."
-" A :py:class:`Mechanics<gtrace.mechanics.Mechanics>` is a named body of "
+"A bench is not only beams. The hardware that holds the optics takes up "
+"room, collides with other hardware and has to be bolted somewhere, so a "
+"layout carries it too. A "
+":py:class:`Mechanics<gtrace.mechanics.Mechanics>` is a named body of "
 "drawing primitives that the trace never sees:"
-msgstr "光学ベンチにあるのはビームだけではない。光学素子を支えるものは場所を取り、他とぶつかり、どこかに固定しなければならない。だからレイアウトはそれも持つ。\\ :py:class:`Mechanics<gtrace.mechanics.Mechanics>` は、描画プリミティブでできた名前付きの部品で、トレースからは一切見えない:"
+msgstr ""
+"光学ベンチにあるのはビームだけではない。素子を保持する部材は場所を取り、他の部材とぶつかり、どこかに固定しなければならない。だからレイアウトはそれも持つ。\\"
+" :py:class:`Mechanics<gtrace.mechanics.Mechanics>` "
+"は、描画プリミティブでできた名前付きの部品で、トレースからは一切見えない:"
 
-
-#: ../../../gtrace/docs/source/layout.rst:358
+#: ../../../gtrace/docs/source/layout.rst:361
 msgid ""
 "The shapes are in the body's **own** coordinates, and the pose carries "
 "them onto the bench: ``center`` is where the local origin lands, "
 "``rotationAngle`` how far the body is turned about it. The shapes do not "
 "change when the body moves, so one drawing serves every copy of a part. "
-":py:meth:`world_shapes<gtrace.mechanics.Mechanics.world_shapes>` tells "
-"you where they are. It builds new primitives, and does not move the ones "
-"you hold."
+":py:meth:`world_shapes<gtrace.mechanics.Mechanics.world_shapes>` gives "
+"the shapes in world coordinates. It builds new primitives, and does not "
+"move the ones you hold."
 msgstr ""
-"形状は部品\\ **自身**\\ の座標で書かれていて、姿勢がそれを光学ベンチ上へ運ぶ。\\ ``center`` "
-"はローカル原点が落ちる場所、\\ ``rotationAngle`` "
-"はその点の回りにどれだけ回すかである。部品が動いても形状は変わらないので、1つの図面がその部品の全てのコピーに使える。実際にどこにあるかは "
+"形状は部品 **自身** の座標で書かれていて、姿勢がそれを光学ベンチ上へ運ぶ。\\ ``center`` はローカル原点が落ちる場所、\\ "
+"``rotationAngle`` "
+"はその点の回りにどれだけ回すかである。部品が動いても形状は変わらないので、1つの図面がその部品のすべてのコピーに使える。\\ "
 ":py:meth:`world_shapes<gtrace.mechanics.Mechanics.world_shapes>` "
-"が教える。手元のプリミティブを動かすのではなく、新しいプリミティブを作って返す。"
+"は、形状を世界座標で返す。新しいプリミティブを作るのであって、手元のプリミティブを動かすのではない。"
 
-#: ../../../gtrace/docs/source/layout.rst:366
+#: ../../../gtrace/docs/source/layout.rst:369
 msgid ""
-"A body is drawn, picked, measured, saved and exported like anything else,"
-" and it is invisible to the beams: adding, moving or editing one does not"
-" invalidate a trace. It goes on the ``mechanics`` layer by default, so a "
-"DXF or the viewer's layer panel can take all of it out of the way at "
-"once. What a click lands on is decided by "
-":py:meth:`contains<gtrace.mechanics.Mechanics.contains>`, a point-in-"
-"polygon test against the body's "
+"A body is drawn, picked, measured, saved and exported like the optics, "
+"and it is invisible to the beams: adding, moving or editing one does not "
+"invalidate a trace. A body goes on the ``mechanics`` layer by default, so"
+" a DXF or the viewer's layer panel can hide every body at once. "
+":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` decides what a "
+"click lands on, with a point-in-polygon test against the body's "
 ":py:meth:`outline<gtrace.mechanics.Mechanics.outline>`. Of several bodies"
-" under one point the smallest wins, so a mount standing on a breadboard "
-"is not shadowed by it."
+" under one point the smallest is picked, so a mount standing on a "
+"breadboard is not shadowed by the breadboard."
 msgstr ""
-"部品は他と同じように描かれ、選択され、測られ、保存され、書き出される。そしてビームからは見えない。部品を足しても動かしても編集しても、トレース結果は無効にならない。既定では"
-" ``mechanics`` レイヤーに置かれるので、DXF でもビューアのレイヤーパネルでも、まとめて片付けられる。クリックが何に当たったかは "
+"部品は素子と同じように描かれ、選択され、測られ、保存され、書き出される。そしてビームからは見えない。部品を足しても、動かしても、編集しても、トレース結果は無効にならない。部品は既定で"
+" ``mechanics`` レイヤーに置かれるので、DXF "
+"でもビューアのレイヤーパネルでも、すべての部品をまとめて隠せる。クリックが何に当たったかは "
 ":py:meth:`contains<gtrace.mechanics.Mechanics.contains>` が決める。部品の "
 ":py:meth:`outline<gtrace.mechanics.Mechanics.outline>` "
-"に対する点の内外判定である。1つの点の下に複数の部品があれば小さいほうが勝つので、ブレッドボードの上に立つマウントがボードに隠されることはない。"
-
-#: ../../../gtrace/docs/source/layout.rst:378
-msgid "Standing on something"
-msgstr "何かの上に立つ"
+"に対する点の内外判定である。1つの点の下に複数の部品があれば小さいほうを選ぶので、ブレッドボードの上に立つマウントがブレッドボードに隠されることはない。"
 
 #: ../../../gtrace/docs/source/layout.rst:380
+msgid "Standing on something"
+msgstr "他の部品の上への設置"
+
+#: ../../../gtrace/docs/source/layout.rst:382
 msgid ""
 "A mirror mount is a body that stands where its mirror stands, so it has "
 "no pose of its own:"
 msgstr "ミラーマウントは、ミラーの立つところに立つ部品なので、自分の姿勢を持たない:"
 
-#: ../../../gtrace/docs/source/layout.rst:389
+#: ../../../gtrace/docs/source/layout.rst:391
 msgid ""
 "``center`` and ``rotationAngle`` of an attached body are **derived on "
 "every read** from the host's pose and the attachment offset. There is no "
-"stored copy that could go stale. Move the mirror in a cell, in the "
-"viewer, or by loading a file, and the mount is already where it should "
-"be. The cost is that an attached body cannot be moved on its own, which "
-"is what \"attached\" means. Writing to its pose, or dragging it, is "
-"refused."
+"stored copy that could become out of date. Move the mirror in a cell, in "
+"the viewer, or by loading a file, and the mount is already where it "
+"should be. The cost is that an attached body cannot be moved on its own. "
+"Writing to its pose, or dragging it, is refused."
 msgstr ""
-"取り付けた部品の ``center`` と ``rotationAngle`` は、宿主の姿勢と取り付けオフセットから\\ "
+"取り付けた部品の ``center`` と ``rotationAngle`` は、宿主の姿勢と取り付けオフセットから "
 "**読まれるたびに導出される**\\ "
-"。保存された値が無いので、古くなることがない。セルでも、ビューアでも、ファイルの読み込みでもミラーを動かせば、マウントはもうあるべき場所にいる。その代わり、取り付けた部品は単独では動かせない。それが「取り付けてある」ということである。姿勢への書き込みも、ドラッグも拒否される。"
+"。保存された値が無いので、古くなることがない。セルでも、ビューアでも、ファイルの読み込みでもミラーを動かせば、マウントはもうあるべき場所にいる。その代わり、取り付けた部品は単独では動かせない。姿勢への書き込みも、ドラッグも拒否される。"
 
-#: ../../../gtrace/docs/source/layout.rst:396
+#: ../../../gtrace/docs/source/layout.rst:398
 msgid ""
 "Where a body sits on its host is a **coordinate convention**, not a "
-"number. The local origin of a part is the point that comes to rest at the"
-" centre of the host's substrate. A mount is therefore drawn around the "
-"mirror it holds, and needs no offset to land correctly. ``offset`` and "
-"``offset_angle`` are there for when you mean to sit slightly off it."
+"number. The local origin of a part is the point that lands at the centre "
+"of the host's substrate. A mount is therefore drawn around the mirror it "
+"holds, and needs no offset to land correctly. Use ``offset`` and "
+"``offset_angle`` to place a body slightly off its host."
 msgstr ""
-"部品が宿主のどこに座るかは、数値ではなく\\ **座標の約束**\\ "
-"である。部品のローカル原点が、宿主の基板中心に来る点である。だからマウントは、保持するミラーを囲むように描かれていて、正しく収まるのにオフセットは要らない。\\"
-" ``offset`` と ``offset_angle`` は、そこから意図的に少しずらしたいときのためにある。"
+"部品が宿主のどこに座るかは、数値ではなく **座標の約束** "
+"である。部品のローカル原点が、宿主の基板中心に落ちる点である。だからマウントは、保持するミラーを囲むように描かれていて、正しく収まるのにオフセットは要らない。部品を宿主から少しずらして置きたいときは、\\"
+" ``offset`` と ``offset_angle`` を使う。"
 
-#: ../../../gtrace/docs/source/layout.rst:402
+#: ../../../gtrace/docs/source/layout.rst:404
 msgid ""
-"**A body may stand on another body.** A bench stacks: the mount is bolted"
-" to a pedestal, the pedestal is held down by a clamping fork. "
+"**A body may stand on another body.** Parts stack on a bench: the mount "
+"is bolted to a pedestal, the pedestal is held down by a clamping fork. "
 "``attached_to`` takes either one. The chain follows the optics at its "
 "root, and a cycle is refused. "
 ":py:func:`host_pose<gtrace.mechanics.host_pose>` is the one place that "
@@ -692,31 +708,31 @@ msgid ""
 "by its HR normal, and a body by its own angle."
 msgstr ""
 "**部品は、別の部品の上にも立てる。** "
-"光学ベンチは積み重なる。マウントはペデスタルにボルト留めされ、ペデスタルはクランプフォークで押さえられる。\\ ``attached_to`` "
-"はどちらも取れる。鎖は、その根にある素子に従う。循環は拒否される。2種類の宿主の違いを知っている唯一の場所が "
+"光学ベンチでは部品が積み重なる。マウントはペデスタルにボルト留めされ、ペデスタルはクランプフォークで押さえられる。\\ "
+"``attached_to`` はどちらも取れる。鎖は、その根にある素子に従う。循環は拒否される。2種類の宿主の違いを知っている唯一の場所が "
 ":py:func:`host_pose<gtrace.mechanics.host_pose>` である。素子は HR "
 "面の法線で向きが決まり、部品は自身の角度で決まる。"
 
-#: ../../../gtrace/docs/source/layout.rst:409
+#: ../../../gtrace/docs/source/layout.rst:412
 msgid ""
-"What differs when one body stands on another is where it is pinned. A "
-"mount is pinned by its origin, since that is the point drawn to coincide "
-"with its optic. A pedestal dropped into a hole is pinned by *that hole*, "
-"and a fork by the bore it closes on. ``attach_point`` says which point of"
-" the body is held, in its own coordinates, and the pose derives from "
-"that:"
+"When one body stands on another, what differs is where the body is "
+"pinned. A mount is pinned by its origin, the point drawn to coincide with"
+" its optic. A pedestal dropped into a hole is pinned by *that hole*, and "
+"a fork by the bore it closes on. ``attach_point`` says which point of the"
+" body is held, in its own coordinates, and the pose derives from that "
+"point:"
 msgstr ""
-"部品が別の部品の上に立つときに違うのは、どこで留まるかである。マウントは原点で留まる。それが、保持する素子と重なるように描かれた点だからである。穴に落とし込んだペデスタルは\\"
-" *その穴*\\ で留まり、フォークは咥えるボアで留まる。\\ ``attach_point`` "
-"は、部品のどの点が留まるかを部品自身の座標で言い、姿勢はそこから導かれる:"
-
-#: ../../../gtrace/docs/source/layout.rst:420
-msgid ""
-"With the default attach point of ``[0, 0]`` the second term vanishes, and"
-" this is the rule every mount was already drawn to."
-msgstr "吸着点の既定値 ``[0, 0]`` では第2項が消える。これは、これまでどのマウントも、それを前提に描かれてきた規則である。"
+"部品が別の部品の上に立つときに違うのは、部品がどこで留まるかである。マウントは自分の原点で留まる。それが、保持する素子と重なるように描かれた点だからである。穴に落とし込んだペデスタルは"
+" *その穴* で留まり、フォークは咥えるボアで留まる。\\ ``attach_point`` "
+"は、部品のどの点が留まるかを部品自身の座標で言い、姿勢はその点から導かれる:"
 
 #: ../../../gtrace/docs/source/layout.rst:423
+msgid ""
+"With the default attach point of ``[0, 0]`` the second term vanishes, and"
+" the rule matches how every mount is already drawn."
+msgstr "取り付け点の既定値 ``[0, 0]`` では第2項が消える。この規則は、これまでどのマウントも描かれてきたやり方と一致する。"
+
+#: ../../../gtrace/docs/source/layout.rst:426
 msgid ""
 "``fix_rotation`` decides who may change the relative angle. True, the "
 "default, suits a mount bolted to its mirror: it faces where the host "
@@ -729,25 +745,25 @@ msgstr ""
 "はクランプフォークに合う。フォークは留まっている点の回りに振れるので、\\ ``Angle`` の行と "
 "Shift+ドラッグで角度を決める。どちらの場合も、部品は宿主と\\ **一緒に**\\ 回る。"
 
-#: ../../../gtrace/docs/source/layout.rst:429
+#: ../../../gtrace/docs/source/layout.rst:432
 msgid ""
-"**Named points** are what all of this stands on. ``points`` is a dict of "
-"local points a part names for itself: ``'post'`` for the hole under a "
-"mount, ``'axis'`` for a pedestal, ``'bore'`` and ``'screw'`` for a fork. "
-"It travels with the model in the library. Named points join the snap "
+"All of this is built on **named points**. ``points`` is a dict of local "
+"points a part names for itself: ``'post'`` for the hole under a mount, "
+"``'axis'`` for a pedestal, ``'bore'`` and ``'screw'`` for a fork. The "
+"dict travels with the model in the library. Named points join the snap "
 "points, so a drag settles on them, a measurement reaches them, and Align "
 "aims by them."
 msgstr ""
-"**名前付き点**\\ が、ここまでのすべてを支えている。\\ ``points`` "
+"ここまでのすべては **名前付き点** の上に成り立っている。\\ ``points`` "
 "は、部品が自分で名前を付けたローカル点の辞書である。マウントの下の穴は ``'post'``\\ 、ペデスタルは ``'axis'``\\ "
 "、フォークは ``'bore'`` と ``'screw'`` "
-"である。モデルと一緒にライブラリへ運ばれる。名前付き点は吸着点の仲間に加わるので、ドラッグはそこに吸い付き、測定はそこに届き、Align "
-"はそこを使って向きを決める。"
+"である。この辞書は、ライブラリの中のモデルと一緒に運ばれる。名前付き点は吸着点の仲間に加わるので、ドラッグはそこに吸い付き、測定はそこに届き、Align"
+" はそこを使って向きを決める。"
 
-#: ../../../gtrace/docs/source/layout.rst:435
+#: ../../../gtrace/docs/source/layout.rst:438
 msgid ""
-":py:meth:`detach<gtrace.mechanics.Mechanics.detach>` bakes the derived "
-"pose in and frees the body. "
+":py:meth:`detach<gtrace.mechanics.Mechanics.detach>` stores the derived "
+"pose and frees the body. "
 ":py:meth:`attach<gtrace.mechanics.Mechanics.attach>` seats it on a host, "
 "at the model's own place by default, or where it already stands with "
 "``keep_pose=True``. A layout saves the host's **name** and the offset, "
@@ -756,27 +772,27 @@ msgid ""
 "keep it."
 msgstr ""
 ":py:meth:`detach<gtrace.mechanics.Mechanics.detach>` "
-"は、そのときの姿勢を部品自身の姿勢として書き込み、宿主から切り離す。\\ "
+"は、導出された姿勢を部品に書き込み、部品を宿主から切り離す。\\ "
 ":py:meth:`attach<gtrace.mechanics.Mechanics.attach>` "
 "は部品を宿主に載せる。既定ではモデル本来の位置に、\\ ``keep_pose=True`` "
-"なら今立っている場所のままで載せる。レイアウトが保存するのは宿主の\\ **名前**\\ "
-"とオフセットだけで、導出された姿勢は保存せず、読み込むときに両者を結び直す。素子を消すと、その上に立つ部品も一緒に消える。残したければ先に "
+"なら今立っている場所に載せる。レイアウトが保存するのは宿主の **名前** "
+"とオフセットだけで、導出された姿勢は保存しない。読み込むときに、両者を結び直す。素子を消すと、その上に立つ部品も一緒に消える。残したければ、先に "
 "detach する。"
 
-#: ../../../gtrace/docs/source/layout.rst:443
+#: ../../../gtrace/docs/source/layout.rst:446
 msgid ""
-":py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` adds a "
-"second one of an element **with the whole stack standing on it**: the "
-"mount bolted to it, the pedestal under the mount, and the fork over the "
-"pedestal. Each one is pinned to the copy the way its original is pinned "
-"to the original. One of a pair of steering mirrors is the element and "
-"everything built under it, and you do not want to assemble that twice."
+":py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` copies an"
+" element **with the whole stack standing on it**: the mount bolted to it,"
+" the pedestal under the mount, and the fork over the pedestal. Each part "
+"is pinned to the copy the way its original is pinned to the original. One"
+" of a pair of steering mirrors is the element plus everything built under"
+" it, and you do not want to build that twice."
 msgstr ""
 ":py:meth:`copy_optics<gtrace.layout.OpticalLayout.copy_optics>` "
-"は、素子をもう1つ足す。\\ **その上に立つ一式ごと**\\ "
-"である。ボルト留めしたマウント、その下のペデスタル、ペデスタルを押さえるフォークが付いてくる。それぞれ、元が元に留まっているのと同じ留め方で、コピー側に留まる。ステアリングミラー2枚組の片方とは、素子とその下に組み上げたもの全てであり、それを2度組み立てたくはない。"
+"は、素子をコピーする。\\ **その上に立つ一式ごと** "
+"である。ボルト留めしたマウント、マウントの下のペデスタル、ペデスタルを押さえるフォークが付いてくる。各部品は、元の部品が元の素子に留まっているのと同じやり方で、コピーに留まる。ステアリングミラー2枚組の片方とは、素子と、その下に組み上げたもの全てである。それを2度組み立てたくはない。"
 
-#: ../../../gtrace/docs/source/layout.rst:450
+#: ../../../gtrace/docs/source/layout.rst:453
 msgid ""
 "The copies are made through the same dicts a saved layout is written "
 "with, so what is copied is what would have been saved: by value, sharing "
@@ -784,15 +800,15 @@ msgid ""
 "they were never stored; each derives its own from the copy it now stands "
 "on. Without a name, the copy takes the original's name without its "
 "trailing number and the first free number after it, so a copy of ``M1`` "
-"is ``M2``. Without an offset it stands its own diameter away along both "
-"axes, far enough to clear what it was made from."
+"is ``M2``. Without an offset the copy stands its own diameter away along "
+"both axes, far enough to clear the original."
 msgstr ""
 "コピーは、保存したレイアウトを書くときと同じ dict "
-"を通して作る。だからコピーされるのは、保存されるはずのものである。値としてのコピーで、何も共有しない。部品の姿勢だけはコピーしない。そもそも保存していないもので、新しく立った先から各自が導出するからである。名前を渡さなければ、元の名前から末尾の数字を落とし、その後の空いている最初の番号を付ける。だから"
+"を通して作る。だからコピーされるのは、保存されるはずのものである。値としてのコピーで、何も共有しない。部品の姿勢だけはコピーしない。そもそも保存していないもので、各部品が新しく立った先のコピーから自分で導出するからである。名前を渡さなければ、コピーは元の名前から末尾の数字を落とし、その後の空いている最初の番号を付ける。だから"
 " ``M1`` のコピーは ``M2`` "
-"になる。オフセットを渡さなければ、両軸方向に自分の直径ぶんだけ離れて立つ。元のものから離れるのに十分な距離である。"
+"になる。オフセットを渡さなければ、コピーは両軸方向に自分の直径ぶんだけ離れて立つ。元のものから離れるのに十分な距離である。"
 
-#: ../../../gtrace/docs/source/layout.rst:459
+#: ../../../gtrace/docs/source/layout.rst:462
 msgid ""
 "Only an element is copied this way, since a stack stands on an element at"
 " its root. To get a second copy of a single body, build it from the model"
@@ -801,127 +817,129 @@ msgstr ""
 "この方法でコピーできるのは素子だけである。一式は、その根にある素子の上に立っているからである。部品を1つだけもう1個作るときは、\\ "
 ":py:func:`from_model<gtrace.mechanics.from_model>` でモデルライブラリから作る。"
 
-#: ../../../gtrace/docs/source/layout.rst:464
+#: ../../../gtrace/docs/source/layout.rst:467
 msgid "The model library"
 msgstr "モデルライブラリ"
 
-#: ../../../gtrace/docs/source/layout.rst:466
+#: ../../../gtrace/docs/source/layout.rst:469
 msgid ""
-"What actually goes onto a bench is not a mirror but a mirror in a mount, "
-"on a pedestal, held down by a fork. "
-":py:func:`assembly<gtrace.layout.assembly>` builds one:"
+"A bench does not carry a bare mirror. It carries a mirror in a mount, on "
+"a pedestal, held down by a fork. "
+":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` builds "
+"one and registers it:"
 msgstr ""
-"光学ベンチに実際に載るのはミラーではなく、マウントに入ったミラーであり、それはペデスタルの上に立ち、フォークで押さえられている。 "
-":py:func:`assembly<gtrace.layout.assembly>` がそれを作る。"
+"光学ベンチに載るのは、裸のミラーではない。マウントに入ったミラーであり、それはペデスタルの上に立ち、フォークで押さえられている。\\ "
+":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` "
+"は、それを1つ組み立てて登録する:"
 
-#: ../../../gtrace/docs/source/layout.rst:482
+#: ../../../gtrace/docs/source/layout.rst:486
 msgid ""
-"Four objects come back: the element first, and then the parts that hold "
-"it. Each part is attached to the one below it. The mount goes on the "
-"optic at the position the model was designed for. The pedestal goes in "
-"the hole the mount is bolted down through. The fork goes round the "
-"pedestal, with its turn free. **The element is the thing to move.** "
+"The call returns four objects: the element first, and then the parts that"
+" hold it. Each part is attached to the one below it. The mount goes on "
+"the optic at the position the model was designed for. The pedestal goes "
+"in the hole the mount is bolted down through. The fork goes round the "
+"pedestal, with its turn free. **Move the element, not the parts.** "
 "Everything else derives its pose from the element."
 msgstr ""
-"返るのは4つのオブジェクトである。素子が先頭で、続いてそれを保持する部品が並ぶ。各部品は1つ下のものに取り付けられている。マウントは素子の上に、モデルが設計された位置で載る。ペデスタルは、マウントを止めているネジ穴に入る。フォークはペデスタルの周りに、回転を自由にして付く。\\"
-" **動かす対象は素子である。** 他は全て、素子から姿勢を導く。"
+"返るのは4つのオブジェクトである。素子が先頭で、続いてそれを保持する部品が並ぶ。各部品は1つ下のものに取り付けられている。マウントは、モデルが設計された位置で素子の上に載る。ペデスタルは、マウントを止め付けるネジ穴に入る。フォークはペデスタルの周りに、回転を自由にして付く。\\"
+" **動かすのは素子であって、部品ではない。** 他はすべて、素子から姿勢を導く。"
 
-#: ../../../gtrace/docs/source/layout.rst:489
+#: ../../../gtrace/docs/source/layout.rst:493
 msgid ""
 "A mirror can be placed by its front face instead: ``add_assembly('MIRROR-"
 "2IN', HRcenter=[0.3, 0.1])`` puts the centre of the HR face at that "
 "point, and the substrate half a thickness behind it. Give ``center`` or "
 "``HRcenter``, not both. ``assembly_kinds()`` says which of the two each "
-"kind is placed by, under ``place``, and that is what the viewer sends "
-"when an assembly is placed by a click."
+"kind is placed by, under ``place``, and the viewer sends that key when an"
+" assembly is placed by a click."
 msgstr ""
 "ミラーは前面で置くこともできる。\\ ``add_assembly('MIRROR-2IN', HRcenter=[0.3, 0.1])`` は "
 "HR 面の中心をその点に置き、基板は厚みの半分だけ後ろに立つ。\\ ``center`` と ``HRcenter`` "
 "は、どちらか一方を与える。どちらで置く種類なのかは ``assembly_kinds()`` が ``place`` "
 "として言う。ビューアがクリックでアセンブリを置くときに送るのも、この名前である。"
 
-#: ../../../gtrace/docs/source/layout.rst:496
+#: ../../../gtrace/docs/source/layout.rst:500
 msgid ""
-":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` "
-"registers all four and fills in the names. Each piece takes the first "
-"number that is free for its own kind, so a second two-inch mirror comes "
-"down as ``M2``, held by ``MT2`` on ``P2`` in ``FK2``."
+"``add_assembly`` fills in the names as it registers the four. Each piece "
+"takes the first number that is free for its own kind, so a second two-"
+"inch mirror is named ``M2``, held by ``MT2`` on ``P2`` in ``FK2``. "
+":py:func:`assembly<gtrace.layout.assembly>` builds the same four without "
+"registering them."
 msgstr ""
-":py:meth:`add_assembly<gtrace.layout.OpticalLayout.add_assembly>` "
-"は4つまとめて登録し、名前も埋める。各部品は自分の種類で空いている最初の番号を取るので、2つ目の2インチミラーは ``M2`` として置かれ、\\"
-" ``MT2`` に保持され、\\ ``P2`` の上に立ち、\\ ``FK2`` で押さえられる。"
+"``add_assembly`` は4つを登録しながら、名前も埋める。各部品は自分の種類で空いている最初の番号を取るので、2つ目の2インチミラーは"
+" ``M2`` と名付けられ、\\ ``P2`` の上の ``MT2`` に保持され、\\ ``FK2`` で押さえられる。\\ "
+":py:func:`assembly<gtrace.layout.assembly>` は、同じ4つを登録せずに組み立てる。"
 
-#: ../../../gtrace/docs/source/layout.rst:501
+#: ../../../gtrace/docs/source/layout.rst:506
 msgid ""
+"The kinds are built from "
 ":py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` and "
-":py:func:`lens_assembly<gtrace.layout.lens_assembly>` are what the kinds "
-"are made of. They take the same arguments, plus the models to build the "
-"parts from. Pass ``None`` for a model to leave that piece out. "
-"``mount_offset`` says where the mount is really bolted. It is in the "
-"optic's own frame, with x along the face normal. The two-inch kind sits "
-"its mount **5 mm further back** than the designed position in the "
-"drawing. That 5 mm is a bench measurement, and the model does not know "
-"it. What the pedestal stands in moves with the mount, because the post "
-"hole is a point of the mount."
+":py:func:`lens_assembly<gtrace.layout.lens_assembly>`. They take the same"
+" arguments, plus the models to build the parts from. Pass ``None`` for a "
+"model to leave that piece out. ``mount_offset`` says where the mount is "
+"really bolted. It is in the optic's own frame, with x along the face "
+"normal. The two-inch kind sits its mount **5 mm further back** than the "
+"designed position in the drawing. That 5 mm is a bench measurement, and "
+"the model does not know it. The hole the pedestal stands in moves with "
+"the mount, because the post hole is a point of the mount."
 msgstr ""
-":py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` と "
+"この種類は :py:func:`mirror_assembly<gtrace.layout.mirror_assembly>` と "
 ":py:func:`lens_assembly<gtrace.layout.lens_assembly>` "
-"が、この種類の中身である。同じ引数に加えて、部品を作るモデル名を取る。モデル名に ``None`` を渡せば、その部品を省ける。\\ "
-"``mount_offset`` は、マウントが実際にどこに留められているかを述べる。素子自身の枠で、x "
-"は面法線の向きである。2インチの種類は、図面の設計位置より **5 mm 後ろ**\\ にマウントを置く。この 5 mm "
-"は光学ベンチでの実測であり、モデルは知らない。ペデスタルが入るネジ穴はマウントの点なので、マウントと一緒に動く。"
+"から作られる。同じ引数に加えて、部品を作るモデルを取る。モデルに ``None`` を渡せば、その部品を省ける。\\ "
+"``mount_offset`` は、マウントが実際にどこに留められているかを言う。素子自身の枠で、x "
+"は面法線の向きである。2インチの種類は、図面の設計位置より **5 mm 後ろ** にマウントを置く。この 5 mm "
+"は光学ベンチでの実測であり、モデルは知らない。ペデスタルが立つ穴はマウントと一緒に動く。ポスト穴はマウントの点だからである。"
 
-#: ../../../gtrace/docs/source/layout.rst:512
+#: ../../../gtrace/docs/source/layout.rst:518
 msgid "Parts repeat, so they are worth registering once:"
 msgstr "部品は繰り返し使うので、一度登録しておく価値がある:"
 
-#: ../../../gtrace/docs/source/layout.rst:528
+#: ../../../gtrace/docs/source/layout.rst:534
 msgid ""
-"A model is a **value**: the shapes, a layer, a description, what its "
-"parts are called, and the builder parameters. gtrace copies them in when "
-"the model is registered, and copies them out when it is used, so a body "
-"and the model it came from stay independent."
+"A model is a **value**: the shapes, a layer, a description, the prefix "
+"its parts are named with, and the builder parameters. gtrace copies them "
+"in when the model is registered, and copies them out when it is used, so "
+"a body and the model it came from stay independent."
 msgstr ""
-"モデルは\\ **値**\\ である。図形・レイヤー・説明・そこから作る部品の名前・ビルダーのパラメータからなる。gtrace "
-"は、モデルを登録するときにそれらを複製して取り込み、使うときに複製して出す。だから部品と、その元になったモデルは互いに独立のままである。"
+"モデルは **値** である。形状・レイヤー・説明・そこから作る部品に付ける接頭辞・ビルダーのパラメータからなる。gtrace "
+"は、モデルを登録するときにそれらをコピーして取り込み、使うときにコピーして出す。だから部品と、その元になったモデルは互いに独立のままである。"
 
-#: ../../../gtrace/docs/source/layout.rst:533
+#: ../../../gtrace/docs/source/layout.rst:539
 msgid ""
-"``prefix`` is what the bodies built from the model are named, before the "
+"``prefix`` is the name the bodies built from the model take, before the "
 "number. It is part of the definition, and not part of any one layout. A "
 "part is known by what it is: a mount is ``MT1``, whatever catalogue the "
 "footprint came from. The stock models use ``MT`` for a mount, ``P`` for a"
 " pedestal, ``FK`` for a fork, ``HLD`` for a holder and ``BB`` for a "
 "breadboard. ``PD`` is deliberately unused, because it reads as "
 "photodetector. A model that gives no prefix leaves the naming to whoever "
-"adds the body, which is ``H`` in the viewer. Loading a file merges it "
-"into the registry name by name, which is how a library is assembled from "
+"adds the body; the viewer uses ``H``. Loading a file merges the models "
+"into the registry name by name, so a library can be assembled from "
 "several files. A file with one bad shape in it is refused whole, and the "
 "registry is left untouched."
 msgstr ""
 "``prefix`` "
-"は、そのモデルから作った部品に付ける名前の、番号の前の部分である。これは特定のレイアウトではなく、定義の側に属する。部品は、それが何であるかで呼ばれるからである。マウントは、フットプリントがどのカタログのものであっても"
+"は、そのモデルから作った部品が取る名前の、番号より前の部分である。これは定義の一部であって、特定のレイアウトの一部ではない。部品は、それが何であるかで呼ばれる。マウントは、フットプリントがどのカタログのものであっても"
 " ``MT1`` である。同梱のモデルは、マウントに ``MT``\\ 、ペデスタルに ``P``\\ 、フォークに ``FK``\\ "
 "、ホルダーに ``HLD``\\ 、ブレッドボードに ``BB`` を使う。\\ ``PD`` "
-"は意図的に使っていない。フォトディテクタと読めてしまうからである。接頭辞を持たないモデルは、名前を付ける側に任せる。ビューアではそれが ``H``"
-" "
-"になる。ファイルを読み込むと、名前ごとに登録簿へ併合される。これが、複数のファイルからライブラリを組み立てるやり方である。1つでも壊れた図形があるファイルは丸ごと拒否され、登録簿には手を触れない。"
+"は意図的に使っていない。フォトディテクタと読めてしまうからである。接頭辞を持たないモデルは、名前を付けることを部品を追加する側に任せる。ビューアは"
+" ``H`` "
+"を使う。ファイルを読み込むと、モデルは名前ごとに登録簿へ併合される。だから、複数のファイルから1つのライブラリを組み立てられる。1つでも壊れた図形があるファイルは丸ごと拒否され、登録簿には手を触れない。"
 
-#: ../../../gtrace/docs/source/layout.rst:544
+#: ../../../gtrace/docs/source/layout.rst:550
 msgid ""
 "A body keeps the shapes themselves, and the model name only as a label. "
-"**The saved layout is the truth**: a library that has moved on cannot "
+"**The saved layout is the truth**: a later change to the library cannot "
 "change a drawing you already made. "
 ":py:meth:`relink_mechanics<gtrace.layout.OpticalLayout.relink_mechanics>`"
-" is how you ask for the newer definition, and it touches neither pose nor"
-" attachment."
+" loads the newer definition, and changes neither pose nor attachment."
 msgstr ""
-"部品が持つのは形状そのもので、モデル名はラベルとしてしか持たない。\\ **基準になるのは、保存したレイアウトの中の形状である。** "
-"ライブラリが先に進んでも、既に作った図面は変わらない。新しい定義を使いたいときに呼ぶのが "
+"部品が持つのは形状そのもので、モデル名はラベルとして持つだけである。\\ **基準になるのは、保存したレイアウトである。** "
+"後からライブラリを変えても、既に作った図面は変わらない。\\ "
 ":py:meth:`relink_mechanics<gtrace.layout.OpticalLayout.relink_mechanics>`"
-" で、姿勢にも取り付けにも触らない。"
+" は新しい定義を読み込む。姿勢にも取り付けにも触らない。"
 
-#: ../../../gtrace/docs/source/layout.rst:551
+#: ../../../gtrace/docs/source/layout.rst:556
 msgid ""
 "The stock models are generic on purpose: ``BB3030``, ``MOUNT-25``, "
 "``HOLDER-50`` and so on. gtrace does not invent the dimensions of a "
@@ -931,32 +949,32 @@ msgstr ""
 "同梱のモデルが汎用的なのは意図的である。\\ ``BB3030``\\ 、\\ ``MOUNT-25``\\ 、\\ ``HOLDER-50`` "
 "などがそれである。gtrace は特定のベンダーの部品の寸法を勝手に決めない。モデルの裏にあるビルダーは、実測した数値を受け取る:"
 
-#: ../../../gtrace/docs/source/layout.rst:569
+#: ../../../gtrace/docs/source/layout.rst:574
 msgid ""
 ":py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` is the "
 "board that goes in the bottom of a vacuum tank. The grid is the same as "
 "the rectangular board's: symmetric about the centre, on the same pitch. "
 "The rim decides which of the holes exist. A hole is drilled where it lies"
-" a margin in from the edge, and left out where it does not, so the rows "
+" a margin in from the edge, and omitted where it does not, so the rows "
 "get shorter towards the rim, as on a real disc."
 msgstr ""
 ":py:func:`round_breadboard<gtrace.mechanics.round_breadboard>` "
 "は、真空槽の底に入れるボードである。格子は長方形のボードと同じで、中心について対称、ピッチも同じである。どの穴が実在するかは縁が決める。縁から一定の余裕だけ内側にある位置には穴を開け、そうでない位置には開けない。だから列は縁に近づくほど短くなり、実物の円板と同じになる。"
 
-#: ../../../gtrace/docs/source/layout.rst:576
+#: ../../../gtrace/docs/source/layout.rst:581
 msgid ""
 "A body built by one of these keeps the parameters it was built from, in "
-"``params``. That is what lets you resize it. "
+"``params``, so it can be resized. "
 ":py:meth:`resize<gtrace.mechanics.Mechanics.resize>` re-drills a "
 "breadboard at the new size instead of scaling it, so the holes keep their"
 " diameter and their pitch. "
 ":py:attr:`resizable<gtrace.mechanics.Mechanics.resizable>` says how: "
 "``'box'`` for a body with two sides, ``'round'`` for one with a single "
-"size, and ``None`` for a body drawn by hand, whose shapes are all anyone "
-"knows about it. **A round body has one size, not two:** either ``width`` "
-"or ``height`` sets its diameter, and two that disagree are refused."
+"size, and ``None`` for a body drawn by hand, where only the shapes are "
+"known. **A round body has one size, not two:** either ``width`` or "
+"``height`` sets its diameter, and two that disagree are refused."
 msgstr ""
-"これらのビルダーで作った部品は、作るときに使ったパラメータを ``params`` に保持する。リサイズできるのは、そのためである。\\ "
+"これらのビルダーで作った部品は、作るときに使ったパラメータを ``params`` に保持する。だからリサイズできる。\\ "
 ":py:meth:`resize<gtrace.mechanics.Mechanics.resize>` "
 "は、ブレッドボードを拡大縮小するのではなく新しい寸法で開け直すので、穴の直径とピッチは変わらない。どうリサイズするかは "
 ":py:attr:`resizable<gtrace.mechanics.Mechanics.resizable>` が言う。2辺を持つ部品は "
@@ -964,88 +982,87 @@ msgstr ""
 "である。手で描いた部品について分かるのは、形状だけだからである。\\ **円形の部品の寸法は、2つではなく1つである。** ``width`` "
 "でも ``height`` でも直径が決まり、食い違う2つを渡すと拒否される。"
 
-#: ../../../gtrace/docs/source/layout.rst:587
+#: ../../../gtrace/docs/source/layout.rst:592
 msgid "Drawing a part"
-msgstr "部品を描く"
+msgstr "部品の描画"
 
-#: ../../../gtrace/docs/source/layout.rst:589
+#: ../../../gtrace/docs/source/layout.rst:594
 msgid ""
 ":py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` opens the "
-"shape editor on a body. It is the same viewer, given a scene of nothing "
-"but the shapes, drawn in the local frame with the origin marked. See :ref"
-":`the-shape-editor` for what it offers, and :doc:`editing` for driving it"
-" from code."
+"shape editor on a body. The editor is the same viewer, with a scene that "
+"holds only the shapes, drawn in the local frame with the origin marked. "
+"See :ref:`the-shape-editor` for what it offers, and :doc:`editing` for "
+"driving it from code."
 msgstr ""
 ":py:meth:`Mechanics.edit<gtrace.mechanics.Mechanics.edit>` "
-"は、部品に対して形状エディタを開く。同じビューアに、その部品の形状だけからなるシーンを渡したものである。ローカル座標系で、原点を示して描かれる。何ができるかは"
+"は、部品に対して形状エディタを開く。エディタは同じビューアであり、シーンにはその形状だけが入る。ローカル座標系で、原点を示して描かれる。何ができるかは"
 " :ref:`the-shape-editor` を、コードから動かす方法は :doc:`editing` を参照。"
 
-#: ../../../gtrace/docs/source/layout.rst:596
+#: ../../../gtrace/docs/source/layout.rst:601
 msgid "Undo and redo"
 msgstr "undo と redo"
 
-#: ../../../gtrace/docs/source/layout.rst:598
+#: ../../../gtrace/docs/source/layout.rst:603
 msgid ""
 "Every edit that goes through "
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` keeps the "
-"state before it, so it can be taken back. The state an undo steps out of "
-"is kept in turn, so it can be put back:"
+"state before the edit, so the edit can be undone. An undo keeps the state"
+" it leaves, so the edit can be redone:"
 msgstr ""
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` "
-"を通った編集は全て、その直前の状態を保持するので、取り消せる。undo が抜け出した状態も同じように保持されるので、やり直せる:"
+"を通る編集は、どれも編集前の状態を保持する。だから編集は取り消せる。undo は、そこから抜け出した状態を保持する。だから編集はやり直せる:"
 
-#: ../../../gtrace/docs/source/layout.rst:611
+#: ../../../gtrace/docs/source/layout.rst:616
 msgid ""
 "The history lives on the layout, not in a front end, so undo means the "
-"same thing however the edit arrived. It goes back ``UNDO_DEPTH`` edits. "
-"The redo side has the same limit, because only an undo fills it. A "
-"refused edit changes nothing and costs no step, and neither does "
+"same thing however the edit arrived. The history goes back ``UNDO_DEPTH``"
+" edits. The redo side has the same limit, because only an undo fills it. "
+"A refused edit changes nothing and costs no step, and neither does "
 "``save``, which only writes a file."
 msgstr ""
-"履歴はフロントエンドではなくレイアウトにあるので、編集がどこから来ても undo の意味は同じである。\\ ``UNDO_DEPTH`` "
-"回ぶんまで遡れる。redo 側も同じ数までである。redo を埋めるのは undo "
-"だけだからである。拒否された編集は何も変えず、段も消費しない。ファイルを書くだけの ``save`` も同様である。"
-
-#: ../../../gtrace/docs/source/layout.rst:617
-msgid ""
-"**An edit that goes through discards whatever is waiting to be redone.** "
-"Once the layout has taken a different turn, you cannot return to the "
-"branch you stepped out of. The states put aside describe elements that "
-"the new edit may have renamed, removed, or changed."
-msgstr ""
-"**編集が1つ通ると、やり直し待ちのものは全て捨てられる。** 新しい編集を行った時点で、redo "
-"の履歴は無効になる。取っておいた状態は、新しい編集が改名したり、削除したり、変更したかもしれない素子を記述しているからである。"
+"履歴はフロントエンドではなくレイアウトにあるので、編集がどこから来ても undo の意味は同じである。履歴は ``UNDO_DEPTH`` "
+"回ぶんの編集まで遡れる。redo 側も同じ数までである。redo を埋めるのは undo "
+"だけだからである。拒否された編集は何も変えず、段も消費しない。ファイルを書くだけの ``save`` も同じである。"
 
 #: ../../../gtrace/docs/source/layout.rst:622
 msgid ""
+"**An edit that goes through discards whatever is waiting to be redone.** "
+"You cannot return to the states you stepped out of, because they describe"
+" elements that the new edit may have renamed, removed, or changed."
+msgstr ""
+"**編集が1つ通ると、やり直し待ちのものは全て捨てられる。** "
+"抜け出した状態には戻れない。その状態は、新しい編集が改名したり、削除したり、変更したかもしれない素子を記述しているからである。"
+
+#: ../../../gtrace/docs/source/layout.rst:626
+msgid ""
 "A step holds the registered elements themselves alongside their "
 "serialized values, and restoring one puts those values back onto those "
-"same objects. That holds through a rename, and through a removal, since "
+"same objects. This works through a rename, and through a removal, since "
 "an element taken out of the layout is held in the history and put back as"
 " itself. See :py:meth:`undo<gtrace.layout.OpticalLayout.undo>` for what "
 "that does *not* cover."
 msgstr ""
-"1つの段は、登録された素子そのものを、そのシリアライズした値と一緒に保持する。復元するときは、その値を同じオブジェクトに書き戻す。これはリネームを跨いでも成り立つし、削除を跨いでも成り立つ。レイアウトから取り除かれた素子は履歴の中に保持され、同じものとして戻されるからである。何がこれで賄え\\"
-" *ない*\\ かは :py:meth:`undo<gtrace.layout.OpticalLayout.undo>` を参照。"
+"1つの段は、登録された素子そのものを、そのシリアライズした値と一緒に保持する。段を復元すると、その値が同じオブジェクトに書き戻される。これはリネームを跨いでも、削除を跨いでも成り立つ。レイアウトから取り除かれた素子は履歴の中に保持され、同じものとして戻されるからである。これで賄え"
+" *ない* ものについては :py:meth:`undo<gtrace.layout.OpticalLayout.undo>` を参照。"
 
-#: ../../../gtrace/docs/source/layout.rst:630
+#: ../../../gtrace/docs/source/layout.rst:634
 msgid "Editing from a front end"
 msgstr "フロントエンドからの編集"
 
-#: ../../../gtrace/docs/source/layout.rst:632
+#: ../../../gtrace/docs/source/layout.rst:636
 msgid ""
-"A layout is edited by the viewer, and by anything else that speaks the "
-"same protocol, through "
+"A layout is edited by the viewer, and by any other front end that uses "
+"the same protocol, through "
 ":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>`:"
 msgstr ""
-"レイアウトはビューアから編集できる。同じプロトコルを話すものなら何からでも編集でき、その入口が "
-":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` である:"
+"レイアウトを編集するのはビューアであり、同じプロトコルを使う他のフロントエンドである。編集は "
+":py:meth:`apply_edit<gtrace.layout.OpticalLayout.apply_edit>` を通る:"
 
-#: ../../../gtrace/docs/source/layout.rst:641
+#: ../../../gtrace/docs/source/layout.rst:645
 msgid ""
 "For what the viewer's buttons and drags do, see :doc:`viewer`. For the "
 "messages themselves, see :doc:`editing`: which operations exist, what "
-"each one may touch, and what the scene carries back."
+"each one may touch, and what the scene returns."
 msgstr ""
 "ビューアのボタンやドラッグが何をするかは :doc:`viewer` を参照。メッセージそのものについては :doc:`editing` "
 "を参照。どんな操作があるか、それぞれが何に触れてよいか、シーンが何を返すかが書いてある。"
@@ -1804,4 +1821,7 @@ msgstr ""
 #~ "これは導出と同じだけ信頼できる。誰にも通知しなくてよいからである。セルで ``M1.HRcenter`` "
 #~ "に代入してからトレースすれば、アセンブリはついてくる。唯一これで賄えないのは、\\ **トレースも描画もせずに**\\ "
 #~ "セルで従う側の姿勢を読む場合で、そのときは宿主が動く前の値が返る。アセンブリが1つも無いレイアウトでは、この処理は何もしない。"
+
+#~ msgid "Then register the result and work with it as a whole:"
+#~ msgstr "次に、その結果を登録し、全体として扱う:"
 

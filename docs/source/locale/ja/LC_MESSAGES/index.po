@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-16 15:55+0900\n"
+"POT-Creation-Date: 2026-09-11 07:30+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: ../../../gtrace/docs/source/index.rst:17
+#: ../../../gtrace/docs/source/index.rst:31
 msgid "Contents:"
 msgstr "目次:"
 
@@ -29,38 +29,70 @@ msgstr "gtrace のドキュメントへようこそ！"
 msgid ""
 "gtrace traces Gaussian beams through an optical system laid out on a "
 "bench. You place mirrors and lenses in Python and trace the beams. You "
-"look at the result in a browser and move the elements until the layout is"
-" right. When the layout is finished, you export the drawing to DXF."
+"look at the result in gtrace's viewer and move the elements until the "
+"layout is right. The viewer runs as a widget inside a Jupyter notebook, "
+"or as a standalone HTML page in a web browser. When the layout is "
+"finished, you export the drawing to DXF."
 msgstr ""
 "gtrace は光学ベンチ上に組んだ光学系を通るガウシアンビームをトレースする。ミラーとレンズを Python "
-"で置き、ビームをトレースする。結果はブラウザで見て、レイアウトが決まるまで素子を動かす。レイアウトができあがったら、図面を DXF に書き出す。"
+"で置き、ビームをトレースする。結果を gtrace のビューアで見て、レイアウトが決まるまで素子を動かす。ビューアは、Jupyter "
+"notebook の中で動くウィジェットと、ウェブブラウザで開く単独の HTML ページの2つの形で動く。レイアウトができあがったら、図面を "
+"DXF に書き出す。"
 
-#: ../../../gtrace/docs/source/index.rst:9
-msgid "Install it with::"
-msgstr "インストールは次のとおり::"
+#: ../../../gtrace/docs/source/index.rst:11
+msgid "Install gtrace with::"
+msgstr "gtrace のインストールは次のとおり::"
 
-#: ../../../gtrace/docs/source/index.rst:13
+#: ../../../gtrace/docs/source/index.rst:15
+msgid "This command does not install Jupyter itself. If you do not have Jupyter::"
+msgstr "このコマンドは Jupyter 本体をインストールしない。Jupyter が入っていない場合は::"
+
+#: ../../../gtrace/docs/source/index.rst:19
 msgid ""
-"Then read :doc:`intro`, which builds a bench of a laser, a lens and two "
-"mirrors, and opens it in the viewer. :doc:`tutorial` works through a "
-"larger example."
+"Then read :doc:`intro`. That page builds a bench of a laser, a lens and "
+"two mirrors, and opens the bench in the viewer. :doc:`tutorial` works "
+"through a larger example."
 msgstr ""
-"次に :doc:`intro` を読む。レーザー1台・レンズ1枚・ミラー2枚の光学ベンチを組み、ビューアで開くところまでを扱う。より大きな例は "
-":doc:`tutorial` にある。"
+"次に :doc:`intro` を読む。このページでは、レーザー1台・レンズ1枚・ミラー2枚の光学ベンチを組み、ビューアで開く。より大きな例は "
+":doc:`tutorial` で扱う。"
 
-#: ../../../gtrace/docs/source/index.rst:30
+#: ../../../gtrace/docs/source/index.rst:23
+msgid "The other pages are reference:"
+msgstr "残りのページはリファレンスである:"
+
+#: ../../../gtrace/docs/source/index.rst:25
+msgid ":doc:`basic_concepts`: the objects a layout is made of."
+msgstr ":doc:`basic_concepts`: レイアウトを構成するオブジェクト。"
+
+#: ../../../gtrace/docs/source/index.rst:26
+msgid ":doc:`propagation`: the three ways to move a beam."
+msgstr ":doc:`propagation`: ビームを動かす3つの方法。"
+
+#: ../../../gtrace/docs/source/index.rst:27
+msgid ":doc:`layout`: the ``OpticalLayout`` object, which holds a whole system."
+msgstr ":doc:`layout`: 光学系全体を保持する ``OpticalLayout`` オブジェクト。"
+
+#: ../../../gtrace/docs/source/index.rst:28
+msgid ":doc:`viewer`: the viewer and its controls."
+msgstr ":doc:`viewer`: ビューアと、その操作。"
+
+#: ../../../gtrace/docs/source/index.rst:29
+msgid ":doc:`editing`: the messages the viewer sends to change a layout."
+msgstr ":doc:`editing`: レイアウトを変更するためにビューアが送るメッセージ。"
+
+#: ../../../gtrace/docs/source/index.rst:44
 msgid "Indices and tables"
 msgstr "索引と表"
 
-#: ../../../gtrace/docs/source/index.rst:32
+#: ../../../gtrace/docs/source/index.rst:46
 msgid ":ref:`genindex`"
 msgstr ":ref:`genindex`"
 
-#: ../../../gtrace/docs/source/index.rst:33
+#: ../../../gtrace/docs/source/index.rst:47
 msgid ":ref:`modindex`"
 msgstr ":ref:`modindex`"
 
-#: ../../../gtrace/docs/source/index.rst:34
+#: ../../../gtrace/docs/source/index.rst:48
 msgid ":ref:`search`"
 msgstr ":ref:`search`"
 

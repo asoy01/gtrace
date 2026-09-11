@@ -1,14 +1,18 @@
 # gtrace — a Gaussian beam ray-tracing package in Python
 
 gtrace traces Gaussian beams through a two-dimensional arrangement of
-optics. It follows the q-parameter rather than a geometric ray, so a
-result carries the beam radius, the wavefront curvature and the Gouy
-phase everywhere along the path, not just the geometry. Beams that are
-transmitted, reflected and internally reflected inside a wedged substrate
-are all followed, which is what makes it useful for chasing ghost beams
-in a real interferometer layout.
+optics. gtrace follows the q-parameter, not a geometric ray. The result
+therefore gives the beam radius, the wavefront curvature and the Gouy
+phase everywhere along the path, not just the geometry. gtrace also
+follows the beams that are transmitted, reflected and internally
+reflected inside a wedged substrate, so you can find the ghost beams in
+a real interferometer layout.
 
-It was written for KAGRA and is used to lay out its optical benches.
+The elements you can place are mirrors and lenses: `Mirror`, `Lens`, and
+their cylindrical versions `CyMirror` and `CyLens`.
+
+gtrace was written for KAGRA and is used to lay out the KAGRA optical
+benches.
 
 ## Installation
 
@@ -21,19 +25,12 @@ pip install "gtrace[notebook]"  # ... and the viewer as a Jupyter widget
 
 Python 3.9 or newer. gtrace itself needs only numpy, scipy and traits.
 
-### What the viewer needs
+`pip install "gtrace[notebook]"` does not install Jupyter itself. If you
+do not have Jupyter:
 
-The viewer has two front ends, and they do not cost the same:
-
-| front end | needs |
-|---|---|
-| self-contained HTML — `render_html()`, `show(backend='html')` | nothing beyond gtrace and a web browser |
-| Jupyter widget — `widget()`, or `show()` inside a notebook | `anywidget` (≥ 0.9), which brings `ipywidgets` with it, and a Jupyter front end |
-
-`show()` picks the widget when it finds itself in a Jupyter kernel with
-anywidget installed, and writes the HTML file otherwise, so the same code
-works both ways. Without anywidget the widget raises `WidgetNotAvailable`
-and says so.
+```sh
+pip install jupyterlab
+```
 
 ### From a clone
 
@@ -43,30 +40,46 @@ cd gtrace
 pip install ".[notebook]"
 ```
 
-Use `pip install -e ".[notebook]"` instead if you intend to change gtrace
-itself. The quotes matter in zsh, which would otherwise try to expand the
-brackets as a glob.
+Use `pip install -e ".[notebook]"` instead if you plan to change gtrace
+itself. The quotes are needed in zsh. Without them, zsh tries to expand
+the brackets as a glob.
+
+### What the viewers need
+
+gtrace has two viewers, and they need different packages:
+
+| viewer | needs |
+|---|---|
+| self-contained HTML page — `render_html()`, `show(backend='html')` | nothing beyond gtrace and a web browser |
+| Jupyter widget — `widget()`, or `show()` inside a notebook | `anywidget` (≥ 0.9), which installs `ipywidgets`, and a Jupyter front end such as JupyterLab |
+
+`show()` uses the widget when it runs in a Jupyter kernel that has
+anywidget installed. Otherwise `show()` writes the HTML file, so the same
+code works in both cases. Without anywidget, `widget()` raises
+`WidgetNotAvailable`. The message says how to install anywidget, and how
+to open the HTML viewer instead.
 
 ## Running the tutorial
 
-The tutorial is a Jupyter notebook, and it lives in the source tree, so
-it needs the clone above and a Jupyter front end:
+The tutorial is a Jupyter notebook in the source tree. The tutorial
+needs the clone above and a Jupyter front end:
 
 ```sh
 pip install jupyterlab
 jupyter lab docs/source/tutorial/gtrace-tutorial.ipynb
 ```
 
-VS Code's notebook editor works just as well: open the file and select
-the interpreter you installed gtrace into.
+The notebook editor of VS Code also works: open the file and select the
+interpreter you installed gtrace into.
 
-Run the cells from the top. The viewer appears in the cell output, which
-is the part that wants `anywidget`; everything else works without it. The
-notebook writes its results next to itself — `tutorial_viewer.html`,
-`tutorial_layout.json` and `tutorial_layout.dxf` from the last chapter,
-and `bench_parts.json` from the section on mechanics.
+Run the cells from the top. The viewer appears in the cell output. Only
+the viewer needs `anywidget`; the rest of the notebook runs without it.
+The notebook writes its result files into its own directory:
+`tutorial_viewer.html`, `tutorial_layout.json` and `tutorial_layout.dxf`
+from the last chapter, and `bench_parts.json` from the section on
+mechanics.
 
-To read it rather than run it:
+To read the tutorial without running it:
 <https://gtrace.readthedocs.io/en/latest/tutorial.html>.
 
 ## Usage
@@ -98,34 +111,43 @@ layout = OpticalLayout(optics=[M1, M2], sources=[src],
 layout.show()
 ```
 
-`show()` opens an interactive viewer: click anywhere along a beam — not
-only at a vertex — and it reports the beam radius, the wavefront ROC,
-the complex q, the waist and its distance, the Rayleigh range, the Gouy
-phase and the accumulated optical path length at that point, separately
-in x and y.
+`TraceRules` sets how far the trace follows the ghost beams. `order` is
+the number of ghost reflections a beam may go through before gtrace
+stops following it. gtrace does not reset the count when a beam leaves
+one element for the next, so `order` limits the whole path and not one
+element. `power_threshold` is the smallest beam power gtrace still
+follows, in watts. A source beam carries 1 W unless you set `P`, so
+`1e-3` follows the ghosts down to a thousandth of the source power.
 
-In a Jupyter notebook it renders in the cell output and can be edited:
-drag an element to move it, shift-drag to rotate it, click it to edit its
-properties, and take back what you did not mean. The layout holds your
-objects by reference, so a mirror you move in the browser is the object
-your own code named, and the trace and the drawing follow.
+`show()` opens an interactive viewer. Click anywhere along a beam, not
+only at a vertex, and the viewer reports the beam radius, the wavefront
+ROC, the complex q, the waist and its distance, the Rayleigh range, the
+Gouy phase and the accumulated optical path length at that point,
+separately in x and y.
 
-`Measure` takes a dimension off the drawing: click the two points, then
-place the line. The ends snap to the corners and faces of the elements
-and to the ends of the beams, and where the whole span runs inside a
-substrate the optical distance is written alongside the physical one.
-Dimensions are kept with the layout and saved with it.
+In a Jupyter notebook the viewer appears in the cell output, and you can
+edit the layout there: drag an element to move it, shift-drag to rotate
+it, click it to edit its properties, and undo a change you did not want.
+The layout holds your objects by reference, so a mirror you move in the
+browser is the object created in your own code, and the trace and the
+drawing are updated with it.
 
-Outside a notebook it writes one self-contained HTML file — no server,
-nothing to install — which you can send to a collaborator, who can read
-the beam parameters off it and take dimensions on it:
+`Measure` is a button in the viewer. It measures a distance on the
+drawing: click the two points, then place the line. The ends snap to the
+corners and faces of the elements, and to the ends of the beams. When the
+whole span runs inside a substrate, the viewer writes the optical distance
+next to the physical one. Dimensions are stored in the layout and saved
+with it.
+
+Outside a notebook `show()` writes one self-contained HTML file. You can
+send the file to a collaborator, who opens it in a web browser, reads the
+beam parameters and measures distances on it:
 
 ```python
 layout.render_html('trace.html')
 ```
 
-DXF output is unchanged and still the way to hand a layout to the rest
-of an engineering workflow:
+Use DXF output to pass a layout to other engineering tools:
 
 ```python
 import gtrace.draw.renderer as renderer
@@ -143,13 +165,13 @@ Full documentation, including the tutorial, is at
   [`docs/source/tutorial/gtrace-tutorial.ipynb`](docs/source/tutorial/gtrace-tutorial.ipynb).
 - [Basic concepts](https://gtrace.readthedocs.io/en/latest/basic_concepts.html)
   and [Beam propagation](https://gtrace.readthedocs.io/en/latest/propagation.html)
-  — the conventions the whole package rests on.
+  — the conventions that the whole package uses.
 - [Optical layouts](https://gtrace.readthedocs.io/en/latest/layout.html)
   and [The viewer](https://gtrace.readthedocs.io/en/latest/viewer.html).
 
-The [`Manuals`](Manuals) directory holds the slides the package was
-first presented with, on ABCD matrices, the q-parameter and the basic
-concepts.
+The [`Manuals`](Manuals) directory holds the slides from the first
+presentation of gtrace. The slides cover ABCD matrices, the q-parameter
+and the basic concepts.
 
 ## License
 

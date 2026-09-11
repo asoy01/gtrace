@@ -25,6 +25,14 @@ across them.
   bench is 光学ベンチ, and the bodies `Mechanics` puts on it are 機構部品
   rather than 周辺物.
 
+- **The manual is corrected where it did not match the code.** The table
+  of drawing options left out `drawMechanicsNames`. An example used a
+  mirror `M1` without creating it. A section named `beam_dump()` while
+  its example called `add_beam_dump()`, the one that registers what it
+  builds. The manual counted three operations that do not force a
+  re-trace; `stretch` is a fourth. The Japanese translation follows the
+  corrected text.
+
 ### Fixed
 
 - **The keyboard shortcuts work inside JupyterLab.** The viewer listened

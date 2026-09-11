@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gtrace \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-16 15:55+0900\n"
+"POT-Creation-Date: 2026-09-11 07:30+0900\n"
 "PO-Revision-Date: 2026-08-09 21:00+0900\n"
 "Last-Translator: Yoichi Aso\n"
 "Language: ja\n"
@@ -33,84 +33,89 @@ msgstr ""
 "に書き出す。"
 
 #: ../../../gtrace/docs/source/intro.rst:12
-msgid "The bench built further down this page, seen in gtrace's viewer."
-msgstr "このページの下の方で組む光学ベンチを、gtrace のビューアで見たところ。"
+msgid ""
+"The bench built by the code in \"A first layout\" below, seen in gtrace's"
+" viewer."
+msgstr "下の「最初のレイアウト」のコードで組む光学ベンチを、gtrace のビューアで見たところ。"
 
-#: ../../../gtrace/docs/source/intro.rst:14
-msgid "What it does:"
+#: ../../../gtrace/docs/source/intro.rst:15
+msgid "What gtrace does:"
 msgstr "gtrace ができること:"
 
-#: ../../../gtrace/docs/source/intro.rst:16
+#: ../../../gtrace/docs/source/intro.rst:17
 msgid ""
-"You place the elements and gtrace works out the rest. Which surface a "
-"beam hits next, where it goes and what comes off it are computed, not "
-"declared."
+"You place the elements and gtrace computes the rest. Which surface a beam"
+" hits next, where the beam goes and which new beams each surface produces"
+" are all computed, not declared."
 msgstr ""
 "素子を置けば、残りは gtrace "
-"が計算する。ビームが次にどの面に当たるか、どこへ進むか、そこから何が出てくるかを、こちらで指定する必要はない。gtrace が幾何から計算する。"
+"が計算する。ビームが次にどの面に当たるか、ビームがどこへ進むか、それぞれの面がどんなビームを新たに作るかは、すべて計算で決まる。こちらで指定するものではない。"
 
-#: ../../../gtrace/docs/source/intro.rst:19
+#: ../../../gtrace/docs/source/intro.rst:20
 msgid ""
-"Reflection and refraction are treated at every surface, so the faint "
-"ghost beams off anti-reflection coatings come out of the trace along with"
-" the beam you meant to have."
-msgstr "反射と屈折を全ての面で扱う。そのため、反射防止コートから出る弱いゴーストビームも、目的のビームと一緒にトレース結果に出てくる。"
+"gtrace computes reflection and refraction at every surface. The trace "
+"therefore includes the faint ghost beams from anti-reflection coatings, "
+"not only the main beam."
+msgstr ""
+"gtrace "
+"は反射と屈折を全ての面で計算する。そのため、トレースの結果には、目的のビームだけでなく、反射防止コートから出る弱いゴーストビームも含まれる。"
 
-#: ../../../gtrace/docs/source/intro.rst:22
+#: ../../../gtrace/docs/source/intro.rst:23
 msgid ""
-"The ABCD matrix is multiplied out along every beam. The beam radius, the "
-"wavefront curvature, the waist and the accumulated Gouy phase are "
+"gtrace multiplies the ABCD matrices along every beam. The beam radius, "
+"the wavefront curvature, the waist and the accumulated Gouy phase are "
 "therefore known at every point of every beam."
 msgstr ""
-"ABCD 行列を全てのビームに沿って掛け合わせる。そのため、ビーム半径・波面の曲率・ウェスト・積算した Gouy "
+"gtrace は ABCD 行列を全てのビームに沿って掛け合わせる。そのため、ビーム半径・波面の曲率・ウェスト・積算した Gouy "
 "位相が、全てのビームの全ての点で分かる。"
 
-#: ../../../gtrace/docs/source/intro.rst:25
+#: ../../../gtrace/docs/source/intro.rst:26
 msgid "Optical path length accumulates through glass as well as through air."
 msgstr "光路長は、空気中だけでなくガラス中でも積算される。"
 
-#: ../../../gtrace/docs/source/intro.rst:26
+#: ../../../gtrace/docs/source/intro.rst:27
 msgid ""
-"The result can be read out by clicking in the viewer, saved as JSON, sent"
-" to somebody as a single HTML page, or exported to DXF for CAD."
+"You can read the result by clicking in the viewer, save it as JSON, send "
+"it to somebody as a single HTML page, or export it to DXF for CAD."
 msgstr ""
 "結果はビューアをクリックして読み取れる。JSON として保存し、1枚の HTML ページとして人に送り、CAD 用に DXF "
 "へ書き出すこともできる。"
 
-#: ../../../gtrace/docs/source/intro.rst:29
+#: ../../../gtrace/docs/source/intro.rst:30
 msgid ""
-"gtrace works in two dimensions: everything lies on one plane. That covers"
-" a bench layout, the case gtrace was written for."
-msgstr "gtrace は2次元で動く。全てが1つの平面上にある。これは光学ベンチのレイアウトを扱うのに十分であり、gtrace はそのために書かれた。"
+"gtrace works in two dimensions: everything lies on one plane. Two "
+"dimensions are enough for a bench layout, the case gtrace was written "
+"for."
+msgstr "gtrace は2次元で動く。全てが1つの平面上にある。2次元あれば光学ベンチのレイアウトには十分である。gtrace はその用途のために書かれた。"
 
-#: ../../../gtrace/docs/source/intro.rst:33
+#: ../../../gtrace/docs/source/intro.rst:34
 msgid "Installation"
 msgstr "インストール"
 
-#: ../../../gtrace/docs/source/intro.rst:35
+#: ../../../gtrace/docs/source/intro.rst:36
 msgid "Python 3.9 or newer::"
 msgstr "Python 3.9 以降が必要である::"
 
-#: ../../../gtrace/docs/source/intro.rst:39
+#: ../../../gtrace/docs/source/intro.rst:40
 msgid ""
 "Write the quotes around ``gtrace[notebook]``. In zsh, brackets without "
 "quotes are read as a glob."
 msgstr "``gtrace[notebook]`` は引用符で囲んで書くこと。zsh では、引用符の無い角括弧が glob として解釈される。"
 
-#: ../../../gtrace/docs/source/intro.rst:42
+#: ../../../gtrace/docs/source/intro.rst:43
 msgid ""
-"This installs gtrace and both viewers: the widget that runs inside a "
-"Jupyter notebook, and the standalone HTML page that opens in a web "
-"browser."
+"This installs gtrace and both viewers: the notebook widget, which runs "
+"inside a Jupyter notebook, and the HTML viewer, a standalone page that "
+"opens in a web browser."
 msgstr ""
-"これで gtrace と、2種類のビューアの両方が入る。Jupyter notebook の中で動くウィジェットと、ウェブブラウザで開く単独の "
-"HTML ページである。"
+"これで gtrace と、2種類のビューアの両方が入る。Jupyter notebook の中で動く notebook "
+"ウィジェットと、ウェブブラウザで開く単独のページである HTML ビューアである。"
 
-#: ../../../gtrace/docs/source/intro.rst:45
+#: ../../../gtrace/docs/source/intro.rst:47
 msgid "It does not install Jupyter itself. If you do not have Jupyter::"
 msgstr "これは Jupyter 本体をインストールしない。Jupyter が入っていない場合は::"
 
-#: ../../../gtrace/docs/source/intro.rst:49
+#: ../../../gtrace/docs/source/intro.rst:51
 msgid ""
 "VS Code's notebook editor works instead of JupyterLab: open the "
 "``.ipynb`` file and select the interpreter you installed gtrace into."
@@ -118,127 +123,138 @@ msgstr ""
 "JupyterLab の代わりに VS Code の notebook エディタでもよい。\\ ``.ipynb`` ファイルを開き、gtrace"
 " を入れたインタプリタを選ぶ。"
 
-#: ../../../gtrace/docs/source/intro.rst:52
+#: ../../../gtrace/docs/source/intro.rst:54
 msgid ""
 "If you do not use notebooks, ``pip install gtrace`` installs gtrace and "
-"the HTML viewer, and leaves out the widget."
+"the HTML viewer, without the notebook widget."
 msgstr ""
 "notebook を使わないなら、\\ ``pip install gtrace`` で gtrace と HTML "
-"ビューアが入る。ウィジェットは入らない。"
+"ビューアが入る。notebook ウィジェットは入らない。"
 
-#: ../../../gtrace/docs/source/intro.rst:56
+#: ../../../gtrace/docs/source/intro.rst:57
+msgid ""
+"To install from a git clone instead, see \"Installing from a git clone\" "
+"at the end of this page."
+msgstr "git clone からインストールする場合は、このページの最後の「git clone からインストールする」を見ること。"
+
+#: ../../../gtrace/docs/source/intro.rst:61
 msgid "A first layout"
 msgstr "最初のレイアウト"
 
-#: ../../../gtrace/docs/source/intro.rst:58
+#: ../../../gtrace/docs/source/intro.rst:63
 msgid ""
-"A laser, a lens and two steering mirrors. This runs in a notebook or in a"
-" plain script; nothing in it is notebook specific."
+"A laser, a lens and two steering mirrors. The code below runs in a "
+"notebook or in a plain script, and uses no notebook-specific feature."
 msgstr ""
-"レーザー1台、レンズ1枚、ステアリングミラー2枚。これは notebook でも素のスクリプトでも動く。notebook "
-"固有のものは何も使っていない。"
+"レーザー1台、レンズ1枚、ステアリングミラー2枚。下のコードは notebook でも素のスクリプトでも動く。notebook "
+"固有の機能は何も使っていない。"
 
-#: ../../../gtrace/docs/source/intro.rst:96
-msgid "Reading it from the top:"
-msgstr "上から順に読んでいく:"
-
-#: ../../../gtrace/docs/source/intro.rst:98
-msgid ""
-"**Units.** Lengths are in metres and angles are in radians. "
-"``gtrace.unit`` gives you ``mm``, ``cm``, ``inch``, ``nm``, ``ppm`` and "
-"the rest as plain multipliers, and ``deg2rad`` for angles, so ``250*mm`` "
-"and ``deg2rad(135)`` read the way they should."
-msgstr ""
-"**単位。** 長さはメートル、角度はラジアンである。\\ ``gtrace.unit`` は ``mm``\\ 、\\ ``cm``\\ 、\\"
-" ``inch``\\ 、\\ ``nm``\\ 、\\ ``ppm`` などを単なる倍率として与え、角度には ``deg2rad`` "
-"を与える。そのため ``250*mm`` や ``deg2rad(135)`` をそのまま書ける。"
+#: ../../../gtrace/docs/source/intro.rst:101
+msgid "Reading the code from the top:"
+msgstr "コードを上から順に読んでいく:"
 
 #: ../../../gtrace/docs/source/intro.rst:103
 msgid ""
+"**Units.** Lengths are in metres and angles are in radians. "
+"``gtrace.unit`` gives you ``mm``, ``cm``, ``inch``, ``nm``, ``ppm`` and "
+"other units as plain multipliers, and ``deg2rad`` for angles. You can "
+"therefore write ``250*mm`` and ``deg2rad(135)``."
+msgstr ""
+"**単位。** 長さはメートル、角度はラジアンである。\\ ``gtrace.unit`` は ``mm``\\ 、\\ ``cm``\\ 、\\"
+" ``inch``\\ 、\\ ``nm``\\ 、\\ ``ppm`` などの単位を単なる倍率として与え、角度には ``deg2rad`` "
+"を与える。そのため ``250*mm`` や ``deg2rad(135)`` をそのまま書ける。"
+
+#: ../../../gtrace/docs/source/intro.rst:108
+msgid ""
 "**The source beam.** A :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>`"
 " starts at ``pos`` and travels in the direction ``dirAngle``, measured "
-"from the x axis counterclockwise. Its shape is the complex beam parameter"
-" ``q0``; :py:func:`q_from_waist<gtrace.layout.q_from_waist>` builds one "
-"from a waist radius, the distance from that waist to where the beam "
-"starts, and the wavelength."
+"from the x axis counterclockwise. The beam shape is the complex beam "
+"parameter ``q0``. :py:func:`q_from_waist<gtrace.layout.q_from_waist>` "
+"builds a ``q0`` from a waist radius, the distance from that waist to "
+"where the beam starts, and the wavelength."
 msgstr ""
 "**光源ビーム。** :py:class:`GaussianBeam<gtrace.beam.GaussianBeam>` は ``pos`` "
 "から出発し、\\ ``dirAngle`` の方向へ進む。角度は x 軸から反時計回りに測る。ビームの形は複素ビームパラメータ ``q0`` "
 "で表す。\\ :py:func:`q_from_waist<gtrace.layout.q_from_waist>` "
-"は、ウェスト半径・そのウェストからビームの出発点までの距離・波長の3つからこれを作る。"
+"は、ウェスト半径・そのウェストからビームの出発点までの距離・波長の3つから ``q0`` を作る。"
 
-#: ../../../gtrace/docs/source/intro.rst:110
+#: ../../../gtrace/docs/source/intro.rst:115
 msgid ""
-"**The elements.** :py:class:`Lens<gtrace.optcomp.Lens>` is ordered by its"
-" focal length. :py:class:`Mirror<gtrace.optcomp.Mirror>` has two "
-"surfaces, the front face HR and the back face AR. ``HRcenter`` places the"
-" front face and ``normAngleHR`` is the direction its normal points, so "
-"``deg2rad(135)`` turns a beam travelling along +x into one travelling "
+"**The elements.** :py:class:`Lens<gtrace.optcomp.Lens>` is specified by "
+"its focal length ``f``. gtrace solves for the curvatures of the two faces"
+" from ``f``, the thickness and the index of refraction. "
+":py:class:`Mirror<gtrace.optcomp.Mirror>` has two surfaces, the front "
+"face HR and the back face AR. ``HRcenter`` places the front face and "
+"``normAngleHR`` is the direction the HR normal points, so "
+"``deg2rad(135)`` turns a beam travelling along +x into a beam travelling "
 "along +y. ``Refl_HR=0.99, Trans_HR=0.01`` say that one part in a hundred "
-"goes through the mirror instead of bouncing off it. That is why ten beams"
-" come back from a bench with only three elements on it."
+"passes through the mirror instead of reflecting. The trace therefore "
+"returns ten beams from a bench with only three elements on it."
 msgstr ""
-"**素子。** :py:class:`Lens<gtrace.optcomp.Lens>` は焦点距離を指定して作る。\\ "
+"**素子。** :py:class:`Lens<gtrace.optcomp.Lens>` は焦点距離 ``f`` を指定して作る。gtrace "
+"は ``f``\\ 、厚み、屈折率から2つの面の曲率を求める。\\ "
 ":py:class:`Mirror<gtrace.optcomp.Mirror>` は2つの面を持つ。前面が HR、背面が AR である。\\ "
 "``HRcenter`` が前面の位置を決め、\\ ``normAngleHR`` はその面の法線が向く方向である。したがって "
 "``deg2rad(135)`` は、+x 方向に進むビームを +y 方向に進むビームに変える。\\ ``Refl_HR=0.99, "
 "Trans_HR=0.01`` "
 "は、100分の1がミラーで反射せずに透過することを表す。素子が3つしかない光学ベンチから10本のビームが返ってくるのは、そのためである。"
 
-#: ../../../gtrace/docs/source/intro.rst:119
+#: ../../../gtrace/docs/source/intro.rst:126
 msgid ""
 "**The layout.** :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` is"
 " the whole system in one object: the elements, the source beams, and the "
 "rules the trace runs under. "
-":py:class:`TraceRules<gtrace.layout.TraceRules>` has three of those:"
+":py:class:`TraceRules<gtrace.layout.TraceRules>` holds three rules:"
 msgstr ""
 "**レイアウト。** :py:class:`OpticalLayout<gtrace.layout.OpticalLayout>` "
 "は、光学系全体を1つのオブジェクトにまとめたものである。素子、光源ビーム、そしてトレースが従う規則を持つ。\\ "
 ":py:class:`TraceRules<gtrace.layout.TraceRules>` には規則が3つある:"
 
-#: ../../../gtrace/docs/source/intro.rst:128
+#: ../../../gtrace/docs/source/intro.rst:135
 msgid "Rule"
 msgstr "規則"
 
-#: ../../../gtrace/docs/source/intro.rst:129
-msgid "What it sets"
-msgstr "何を決めるか"
+#: ../../../gtrace/docs/source/intro.rst:136
+msgid "What the rule sets"
+msgstr "規則が決めるもの"
 
-#: ../../../gtrace/docs/source/intro.rst:130
+#: ../../../gtrace/docs/source/intro.rst:137
 msgid "``power_threshold``"
 msgstr "``power_threshold``"
 
-#: ../../../gtrace/docs/source/intro.rst:131
+#: ../../../gtrace/docs/source/intro.rst:138
 msgid ""
-"How faint a beam has to get before it stops being followed. Lower it to "
-"chase more ghosts, at the cost of time."
-msgstr "ビームがどこまで弱くなったら追跡をやめるか。下げるとより多くのゴーストを追えるが、時間がかかる。"
+"How faint a beam has to get before it stops being followed. Lower "
+"``power_threshold`` to follow more ghost beams, at the cost of time."
+msgstr ""
+"ビームがどこまで弱くなったら追跡をやめるか。\\ ``power_threshold`` "
+"を下げるとより多くのゴーストビームを追えるが、時間がかかる。"
 
-#: ../../../gtrace/docs/source/intro.rst:133
+#: ../../../gtrace/docs/source/intro.rst:140
 msgid "``order``"
 msgstr "``order``"
 
-#: ../../../gtrace/docs/source/intro.rst:134
+#: ../../../gtrace/docs/source/intro.rst:141
 msgid ""
 "How many ghost reflections a beam may go through before it stops being "
-"followed. Every beam carries the count, and the count is not reset when "
-"the beam leaves one element for the next, so ``order`` is a limit on the "
-"whole trace. See :ref:`stray-order`."
+"followed. Every beam carries the count. The count is not reset when the "
+"beam leaves one element for the next, so ``order`` limits the whole "
+"trace. See :ref:`stray-order`."
 msgstr ""
-"ビームが追跡を打ち切られるまでに通ってよいゴースト反射の回数。この回数は各ビームが持ち、ビームが1つの素子から次の素子へ移るときにリセットされない。したがって"
+"ビームが追跡を打ち切られるまでに通ってよいゴースト反射の回数。この回数は各ビームが持つ。ビームが1つの素子から次の素子へ移るときも、回数はリセットされない。したがって"
 " ``order`` はトレース全体に対する上限である。\\ :ref:`stray-order` を参照。"
 
-#: ../../../gtrace/docs/source/intro.rst:138
+#: ../../../gtrace/docs/source/intro.rst:145
 msgid "``open_beam_length``"
 msgstr "``open_beam_length``"
 
-#: ../../../gtrace/docs/source/intro.rst:139
+#: ../../../gtrace/docs/source/intro.rst:146
 msgid ""
 "How long a beam that hits nothing is drawn. The default is 1 m; 15 cm "
-"keeps this small bench from being lost in its own stray beams."
+"keeps the stray beams from covering this small bench."
 msgstr "何にも当たらないビームをどれだけの長さで描くか。既定は 1 m である。この小さな光学ベンチでは、迷光が図を覆わないように 15 cm にしている。"
 
-#: ../../../gtrace/docs/source/intro.rst:143
+#: ../../../gtrace/docs/source/intro.rst:149
 msgid ""
 "**The trace.** :py:meth:`trace()<gtrace.layout.OpticalLayout.trace>` "
 "releases each source beam, follows it wherever the geometry takes it, and"
@@ -247,85 +263,87 @@ msgstr ""
 "**トレース。** :py:meth:`trace()<gtrace.layout.OpticalLayout.trace>` "
 "は各光源ビームを放ち、幾何が導くままに追跡し、その過程で生じた全てのビームを返す。"
 
-#: ../../../gtrace/docs/source/intro.rst:148
-msgid "Showing the result"
-msgstr "結果を表示する"
-
 #: ../../../gtrace/docs/source/intro.rst:154
-msgid ""
-"In a Jupyter notebook this puts the viewer in the cell output. Anywhere "
-"else it writes a self-contained HTML file and opens it in your browser."
-msgstr ""
-"Jupyter notebook では、これでセルの出力にビューアが出る。それ以外の場所では、自己完結した HTML "
-"ファイルを書き出してブラウザで開く。"
+msgid "Showing the result"
+msgstr "結果の表示"
 
-#: ../../../gtrace/docs/source/intro.rst:157
+#: ../../../gtrace/docs/source/intro.rst:160
 msgid ""
-"The two show the same drawing and report the same beam numbers. They "
-"differ in what they can change. The notebook widget has a running Python "
-"kernel behind it, so it can edit the layout and trace it again. The HTML "
-"file has no kernel, so it is read-only: you can pan, zoom, click a beam "
-"and measure a distance, but not move anything."
+"In a Jupyter notebook, ``show()`` puts the viewer in the cell output. "
+"Anywhere else, ``show()`` writes a self-contained HTML file and opens it "
+"in your browser."
 msgstr ""
-"この2つは同じ絵を表示し、同じ数値を報告する。違うのは何を変えられるかである。notebook のウィジェットの後ろでは Python "
-"カーネルが動いているので、レイアウトを編集して再トレースできる。HTML "
-"ファイルにはカーネルが無いので読み取り専用である。パン・ズーム・ビームのクリック・距離の測定はできるが、ものを動かすことはできない。"
+"Jupyter notebook では、\\ ``show()`` はセルの出力にビューアを表示する。それ以外の場所では、\\ "
+"``show()`` は自己完結した HTML ファイルを書き出し、ブラウザで開く。"
 
-#: ../../../gtrace/docs/source/intro.rst:166
+#: ../../../gtrace/docs/source/intro.rst:164
+msgid ""
+"The two viewers show the same drawing and report the same numbers for "
+"each beam. They differ in what they can change. The notebook widget has a"
+" running Python kernel behind it, so the widget can edit the layout and "
+"trace it again. The HTML viewer has no kernel, so it is read-only: you "
+"can pan, zoom, click a beam and measure a distance, but not move "
+"anything."
+msgstr ""
+"2つのビューアは同じ絵を表示し、各ビームについて同じ数値を報告する。違うのは何を変えられるかである。notebook ウィジェットの後ろでは "
+"Python カーネルが動いているので、ウィジェットはレイアウトを編集して再びトレースできる。HTML "
+"ビューアにはカーネルが無いので、読み取り専用である。パン・ズーム・ビームのクリック・距離の測定はできるが、ものを動かすことはできない。"
+
+#: ../../../gtrace/docs/source/intro.rst:173
 msgid ""
 "The bench in the notebook widget, with the beam between the two steering "
 "mirrors clicked."
 msgstr "notebook のウィジェットで見た光学ベンチ。2枚のステアリングミラーの間のビームをクリックしたところ。"
 
-#: ../../../gtrace/docs/source/intro.rst:169
-msgid ""
-"Click anywhere along a beam, not only at a corner. The panel then tells "
-"you what that beam is doing *at that point*: the radius, the wavefront "
-"ROC, the complex q, the waist radius, the distance to the waist, the "
-"Rayleigh range, the accumulated Gouy phase, the power, and the optical "
-"path travelled so far. The x and y columns are separate, because a beam "
-"is not round in general."
-msgstr ""
-"ビームの上ならどこをクリックしてもよい。角である必要はない。パネルはそのビームが\\ *その点で*\\ 何をしているかを教える。半径、波面の "
-"ROC、複素数 q、ウェスト半径、ウェストまでの距離、レイリー長、積算した Gouy 位相、パワー、そしてそこまでに進んだ光路長である。x と y"
-" の列が分かれているのは、ビームが一般には丸くないからである。"
-
 #: ../../../gtrace/docs/source/intro.rst:176
 msgid ""
-"Click an element and the panel shows its properties instead, and lets you"
-" change them."
-msgstr "素子をクリックすると、パネルはビームの読み取りではなくその素子のプロパティを表示し、値を変更できるようにする。"
+"Click anywhere along a beam, not only at a corner. The panel then shows "
+"the properties of that beam *at that point*: the radius, the wavefront "
+"radius of curvature (ROC), the complex q, the waist radius, the distance "
+"to the waist, the Rayleigh range, the accumulated Gouy phase, the power, "
+"and the optical path travelled so far. The x and y columns are separate, "
+"because a beam is not round in general."
+msgstr ""
+"ビームの上ならどこをクリックしてもよい。角である必要はない。パネルは、そのビームの\\ *その点での*\\ "
+"プロパティを表示する。半径、波面の曲率半径 (ROC)、複素数 q、ウェスト半径、ウェストまでの距離、レイリー長、積算した Gouy "
+"位相、パワー、そしてそこまでに進んだ光路長である。x と y の列が分かれているのは、ビームが一般には丸くないからである。"
 
-#: ../../../gtrace/docs/source/intro.rst:179
+#: ../../../gtrace/docs/source/intro.rst:183
+msgid ""
+"Click an element and the panel shows the element properties instead, and "
+"lets you change them."
+msgstr "素子をクリックすると、パネルは代わりにその素子のプロパティを表示し、値を変更できるようにする。"
+
+#: ../../../gtrace/docs/source/intro.rst:186
 msgid ""
 "Drag the background to pan and use the wheel to zoom; ``Fit`` frames the "
 "whole layout again. The buttons along the top of the widget add elements,"
 " align one element to a beam, measure a distance, and undo. :doc:`viewer`"
-" goes through all of them."
+" describes all of the buttons."
 msgstr ""
 "背景をドラッグするとパンし、ホイールでズームする。\\ ``Fit`` "
 "はレイアウト全体が収まるように戻す。ウィジェット上部のボタンで、素子を追加し、素子をビームに正対させ、距離を測り、undo する。\\ "
-":doc:`viewer` にその全てが書いてある。"
+":doc:`viewer` に全てのボタンの説明がある。"
 
-#: ../../../gtrace/docs/source/intro.rst:185
+#: ../../../gtrace/docs/source/intro.rst:192
 msgid "Changing the layout"
-msgstr "レイアウトを変更する"
+msgstr "レイアウトの変更"
 
-#: ../../../gtrace/docs/source/intro.rst:187
+#: ../../../gtrace/docs/source/intro.rst:194
 msgid ""
 "Working with gtrace is a loop: place an element, look at what the beams "
-"do, move the element. Both halves of that loop reach the same objects."
+"do, move the element. Python and the widget reach the same objects."
 msgstr ""
 "gtrace の使い方はループである。素子を置き、ビームがどうなるかを見て、素子を動かす。Python "
-"からの操作とビューアからの操作は、どちらも同じオブジェクトに届く。"
+"とウィジェットは、どちらも同じオブジェクトに届く。"
 
-#: ../../../gtrace/docs/source/intro.rst:190
+#: ../../../gtrace/docs/source/intro.rst:197
 msgid ""
 "From Python, keep the widget in a variable and call ``update()`` after a "
 "change:"
 msgstr "Python からは、ウィジェットを変数に入れておき、変更のあとで ``update()`` を呼ぶ:"
 
-#: ../../../gtrace/docs/source/intro.rst:203
+#: ../../../gtrace/docs/source/intro.rst:210
 msgid ""
 "From the widget, drag an element to move it, ctrl-drag it onto a beam to "
 "align it, or type a new number into the properties panel. Those edits "
@@ -336,145 +354,145 @@ msgstr ""
 "を押しながらビームの上へドラッグして正対させ、あるいはプロパティパネルに数値を打ち込む。これらの編集は notebook "
 "側のオブジェクトに届く。レイアウトは素子を参照で保持していて、コピーを作らないからである::"
 
-#: ../../../gtrace/docs/source/intro.rst:211
+#: ../../../gtrace/docs/source/intro.rst:218
 msgid ""
 "So the mirror you dragged in the browser is the ``S2`` your next cell "
 "sees."
 msgstr "つまり、ブラウザでドラッグしたミラーは、次のセルが見る ``S2`` そのものである。"
 
-#: ../../../gtrace/docs/source/intro.rst:214
+#: ../../../gtrace/docs/source/intro.rst:221
 msgid "Saving and exporting"
 msgstr "保存と書き出し"
 
-#: ../../../gtrace/docs/source/intro.rst:222
+#: ../../../gtrace/docs/source/intro.rst:229
 msgid ""
 ":py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>`"
-" reads a saved layout back into the objects you already have, so a change"
-" you did not want can be undone by reloading."
+" reads a saved layout back into the objects you already have, so you can "
+"undo an unwanted change by reloading."
 msgstr ""
 ":py:meth:`update_from_file<gtrace.layout.OpticalLayout.update_from_file>`"
 " は、保存したレイアウトを、いま手元にあるオブジェクトへ読み戻す。意図しない変更をしてしまったら、読み直せば元に戻せる。"
 
-#: ../../../gtrace/docs/source/intro.rst:226
+#: ../../../gtrace/docs/source/intro.rst:233
 msgid ""
-"The beams are ordinary Python objects, so the numbers are there to be "
-"used in your own code:"
+"The beams are ordinary Python objects, so you can use the numbers in your"
+" own code:"
 msgstr "ビームは普通の Python オブジェクトなので、その数値を自分のコードで使える:"
 
-#: ../../../gtrace/docs/source/intro.rst:242
+#: ../../../gtrace/docs/source/intro.rst:249
 msgid ""
-"The viewer cannot do this part. A layout can be produced by a search, an "
-"optimisation or a loop over a catalogue of stock lenses, and only then "
-"opened and looked at."
-msgstr "この部分はビューアにはできない。候補の探索や最適化、手持ちのレンズを順に試すループの中でレイアウトを作り、そのあとでビューアを開いて眺めることができる。"
+"The viewer cannot do this. Your code can build a layout from a search, an"
+" optimisation or a loop over a catalogue of stock lenses, and open the "
+"viewer only afterwards."
+msgstr "ビューアにはこれができない。自分のコードなら、探索や最適化、あるいは手持ちのレンズのカタログを順に試すループからレイアウトを組み立て、そのあとでビューアを開くことができる。"
 
-#: ../../../gtrace/docs/source/intro.rst:247
+#: ../../../gtrace/docs/source/intro.rst:254
 msgid "Where to go next"
 msgstr "次に読むもの"
 
-#: ../../../gtrace/docs/source/intro.rst:253
+#: ../../../gtrace/docs/source/intro.rst:260
 msgid "If you want to"
 msgstr "やりたいこと"
 
-#: ../../../gtrace/docs/source/intro.rst:254
+#: ../../../gtrace/docs/source/intro.rst:261
 msgid "Read"
 msgstr "読むページ"
 
-#: ../../../gtrace/docs/source/intro.rst:255
+#: ../../../gtrace/docs/source/intro.rst:262
 msgid "Work through a real example from end to end"
 msgstr "実例を最初から最後まで通してやってみる"
 
-#: ../../../gtrace/docs/source/intro.rst:256
+#: ../../../gtrace/docs/source/intro.rst:263
 msgid ":doc:`tutorial`"
 msgstr ":doc:`tutorial`"
 
-#: ../../../gtrace/docs/source/intro.rst:257
+#: ../../../gtrace/docs/source/intro.rst:264
 msgid "Match a laser into a cavity with two lenses"
 msgstr "レンズ2枚でレーザーを共振器にモードマッチングさせる"
 
-#: ../../../gtrace/docs/source/intro.rst:258
+#: ../../../gtrace/docs/source/intro.rst:265
 msgid ":doc:`the mode matching example<tutorial/modematching>`"
 msgstr ":doc:`モードマッチングの例題<tutorial/modematching>`"
 
-#: ../../../gtrace/docs/source/intro.rst:259
+#: ../../../gtrace/docs/source/intro.rst:266
 msgid "Know what the coordinates, mirrors and lenses mean"
 msgstr "座標系・ミラー・レンズが何を意味するかを知る"
 
-#: ../../../gtrace/docs/source/intro.rst:260
+#: ../../../gtrace/docs/source/intro.rst:267
 msgid ":doc:`basic_concepts`"
 msgstr ":doc:`basic_concepts`"
 
-#: ../../../gtrace/docs/source/intro.rst:261
+#: ../../../gtrace/docs/source/intro.rst:268
 msgid "Understand what happens at a surface, and where the ghost beams come from"
 msgstr "面で何が起きるか、ゴーストビームがどこから来るかを理解する"
 
-#: ../../../gtrace/docs/source/intro.rst:263
+#: ../../../gtrace/docs/source/intro.rst:270
 msgid ":doc:`propagation`"
 msgstr ":doc:`propagation`"
 
-#: ../../../gtrace/docs/source/intro.rst:264
+#: ../../../gtrace/docs/source/intro.rst:271
 msgid ""
 "Use everything ``OpticalLayout`` can do: mechanics, assemblies, "
 "dimensions, undo, JSON"
 msgstr "``OpticalLayout`` の機能を全部使う: 機構部品、組み立て、寸法線、undo、JSON"
 
-#: ../../../gtrace/docs/source/intro.rst:266
+#: ../../../gtrace/docs/source/intro.rst:273
 msgid ":doc:`layout`"
 msgstr ":doc:`layout`"
 
-#: ../../../gtrace/docs/source/intro.rst:267
+#: ../../../gtrace/docs/source/intro.rst:274
 msgid "Use everything the viewer can do"
 msgstr "ビューアの機能を全部使う"
 
-#: ../../../gtrace/docs/source/intro.rst:268
+#: ../../../gtrace/docs/source/intro.rst:275
 msgid ":doc:`viewer`"
 msgstr ":doc:`viewer`"
 
-#: ../../../gtrace/docs/source/intro.rst:269
+#: ../../../gtrace/docs/source/intro.rst:276
 msgid ""
 "Drive a layout from code the way the viewer does, or write a front end of"
 " your own"
 msgstr "ビューアと同じようにコードからレイアウトを操作する、あるいは自分のフロントエンドを書く"
 
-#: ../../../gtrace/docs/source/intro.rst:271
+#: ../../../gtrace/docs/source/intro.rst:278
 msgid ":doc:`editing`"
 msgstr ":doc:`editing`"
 
-#: ../../../gtrace/docs/source/intro.rst:273
+#: ../../../gtrace/docs/source/intro.rst:280
 msgid ""
-"Read :doc:`propagation` early. It explains where the ghost beams come "
-"from and how they are counted, so that you can choose ``order`` and "
-"``power_threshold`` on purpose instead of turning them until the picture "
-"looks right."
+"Read :doc:`propagation` early. That chapter explains where the ghost "
+"beams come from and how they are counted, so that you can choose "
+"``order`` and ``power_threshold`` for a reason, instead of changing them "
+"until the picture looks right."
 msgstr ""
-":doc:`propagation` は早めに読むこと。ゴーストビームがどこから来て、どう数えられるかを説明している。これを読めば、\\ "
-"``order`` と ``power_threshold`` を、絵が良さそうに見えるまで回すのではなく、根拠を持って選べるようになる。"
+":doc:`propagation` は早めに読むこと。この章は、ゴーストビームがどこから来て、どう数えられるかを説明している。これを読めば、\\"
+" ``order`` と ``power_threshold`` を、絵が良さそうに見えるまで変えるのではなく、根拠を持って選べる。"
 
-#: ../../../gtrace/docs/source/intro.rst:278
+#: ../../../gtrace/docs/source/intro.rst:285
 msgid ""
-"Mirrors and beams also work without a layout. You can hand a beam to a "
-"mirror, get the reflected and transmitted beams back, and carry them "
+"Mirrors and beams also work without a layout. You can pass a beam to a "
+"mirror, get the reflected and transmitted beams, and keep track of them "
 "yourself. The last chapter of the :doc:`tutorial` builds a cavity that "
-"way and registers it in a layout afterwards. Work like this when the "
-"positions of the elements have to be computed instead of typed in."
+"way and registers it in a layout afterwards. Work this way when the "
+"element positions have to be computed instead of typed in."
 msgstr ""
 "ミラーとビームは、レイアウトが無くても動く。ミラーにビームを渡すと、反射ビームと透過ビームが返ってくるので、それを自分で持ち回ればよい。\\ "
 ":doc:`tutorial` "
 "の最後の章は、そうやって共振器を組み、あとからレイアウトに登録する。素子の位置を手で入力するのではなく計算で決める必要があるときは、この方法で作業する。"
 
-#: ../../../gtrace/docs/source/intro.rst:285
+#: ../../../gtrace/docs/source/intro.rst:292
 msgid "Installing from a git clone"
-msgstr "git clone からインストールする"
+msgstr "git clone からのインストール"
 
-#: ../../../gtrace/docs/source/intro.rst:287
+#: ../../../gtrace/docs/source/intro.rst:294
 msgid "To track gtrace's own development, or to edit gtrace itself::"
 msgstr "gtrace 自体の開発を追いかけたい場合や、gtrace に手を入れたい場合は::"
 
-#: ../../../gtrace/docs/source/intro.rst:293
+#: ../../../gtrace/docs/source/intro.rst:300
 msgid ""
-"The tutorial notebooks live in ``docs/source/tutorial/``. They need "
-"nothing from the repository but gtrace itself, so downloading the "
-"``.ipynb`` files on their own works too; :doc:`tutorial` links to them."
+"The tutorial notebooks are in ``docs/source/tutorial/``. They need only "
+"gtrace and nothing else from the repository, so you can download the "
+"``.ipynb`` files on their own. :doc:`tutorial` links to them."
 msgstr ""
 "チュートリアルの notebook は ``docs/source/tutorial/`` にある。リポジトリからは gtrace "
 "本体以外に何も必要としないので、\\ ``.ipynb`` ファイルだけをダウンロードしても動く。\\ :doc:`tutorial` "
