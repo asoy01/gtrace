@@ -252,6 +252,40 @@ var EDITABLE = __EDITABLE__;
         v.dimFields.p2x.el.dispatchEvent(new Event('change', {bubbles: true}));
         out.editEnd = {msg: sent[sent.length - 1], sent: sent.length - nEdit};
 
+        // The dimension panel builds its own rows rather than sharing
+        // the table the optics panel uses, so the two keys that enter
+        // and throw away a value are checked on this panel too.
+        var nKey = sent.length;
+        var off = v.dimFields.offset.el;
+        off.focus();
+        off.value = '12';
+        var kev = new KeyboardEvent('keydown', {key: 'Enter', bubbles: true,
+                                                cancelable: true});
+        off.dispatchEvent(kev);
+        out.enter = {sent: sent.length - nKey, msg: sent[sent.length - 1],
+                     stopped: kev.defaultPrevented,
+                     left: document.activeElement !== off};
+        // A change raised as the box loses the keyboard must not send
+        // the same edit a second time.
+        var nDup = sent.length;
+        off.gtEntering = true;
+        off.dispatchEvent(new Event('change', {bubbles: true}));
+        off.gtEntering = false;
+        out.enter.duringEntry = sent.length - nDup;
+        // Escape throws the text away. It used to enter it instead:
+        // leaving the box is what commits a value, and Escape leaves
+        // the box.
+        var nEsc = sent.length;
+        off.focus();
+        off.value = '999';
+        off.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape',
+                                                        bubbles: true,
+                                                        cancelable: true}));
+        out.enter.escSent = sent.length - nEsc;
+        out.enter.escValue = off.value;
+        sent.length = nKey;
+        v._refreshDimPanel();
+
         // Renaming goes through the same operation an optics uses.
         var nRen = sent.length;
         v.dimFields.name.el.value = 'thickness';
@@ -923,6 +957,23 @@ to = res['typedOffset']
 check('and 1[in] in the millimetre row beside it is 25.4 mm',
       to and to['op'] == 'set'
       and abs(to['attrs']['offset'] - 0.0254) < 1e-12, json.dumps(to))
+
+print('--- entering a value on this panel ---')
+# The dimension panel builds its rows itself rather than through the
+# table the optics panel uses, so the two keys are checked here as well.
+ke = res['enter']
+check('Enter sends the edit', ke['sent'] == 1, str(ke['sent']))
+check('and sends what was typed, in the unit of the row',
+      ke['msg']['op'] == 'set' and abs(ke['msg']['attrs']['offset'] - 0.012)
+      < 1e-12, json.dumps(ke['msg']))
+check('the key goes no further', ke['stopped'] is True, str(ke['stopped']))
+check('the box is left', ke['left'] is True, str(ke['left']))
+check('a change raised while the value is being entered sends nothing',
+      ke['duringEntry'] == 0, str(ke['duringEntry']))
+check('Escape sends nothing', ke['escSent'] == 0, str(ke['escSent']))
+check('and puts back what the model holds, rather than entering the '
+      'text it was told to throw away',
+      ke['escValue'] != '999', str(ke['escValue']))
 
 print('--- read-only viewer ---')
 errs, res = run(False)

@@ -2755,14 +2755,19 @@ Viewer.prototype._buildDimPanel = function () {
             else { input.title = CALC_HINT; }
             input.spellcheck = false;
             input.addEventListener('change', function () {
+                if (input.gtEntering) { return; }
                 self._commitDimField(f.key, input);
             });
             input.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Escape') {
-                    self._refreshDimPanel();
-                    input.blur();
+                    escapeReverts(input, function () {
+                        self._refreshDimPanel();
+                    });
                     ev.stopPropagation();
                 }
+            });
+            commitOnEnter(input, function () {
+                self._commitDimField(f.key, input);
             });
             td.appendChild(input);
             rec.el = input;
@@ -2785,6 +2790,59 @@ Viewer.prototype._buildDimPanel = function () {
     this.dimFoot.appendChild(delBtn);
     this.dimBody.appendChild(this.dimFoot);
 };
+
+/*
+ * Enter is how a value is entered, so make it so.
+ *
+ * A browser usually does this by itself: pressing Enter in a text box
+ * raises a change event, and a change event is what these rows commit
+ * on. Inside a JupyterLab cell it does not. Measured on the page: the
+ * same key in a plain text box placed on the document raises the event,
+ * and in one placed inside a notebook cell it does not. Nothing reached
+ * the model, and a value only went in when the box lost the keyboard -
+ * on Tab, or on a click somewhere else.
+ *
+ * So the commit is made here rather than waited for. The mark stops the
+ * change event that losing the keyboard may still raise from sending
+ * the same edit a second time: Python has not answered yet, so the
+ * second one does not look like a repeat and would take an undo step
+ * of its own.
+ *
+ * The box is left afterwards, the way Escape leaves it. A row that
+ * still had the keyboard would go on showing what was typed instead of
+ * what the model took - 3*25.4 rather than 76.2.
+ */
+function commitOnEnter(input, commit) {
+    input.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') { return; }
+        input.gtEntering = true;
+        commit();
+        input.blur();
+        input.gtEntering = false;
+        ev.preventDefault();
+        ev.stopPropagation();
+    });
+}
+
+/*
+ * Escape throws away what was typed and puts back what the model holds.
+ *
+ * It has to leave the box to do that. The refresh loop never writes
+ * over the row the keyboard is in, so a row put back while it still had
+ * the keyboard went on showing the text that was being thrown away.
+ * Leaving the box is also what raises a change event, and that event
+ * used to enter the very value Escape had just refused: typing 999 into
+ * a diameter and pressing Escape gave the mirror a diameter of 999 mm.
+ *
+ * So the box is left first, with the mark up that says any change from
+ * it is not an edit, and the row is put back afterwards.
+ */
+function escapeReverts(input, revert) {
+    input.gtEntering = true;
+    input.blur();
+    input.gtEntering = false;
+    revert();
+}
 
 /*
  * Build a table of property rows from a field list.
@@ -2853,15 +2911,16 @@ function buildFieldTable(fields, editable, commit, revert) {
             else { input.title = CALC_HINT; }
             input.spellcheck = false;
             input.addEventListener('change', function () {
+                if (input.gtEntering) { return; }
                 commit(f.key, input);
             });
             input.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Escape') {
-                    revert();
-                    input.blur();
+                    escapeReverts(input, revert);
                     ev.stopPropagation();
                 }
             });
+            commitOnEnter(input, function () { commit(f.key, input); });
             td.appendChild(input);
             rec.el = input;
             rec.editable = true;

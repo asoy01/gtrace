@@ -1446,6 +1446,83 @@ var LENS = __LENS__;
             v._selectOptic(v.scene.optics[0]);
         }
 
+        // Enter is how a value is entered.
+        //
+        // A browser raises a change event of its own when Enter is
+        // pressed in a text box, and a change event is what a row
+        // commits on - except inside a JupyterLab cell, where it is not
+        // raised at all. Measured on the page: the same key in a plain
+        // box on the document commits, and in one inside a cell it does
+        // not, so nothing reached the model and a value only went in
+        // when the box lost the keyboard. The row now commits on the
+        // key itself.
+        if (EDITABLE) {
+            out.enter = {};
+            var e0 = sent.length;
+            var ne = sent.length;
+            var dia = v.opticFields.diameter.el;
+            dia.focus();
+            dia.value = '3*25.4';
+            var kev = new KeyboardEvent('keydown', {key: 'Enter',
+                                                    bubbles: true,
+                                                    cancelable: true});
+            dia.dispatchEvent(kev);
+            out.enter.sent = sent.length - ne;
+            out.enter.msg = sent[sent.length - 1];
+            out.enter.stopped = kev.defaultPrevented;
+            // The box is left, so that the row goes back to showing
+            // what the model took rather than what was typed.
+            out.enter.left = document.activeElement !== dia;
+
+            // Losing the keyboard may still raise a change event, and
+            // Python has not answered yet, so that event would send the
+            // same edit a second time and take an undo step of its own.
+            ne = sent.length;
+            dia.gtEntering = true;
+            dia.dispatchEvent(new Event('change', {bubbles: true}));
+            dia.gtEntering = false;
+            out.enter.duringEntry = sent.length - ne;
+
+            // A value the model already holds still sends nothing.
+            ne = sent.length;
+            dia.focus();
+            dia.value = String(v.scene.optics[0].diameter * 1000);
+            dia.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter',
+                                                            bubbles: true,
+                                                            cancelable: true}));
+            out.enter.sameSent = sent.length - ne;
+
+            // Escape is unchanged: it puts back what the model holds
+            // and sends nothing.
+            ne = sent.length;
+            dia.focus();
+            dia.value = '999';
+            dia.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape',
+                                                            bubbles: true,
+                                                            cancelable: true}));
+            out.enter.escSent = sent.length - ne;
+            out.enter.escValue = dia.value;
+
+            // The name row is a text row rather than a number, and it
+            // goes through the same key.
+            ne = sent.length;
+            var nm = v.opticFields.name.el;
+            nm.focus();
+            nm.value = 'M1b';
+            nm.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter',
+                                                           bubbles: true,
+                                                           cancelable: true}));
+            out.enter.nameSent = sent.length - ne;
+            out.enter.nameMsg = sent[sent.length - 1];
+            // Everything this block sent is taken back off the list:
+            // the checks that follow feed what the page sent through
+            // apply_edit, and a trial edit left in it would move the
+            // layout they compare against.
+            sent.length = e0;
+            model.set('scene', SCENE);
+            v._selectOptic(v.scene.optics[0]);
+        }
+
     } catch (e) {
         out.error = String((e && e.stack) || e);
     }
@@ -1874,6 +1951,34 @@ check('and the order as a number',
 check('and what terminating keeps, as a boolean',
       flags['msgs'][3]['attrs']['term_on_HR_transmits'] is True,
       str(flags['msgs'][3]))
+
+print('--- entering a value with Enter ---')
+# Pressing Enter in a text box raises a change event of the browser's
+# own, and a change event is what a row commits on - but not inside a
+# JupyterLab cell, where it is never raised. Measured on the page: the
+# same key in a plain box on the document commits, and in one inside a
+# cell it does not. Nothing reached the model, and a value only went in
+# when the box lost the keyboard, while the manual said to press Enter.
+ent = res['enter']
+check('Enter sends the edit', ent['sent'] == 1, str(ent['sent']))
+check('and sends what was typed, worked out',
+      ent['msg']['op'] == 'set'
+      and abs(ent['msg']['attrs']['diameter'] - 3 * 25.4 * mm) < 1e-12,
+      str(ent['msg']))
+check('the key goes no further', ent['stopped'] is True, str(ent['stopped']))
+check('the box is left, so the row shows what the model took',
+      ent['left'] is True, str(ent['left']))
+check('a change raised while the value is being entered sends nothing',
+      ent['duringEntry'] == 0, str(ent['duringEntry']))
+check('Enter on a value the model already holds sends nothing',
+      ent['sameSent'] == 0, str(ent['sameSent']))
+check('Escape still sends nothing', ent['escSent'] == 0, str(ent['escSent']))
+check('and still puts back what the model holds',
+      abs(float(ent['escValue']) - res['m1']['diameter'] / mm) < 1e-9,
+      str(ent['escValue']))
+check('a text row is entered with Enter too',
+      ent['nameSent'] == 1 and ent['nameMsg']['op'] == 'rename'
+      and ent['nameMsg']['name'] == 'M1b', str(ent['nameMsg']))
 
 print('--- a row only some classes have ---')
 cur = res['curve']

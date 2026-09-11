@@ -47,6 +47,21 @@ across them.
 - **`Ctrl+F` opens the browser's search instead of fitting the
   drawing.** `f` was read as Fit whatever modifier was held with it.
 
+- **Enter enters a value in a panel row.** A row committed on the change
+  event a browser raises by itself when Enter is pressed in a text box,
+  and inside a JupyterLab cell that event is never raised: a plain text
+  box on the same page commits, and one inside a cell does not. So
+  nothing reached the model, and a value only went in when the row lost
+  the keyboard - on Tab, or on a click somewhere else - while the manual
+  said to press Enter. The row now commits on the key itself.
+
+- **`Esc` throws away what was typed instead of entering it.** It put
+  the row back and then took the keyboard away from it, and taking the
+  keyboard away is what commits a value: typing `999` into a diameter
+  and pressing `Esc` gave the mirror a diameter of 999 mm. The row now
+  gives the keyboard up first, and what that raises is not read as an
+  edit.
+
 ## 0.8.0 - 2026-08-22
 
 ### Changed
